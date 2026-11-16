@@ -65,7 +65,7 @@ IsIterable(type Text) Boolean
 	Counting.IsIterable("Count") is false
 	Counting.Unknown(ScopedStatement(SyntaxNode("Invalid", "Broken: x"), Counted, 0), Counted) is "Broken: x"
 	Enumerating.IsIterable("A") and Looping.IsIterable("Count")
-	Counting.NotIterable(WhileFlag, Flagged) is "" and (Counting.NotIterable(OtherLoop, Flagged) is "")
+	Counting.NotIterable(WhileFlag, Flagged) is "" and Counting.NotIterable(OtherLoop, Flagged) is ""
 	Counting.NotIterable(TextLoop, Flagged) is ""
 	Counting.NotIterable(CountLoop, Counted) is "NotIterable: count is a Count"
 	let element = inference.types.ElementType(type)
@@ -152,7 +152,7 @@ IsMissing(instance Text, name Text) Boolean
 	Counting.IsMissing("Generic", "number") is false
 	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Text", "Parsed")
 	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Settings", "Parsed") is false
-	Listing.IsMissing("Generic", "number") is false and (Listing.IsMissing("List(Text, Number)", "Key") is false)
+	Listing.IsMissing("Generic", "number") is false and Listing.IsMissing("List(Text, Number)", "Key") is false
 	Boxing.IsMissing("Box", "first") is false
 	let types = inference.types
 	let isChecked = types.IsKnown(types.BaseName(instance)) and instance is not in ("Generic", "Generics")

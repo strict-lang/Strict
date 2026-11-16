@@ -47,7 +47,7 @@ Matches(lines Texts) Boolean
 	for Range(0, lines.Length / 2)
 		let position = value * 2
 		let isSkipped = isRunning then installed.IsToolchainFile(lines(position)) else false
-		if (isSkipped is false) and (Value(lines(position)) is not lines(position + 1))
+		if isSkipped is false and Value(lines(position)) is not lines(position + 1)
 			return false
 	true
 Saved(inputs Texts)

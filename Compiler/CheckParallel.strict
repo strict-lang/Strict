@@ -135,8 +135,7 @@ CheckedToolShares(folder Text, exe Text) Boolean
 		let res = Process.RunTool(value is "" then exe else "cmd", value is "" then "tools " + shares else cmd, ShortSeconds)
 		if res.exitCode is not 0
 			return Error("ToolsShareFailed: " + res.Output)
-		let sErr = CheckedBatch(shares, "slow", BatchSlowCount, value)
-		if sErr is Error or CheckedBatch(shares, "quick", 2, value) is Error
+		if CheckedBatch(shares, "slow", BatchSlowCount, value) is Error or CheckedBatch(shares, "quick", 2, value) is Error
 			return Error("BadToolBatch")
 	true
 CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean

@@ -30,8 +30,7 @@ Rebuilding(register Number) Number
 	let reuse = LoadReuse(steps)
 	for Range(position + 1, steps.Length)
 		let step = steps(value)
-		let isBuilt = step.kind is InstructionType.Invoke then step.texts(1) is "from" else false
-		if isBuilt and register is in reuse.Reads(step)
+		if (step.kind is InstructionType.Invoke then step.texts(1) is "from" else false) and register is in reuse.Reads(step)
 			return value
 		if reuse.Written(step) is register
 			return -1

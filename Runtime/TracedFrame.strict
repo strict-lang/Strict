@@ -110,7 +110,7 @@ Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(3, Started).Length is 0
 	Lined.Iteration(2, Started).Last is "$Set Strict/Doubler|4|for|0"
 	Ending.Iteration(1, Started).Length is 2
-	Ending.Iteration(2, Started).Length is 0 and (Lined.Iteration(2, Stopped).Length is 0)
+	Ending.Iteration(2, Started).Length is 0 and Lined.Iteration(2, Stopped).Length is 0
 	let entry = frame.method.instructions(position)
 	let begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
 	let state = slots(Frame.LoopSlot)

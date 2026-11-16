@@ -76,8 +76,7 @@ IsFused Boolean
 	if Written < 0 or call < 0
 		return false
 	let dot = function.method.instructions(call).payload(0)
-	let isDot = function.method.instructions(Written).payload(0) is dot
-	isDot or Biases is not "" or MlirGated(function, position).IsGated
+	function.method.instructions(Written).payload(0) is dot or Biases is not "" or MlirGated(function, position).IsGated
 Operand Text
 	Summing.Operand is "%zero"
 	Biasing.Operand is "%t2gbias"

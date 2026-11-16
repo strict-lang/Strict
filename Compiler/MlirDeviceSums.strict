@@ -44,8 +44,7 @@ IsSum Boolean
 		let entry = function.method.instructions(value)
 		if entry.kind is in (InstructionType.LoopBegin, InstructionType.InvokeWriteToList, InstructionType.Return)
 			return false
-		let isRead = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is in names
-		if isRead and IsAdded(value) is false
+		if entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is in names and IsAdded(value) is false
 			return false
 	names.Length > 0
 Accumulated Texts

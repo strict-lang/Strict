@@ -188,8 +188,7 @@ Marked(entry InstructionEntry) Text
 	Twice.Marked(Marking) is "Twice"
 	Twice.Marked(InstructionEntry.LoadNumber(0, 0)) is ""
 	Twice.Marked(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x in Y at Z:line 2")) is ""
-	let isText = entry.kind is InstructionType.LoadConstantToRegister and entry.texts.Length > 0
-	isText then Placed(entry.texts(0)) else ""
+	entry.kind is InstructionType.LoadConstantToRegister and entry.texts.Length > 0 then Placed(entry.texts(0)) else ""
 Placed(text Text) Text
 	Twice.Placed("1 is 1 in Twice at Z:line 2") is "Twice"
 	Twice.Placed("x in Y") is ""

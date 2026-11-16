@@ -127,7 +127,7 @@ Bits(position Number, count Number) Number
 	StoredSample.Bits(8, 2) is 2
 	Inflate((255, 255, 255)).Bits(7, 13) is 8191
 	Inflate((255)).Bits(7, 1) is 1
-	(Inflate((255)).Bits(8, 0) is 0) and (Inflate((0, 0, 255)).Bits(7, 13) is 7680)
+	Inflate((255)).Bits(8, 0) is 0 and Inflate((0, 0, 255)).Bits(7, 13) is 7680
 	if count is 0
 		return 0
 	let at = (position / 8).Floor

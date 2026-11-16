@@ -40,8 +40,7 @@ Literal(type Text) Text
 	MetalValue("-3").Literal("i64") is "((long)-3)"
 	MetalValue("2.500000e-01").Literal("float") is "2.500000e-01f"
 	MetalValue("1.500000e+00").Literal("double") is "@1.500000e+00"
-	let isNumber = text is not "" and "0123456789-".IndexOf(text(0)) >= 0
-	if isNumber is false or type is "double" or MetalValue(type).Type is ""
+	if text is "" or "0123456789-".IndexOf(text(0)) < 0 or type is "double" or MetalValue(type).Type is ""
 		return "@" + text
 	type is "float" then text + "f" else "((" + MetalValue(type).Type + ")" + text + ")"
 Hexed(type Text) Text

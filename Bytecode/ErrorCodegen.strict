@@ -143,8 +143,7 @@ IsErrorComparison(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsErrorComparison(SyntaxNode("Binary", "is", (BareError, A)), CodeBlock.Empty)
 	if node.Kind is not "Binary" or node.text is not in ("is", "is not")
 		return false
-	let left = values.TypeOf(node.children(0), block)
-	left is in ErrorTypes or values.TypeOf(node.children(1), block) is in ErrorTypes
+	values.TypeOf(node.children(0), block) is in ErrorTypes or values.TypeOf(node.children(1), block) is in ErrorTypes
 Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", Greeting), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Plain.Statement(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError

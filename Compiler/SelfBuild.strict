@@ -4,6 +4,7 @@ has executable Text
 constant Current = Error("Current")
 constant CheckedFile = "/obj/Strict.checked"
 constant BuildLock = "/obj/Strict.selfbuild.lock"
+constant HoldFile = "/obj/Strict.hold"
 constant CorePackages = ("Compiler", "Bytecode", "Expressions", "Runtime", "Validators")
 constant ExtraPackages = ("Math", "Binary", "Compression", "Regex", "Json", "Networking", "NeuralNetworks")
 constant DaemonCommands = ("coordinator", "serve", "linked", "status", "stop")
@@ -14,6 +15,9 @@ Rebuilt(arguments Texts) Number slow
 	SelfBuild(Logger, "Compiler/output/Missing", "Missing.exe").Rebuilt(List(Text) + "test") is Current
 	SelfBuild(Logger, ".", "strict.exe").Rebuilt(List(Text) + "stop") is Current
 	if IsStale(arguments) is false
+		return Current
+	if File(root + HoldFile).Exists
+		logger.Log(Shown + " is older than Strict sources, not rebuilt while obj/Strict.hold exists")
 		return Current
 	Built(arguments) then Process(TargetExecutable).Started(Quoted(arguments)) else Current
 TargetExecutable Text

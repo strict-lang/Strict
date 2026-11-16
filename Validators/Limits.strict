@@ -25,7 +25,7 @@ Issues ValidationIssues
 	Limits(("has number", "Run", "\t1"), false).Issues.Length is 0
 	Limits(Long.lines, false, 10).Issues.Length is 0
 	Limits(OnlyConstants.lines + OnlyConstants.lines + OnlyConstants.lines, false, 10).Issues.Length is 0
-	(Methods.Issues.Length is 1) and (Long.Issues.Length is 1)
+	Methods.Issues.Length is 1 and Long.Issues.Length is 1
 	Limits(("Run", "\tlet a = 0 - b"), false).Issues.Length is 1
 	Limits(("Run", "\t1", "has a"), false).Issues.Length is 0
 	Limits(("Run", "\t\"" + Character(228) + "\""), false).Issues.Length is 1

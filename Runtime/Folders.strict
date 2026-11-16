@@ -36,8 +36,7 @@ Commands(command Text, paths Texts, root Text, isMutating = false, isFull = fals
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true, true) is ("test \"a.strict\" \".\" mutations")
-	let isUnit = command is "test" and isFull is false
-	let options = (isUnit then " unit" else "") + (isMutating then " mutations" else "")
+	let options = (command is "test" and isFull is false then " unit" else "") + (isMutating then " mutations" else "")
 	for paths
 		command + " \"" + value + "\" \"" + root + "\"" + options
 Cleaned(folder Text) Number

@@ -83,8 +83,7 @@ CheckSimpleAndOrbit(folder Text) Boolean
 		return Error("SimpleRead failed: " + (simple to Text))
 	File(folder + "/Orbiting.strict").Write(OrbitingSrc.Split("\n"))
 	let orbit = BuiltAndRan(folder, "OrbitGpu", OrbitGpuSrc, false, false)
-	let badOrbit = orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit
-	badOrbit then Error("OrbitGpu failed: " + (orbit to Text)) else true
+	orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit then Error("OrbitGpu failed: " + (orbit to Text)) else true
 CheckViewingAndPending(folder Text) Boolean
 	File(folder + "/Pair.strict").Write(UpdatedPair.Split("\n"))
 	File(folder + "/Viewing.strict").Write((ViewA + ViewB).Split("\n"))

@@ -50,8 +50,7 @@ IsHalf(member MemberEntry) Boolean
 	Sample.IsHalf(MemberEntry("Width", "Number", List(InstructionEntry) + Heights, false, 32)) is false
 	Sample.IsHalf(MemberEntry("Width", "Number", List(InstructionEntry), false, 32))
 	Sample.IsHalf(MemberEntry("Width", "Strict/Number", List(InstructionEntry), false)) is false
-	let isNumber = member.typeName is in ("Number", "Strict/Number")
-	isNumber and member.initial.Length is 0 and member.Bits is Number.SingleBits
+	member.typeName is in ("Number", "Strict/Number") and member.initial.Length is 0 and member.Bits is Number.SingleBits
 Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	Sample.Constructed(Sized, "Sizing", Instances).Last is "    llvm.store %t2cp, %r2 : f64, !llvm.ptr"
 	Sample.Constructed(Sized, "Sizing", Instances).First is "    %t2cx = llvm.load %r0 : !llvm.ptr -> f64"

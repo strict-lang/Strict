@@ -15,13 +15,13 @@ constant Room = MachineView(freeRam = 16, freeVram = 8, totalRam = 64, totalVram
 Forced(name Text, fallback Number) Number
 	MachineView.Forced("StrictVariableNeverSet", 4) is 4
 	let forced = Process.Variable(name)
-	(forced is "") or (forced to Number is Error) then fallback else forced to Number
+	forced is "" or forced to Number is Error then fallback else forced to Number
 Vram(text Text) Numbers
 	MachineView.Vram("24564, 24049") is (24564 * Mebibyte, 24049 * Mebibyte)
 	MachineView.Vram("nope") is (0, 0)
 	let measured = text is "" then Process.RunTool("nvidia-smi", Query).Output else text
 	let forced = Process.Variable("STRICT_MACHINE_VRAM")
-	if (text is "") and (forced is not "")
+	if text is "" and forced is not ""
 		return (forced to Number, forced to Number)
 	let parts = measured.Split(",")
 	parts.Length < 2 then (0, 0) else (parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte)

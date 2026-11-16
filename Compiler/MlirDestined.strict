@@ -119,8 +119,7 @@ Next(entry InstructionEntry) InstructionEntry
 	Caller.IsKept(InstructionEntry.Invoke(0, ("Strict/Math/Vector2", "X", "Strict/Number"), List(Number), -1), 5)
 	let steps = function.method.instructions
 	let following = position + 1 < steps.Length then steps(position + 1) else entry
-	let isChecked = following.kind is InstructionType.CheckError and position + 2 < steps.Length
-	isChecked then steps(position + 2) else following
+	following.kind is InstructionType.CheckError and position + 2 < steps.Length then steps(position + 2) else following
 CheckedAt Number
 	MlirDestined(MlirListDestined.Checked.function, 9).CheckedAt is 10
 	MlirDestined(MlirListDestined.Lined.function, 9).CheckedAt is 9

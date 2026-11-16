@@ -55,7 +55,7 @@ Decoded(stream Inflate, position Number) Symbol
 	entry > 0 then Symbol((entry / EntryScale).Floor, entry % EntryScale) else Walked(stream, position)
 Walked(stream Inflate, position Number) Symbol
 	Longest.Walked(Inflate((1, 0)), 0) is Symbol(9, 16)
-	(Sample.Walked(Inflate((1, 7)), 0) is Symbol(0, 2)) and (Sample.Walked(Inflate((1, 7)), 8) is Symbol(3, 3))
+	Sample.Walked(Inflate((1, 7)), 0) is Symbol(0, 2) and Sample.Walked(Inflate((1, 7)), 8) is Symbol(3, 3)
 	Huffman.From((2, 2, 2, 2)).Walked(Inflate((3)), 0) is Symbol(3, 2)
 	mutable relative = 0
 	mutable offset = 0

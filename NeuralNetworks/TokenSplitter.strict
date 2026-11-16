@@ -87,6 +87,4 @@ Kind(text Text, index Number) Number
 	let code = text(index).number
 	if code is Character.Space or code is in Whitespace
 		return 0
-	if code > Character.Delete or code is in Uppercase or code is in Lowercase
-		return 1
-	code is in Digits then 2 else 3
+	code > Character.Delete or code is in Uppercase or code is in Lowercase then 1 else code is in Digits then 2 else 3

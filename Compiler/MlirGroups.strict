@@ -174,9 +174,7 @@ Combined(left Text, right Text) Text
 	Norming.Combined("size", "count") is "!"
 	Norming.Combined("?size", "") is "!"
 	let isOpen = left.StartsWith("!") or left.StartsWith("?") or right.StartsWith("!") or right.StartsWith("?")
-	if isOpen or left is not "" and right is not "" and left is not right
-		return "!"
-	left is "" then right else left
+	isOpen or left is not "" and right is not "" and left is not right then "!" else left is "" then right else left
 Floored(grouping Text) Text
 	Norming.Floored("?size") is "size"
 	Norming.Floored("!") is "!"

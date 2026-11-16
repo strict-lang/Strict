@@ -22,7 +22,7 @@ Block(number Number) Numbers
 	let header = (Final(start + size), size % Byte.Values, (size / Byte.Values).Floor, complement % Byte.Values)
 	header + (complement / Byte.Values).Floor + Inflate.Part(bytes, start, size)
 Final(end Number) Number
-	(Deflate((1, 2, 3)).Final(2) is 0) and (Deflate((1, 2, 3)).Final(3) is 1)
+	Deflate((1, 2, 3)).Final(2) is 0 and Deflate((1, 2, 3)).Final(3) is 1
 	end >= bytes.Length then 1 else 0
 Adler Numbers
 	Deflate((1, 2, 3)).Adler is (0, 13, 0, 7)

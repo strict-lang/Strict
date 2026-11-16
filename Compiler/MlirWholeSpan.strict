@@ -154,8 +154,7 @@ LastStore(name Text, at Number) Number
 	Rescaled.LastStore("sum", 12) is 16
 	Quads.LastStore("sum", 15) is -1
 	for Range(StoreBefore(name, at) + 1, at)
-		let opens = function.method.instructions(value).kind is InstructionType.LoopBegin
-		if opens and function.method.LoopEndOf(value) >= at
+		if function.method.instructions(value).kind is InstructionType.LoopBegin and function.method.LoopEndOf(value) >= at
 			return StoreBefore(name, function.method.LoopEndOf(value))
 	-1
 IsSkipped(store Number, at Number) Boolean

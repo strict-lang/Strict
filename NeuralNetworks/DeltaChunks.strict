@@ -40,8 +40,7 @@ Position(token Number, head Number, part Number) Number
 	DeltaChunks(Probe, groups = 2).Position(1, 1, 2) is 22
 	Probe.Position(1, 1, 2) is 14
 	Probe.Position(2, 1, 1) is 18
-	let offset = part < 2 then part * groups + head % groups else 2 * groups + head
-	(token * (2 * groups + heads) + offset) * size
+	(token * (2 * groups + heads) + (part < 2 then part * groups + head % groups else 2 * groups + head)) * size
 Length(start Number) Number
 	Probe.Read.reads(10).IsNearlyEqual(DeltaChunks(Probe, chunk = 4).Read.reads(10))
 	DeltaChunks(Probe, groups = 2).Weighted((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.5

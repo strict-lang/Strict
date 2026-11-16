@@ -26,8 +26,7 @@ Nearly(comparison SyntaxNode, isPrecise Boolean, block CodeBlock) CodeBlock
 IsLogical(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsLogical(Logical, CodeBlock.Empty)
 	Plain.IsLogical(SyntaxNode("Binary", "and", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
-	let isLogical = node.Kind is "Binary" and node.text is in ("and", "or")
-	isLogical and OperatorCodegen(values).IsCustom(node, block) is false
+	node.Kind is "Binary" and node.text is in ("and", "or") and OperatorCodegen(values).IsCustom(node, block) is false
 Evaluated(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Evaluated(Logical.children.Last, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	if IsLogical(node, block)

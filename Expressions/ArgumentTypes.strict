@@ -157,7 +157,7 @@ Declared(instance Text, method Text) Texts
 	Sizing.Declared("Count", "Grow") is ("Area")
 	Sizing.Declared("Size", "from") is ("Number")
 	Couples.Declared("Couple", "from").Length is 0
-	(Sizing.Declared("Size", "Missing") is ("")) and (Couples.Declared("Couple", "Missing") is (""))
+	Sizing.Declared("Size", "Missing") is ("") and Couples.Declared("Couple", "Missing") is ("")
 	let parameters = inference.types.ParameterScope(Owner(instance, method))
 	if method is "from" and "Generic" is in inference.types.MembersOf(instance).types
 		return List(Text)
@@ -173,8 +173,8 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
 	Sizing.Matched(("Text", "Number"), ("Number", "Text"), "Letter", "from") is 0
 	Sizing.Issue(SyntaxParser(Tokenizer("Size(count)").Tokens).Parse, Counted, Counted) is ""
-	(Odd.Mismatch("Word", "Empty") is false) and (Odd.IsBaseMismatch("Text", "Empty") is false)
-	(Couples.Mismatch("Text", "Texts") is false) and (Couples.IsBaseMismatch("Text", "Texts") is false)
+	Odd.Mismatch("Word", "Empty") is false and Odd.IsBaseMismatch("Text", "Empty") is false
+	Couples.Mismatch("Text", "Texts") is false and Couples.IsBaseMismatch("Text", "Texts") is false
 	Sizing.Mismatch("Count", "Character") is false
 	let members = inference.types.MembersOf(instance).types
 	let isMemberCall = (arguments - members).Length is 0 and Mismatched(arguments, members) < 0
@@ -187,8 +187,8 @@ Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Mismatch("Size", "Size") is false
 	Sizing.Mismatch("Count", "Xyz") is false
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
-	(Odd.Mismatch("Character", "Word") is false) and (Odd.Mismatch("Empty", "Number") is false)
-	(Odd.IsBaseMismatch("Text", "Character") is false) and (Odd.IsBaseMismatch("Text", "Word") is false)
+	Odd.Mismatch("Character", "Word") is false and Odd.Mismatch("Empty", "Number") is false
+	Odd.IsBaseMismatch("Text", "Character") is false and Odd.IsBaseMismatch("Text", "Word") is false
 	for Range((call.Kind is "MethodCall" then 1 else 0), call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
 Mismatched(arguments Texts, types Texts) Number
@@ -197,7 +197,7 @@ Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(List(Text) + "Area", List(Text) + "Area") is -1
 	Sizing.Mismatched(("Text", "Text"), ("Sizes", "Text")) is 0
 	Sizing.Mismatched(("Text", "Text"), ("Texts", "Text")) is -1
-	(Listing.Mismatch("Count", "Counts") is false) and (Listing.IsBaseMismatch("Text", "Texts") is false)
+	Listing.Mismatch("Count", "Counts") is false and Listing.IsBaseMismatch("Text", "Texts") is false
 	Scaling.Issue(SyntaxNode("MethodCall", "Scaled", (Overloads.Rescaled.children(0))), Scalers, Scalers) is ""
 	for arguments
 		if index < types.Length and (Mismatch(value, types(index)) or IsWrongElement(value, types(index)))

@@ -22,6 +22,11 @@ constant Joined = MutationKinds(MethodEntry(Mutation.Twice.method, instructions 
 constant Texted = MutationKinds(MethodEntry(Twice.method, instructions = (InstructionEntry.LoadText(0, "a"), Mutation.Stored)))
 constant TextAdditions = (Loaded, InstructionEntry.LoadText(0, "a"), InstructionEntry.Binary(InstructionType.Add, (1, 0, 2)), InstructionEntry.Binary(InstructionType.Add, (1, 1, 2)))
 constant Load = InstructionType.LoadConstantToRegister
+constant Guarded = (InstructionEntry(Truth, line = 2), InstructionEntry(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0), line = 2))
+constant Ended = InstructionEntry(InstructionEntry.Jump(InstructionType.JumpEnd, 0), line = 2)
+constant Shortcut = MutationKinds(MethodEntry(Twice.method, instructions = Guarded + (InstructionEntry(Loaded, line = 3), InstructionEntry(Returned, line = 3), Ended, Returned)))
+constant Guarding = MutationKinds(MethodEntry(Twice.method, instructions = Guarded + (InstructionEntry(InstructionEntry.Invoke(2, List(Text) + "Strict/Error", (1), -1), line = 3), InstructionEntry(Returned, line = 3), Ended, Returned)))
+constant Walking = MutationKinds(MethodEntry(Twice.method, instructions = Guarded + (InstructionEntry(InstructionEntry(InstructionType.LoopBegin, List(Text), (1, 0, 0)), line = 2), InstructionEntry(Loaded, line = 3), Ended)))
 constant ConstantLoads = (InstructionEntry(InstructionType.Subtract, List(Text), (2, 0)), InstructionEntry(Load, "a", (3, 1, -1)), InstructionEntry(Load, List(Text), (3, 4, -1)))
 constant StoredConditional = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "conditional0")
 constant ConditionalStores = (Mutation.Greater, MutationFlow.Looped.method.instructions(2), InstructionEntry(InstructionEntry.Binary(InstructionType.Add, (4, 1, 2)), line = 1), StoredConditional, StoredConditional)
@@ -61,9 +66,10 @@ Twin(position Number) Number
 	(before * 2 is same.Length then same.Slice(before, before) + same.Slice(0, before) else same)(same.Index(position))
 Possible(position Number) Numbers
 	Twice.Possible(1) is (5) and Compared.Possible(1) is (2) and Storing.Possible(1) is (3)
+	Shortcut.Possible(0) is (0) and Guarding.Possible(0) is (0, 1) and Walking.Possible(0).Length is 0
 	let entry = method.instructions(position)
 	if IsCompared(position)
-		return (0, 1)
+		return IsShortcut(position) then List(Number) + 0 else (0, 1)
 	let isLast = position is method.instructions.Length - 1
 	if entry.kind is InstructionType.Return and isLast and IsLiteral(position) is false
 		return method.returnType is in Primitives then (2) else List(Number)
@@ -146,8 +152,33 @@ IsCompared(position Number) Boolean
 IsLooping(position Number) Boolean
 	Repeated.IsLooping(2) and Repeated.IsLooping(0) is false
 	Compared.IsLooping(1) is false
+	Walking.IsLooping(0)
+	let entry = method.instructions(position)
 	let next = position + 1 is method.instructions.Length then -1 else method.instructions(position + 1).kind
-	next is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	let loops = (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	if next is in loops
+		return true
+	for method.instructions
+		if value.kind is in loops and value.line is entry.line and entry.line > 0
+			return true
+	false
+IsShortcut(position Number) Boolean
+	Shortcut.IsShortcut(0) and Guarding.IsShortcut(0) is false and Compared.IsShortcut(0) is false
+	let instructions = method.instructions
+	mutable start = position + 1
+	for as long as start < instructions.Length then instructions(start).line is instructions(position).line else false
+		start = start + 1
+	let jump = start < instructions.Length then instructions(start - 1) else Returned
+	jump.kind is InstructionType.JumpToIdIfFalse then IsReturning(start, jump.payload(0)) else false
+IsReturning(start Number, id Number) Boolean
+	Shortcut.IsReturning(2, 0) and Guarding.IsReturning(2, 0) is false
+	mutable isError = false
+	for Range(start, method.instructions.Length)
+		let entry = method.instructions(value)
+		isError = isError or entry.kind is InstructionType.Invoke and "Strict/Error" is in entry.texts
+		if entry.kind is InstructionType.JumpEnd and entry.payload(0) is id
+			return method.instructions(value - 1).kind is InstructionType.Return and isError is false
+	false
 IsDropped(entry InstructionEntry) Boolean
 	Twice.IsDropped(Twice.method.instructions(0)) is false
 	Twice.IsDropped(Logging)

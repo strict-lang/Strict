@@ -106,8 +106,7 @@ IsKept(at Number) Boolean
 	let steps = function.method.instructions
 	for steps
 		let isValue = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is "value" else false
-		let isOther = isValue and index is not at
-		if isOther and MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) is false
+		if isValue and index is not at and MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) is false
 			return false
 	true
 Element(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts

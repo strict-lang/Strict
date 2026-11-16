@@ -42,11 +42,10 @@ Weights(logging Logger, name Text, path Text) MachineUse slow
 IsForced(arguments Texts) Boolean
 	MachineUse.IsForced(("--quality", "best", Force))
 	Force is in arguments or Process.Variable("STRICT_FORCE") is "1"
-IsChecked(arguments Texts, root Text) Boolean
+IsChecked(arguments Texts, root Text) Boolean slow
 	MachineUse.IsChecked(List(Text) + Resident.Stopping, "artifacts/h3test") is false
 	MachineUse.IsChecked(("--quality", "best"), "artifacts/missing")
-	let isResident = Local is in arguments is false and File(root + Resident.Stamp).Exists
-	(isResident or arguments is (Resident.Stopping)) is false
+	(Local is in arguments is false and File(root + Resident.Stamp).Exists or arguments is (Resident.Stopping)) is false
 Needed Text
 	MachineUse(Logger, "H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
 	let mode = isForced then "force" else "wait"

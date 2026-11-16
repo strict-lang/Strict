@@ -51,8 +51,7 @@ LeadingEnd(body SyntaxNode, block CodeBlock) Number
 	Reading.Without(BodyParser("Run", "\tRead.attack", "\tattack").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.LeadingEnd(Declared, CodeBlock.Empty) is 2
 	for body.children
-		let isLast = index is body.children.Length - 1
-		if isLast or (IsTest(value, true, block) or IsTestConstant(body, index, block)) is false
+		if index is body.children.Length - 1 or (IsTest(value, true, block) or IsTestConstant(body, index, block)) is false
 			return index
 	body.children.Length
 IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
@@ -61,8 +60,7 @@ IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
 	Plain.IsTestConstant(Undeclared, 0, CodeBlock.Empty) is false
 	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty)
 	let line = body.children(position)
-	let isDeclared = line.Kind is "Declaration" and line.text.StartsWith("constant ")
-	let isNext = isDeclared and position + 2 < body.children.Length
+	let isNext = line.Kind is "Declaration" and line.text.StartsWith("constant ") and position + 2 < body.children.Length
 	isNext and (IsTest(body.children(position + 1), true, block) or IsTestConstant(body, position + 1, block))
 IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
