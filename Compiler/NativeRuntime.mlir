@@ -18988,6 +18988,11 @@
     %hasResident = arith.cmpi ne, %resident, %none : i64
     %hasFailure = arith.cmpi ne, %failure, %none : i64
     %isPrepared = arith.andi %hasResident, %hasFailure : i1
+    cf.cond_br %hasResident, ^asyncPrepared, ^asyncFull
+  ^asyncFull:
+    func.call @strict_gpu_full(%name, %singleBytes) : (!llvm.ptr, i64) -> ()
+    cf.br ^release
+  ^asyncPrepared:
     cf.cond_br %isPrepared, ^asyncFlush, ^asyncFailed
   ^asyncFlush:
     %residentSlot = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -19111,6 +19116,18 @@
   llvm.mlir.global internal @strict_gpu_failure(0 : i64) : i64
   llvm.mlir.global internal @strict_gpu_mutex(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_broken_text("\3D\00\00\00\00\00\00\00\3D\00\00\00\00\00\00\00Error: the GPU stopped, out of GPU memory or a launch failed\0A\00") : !llvm.array<78 x i8>
+  llvm.mlir.global internal constant @strict_gpu_full_text("\AA\00\00\00\00\00\00\00\AA\00\00\00\00\00\00\00Error: GpuMemoryFull: the GPU loop %s needs %lld MB, the GPU memory has no room left for it. To make this fit into your GPU VRAM, please reduce resolution and/or length.\0A\00") : !llvm.array<187 x i8>
+  // a loop that belongs on the GPU and finds no room for its result ends the program instead of running on the CPU
+  func.func private @strict_gpu_full(%name: !llvm.ptr, %bytes: i64) {
+    %megabyte = arith.constant 1048576 : i64
+    %megabytes = arith.divui %bytes, %megabyte : i64
+    %formatLengths = llvm.mlir.addressof @strict_gpu_full_text : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %printed = llvm.call @printf(%format, %name, %megabytes) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64) -> i32
+    %code = arith.constant 1 : i32
+    llvm.call @exit(%code) : (i32) -> ()
+    return
+  }
   llvm.mlir.global internal constant @strict_gpu_failed_text("\30\00\00\00\00\00\00\00\30\00\00\00\00\00\00\00Error: a loop on the GPU read outside of a list\0A\00") : !llvm.array<65 x i8>
   func.func private @strict_gpu_class(%bytes: i64) -> i64 {
     %none = arith.constant 0 : i64
@@ -22158,8 +22175,9 @@
   llvm.mlir.global internal @strict_gpu_transposed_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // device address, size and next offset of the 8 bit numbers made for dot products, one stream runs everything in order
   // so a quantization only overwrites bytes of dot products that ran already, it grows to 4 times a list that needs more
-  // than a quarter (the inputs of a long prompt)
-  llvm.mlir.global internal @strict_gpu_scratch(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>
+  // than a quarter (the inputs of a long prompt), to twice when that does not fit, then a half is free for a list (keys and
+  // values of a 720p H3 video), the fourth number is that shift (1, else a quarter)
+  llvm.mlir.global internal @strict_gpu_scratch(dense<0> : tensor<4xi64>) : !llvm.array<4 x i64>
   llvm.mlir.global internal constant @strict_gpu_dp4a_switch("\0B\00\00\00\00\00\00\00\0B\00\00\00\00\00\00\00STRICT_DP4A\00") : !llvm.array<28 x i8>
   llvm.mlir.global internal @strict_gpu_dp4a_state(0 : i64) : i64
   // 1 while strict_gpu_tokens runs the dot products of rows that keep their tokens (strict_gpu_rows_kept)
@@ -22253,6 +22271,7 @@
   // (above 0) become strict_device_values_transposed's numbers per number
   func.func private @strict_gpu_quantized(%ptx: !llvm.ptr, %view: !llvm.ptr, %transposed: i64) {
     %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
     %two = arith.constant 2 : i64
     %three = arith.constant 3 : i64
     %four = arith.constant 4 : i64
@@ -22313,6 +22332,7 @@
     %scratch = llvm.mlir.addressof @strict_gpu_scratch : !llvm.ptr
     %capacitySlot = llvm.getelementptr %scratch[1] : (!llvm.ptr) -> !llvm.ptr, i64
     %nextSlot = llvm.getelementptr %scratch[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %shareSlot = llvm.getelementptr %scratch[3] : (!llvm.ptr) -> !llvm.ptr, i64
     %base = llvm.load %scratch : !llvm.ptr -> i64
     %hasBase = arith.cmpi ne, %base, %none : i64
     cf.cond_br %hasBase, ^place(%base : i64), ^obtain
@@ -22326,22 +22346,32 @@
     cf.cond_br %obtained, ^place(%block : i64), ^done
   ^place(%start: i64):
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
-    %quarter = arith.shrui %capacity, %two : i64
+    %shareShift = llvm.load %shareSlot : !llvm.ptr -> i64
+    %halved = arith.cmpi eq, %shareShift, %one : i64
+    %share = arith.select %halved, %one, %two : i64
+    %quarter = arith.shrui %capacity, %share : i64
     %small = arith.cmpi ule, %bytes, %quarter : i64
     cf.cond_br %small, ^offset, ^grow
   ^grow:
     %roomy = arith.shli %bytes, %two : i64
     %grownClass = func.call @strict_gpu_class(%roomy) : (i64) -> i64
-    %grown = func.call @strict_gpu_obtain(%grownClass) : (i64) -> i64
-    %hasGrown = arith.cmpi ne, %grown, %none : i64
-    cf.cond_br %hasGrown, ^replace, ^done
-  ^replace:
+    %roomiest = func.call @strict_gpu_obtain(%grownClass) : (i64) -> i64
+    %hasRoomiest = arith.cmpi ne, %roomiest, %none : i64
+    cf.cond_br %hasRoomiest, ^replace(%roomiest, %grownClass, %two : i64, i64, i64), ^halfGrow
+  ^halfGrow:
+    %pair = arith.shli %bytes, %one : i64
+    %pairClass = func.call @strict_gpu_class(%pair) : (i64) -> i64
+    %paired = func.call @strict_gpu_obtain(%pairClass) : (i64) -> i64
+    %hasPaired = arith.cmpi ne, %paired, %none : i64
+    cf.cond_br %hasPaired, ^replace(%paired, %pairClass, %one : i64, i64, i64), ^done
+  ^replace(%grown: i64, %chosenClass: i64, %grownShift: i64):
     %oldClass = func.call @strict_gpu_class(%capacity) : (i64) -> i64
     func.call @strict_gpu_give(%start, %oldClass) : (i64, i64) -> ()
-    %grownSize = func.call @strict_gpu_class_size(%grownClass) : (i64) -> i64
+    %grownSize = func.call @strict_gpu_class_size(%chosenClass) : (i64) -> i64
     llvm.store %grown, %scratch : i64, !llvm.ptr
     llvm.store %grownSize, %capacitySlot : i64, !llvm.ptr
     llvm.store %none, %nextSlot : i64, !llvm.ptr
+    llvm.store %grownShift, %shareSlot : i64, !llvm.ptr
     cf.br ^place(%grown : i64)
   ^offset:
     %next = llvm.load %nextSlot : !llvm.ptr -> i64
@@ -23208,7 +23238,10 @@
     llvm.store %positions, %transposedRowsSlot : i64, !llvm.ptr
     llvm.store %valueStart, %transposedOffsetSlot : i64, !llvm.ptr
     llvm.store %valueDistance, %transposedStrideSlot : i64, !llvm.ptr
-    %result = func.call @strict_gpu_run(%ptx, %chosenName, %chosenSlot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %bytesDots, %chosenLanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    // the result as bfloat16 (packed 17, all bits above for the GPU minimum) from 2^20 numbers on: attention results are
+    // activations, half the memory (a 720p H3 video has 747M of them)
+    %brainResults = arith.constant -239 : i64
+    %result = func.call @strict_gpu_run(%ptx, %chosenName, %chosenSlot, %queryCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %bytesDots, %chosenLanes, %none, %brainResults, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %widthSlot : i64, !llvm.ptr
     llvm.store %none, %transposedSettings : i64, !llvm.ptr
     return %result : f64
