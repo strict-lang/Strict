@@ -611,12 +611,16 @@
   }
   // the millisecond tick Sampler.Taken took last, one sample per millisecond of the whole process (SampledFrame)
   llvm.mlir.global internal @strict_sampler_tick(-1.0e+300 : f64) : f64
+  // a tick is taken when it is not negative (like Sampler.Taken in Strict) and differs from the tick before it
   func.func private @strict_sampler_taken(%self: f64, %tick: f64) -> f64 {
     %slot = llvm.mlir.addressof @strict_sampler_tick : !llvm.ptr
     %last = llvm.load %slot : !llvm.ptr -> f64
     %isNew = arith.cmpf une, %last, %tick : f64
+    %noTick = arith.constant 0.0 : f64
+    %isTick = arith.cmpf oge, %tick, %noTick : f64
+    %isTaken = arith.andi %isNew, %isTick : i1
     llvm.store %tick, %slot : f64, !llvm.ptr
-    %taken = func.call @strict_boolean(%isNew) : (i1) -> f64
+    %taken = func.call @strict_boolean(%isTaken) : (i1) -> f64
     return %taken : f64
   }
   // the slots of a VM frame (flag 256 on their block): writes into it are not counted, a copy of it is rooted too, a
@@ -10722,8 +10726,11 @@
     %inPlace = arith.andi %newest, %growable : i1
     cf.cond_br %inPlace, ^check_alone, ^copy
   ^check_alone:
-    // no heap object holds this view (only locals): an older version of it is not kept, write in place
-    %alone = func.call @strict_rc_unshared(%list) : (f64) -> i1
+    // only the unshared slots of a VM frame are written in place: this write is versioned because the compiler could
+    // not prove its variable owns the list, another local may still read the older version (no count sees locals)
+    %rooted = func.call @strict_rc_rooted(%list) : (f64) -> i1
+    %unshared = func.call @strict_rc_unshared(%list) : (f64) -> i1
+    %alone = arith.andi %rooted, %unshared : i1
     cf.cond_br %alone, ^direct, ^check_separate
   ^direct:
     %directBits = llvm.load %holder : !llvm.ptr -> f64
@@ -17309,7 +17316,11 @@
   ^unready:
     return %ready : i1
   ^open:
+    // opening the device is once per run like a shared constant: it does not count for the test that needed it first
+    %noBudget = arith.constant 0.0 : f64
+    %budgetEntered = func.call @strict_testbudget_entered(%noBudget) : (f64) -> f64
     %opened = func.call @strict_gpu_open() : () -> i1
+    %budgetLeft = func.call @strict_testbudget_left(%noBudget, %budgetEntered) : (f64, f64) -> f64
     %two = arith.constant 2 : i64
     %result = arith.select %opened, %one, %two : i64
     llvm.store %result, %stateSlot : i64, !llvm.ptr
