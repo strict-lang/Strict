@@ -90,4 +90,4 @@ Stopped(deadline Number, step = 1) Text
 	MutationCache.Stopped(0.001, 2) is ""
 	if step % Frame.CheckSteps is not 1
 		return ""
-	(deadline > 0) and (Process.Elapsed > deadline) then "Timeout" else TestBudget.Expired
+	(deadline > 0 then Process.Elapsed > deadline else false) then "Timeout" else TestBudget.Expired

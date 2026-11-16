@@ -1,0 +1,52 @@
+has logger
+constant SourcePath = "MachineLearning/MarkovText.strict"
+constant OriginalUrl = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+constant OriginalData = "MachineLearning/shakespeare.txt"
+constant ToolSeconds = 60
+constant ReplyText = "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+constant ServerHead = ("has logger", "Run(arguments Texts)", "	let server = Socket.Local(0)")
+constant ServerBody = ("	File(arguments(0)).Write(List(Text) + (Socket.Port(server) to Text))", "	let client = Socket.Accept(server)")
+constant ServerReply = ("	let request = Socket.Receive(client, 1)", "	if request is not Error", "		Socket.Send(client, (ReplyBytes))", "	Socket.Close(client)", "	Socket.Close(server)")
+constant ClientHead = ("has logger", "Run(arguments Texts) Number", "	Waited(arguments(0))")
+constant ClientPatch = ("	let port = File(arguments(0)).ReadLines.First.Trim", "	let target = arguments(1) + \"/missing.txt\"", "	let raw = Text.Combine(File(\"SRC\").ReadLines, \"\\n\")")
+constant ClientWrite = ("	let hasChain = raw.Replace(\"has logger\", \"has logger\\nhas chain MachineLearning/Markov\")", "	let url = \"http://127.0.0.1:\" + port + \"/missing\"")
+constant ClientSave = ("	let source = arguments(1) + \"/MarkovText.strict\"", "	File(source).Write(hasChain.Replace(\"URL\", url).Replace(\"DATA\", target).Split(\"\\n\"))")
+constant ClientBuildA = ("	let isNative = arguments.Length > 2", "	let built = isNative then Process.RunTool(\"strict\", \"build \" + source, 60) else ProcessResult(0, \"\", \"\")")
+constant ClientBuildB = ("	if built.exitCode is not 0", "		return 1")
+constant ClientRunA = List(Text) + "	let exe = arguments(1) + \"/MarkovText\" + (Process.OperatingSystem is \"Windows\" then \".exe\" else \"\")"
+constant ClientRunB = List(Text) + "	let res = Process.RunTool(isNative then exe else \"strict\", isNative then \"\" else source, 60)"
+constant ClientCheckA = ("	if (res.exitCode is 0) or (\"download failed\" is not in res.Output.Lower) or File(target).Exists", "		return 1")
+constant ClientCheckB = ("	logger.Log(\"MarkovText reports the download failure without publishing a partial corpus\")", "	0")
+constant ClientHelper = ("Waited(portFile Text)", "	for 200", "		if File(portFile).Exists", "			return 0", "		Process.Wait(0.05)")
+Run(arguments Texts) Number
+	let folder = "Examples/DownloadCheck" + 1000000.Random.Floor
+	let result = Checked(folder, "native" is in arguments)
+	Directory.Delete(folder)
+	result is Error then result else 0
+Checked(folder Text, isNative Boolean)
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	File(folder + "/Server.strict").Write(ServerLines)
+	File(folder + "/Client.strict").Write(ClientLines)
+	let commands = ("run " + folder + "/Server.strict " + folder + "/port.txt", ClientArgs(folder, isNative))
+	let results = Process.RunTools("strict", commands, ToolSeconds)
+	if (results.First.exitCode is not 0) or (results.Last.exitCode is not 0)
+		let err = results.First.Output + results.First.error + " | " + results.Last.Output + results.Last.error
+		return Error("DownloadCheckFailed: " + err)
+	logger.Log(results.Last.Output.Trim)
+ClientArgs(folder Text, isNative Boolean) Text
+	"run " + folder + "/Client.strict " + folder + "/port.txt " + folder + (isNative then " native" else "")
+ServerLines Texts
+	ServerHead + ServerBody + PatchedReply(ReplyBytes)
+PatchedReply(reply Text) Texts
+	for ServerReply
+		value.Replace("ReplyBytes", reply)
+ReplyBytes Text
+	Text.Combine(ReplyByteTexts, ", ")
+ReplyByteTexts Texts
+	for ByteEncoder.Empty.UnicodeBytes(ReplyText)
+		value to Number to Text
+ClientLines Texts
+	let runs = ClientBuildA + ClientBuildB + ClientRunA + ClientRunB + ClientCheckA + ClientCheckB + ClientHelper
+	for ClientHead + ClientPatch + ClientWrite + ClientSave + runs
+		value.Replace("SRC", SourcePath).Replace("URL", OriginalUrl).Replace("DATA", OriginalData)

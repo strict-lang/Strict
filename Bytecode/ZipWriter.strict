@@ -1,4 +1,5 @@
 has entries List(ZipEntry)
+has withChecksums Boolean = true
 constant DosDate = 20513
 constant Sample = ZipWriter(ZipEntry("a", (104, 105)), ZipEntry("b", (1, 2)))
 Bytes Numbers
@@ -6,7 +7,7 @@ Bytes Numbers
 	mutable local = List(Mutable(Number))
 	mutable central = List(Mutable(Number))
 	for entries
-		let checksum = value.Checksum
+		let checksum = withChecksums then value.Checksum else 0
 		central = central + CentralHeader(value, checksum, local.Length)
 		local = local + LocalHeader(value, checksum) + value.content
 	local + central + EndRecord(central.Length, local.Length)

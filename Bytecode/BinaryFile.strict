@@ -20,7 +20,7 @@ Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
 		entries.Add(ZipEntry(value.Name + ".bytecode", value.Bytes))
 	if links.Length > 0
 		entries.Add(ZipEntry("links", ByteEncoder.Empty.UnicodeBytes(Text.Combine(links, "\n"))))
-	for ZipWriter(entries).Bytes
+	for ZipWriter(entries, false).Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
@@ -40,7 +40,7 @@ Rewritten(header Numbers, own TypeEntry, rest List(ZipEntry)) Bytes
 	for rest
 		if index > 1
 			entries.Add(value)
-	for ZipWriter(entries).Bytes
+	for ZipWriter(entries, false).Bytes
 		Byte(value)
 Ended(bytes Bytes, position Number) Number
 	Probe.Ended(List(Byte), 0) is -1
@@ -67,7 +67,20 @@ Header(bytes Bytes, position Number) ZipReader
 IsFresh(entries List(ZipEntry)) Boolean
 	Probe.IsFresh(Packing)
 	Probe.IsFresh(Packing + ZipEntry("links", ByteEncoder.Empty.UnicodeBytes("Missing\tStrict/Missing\t"))) is false
-	Current(entries).Length > 0
+	if (IsCurrent(entries) is false) or (entries.Length < 2) or (entries(1).Name.EndsWith(".bytecode") is false)
+		return false
+	let own = List(TypeEntry) + EntryDecoder.Of(entries(1).content).Type
+	for entries.Last.Name is "links" then BinaryLinks(BinaryFile(source)).Resolved(own, entries.Last) else own
+		if value.Name is ""
+			return false
+	true
+Unchecked(paths Texts) Texts
+	Probe.Unchecked(List(Text) + "./Missing.strict") is ("./Missing.strict")
+	for paths
+		let cache = BinaryFile(value)
+		let header = File(cache.Path).Exists then cache.Head(File(cache.Path).ReadBytes) else List(ZipEntry)
+		if (header.Length is 0) or (cache.IsCurrent(header) is false)
+			value
 Current(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Current(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	Probe.Current(Outdated).Length is 0

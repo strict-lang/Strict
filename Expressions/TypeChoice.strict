@@ -9,8 +9,11 @@ Chosen(files Texts, source Text) Texts
 	Qualified.Chosen(Project, "./Content/Catalog.strict") is ("./WebWars/Scene.strict", "./WebWars/Unit.strict")
 	Plain.Chosen(Project, "./Content/Catalog.strict") is Project
 	let names = Names(files)
+	mutable counts = Dictionary(Text, Number)
+	for names
+		counts(value) = (value is in counts then counts(value) else 0) + 1
 	for files
-		let best = names.Count(names(index)) is 1 then value else Best(SameNamed(files, names, names(index)), source)
+		let best = counts(names(index)) is 1 then value else Best(SameNamed(files, names, names(index)), source)
 		if (best is "") or (best is value)
 			value
 Names(files Texts) Texts
@@ -18,7 +21,9 @@ Names(files Texts) Texts
 	Plain.Best(("./WebWars/Scene.strict"), "./Content/Catalog.strict") is "./WebWars/Scene.strict"
 	Plain.Names(Project) is ("Scene.strict", "Scene.strict", "Unit.strict")
 	for files
-		Path(value.Replace("\\", "/")).FileName.text
+		let slashed = value.IndexOf("\\") >= 0 then value.Replace("\\", "/") else value
+		let slash = slashed.LastIndexOf("/")
+		slash < 0 then slashed else slashed.Substring(slash + 1, slashed.Length - slash - 1)
 SameNamed(files Texts, names Texts, name Text) Texts
 	Plain.Best(("x\\Scene.strict", "y\\Scene.strict"), "y\\Game.strict") is "y\\Scene.strict"
 	Plain.SameNamed(Project, Plain.Names(Project), "Scene.strict").Length is 2

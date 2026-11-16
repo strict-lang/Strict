@@ -19,7 +19,7 @@ Methods Texts
 	Reading.Methods is ("Next", "Twice", "Size")
 	Changes(("has count Number", "Next Number", "\tcount"), true).Methods.Length is 0
 	Changes(("has count Number = 1", "Sum(items Numbers) Number", "\tfor items", "\t\tvalue"), true).Methods.Length is 0
-	let members = isReading and (IsDefaulted is false) then List(Text) else Members
+	let members = isReading then (IsDefaulted then Members else List(Text)) else Members
 	mutable changing = List(Text)
 	mutable found = members.Length is 0 then List(Text) else Found(members, changing)
 	for as long as found.Length > changing.Length
@@ -30,22 +30,35 @@ IsDefaulted Boolean
 	Reading.IsDefaulted
 	Changes(List(Text) + "has count Number").IsDefaulted is false
 	for lines
-		if TypeShape(lines).IsMemberLine(value) and (value.StartsWith("constant ") is false) and (value.IndexOf(" = ") > 0)
-			return true
+		if value.IndexOf(" = ") > 0
+			if TypeShape(lines).IsMemberLine(value) and (value.StartsWith("constant ") is false)
+				return true
 	false
 Found(members Texts, changing Texts) Texts
-	Ticking.Found(("count"), List(Text)) is ("Next")
-	Ticking.Found(("count"), ("Next")) is ("Next", "Twice")
+	Ticking.Found(("count"), List(Text)) is ("Next") and (Ticking.Found(("count"), ("Next")) is ("Next", "Twice"))
 	let shape = TypeShape(lines)
 	mutable method = ""
 	mutable result = List(Mutable(Text))
 	for lines
-		if shape.IsMethodHeader(value)
+		if value.StartsWith("\t")
+			if method is not in result
+				if MightMention(value, members, changing) and IsChanging(Tokens(index), members, changing)
+					result.Add(method)
+		else if shape.IsMethodHeader(value)
 			method = Tokenizer(value).Tokens.First
-		else if value.StartsWith("\t") and (method is not in result)
-			if IsChanging(Tokens(index), members, changing)
-				result.Add(method)
 	result
+MightMention(line Text, members Texts, changing Texts) Boolean
+	Ticking.MightMention("\tcount = count + 1", ("count"), List(Text))
+	Ticking.MightMention("\tother + 1", ("count"), List(Text)) is false
+	if isReading and (line.IndexOf("value") >= 0)
+		return true
+	for members
+		if line.IndexOf(value) >= 0
+			return true
+	for changing
+		if line.IndexOf(value) >= 0
+			return true
+	false
 Tokens(at Number) Texts
 	Reading.Tokens(3) is ("count", "=", "count", "+", "step")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1")).Tokens(2) is ("value", "+", "1")

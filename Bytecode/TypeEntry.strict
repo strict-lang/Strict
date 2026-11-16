@@ -73,14 +73,19 @@ ShortName(typeName Text) Text
 	HelloLogger.ShortName("Strict/List(TypeEntry)") is "List(TypeEntry)"
 	HelloLogger.ShortName("Number") is "Number"
 	HelloLogger.ShortName("Strict/List(Mutable(Text))") is "List(Text)"
-	if typeName.IndexOf("Mutable(") is not -1
-		return ShortName(typeName.Replace("Mutable(", "").Substring(0, typeName.Length - 9))
 	let open = typeName.IndexOf("(")
-	let slash = (open < 0 then typeName else typeName.Substring(0, open)).LastIndexOf("/")
+	if open < 0
+		let slash = typeName.LastIndexOf("/")
+		return slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
+	if typeName.IndexOf("Mutable(") >= 0
+		return ShortName(typeName.Replace("Mutable(", "").Substring(0, typeName.Length - 9))
+	let slash = typeName.Substring(0, open).LastIndexOf("/")
 	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
 Based(typeName Text) Text
 	HelloLogger.Based("Strict/List(Strict/Number)") is "List"
 	HelloLogger.Based("Strict/Number") is "Number"
+	if typeName is in ("Number", "Text", "Boolean", "List", "None")
+		return typeName
 	let short = ShortName(typeName)
 	let open = short.IndexOf("(")
 	open < 0 then short else short.Substring(0, open)
@@ -103,7 +108,12 @@ IsStruct Boolean
 	TypeEntry("Strict/File", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).IsStruct
 	Initialized.IsStruct and TypeEntry("Strict/S", List(MemberEntry) + Lighting, MethodEntry.HelloRun).IsStruct
 	TypeEntry("Strict/S", (CharacterEntry.members.First, CharacterEntry.members.First), List(MethodEntry)).IsStruct
-	(IsBaseName(ShortName(Name)) is false) and (Wrapped is "")
+	let short = ShortName(Name)
+	if IsBaseName(short) or (short is in ("Logger", "File"))
+		return short is in ("Logger", "File")
+	if (members.Length is 0) or (methods.Length > 0)
+		return (members.Length is 0) or (Changing.Length is not 1)
+	(Changing.Length is not 1) and ((Changing.Length > 0) or (members.First.typeName is not "Strict/Number"))
 Changing List(MemberEntry)
 	HelloLogger.Changing.Length is 1
 	TypeEntry("A", List(MemberEntry) + MemberEntry.SevenMember, List(MethodEntry)).Changing.Length is 0

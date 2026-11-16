@@ -11,10 +11,23 @@ Parameters Scope
 	Defaulting.Parameters.TypeOf("Add z default") is "Basis . None"
 	HeaderEntries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).Parameters.TypeOf("B a step") is "0.5"
 	HeaderEntries(HeaderTokens(Tokenizer("T(a Number) Number with Step 0.5").Tokens)).Parameters.TypeOf("T step") is "0.5"
+	let steps = "Step" is in header.tokens then Steps(header.tokens).Entries(header) else KnownTypes.NoMembers
+	WithModifiers(steps.names.Length > 0 then Summary.WithAll(steps.names, steps.types) else Summary)
+Summary Scope
+	(Adding.Summary.TypeOf("Add required") is "1") and (Defaulting.Summary.TypeOf("Add z default") is "Basis . None")
 	let name = header.tokens(0)
-	let parameters = (Text.Combine(header.ParameterNames, ","), Text.Combine(ParameterTypes, ","), Required to Text)
-	let steps = Defaults(Steps(header.tokens).Entries(header))
-	let entries = Scope((name, name + " types", name + " required"), parameters).WithAll(steps.names, steps.types)
+	if header.ParametersEnd is 0
+		return Scope((name, name + " types", name + " required"), ("", "", "0"))
+	let names = header.ParameterNames
+	let hasDefaults = "=" is in header.tokens
+	let key = (name, name + " types", name + " required")
+	let required = hasDefaults then Required to Text else names.Length to Text
+	let entries = Scope(key, (Text.Combine(names, ","), Text.Combine(ParameterTypes, ","), required))
+	hasDefaults then Defaults(entries) else entries
+WithModifiers(entries Scope) Scope
+	Adding.WithModifiers(KnownTypes.NoMembers).names.Length is 0
+	Mutating.WithModifiers(KnownTypes.NoMembers).TypeOf("Add mutable") is "Mutable"
+	let name = header.tokens(0)
 	let marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
 	header.ReturnsMutable then marked.With(name + " mutable", "Mutable") else marked
 ParameterTypes Texts
@@ -41,19 +54,22 @@ Defaults(scope Scope) Scope
 	mutable names = List(Mutable(Text))
 	mutable values = List(Mutable(Text))
 	for header.ParametersEnd
-		if (index > 1) and header.IsParameterStart(index) and (Default(index).Length > 0)
-			names.Add(header.tokens(0) + " " + header.tokens(index) + " default")
-			values.Add(Text.Combine(Default(index), " "))
+		if (index > 1) and header.IsParameterStart(index)
+			let tokens = Default(index)
+			if tokens.Length > 0
+				names.Add(header.tokens(0) + " " + header.tokens(index) + " default")
+				values.Add(Text.Combine(tokens, " "))
 	scope.WithAll(names, values)
 Default(position Number) Texts
-	Defaulting.Default(5) is ("List", "(", "Text", ")")
-	Defaulting.Default(2).Length is 0
+	(Defaulting.Default(5) is ("List", "(", "Text", ")")) and (Defaulting.Default(2).Length is 0)
+	mutable depth = 1
 	mutable tokens = List(Mutable(Text))
 	mutable isDefault = false
 	for Range(position + 1, header.ParametersEnd)
 		let token = header.tokens(value)
-		if (header.Depth(value) is 1) and (token is in (",", "with"))
+		if (depth is 1) and (token is in (",", "with"))
 			return tokens
 		tokens = isDefault then tokens + token else tokens
-		isDefault = isDefault or ((token is "=") and (header.Depth(value) is 1))
+		isDefault = isDefault or ((depth is 1) and (token is "="))
+		depth = depth + (token is "(" then 1 else (token is ")" then -1 else 0))
 	tokens

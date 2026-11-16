@@ -1,0 +1,50 @@
+has logger
+constant ToolSeconds = 260
+constant CompileSeconds = 60
+constant MegaByte = 1048576
+constant LimitBytes = 1073741824
+constant WinA = ("#define _CRT_SECURE_NO_WARNINGS", "#include <windows.h>", "#include <psapi.h>", "#include <stdio.h>")
+constant WinB = ("int main(int c,char**v){STARTUPINFOA si={sizeof(si)};PROCESS_INFORMATION pi={0};")
+constant WinC = ("  HANDLE job=CreateJobObjectA(0,0);JOBOBJECT_EXTENDED_LIMIT_INFORMATION j={0};")
+constant WinD = ("  j.BasicLimitInformation.LimitFlags=JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;SetInformationJobObject(job,9,&j,sizeof(j));")
+constant WinE = ("  if(!CreateProcessA(0,v[1],0,0,1,0,0,0,&si,&pi))return 2;AssignProcessToJobObject(job,pi.hProcess);")
+constant WinF = ("  DWORD w=WaitForSingleObject(pi.hProcess,240000);DWORD code=1;GetExitCodeProcess(pi.hProcess,&code);")
+constant WinG = ("  if(w==WAIT_TIMEOUT){TerminateJobObject(job,1);CloseHandle(job);return 3;}")
+constant WinH = ("  PROCESS_MEMORY_COUNTERS pmc={sizeof(pmc)};GetProcessMemoryInfo(pi.hProcess,&pmc,sizeof(pmc));")
+constant WinI = ("  printf(\"PEAK:%llu CODE:%lu\\n\",(unsigned long long)pmc.PeakWorkingSetSize,(unsigned long)code);")
+constant WinJ = ("  CloseHandle(pi.hThread);CloseHandle(pi.hProcess);CloseHandle(job);return code!=0;}")
+constant NixA = ("#include <sys/resource.h>", "#include <sys/wait.h>", "#include <unistd.h>", "#include <stdio.h>", "#include <signal.h>")
+constant NixB = ("int main(int c,char**v){pid_t p=fork();if(p==0){setpgid(0,0);execvp(v[1],v+1);_exit(2);}")
+constant NixC = ("  int st=0;for(int i=0;i<2400;i++){if(waitpid(p,&st,WNOHANG)==p)break;usleep(100000);}")
+constant NixD = ("  if(!WIFEXITED(st)){kill(-p,SIGKILL);waitpid(p,&st,0);return 3;}struct rusage r;getrusage(RUSAGE_CHILDREN,&r);")
+constant NixE = ("#ifdef __APPLE__\n  unsigned long long k=1;\n#else\n  unsigned long long k=1024;\n#endif")
+constant NixF = ("  int code=WEXITSTATUS(st);printf(\"PEAK:%llu CODE:%d\\n\",(unsigned long long)r.ru_maxrss*k,code);return code!=0;}")
+Run Number
+	let folder = "Compiler/output/Emission" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder)
+	Directory.Delete(folder)
+	result is Error then result else 0
+Checked(folder Text) Boolean
+	let isWin = Process.OperatingSystem is "Windows"
+	let cFile = folder + "/run.c"
+	let exe = folder + "/run" + (isWin then ".exe" else "")
+	File(cFile).Write(isWin then WinLines else NixLines)
+	let flags = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (isWin then " -lpsapi" else "")
+	let comp = Process.RunTool("clang", flags, CompileSeconds)
+	if comp.exitCode is not 0
+		return Error("CompileFailed: " + comp.Output + comp.error)
+	let started = Process.Elapsed
+	let cmd = "\"" + Process.Current.executable + "\" test Math/Matrix.strict . native"
+	Reported(Process.RunTool(exe, isWin then "\"" + cmd + "\"" else cmd, ToolSeconds), Process.Elapsed - started)
+Reported(res ProcessResult, elapsed Number) Boolean
+	if res.exitCode is not 0
+		return Error("Matrix native tests failed (" + res.exitCode + "): " + res.Output + res.error)
+	let peakBytes = Text.Combine(Regex("PEAK:(\\d+)").Groups(res.Output), "") to Number
+	logger.Log("Matrix: " + (peakBytes / MegaByte).Round(0) + " MB peak, " + elapsed.Round(2) + " s")
+	peakBytes >= LimitBytes then Error("Matrix compilation exceeded 1 GB") else true
+WinLines Texts
+	WinA + WinB + WinC + WinD + WinE + WinF + WinG + WinH + WinI + WinJ
+NixLines Texts
+	NixA + NixB + NixC + NixD + NixE + NixF

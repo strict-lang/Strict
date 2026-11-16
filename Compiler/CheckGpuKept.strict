@@ -1,0 +1,58 @@
+has logger
+constant BuildSeconds = 180
+constant ToolSeconds = 60
+constant ProgramA = ("has logger", "Run", "	let file = Safetensors(\"kept.safetensors\", 32)", "	let tokens = file.Values(\"tokens\")")
+constant ProgramB = ("	let plain = Batch(file.Quantized(\"w\"), Layer.Unbiased).Sums(tokens)", "	let kept = Batch(file.Quantized(\"w\", 32), Layer.Unbiased).Sums(tokens)")
+constant ProgramC = ("	logger.Log((Safetensors(\"plain.safetensors\").Written(\"sums\", plain) + Safetensors(\"kept.out.safetensors\").Written(\"sums\", kept)) to Text)")
+constant CHead = ("#define _CRT_SECURE_NO_WARNINGS", "#include <math.h>", "#include <stdint.h>", "#include <stdio.h>", "#include <stdlib.h>", "#include <string.h>")
+constant CHelpA = ("static uint32_t rng=7;static float uf(float a,float b){rng=rng*1664525u+1013904223u;return a+(rng>>8)*(b-a)/16777216.0f;}")
+constant CHelpB = ("static int8_t ri8(void){rng=rng*1664525u+1013904223u;return(int8_t)(-127+(int)((rng>>8)%255));}", "static float rnf(void){float u=uf(1e-7f,1),v=uf(0,1);return sqrtf(-2.0f*logf(u))*cosf(6.2831853f*v);}")
+constant CWriteA = ("static void write_sf(const char*p,int tok,int8_t*w,float*sc,float*inp){char hdr[512];", "  size_t wb=64*256,sb=64*4,tb=(size_t)tok*256*4;")
+constant CWriteB = "  snprintf(hdr,512,\"{\\\"w.weight\\\":{\\\"dtype\\\":\\\"I8\\\",\\\"shape\\\":[64,256],\\\"data_offsets\\\":[0,%zu]},\\\"w.weight_scale\\\":"
+constant CWriteC = "{\\\"dtype\\\":\\\"F32\\\",\\\"shape\\\":[64,1],\\\"data_offsets\\\":[%zu,%zu]},\\\"tokens\\\":{\\\"dtype\\\":\\\"F32\\\",\\\"shape\\\":[%zu],\\\"data_offsets\\\":[%zu,%zu]}}\""
+constant CWriteC2 = ",wb,wb,wb+sb,(size_t)tok*256,wb+sb,wb+sb+tb);"
+constant CWriteD = ("  size_t hl=strlen(hdr),pl=hl+((-hl)&7);FILE*f=fopen(p,\"wb\");fwrite(&pl,8,1,f);fwrite(hdr,1,hl,f);for(size_t i=hl;i<pl;i++)fputc(' ',f);", "  fwrite(w,1,wb,f);fwrite(sc,1,sb,f);fwrite(inp,1,tb,f);fclose(f);}")
+constant CReadA = ("static float*read_sf(const char*p){FILE*f=fopen(p,\"rb\");uint64_t l=0;fread(&l,8,1,f);char*h=(char*)malloc(l+1);fread(h,1,l,f);h[l]=0;")
+constant CReadB = ("  const char*k=strstr(h,\"\\\"sums\\\"\");const char*o=strstr(k,\"data_offsets\\\":[\");size_t a=0,b=0;sscanf(o,\"data_offsets\\\":[%zu,%zu\",&a,&b);")
+constant CReadC = ("  fseek(f,(long)(8+l+a),SEEK_SET);float*d=(float*)malloc(b-a);fread(d,1,b-a,f);fclose(f);free(h);return d;}")
+constant CError = ("static double rel_err(float*s,double*ex,int n){double se=0,ee=0;for(int i=0;i<n;i++){double d=s[i]-ex[i];se+=d*d;ee+=ex[i]*ex[i];}return sqrt(se/ee);}")
+constant CMainA = ("int main(int c,char**v){int tok=atoi(v[1]);int8_t w[64*256];float sc[64];for(int i=0;i<64*256;i++)w[i]=ri8();")
+constant CMainB = ("  for(int i=0;i<64;i++)sc[i]=uf(0.005f,0.02f);float*inp=(float*)malloc((size_t)tok*256*4);")
+constant CMainC = ("  for(int t=0;t<tok;t++){for(int j=0;j<256;j++)inp[t*256+j]=rnf();rng=rng*1664525u+1013904223u;inp[t*256+((rng>>8)%256)]=100.0f;}")
+constant CMainD = ("  write_sf(v[2],tok,w,sc,inp);double*ex=(double*)malloc((size_t)tok*64*8);for(int t=0;t<tok;t++)for(int r=0;r<64;r++){")
+constant CMainE = ("    double s=0;for(int j=0;j<256;j++)s+=(double)inp[t*256+j]*((double)w[r*256+j]*(double)sc[r]);ex[t*64+r]=s;}if(system(v[3])!=0)return 2;")
+constant CMainF = ("  float*pl=read_sf(v[4]),*kp=read_sf(v[5]);double pe=rel_err(pl,ex,tok*64),ke=rel_err(kp,ex,tok*64);")
+constant CMainG = ("  printf(\"%d tokens: relative error of 8 bit tokens %.2e, of kept tokens %.2e\\n\",tok,pe,ke);")
+constant CMainH = ("  if(tok>=64&&(pe<=1e-3||ke>=pe/100))return 3;if(ke>=1e-3)return 4;return 0;}")
+Run Number
+	let folder = "Compiler/output/KeptTokens" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder)
+	Directory.Delete(folder)
+	result is Error then result else 0
+Checked(folder Text) Boolean
+	let src = folder + "/KeptTokens.strict"
+	File(src).Write(ProgramA + ProgramB + ProgramC)
+	let built = Process.RunTool(Process.Current.executable, "build " + src, BuildSeconds)
+	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else RanCases(folder)
+RanCases(folder Text) Boolean
+	let win = Process.OperatingSystem is "Windows"
+	let cFile = folder + "/check.c"
+	let exe = folder + "/check" + (win then ".exe" else "")
+	let head = CHead + CHelpA + CHelpB + CWriteA + (CWriteB + CWriteC + CWriteC2) + CWriteD + CReadA + CReadB + CReadC
+	File(cFile).Write(head + CError + CMainA + CMainB + CMainC + CMainD + CMainE + CMainF + CMainG + CMainH)
+	let ccArgs = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (win then "" else " -lm")
+	let comp = Process.RunTool("clang", ccArgs, ToolSeconds)
+	comp.exitCode is not 0 then Error("CompileFailed: " + comp.Output + comp.error) else RunTokenCounts(folder, exe, win)
+RunTokenCounts(folder Text, exe Text, win Boolean) Boolean
+	let env = (win then "set STRICT_GPU=all&& " else "STRICT_GPU=all ")
+	let target = "\"" + folder + "/KeptTokens" + (win then ".exe" else "") + "\""
+	for ("96", "20")
+		let args = value + " kept.safetensors " + target + " plain.safetensors kept.out.safetensors"
+		let cmd = "cd " + (win then "/d " else "") + "\"" + folder + "\" && " + env + "\"" + exe + "\" " + args
+		let ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
+		logger.Log(ran.Output.Trim)
+		if ran.exitCode is not 0
+			return Error("KeptTokensFailed: " + ran.Output + ran.error)
+	true

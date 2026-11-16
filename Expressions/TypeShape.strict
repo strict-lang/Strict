@@ -70,14 +70,7 @@ ParameterScope Scope
 	TypeShape("Add(first Number, second) Number", "\tfirst").ParameterScope.TypeOf("Add types") is "Number,Second"
 	TypeShape("Add(first Number) Mutable(Number)", "\tfirst").ParameterScope.TypeOf("Add mutable") is "Mutable"
 	TypeShape("has price Number with Step 0.01").ParameterScope.TypeOf("price step") is "0.01"
-	let methods = MethodScope
-	mutable scope = IsContract then Scope(List(Text) + " trait", List(Text) + "true") else Scope(List(Text), List(Text))
-	for lines
-		if IsMethodHeader(value)
-			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
-			scope = scope.WithAll(entries.names, entries.types)
-	let added = Changes(lines).Added(Changes(lines, true).Added(Steps(List(Text)).Members(lines)))
-	scope.WithAll(added.names, added.types)
+	Defaults(lines).Parameters(MethodScope, IsContract)
 UsesGenerics Boolean
 	TypeShape("has value Generic").UsesGenerics
 	TypeShape("has value Generic or None").UsesGenerics is false
@@ -107,11 +100,8 @@ CallScope(generics Texts) Scope
 	TypeShape("has Name", "has Value Generic", "has Size = 0").CallScope(List(Text)).TypeOf("from") is "Name,Value,Size"
 	TypeShape("has width Number with value > 0").CallScope(List(Text)).TypeOf(Constrained) is "true"
 	TypeShape("has light Number = 0").CallScope(List(Text)).TypeOf("light default") is "0"
-	constant parameters = Defaults(lines).Added(ParameterScope)
-	constant kind = Constraint.Kind(lines)
-	constant members = MemberScope
-	constant names = ConstructorNames(members, generics)
-	Defaults(lines).Constructors(kind is "" then parameters else parameters.With(Constrained, kind), names, members)
+	let members = MemberScope
+	Defaults(lines).Of(MethodScope, members, ConstructorNames(members, generics))
 ConstructorNames(members Scope, generics Texts) Texts
 	TypeShape(List(Text)).ConstructorNames(Scope(("a", "b"), ("Generic", "Generics")), List(Text)) is ("a")
 	mutable names = List(Mutable(Text))
@@ -164,15 +154,7 @@ ConstantScope Scope
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantScope.TypeOf("C") is "11"
 	TypeShape("constant Limit = 3 * 2", "has a").ConstantScope.names.Length is 1
 	TypeShape("constant A = ").ConstantScope.names.Length is 0
-	mutable names = List(Mutable(Text))
-	mutable literals = List(Mutable(Text))
-	for lines.Slice(0, MembersEnd)
-		if value.StartsWith("constant ")
-			let literal = ConstantText(index)
-			if literal is not ""
-				names.Add(Tokenizer(value).Tokens(1))
-				literals.Add(literal)
-	Scope(names, literals)
+	Defaults(lines).ConstantScope(MembersEnd)
 UsedTypes Texts
 	Measured.UsedTypes is ("Vector2")
 	mutable own = MemberScope.names + MethodScope.names

@@ -7,13 +7,23 @@ Types Texts
 	Mentions(("Run", "\tconstant Limit = 3", "\tLimit + Size")).Types is ("Size")
 	let shape = TypeShape(lines)
 	let own = shape.MemberScope.names + shape.MethodScope.names + Constants
-	mutable tokens = List(Mutable(Text))
-	for lines
-		tokens = tokens + Tokenizer(value.Trim).Names
 	let typed = Typed(shape)
-	for (tokens + typed).Unique
-		if (value is in typed) or (value is not in own)
-			value
+	Distinct(CollectedNames(lines) + typed, typed, own)
+Distinct(tokens Texts, typed Texts, own Texts) Texts
+	Mentions(List(Text)).Distinct(("a", "a", "b"), List(Text) + "b", List(Text) + "a") is ("b")
+	mutable seen = Dictionary(Text, Boolean)
+	mutable result = List(Mutable(Text))
+	for tokens
+		if (value is not in seen) and ((value is in typed) or (value is not in own))
+			seen(value) = true
+			result.Add(value)
+	result
+CollectedNames(sources Texts) Texts
+	Mentions(List(Text)).CollectedNames(("a + b", "c")) is ("a", "b", "c")
+	mutable names = List(Text)
+	for sources
+		names = names + Tokenizer(value.Trim).Names
+	names
 Typed(shape Expressions/TypeShape) Texts
 	Units.Typed(TypeShape(Units.lines)) is ("Units", "Logger", "Shape", "Number")
 	Mentions(("Size Size", "\touter.Size(1, 2)")).Types is ("Size")
@@ -23,10 +33,7 @@ Typed(shape Expressions/TypeShape) Texts
 			types = types + HeaderTokens(Tokenizer(value).Tokens).ParameterTypes
 		if value.IndexOf("outer.") >= 0
 			types = types + Outer(Tokenizer(value.Trim).Tokens)
-	mutable typed = List(Mutable(Text))
-	for types
-		typed = typed + Tokenizer(value).Names
-	typed
+	CollectedNames(types)
 Outer(tokens Texts) Texts
 	Mentions.Outer(("outer", ".", "Key", ".", "F")) is ("Key")
 	Mentions.Outer(("outer", "x", "A", "inner", ".", "B", "Key", "outer", ".")).Length is 0

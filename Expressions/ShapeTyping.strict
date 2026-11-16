@@ -19,25 +19,37 @@ Typed(shape TypeShape, scope Scope, typeName Text) Scope
 	Counting.Typed(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
 	mutable result = scope
 	for shape.lines
-		let tokens = value.StartsWith("\t") then List(Text) else Tokenizer(value).Tokens
-		if value.StartsWith("constant ")
-			result = Refined(result, tokens(1), 0, ChainType(tokens, typeName, result))
-		else if shape.IsComputed(value)
-			result = result.With(tokens(0), ComputedType(tokens, typeName, result))
-		else if shape.IsMethodHeader(value)
-			result = Refined(result, tokens(0), shape.Overload(tokens(0), index), Returned(shape, index, typeName))
+		result = TypedLine(shape, result, index, typeName)
 	result
+TypedLine(shape TypeShape, scope Scope, position Number, typeName Text) Scope
+	Counting.TypedLine(Twice, KnownTypes.NoMembers, 0, "Count").TypeOf("Twice") is "Number"
+	let line = shape.lines(position)
+	if line.StartsWith("constant ")
+		let tokens = Tokenizer(line).Tokens
+		return Refined(scope, tokens(1), 0, ChainType(tokens, typeName, scope))
+	if shape.IsComputed(line)
+		let tokens = Tokenizer(line).Tokens
+		return scope.With(tokens(0), ComputedType(tokens, typeName, scope))
+	shape.IsMethodHeader(line) then RefinedMethod(shape, scope, position, typeName) else scope
+RefinedMethod(shape TypeShape, scope Scope, position Number, typeName Text) Scope
+	Swapped.RefinedMethod(Making, KnownTypes.NoMembers, 1, "User").TypeOf("Made") is "Couple(Text, Number)"
+	let refined = Returned(shape, position, typeName)
+	if refined is ""
+		return scope
+	let name = Tokenizer(shape.lines(position)).Tokens.First
+	Refined(scope, name, shape.Overload(name, position), refined)
 Returned(shape TypeShape, position Number, typeName Text) Text
 	Swapped.Returned(Making, 1, "User") is "Couple(Text, Number)"
 	Swapped.Returned(Local, 1, "User") is "Couple(Text, Number)"
 	Swapped.Returned(Instantiation.Swapping, 2, "Couple") + Swapped.Returned(Plain, 0, "User") is "Couple(second, first)"
 	(Swapped.Returned(TypeShape("Made Couple", "\t\"a\""), 0, "User") + Swapped.Returned(Lost, 0, "User")) is ""
-	let header = HeaderTokens(Tokenizer(shape.lines(position)).Tokens)
-	let isOpen = "Generic" is in inference.types.MembersOf(header.ReturnType).types
-	if (header.ReturnType is typeName) or (isOpen is false)
-		return Instantiation(inference.types).Template(shape, position, typeName)
+	let returned = HeaderTokens(Tokenizer(shape.lines(position)).Tokens).ReturnType
+	if returned is typeName
+		return shape.UsesGenerics then Instantiation(inference.types).Template(shape, position, typeName) else ""
+	if "Generic" is not in inference.types.MembersOf(returned).types
+		return ""
 	let type = Result(shape, position, typeName)
-	(inference.types.BaseName(type) is header.ReturnType) and (type.IndexOf("Unknown") < 0) then type else ""
+	(inference.types.BaseName(type) is returned) and (type.IndexOf("Unknown") < 0) then type else ""
 Result(shape TypeShape, position Number, typeName Text) Text
 	Swapped.Result(Local, 1, "User") is "Couple(Text, Number)"
 	Swapped.Result(Plain, 0, "User") is "Text"

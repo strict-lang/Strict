@@ -1,0 +1,75 @@
+has logger
+constant ToolSeconds = 90
+constant OptFlags = "--symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
+constant ClangFlags = "--target=nvptx64-nvidia-cuda -O3 -fno-slp-vectorize -S -Wno-override-module -Xclang -target-feature -Xclang +ptx78 -march=sm_80"
+constant MlirHeader = ("module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
+constant HeadA = ("#define _CRT_SECURE_NO_WARNINGS", "#include <math.h>", "#include <stdint.h>", "#include <stdio.h>", "#include <stdlib.h>", "#include <string.h>")
+constant HeadB = ("#ifdef _WIN32", "#include <windows.h>", "static HMODULE cu; typedef int(*F)(void);", "#define CF(n,p) ((int(*)p)GetProcAddress(cu,n))", "#else", "#include <dlfcn.h>", "static void* cu;")
+constant HeadC = ("#define CF(n,p) ((int(*)p)dlsym(cu,n))", "#endif")
+constant CudaHelpA = ("static void ck(int r){if(r){fprintf(stderr,\"CUDA error %d\\n\",r);exit(1);}}", "static uint32_t rng=7; static float rnd(void){rng=rng*1664525u+1013904223u;")
+constant CudaHelpB = ("  float u=(rng>>8)*(1.0f/16777216.0f);rng=rng*1664525u+1013904223u;float v=(rng>>8)*(1.0f/16777216.0f);return sqrtf(-2.0f*logf(u>1e-7f?u:1e-7f))*cosf(6.2831853f*v);}")
+constant CudaRotA = ("static void rot(float*v,int n){for(int g=0;g<n;g+=256)for(int s=1;s<=64;s*=4){float out[256];", "  for(int i=0;i<256;i++){int d=(i/s)%4,b=i-d*s;float sum=0;")
+constant CudaRotB = ("    for(int p=0;p<4;p++)sum+=v[g+b+p*s]*((3-d==p)?-0.5f:0.5f);out[i]=sum;}", "  memcpy(v+g,out,256*sizeof(float));}}")
+constant CudaBrn = ("static uint16_t bfn(float f){uint32_t w;memcpy(&w,&f,4);uint32_t r=(w+32767u+((w>>16)&1u))>>16;return(uint16_t)r;}", "static float exactf(uint16_t b){uint32_t w=((uint32_t)b)<<16;float f;memcpy(&f,&w,4);return f;}")
+constant CudaRunA = ("static void run_case(void*kn,int w,int th,int bits,int sh){int cnt=3*w;float*num=(float*)malloc(cnt*4);", "  float*ex=(float*)malloc(cnt*4);uint16_t*bf=(uint16_t*)malloc(cnt*2);")
+constant CudaRunB = ("  for(int i=0;i<cnt;i++){num[i]=rnd();if(bits==17){bf[i]=bfn(num[i]);ex[i]=exactf(bf[i]);}else ex[i]=num[i];}", "  size_t nb=bits==17?cnt*2:cnt*4;void*src=0,*dst=0;unsigned long long sdev=0,ddev=0;")
+constant CudaRunC = ("  ck(CF(\"cuMemAlloc_v2\",(uint64_t*,size_t))(&sdev,nb+16));ck(CF(\"cuMemAlloc_v2\",(uint64_t*,size_t))(&ddev,cnt+cnt/8));")
+constant CudaRunC2 = ("  ck(CF(\"cuMemsetD8_v2\",(uint64_t,unsigned char,size_t))(ddev,0,cnt+cnt/8));uint64_t shd=sdev+sh;")
+constant CudaRunD = ("  ck(CF(\"cuMemcpyHtoD_v2\",(uint64_t,const void*,size_t))(shd,bits==17?(void*)bf:(void*)num,nb));", "  uint64_t a0=shd,a1=cnt,a2=w,a3=ddev,a4=bits;void*args[5]={&a0,&a1,&a2,&a3,&a4};")
+constant CudaRunE = ("  ck(CF(\"cuLaunchKernel\",(void*,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,unsigned,void*,void**,void**))(kn,cnt/w,1,1,th,1,1,0,0,args,0));", "  ck(CF(\"cuCtxSynchronize\",(void))());")
+constant CudaRunF1 = ("  uint8_t*res=(uint8_t*)calloc(cnt+cnt/8,1);ck(CF(\"cuMemcpyDtoH_v2\",(void*,uint64_t,size_t))(res,ddev,cnt+cnt/8));")
+constant CudaRunF2 = ("  ck(CF(\"cuMemFree_v2\",(uint64_t))(sdev));ck(CF(\"cuMemFree_v2\",(uint64_t))(ddev));rot(ex,cnt);")
+constant CudaRunG1 = ("  for(int t=0;t<3;t++){float mx=0;for(int i=0;i<w;i++){float a=fabsf(ex[t*w+i]);if(a>mx)mx=a;}float fac=127.0f/mx;")
+constant CudaRunG2 = ("    for(int i=0;i<w;i++){int8_t wc=(int8_t)llrintf(ex[t*w+i]*fac);if((int8_t)res[t*w+i]!=wc){fprintf(stderr,\"code mismatch\\n\");exit(2);}}")
+constant CudaRunH = ("    float ws=mx/127.0f;for(int i=0;i<w/32;i++){float gs;memcpy(&gs,res+cnt+(t*(w/32)+i)*4,4);if(gs!=ws){fprintf(stderr,\"scale mismatch\\n\");exit(3);}}}")
+constant CudaRunI = ("  printf(\"strict_device_hadamard_tokens of 3 tokens of %d in %d bits %d bytes after an alignment with %d threads passes\\n\",w,bits,sh,th);", "  free(num);free(ex);free(bf);free(res);}")
+constant CudaMainA = ("int main(int c,char**v){", "#ifdef _WIN32", "  cu=LoadLibraryA(\"nvcuda.dll\");", "#else", "  cu=dlopen(\"libcuda.so.1\",RTLD_NOW);", "#endif", "  if(!cu)return 4;FILE*f=fopen(v[1],\"rb\");")
+constant CudaMainA2 = ("  fseek(f,0,SEEK_END);long sz=ftell(f);fseek(f,0,SEEK_SET);")
+constant CudaMainB = ("  char*ptx=(char*)malloc(sz+1);fread(ptx,1,sz,f);ptx[sz]=0;fclose(f);int dev=0;void*ctx=0,*mod=0,*kn=0;")
+constant CudaMainB2 = ("  ck(CF(\"cuInit\",(unsigned))(0));ck(CF(\"cuDeviceGet\",(int*,int))(&dev,0));ck(CF(\"cuCtxCreate_v2\",(void**,unsigned,int))(&ctx,0,dev));")
+constant CudaMainC = ("  ck(CF(\"cuModuleLoadData\",(void**,const void*))(&mod,ptx));ck(CF(\"cuModuleGetFunction\",(void**,void*,const char*))(&kn,mod,\"strict_device_hadamard_tokens\"));")
+constant CudaMainD = ("  int cs[4][4]={{5376,672,32,0},{14336,896,32,0},{5376,672,32,4},{14336,896,17,0}};", "  for(int i=0;i<4;i++)run_case(kn,cs[i][0],cs[i][1],cs[i][2],cs[i][3]);ck(CF(\"cuCtxDestroy_v2\",(void*))(ctx));return 0;}")
+Run Number
+	let folder = "Compiler/output/HadamardCheck" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder)
+	Directory.Delete(folder)
+	result is Error then result else 0
+Checked(folder Text) Boolean
+	let body = ModuleLines("Device") + ModuleLines("Nvidia") + ModuleLines("Hadamard")
+	File(folder + "/hadamard.mlir").Write(MlirHeader + body + List(Text) + "}")
+	let lowered = CompiledPtx(folder)
+	lowered is Error then lowered else RanHarness(folder)
+ModuleLines(name Text) Texts
+	File("Compiler/NativeRuntime" + name + ".mlir").ReadLines
+CompiledPtx(folder Text) Boolean
+	let optArgs = "\"" + folder + "/hadamard.mlir\" " + OptFlags + " -o \"" + folder + "/h.llvm.mlir\""
+	let optRes = Process.RunTool(FindTool("mlir-opt", "C:/msys64/ucrt64/bin/mlir-opt.exe"), optArgs, ToolSeconds)
+	if optRes.exitCode is not 0
+		return Error("MlirOptFailed: " + optRes.Output + optRes.error)
+	let trArgs = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/h.llvm.mlir\" -o \"" + folder + "/h.ll\""
+	let trRes = Process.RunTool(FindTool("mlir-translate", "C:/msys64/ucrt64/bin/mlir-translate.exe"), trArgs, ToolSeconds)
+	if trRes.exitCode is not 0
+		return Error("MlirTranslateFailed: " + trRes.Output + trRes.error)
+	let ptxArgs = ClangFlags + " \"" + folder + "/h.ll\" -o \"" + folder + "/h.ptx\""
+	let ptxRes = Process.RunTool(FindTool("clang", "C:/Program Files/LLVM/bin/clang.exe"), ptxArgs, ToolSeconds)
+	ptxRes.exitCode is not 0 then Error("ClangPtxFailed: " + ptxRes.Output + ptxRes.error) else true
+RanHarness(folder Text) Boolean
+	let win = Process.OperatingSystem is "Windows"
+	let exe = folder + "/check" + (win then ".exe" else "")
+	File(folder + "/check.c").Write(HarnessCode)
+	let ccArgs = "-O2 \"" + folder + "/check.c\" -o \"" + exe + "\"" + (win then "" else " -ldl -lm")
+	let comp = Process.RunTool("clang", ccArgs, ToolSeconds)
+	if comp.exitCode is not 0
+		return Error("CompileFailed: " + comp.Output + comp.error)
+	let ran = Process.RunTool(exe, "\"" + folder + "/h.ptx\"", ToolSeconds)
+	logger.Log(ran.Output.Trim)
+	ran.exitCode is not 0 then Error("HadamardCheckFailed: " + ran.Output + ran.error) else true
+FindTool(name Text, windowsPath Text) Text
+	(Process.OperatingSystem is "Windows") and File(windowsPath).Exists then windowsPath else name
+HarnessCode Texts
+	let h = HeadA + HeadB + HeadC + CudaHelpA + CudaHelpB + CudaRotA + CudaRotB + CudaBrn
+	let g = CudaRunG1 + CudaRunG2 + CudaRunH + CudaRunI + CudaMainA + CudaMainA2
+	let m = CudaMainB + CudaMainB2 + CudaMainC + CudaMainD
+	h + CudaRunA + CudaRunB + CudaRunC + CudaRunC2 + CudaRunD + CudaRunE + CudaRunF1 + CudaRunF2 + g + m

@@ -40,11 +40,11 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 	LinkHomes(linked.With(Checked(linked.linker, linked.entries, source, inference))).Saved
 Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
 	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
-	let sources = Sources(linker, linked, source)
-	if BuildProfile(logger).Parsed(value, sources) is false
+	let sources = BinaryFile.Unchecked(Sources(linker, linked, source))
+	if (sources.Length > 0) and (BuildProfile(logger).Parsed(value, sources) is false)
 		return List(TypeEntry)
 	mutable failures = 0
-	for BuildProfile(logger).Issues(value, sources, inference)
+	for sources.Length > 0 then BuildProfile(logger).Issues(value, sources, inference) else List(Texts)
 		failures = failures + value.Length
 		for value
 			logger.Log(value)
@@ -102,7 +102,9 @@ IsBrokenConstant(line Text) Boolean
 	FileCompiler.IsBrokenConstant("constant LoadConstantToRegister") is false
 	FileCompiler.IsBrokenConstant(Trailing.First) is false
 	FileCompiler.IsBrokenConstant("constant None = Style()") is false and (IsBrokenConstant("has pair = (1,)") is false)
-	line.StartsWith("constant ") and (IsComplete(StatementParser(Tokenizer(line).Tokens).ParseStatement) is false)
+	if line.StartsWith("constant ") is false
+		return false
+	IsComplete(StatementParser(Tokenizer(line).Tokens).ParseStatement) is false
 IsParsed(line Text) Boolean
 	FileCompiler.IsParsed("let a = b + c")
 	FileCompiler.IsParsed("(number + other") is false and (FileCompiler.IsParsed("a + b)") is false)

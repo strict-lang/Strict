@@ -1,0 +1,42 @@
+has logger
+constant ToolSeconds = 270
+constant CompileSeconds = 60
+constant CheckSeconds = 90
+constant ProbeLines = ("Run Number", "	Process.Input.Length")
+constant CodeA = ("#include <windows.h>", "#include <stdio.h>", "typedef struct { ULONG v, ctrl, st; } PT;")
+constant CodeB = ("int main(int c,char**v){HANDLE inR,inW,outR,outW;SECURITY_ATTRIBUTES sa={sizeof(sa),0,1};")
+constant CodeC = ("  CreatePipe(&inR,&inW,&sa,0);CreatePipe(&outR,&outW,&sa,0);SetHandleInformation(inW,1,0);SetHandleInformation(outR,1,0);")
+constant CodeD = ("  STARTUPINFOA si={sizeof(si)};si.dwFlags=STARTF_USESTDHANDLES;si.hStdInput=inR;si.hStdOutput=outW;si.hStdError=outW;")
+constant CodeE = ("  PROCESS_INFORMATION pi={0};if(!CreateProcessA(v[1],0,0,0,1,0,0,0,&si,&pi))return 2;CloseHandle(inR);CloseHandle(outW);")
+constant CodeF = ("  PT pt={1,0,0};ULONGLONG t0=GetTickCount64();while(pt.ctrl==0&&GetTickCount64()-t0<2000){")
+constant CodeG = ("    if(!GetProcessInformation(pi.hProcess,4,&pt,sizeof(pt)))return 3;if(pt.ctrl==0)Sleep(10);}")
+constant CodeH = ("  DWORD wr=0;WriteFile(inW,\"x\",1,&wr,0);CloseHandle(inW);WaitForSingleObject(pi.hProcess,60000);")
+constant CodeI = ("  CloseHandle(outR);CloseHandle(pi.hThread);CloseHandle(pi.hProcess);printf(\"CTRL:%lu STATE:%lu\\n\",pt.ctrl,pt.st);")
+constant CodeJ = ("  return ((pt.ctrl&1)!=0&&(pt.st&1)==0)?0:4;}")
+Run Number
+	if Process.OperatingSystem is not "Windows"
+		logger.Log("CheckThrottling reads the power throttling of a Windows process")
+		return 0
+	let folder = "Compiler/output/ThrottlingCheck" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	let result = Checked(folder)
+	Directory.Delete(folder)
+	if result is Error
+		return result
+	logger.Log("CheckThrottling passed")
+	0
+Checked(folder Text) Boolean
+	let src = folder + "/ThrottlingCheck.strict"
+	File(src).Write(ProbeLines)
+	let built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else CompiledAndRan(folder)
+CompiledAndRan(folder Text) Boolean
+	let cFile = folder + "/check.c"
+	File(cFile).Write(CodeA + CodeB + CodeC + CodeD + CodeE + CodeF + CodeG + CodeH + CodeI + CodeJ)
+	let checker = folder + "/check.exe"
+	let comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + checker + "\"", CompileSeconds)
+	if comp.exitCode is not 0
+		return Error("CompileFailed: " + comp.Output + comp.error)
+	let ran = Process.RunTool(checker, "\"" + folder + "/ThrottlingCheck.exe\"", CheckSeconds)
+	ran.exitCode is not 0 then Error("ThrottlingFailed: " + ran.Output + ran.error) else true

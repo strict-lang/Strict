@@ -62,6 +62,8 @@ Member(index Number) VmValue
 	None.Member(1).kind is "None"
 	OfNumber(3).Member(0).number is 3
 	Numbered.Member(1).items.Length is 2
+	if kind is in ("Text", "Number", "Boolean", "List")
+		return value
 	let isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
 As(typeName Text) VmValue
@@ -70,12 +72,11 @@ As(typeName Text) VmValue
 	(OfText("ab").As("Strict/List(Character)").text is "ab") and (OfText("ab").As("Strict/Character").text is "ab")
 	(OfText("ab").As("Strict/Number").text is "ab") and (VmValue("N", 0, "a", None.items).As("Strict/Number").number is 0)
 	(OfList(OfText("c"), OfText("b")).As("Strict/Text").text is "cb") and (OfText("a").As("Strict/Text").number is 0)
-	let target = TypeEntry.ShortName(typeName)
-	if (kind is "List") and (target is "Text")
-		return OfText(Concatenated)
-	if (kind is "Number") and (target is "Character")
-		return OfText(Character(number) to Text)
-	(kind is "Text") and (target is "Number") and (text.Length is 1) then OfNumber(Character(text).number) else value
+	if kind is "Number"
+		return typeName is in ("Strict/Character", "Character") then OfText(Character(number) to Text) else value
+	if (kind is "Text") and (text.Length is 1)
+		return typeName is in ("Strict/Number", "Number") then OfNumber(Character(text).number) else value
+	(kind is "List") and (typeName is in ("Strict/Text", "Text")) then OfText(Concatenated) else value
 IsTrue Boolean
 	OfBoolean(false).IsTrue is false
 	number is 1

@@ -550,7 +550,7 @@
     %result = llvm.inttoptr %found : i64 to !llvm.ptr
     return %result : !llvm.ptr
   }
-  llvm.mlir.global internal constant @strict_test_timeout("\9E\00\00\00\00\00\00\00\9E\00\00\00\00\00\00\00Test failed: %s\0A  got: TestDurationMustNotExceedHundredMilliseconds: unit test exceeded 100 ms; end the method header with slow for explicit functional tests\0A\00") : !llvm.array<175 x i8>
+  llvm.mlir.global internal constant @strict_test_timeout("\A1\00\00\00\00\00\00\00\A1\00\00\00\00\00\00\00Test failed: %s\0A  got: TestDurationMustNotExceedTwoHundredMilliseconds: unit test exceeded 200 ms; end the method header with slow for explicit functional tests\0A\00") : !llvm.array<178 x i8>
   llvm.mlir.global internal constant @strict_test_unavailable("\6D\00\00\00\00\00\00\00\6D\00\00\00\00\00\00\00Test failed: %s\0A  got: TestBudgetWatchdogUnavailable: cannot enforce the unit-test deadline on this platform\0A\00") : !llvm.array<126 x i8>
   // a served request (output is its caller) gets the message and only its work fails, else the process ends
   func.func private @strict_test_failed(%place: i64, %unavailable: i1, %output: i64) {
@@ -610,7 +610,7 @@
     return %ran : f64
   }
   func.func private @strict_testbudget_started(%self: f64, %place: f64, %isSlow: f64) -> f64 {
-    %limit = arith.constant 0.1 : f64
+    %limit = arith.constant 0.2 : f64
     %started = func.call @strict_test_begin(%self, %place, %isSlow, %limit) : (f64, f64, f64, f64) -> f64
     return %started : f64
   }
@@ -947,7 +947,7 @@
     return
   }
   llvm.mlir.global internal constant @strict_test_running("\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00\00") : !llvm.array<17 x i8>
-  llvm.mlir.global internal constant @strict_test_expired("\2C\00\00\00\00\00\00\00\2C\00\00\00\00\00\00\00TestDurationMustNotExceedHundredMilliseconds\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal constant @strict_test_expired("\2F\00\00\00\00\00\00\00\2F\00\00\00\00\00\00\00TestDurationMustNotExceedTwoHundredMilliseconds\00") : !llvm.array<64 x i8>
   llvm.mlir.global internal constant @strict_test_disconnected("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00CallerDisconnected\00") : !llvm.array<35 x i8>
   llvm.mlir.global internal thread_local @strict_test_heard(0.0 : f64) : f64
   // the Error name the VM work of a served request stops with at its next check: its test is over the deadline (until
@@ -21273,7 +21273,7 @@
   ^missing:
     return %false : i1
   }
-  // STRICT_GPU_DOWNLOADS=1 names every list of numbers going from the GPU to the host (check_gpu_residency.py)
+  // STRICT_GPU_DOWNLOADS=1 names every list of numbers going from the GPU to the host (CheckGpuResidency.strict)
   llvm.mlir.global internal @strict_gpu_downloads(-1 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_downloads_switch("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00STRICT_GPU_DOWNLOADS\00") : !llvm.array<37 x i8>
   llvm.mlir.global internal constant @strict_gpu_downloads_text("\31\00\00\00\00\00\00\00\31\00\00\00\00\00\00\00Strict GPU download of %lld numbers in %lld bits\0A\00") : !llvm.array<66 x i8>
