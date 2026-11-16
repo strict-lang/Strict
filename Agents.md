@@ -59,21 +59,21 @@ Default to Strict on the warm VM (~10 ms warm hit) instead of `python`, `python 
 - Syntax rules in `-c` / script files: one statement per line (no `;` separator; use `\n` or PowerShell `@' ... '@`). Top-level statements wrap into `Run`, `logger` is injected when used, mentioning `arguments` adds `Run(arguments Texts)`, helper methods go at the bottom, and `for` with a body must be the last expression of a method or collect into `mutable` inside a helper.
 
 Cookbook (Windows PowerShell 5.1 quoting):
-- Exact-once find/replace in a file (check uniqueness with `Split(...).Length is 2`). `File.Write(lines)` keeps the line endings an existing file has (CRLF stays CRLF), a new file gets LF. An Error on any line ends the script with exit code 1 and prints it with its line:
+- Exact-once find/replace in a file (check uniqueness with `Split(...).Length is 2`). `ReadText` and `Write(text)` read and write a whole file in one call: never join `ReadLines` or split for `Write(lines)`. The text read only has `\n`, both `Write` keep the line endings an existing file has (CRLF stays CRLF), a new file gets LF. An Error on any line ends the script with exit code 1 and prints it with its line:
 ```powershell
 .\strict.exe -c @'
 let path = "Compiler/Foo.strict"
-let text = Text.Combine(File(path).ReadLines, "\n")
+let text = File(path).ReadText
 if text.Split("old").Length is not 2
 	return Error("ExpectedOneMatch in " + path)
-File(path).Write(text.Replace("old", "new").Split("\n"))
+File(path).Write(text.Replace("old", "new"))
 '@
 ```
-  From the Bash tool: `./strict.exe -c "$(cat <<'EOF'` ... `EOF` `)" args`, the quoted `'EOF'` keeps `\t`, `\\` and `$` literal. A multi-file transform goes into a script file run with `./strict.exe run <file.strict>`; a search string containing CRLF-sensitive text compares against `text.Replace("\r\n", "\n")`.
+  From the Bash tool: `./strict.exe -c "$(cat <<'EOF'` ... `EOF` `)" args`, the quoted `'EOF'` keeps `\t`, `\\` and `$` literal. A multi-file transform goes into a script file run with `./strict.exe run <file.strict>`. `ReadText` and `ReadLines` strip the `\r` of CRLF files: never add `.Replace("\r\n", "\n")`.
 - Regex search / extract / capture replace (`Regex` supports `IsMatch`, `Find`, `FindAll`, `Groups`, `Replace`, `Split`, run natively by the VM; escape `\d`/`\w`/`\s` as `\\d`/`\\w`/`\\s`; a plain substring is faster with `IndexOf`, 20000 lines in 0.7 s against 4 s):
   `.\strict.exe -c 'logger.Log(Regex("(\\w+)=(\\w*)").Replace("a=1, b=2", "$2=$1"))'`
 - Files & directory globs / recursive walk:
-  `File(path).Exists`, `.ReadLines`, `.ReadBytes`, `.Write(lines)`, `.Rename(newPath)`, `.Delete`, `Directory.Create(path)`, `Directory.Files("Runtime", "*.strict")`. Recursive helper:
+  `File(path).Exists`, `.ReadText`, `.ReadLines`, `.ReadBytes`, `.Write(text)`, `.Write(lines)`, `.Rename(newPath)`, `.Delete`, `Directory.Create(path)`, `Directory.Files("Runtime", "*.strict")`. Recursive helper:
 ```strict
 Walk(folder Text) Texts
 	mutable found = Directory.Files(folder, "*.strict")

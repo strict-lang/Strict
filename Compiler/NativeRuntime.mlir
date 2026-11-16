@@ -16570,14 +16570,27 @@
     %result = func.call @strict_text_made(%output, %written) : (!llvm.ptr, i64) -> f64
     return %result : f64
   }
+  func.func private @strict_file_readtext(%path: f64) -> f64 {
+    %text = func.call @strict_file_joined(%path) : (f64) -> f64
+    return %text : f64
+  }
+  func.func private @strict_file_writetext(%path: f64, %text: f64) -> f64 {
+    %lines = func.call @strict_text_lines(%text) : (f64) -> f64
+    %written = func.call @strict_file_writelines(%path, %lines) : (f64, f64) -> f64
+    return %written : f64
+  }
   func.func private @strict_file_read_lines(%path: f64) -> f64 {
+    %text = func.call @strict_file_text(%path) : (f64) -> f64
+    %lines = func.call @strict_text_lines(%text) : (f64) -> f64
+    return %lines : f64
+  }
+  func.func private @strict_text_lines(%text: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %four = arith.constant 4.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %newline = arith.constant 10 : i8
     %carriage = arith.constant 13 : i8
-    %text = func.call @strict_file_text(%path) : (f64) -> f64
     %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
     %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
     %lines = func.call @strict_list_new(%four, %zero) : (f64, f64) -> f64
