@@ -202,12 +202,13 @@ Launched(rest Texts, folder Text) Number slow
 		return Native("test", (rest(0), rest(1), "native"))
 	let base = NativeBuild.Output(rest(0), true)
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	let cache = NativeCache("build", (rest(0), rest(1)))
+	let cache = NativeCache("build", (rest(0), rest(1)), isRunning = true)
 	let fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
 	if fresh is ""
-		let tested = Execute(logger, "*").Served(rest(0), rest(1)).code
+		let tested = Execute(logger, "*").Served(rest(0), rest(1), true).code
 		if tested is not 0
 			return tested
+		logger.Log(Execute.Summary(0, rest(0)))
 	Started(rest, folder, fresh)
 Compiled(rest Texts, fresh Text) Number slow
 	if fresh is not ""
