@@ -34,7 +34,7 @@ Before writing any code, stop at the first rung that holds:
 - Do not inflate estimates to sound cautious or technically sophisticated. If a task requires 30 minutes, say 30 minutes. Do not turn a straightforward implementation into a multi-day engineering project simply because the underlying technology is complex.
 
 ## 🚨 Top Priority: Strict is self-hosted
-Strict compiles itself natively (`Strict.strict` builds the `strict` command `strict.exe` in the repository root, see the README section "Command line"). `bugs.md` is the priority list, one short line per bug, created when there is one and deleted when it is empty (remove what is done, add what is found), `performance.md` the same for speed work for soon, [ideas.md](ideas.md) has large or far fetched work. A plan file is created when needed and deleted when it is done, no other lists. Normally there is no .md file, only when there is something interesting to say. The C# implementation that bootstrapped Strict is commit 4e4fc3da in the history (reference only), all new work is Strict code.
+Strict compiles itself natively (`Strict.strict` builds the `strict` command `strict.exe` in the repository root, see the README section "Command line"). `bugs.md` is the priority list, one short line per bug, created when there is one and deleted when it is empty (remove what is done, add what is found), `performance.md` is the same for speed work,  [ideas.md](ideas.md) for future work. A plan file is created when needed and deleted when it is done, no other lists. Normally there is no .md file, only when there is something interesting to say. The C# implementation that bootstrapped Strict is commit 4e4fc3da in the history (reference only, early Oct 2026 C# was removed, 2021 early Go sdk was removed), all new work is Strict code.
 
 ## Project Guidelines
 - In Strict, type instance equality should check type compatibility and then compare member values (including list/dictionary members) rather than reference equality.
@@ -92,7 +92,7 @@ logger.Log((res.exitCode to Text) + ":" + res.Output.Trim)
 - Fallback only when Strict cannot express the operation directly (e.g. arbitrary binary diffs or interactive/HTTP client downloads).
 
 ## Speed
-The language exists so a computer can check and discard generated code in seconds (README: "within seconds", "almost immediately"). Tool time is product time. A warm run that used to be sub-second and is now many seconds, or a check that used to be about 5 s and is now minutes, is a failed change. Stop, name the command and the times, fix the cause or write one line in `performance.md`. Do not finish the suite, do not average more runs, do not call that a pass.
+The language exists so a computer can check and discard generated code in seconds (README: "within seconds", "almost immediately"). Tool time is product time. A warm run that used to be sub-second and is now many seconds, or a check that used to be about 5 s and is now minutes, is a failed change. Name the command and the times, fix the cause or write one line in `performance.md`. Try to still finish the suite, but future focus is on fixing bugs and performance.md items first.
 
 Budgets on a warm cache (replace a number when `performance.md` or the Speed section of `ideas.md` has a newer measurement):
 - `strict test <file> unit`: milliseconds when `obj/Name.strictbinary` is current. About 1 s the first time for a heavy compiler file after a real edit. Several seconds on every file is a regression.
