@@ -3,6 +3,7 @@ has root Text
 has executable Text
 constant Current = Error("Current")
 constant CheckedFile = "/obj/Strict.checked"
+constant BuildLock = "/obj/Strict.selfbuild.lock"
 constant CorePackages = ("Compiler", "Bytecode", "Expressions", "Runtime", "Validators")
 constant ExtraPackages = ("Math", "Binary", "Compression", "Regex", "Json", "Networking", "NeuralNetworks")
 constant DaemonCommands = ("coordinator", "serve", "linked", "status", "stop")
@@ -13,26 +14,45 @@ Rebuilt(arguments Texts) Number slow
 	SelfBuild(Logger, ".", "strict.exe").Rebuilt(List(Text) + "stop") is Current
 	if IsStale(arguments) is false
 		return Current
-	let built = Built
+	let built = Built(arguments)
 	if built is Error
 		return built is Current then Current else 1
 	built is not 0 then built else Process(TargetExecutable).Started(Quoted(arguments))
 TargetExecutable Text
 	SelfBuild(Logger, "a", "C:\\b\\strict.exe").TargetExecutable is "a/strict.exe"
 	root + "/" + Path(executable.Replace("\\", "/")).FileName.text
-Built Number slow
+Built(arguments Texts) Number slow
+	let exeBefore = File(TargetExecutable).Modified
+	if Locked is false
+		return Error("Locked")
 	let home = Directory.Current
 	Directory.Change(root)
-	if NativeCache("build", ("Strict.strict", ".")).IsCurrent
+	let current = (IsStale(arguments) is false) or NativeCache("build", ("Strict.strict", ".")).IsCurrent
+	let code = current then (File(TargetExecutable).Modified > exeBefore then 0 else Current) else RebuiltCore
+	if (code is 0) or (code is Current)
 		Marked
-		Directory.Change(home)
-		return Current
-	logger.Log(TargetExecutable + " is older than Strict sources, rebuilding")
-	let code = NativeCompiler(logger).Ran(("build", "Strict.strict", "."))
-	if code is 0
-		Marked
+	Unlocked
 	Directory.Change(home)
 	code
+RebuiltCore Number slow
+	logger.Log(TargetExecutable + " is older than Strict sources, rebuilding")
+	NativeCompiler(logger).Ran(("build", "Strict.strict", "."))
+Locked Boolean slow
+	if Directory.Exists(root + "/obj") is false
+		Directory.Create(root + "/obj")
+	let lock = File(root + BuildLock)
+	if lock.Locked
+		return true
+	let started = Process.Elapsed
+	for as long as Process.Elapsed - started < Strict.BuildWait
+		Process.Wait(0.1)
+		if lock.Locked
+			return true
+	false
+Unlocked
+	SelfBuild(Logger, "Compiler/output", "strict.exe").Locked
+	SelfBuild(Logger, "Compiler/output", "strict.exe").Unlocked
+	File(root + BuildLock).Delete
 Marked
 	Directory.Create(root + "/obj")
 	File(root + CheckedFile).Write("checked")

@@ -66,4 +66,4 @@ At(entry InstructionEntry) Number
 	Ones.At(InstructionEntry(InstructionType.Return, List(Text), List(Number))) is -1
 	let isLoad = entry.kind is InstructionType.LoadConstantToRegister
 	let at = isLoad then 1 else (entry.kind is InstructionType.StoreConstantToVariable then 0 else -1)
-	at < 0 then -1 else (entry.payload(at) is 6 then at else -1)
+	at < 0 then -1 else (entry.payload(at) is in (3, 6) then at else -1)

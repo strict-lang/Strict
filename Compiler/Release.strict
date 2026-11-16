@@ -110,13 +110,18 @@ Content(target Text)
 	let builder = Parent + "/ContentBuild.strict"
 	if File(builder).Exists is false
 		return Synced(source, target)
-	let tools = Toolchain(Platform.Current, TypeSource.Root)
-	let compiled = ToolRunner(tools.Executable(TypeSource.Root + "/Strict")).Execute("build \"" + builder + "\"")
-	let program = ToolRunner(tools.Executable(Parent + "/ContentBuild"))
-	let built = compiled.Failed then compiled else program.Execute("\"" + source + "\" \"" + target + "\"")
+	let built = BuiltContent(builder, source, target)
 	if built.Failed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
 		return Error("ContentBuildFailed")
+BuiltContent(builder Text, source Text, target Text) ProcessResult
+	let tools = Toolchain(Platform.Current, TypeSource.Root)
+	let exe = tools.Executable(TypeSource.Root + "/Strict")
+	let isCurrent = NativeCache("build", (builder, TypeSource.Root)).IsCurrent
+	let compiled = isCurrent then ProcessResult(0, "", "") else ToolRunner(exe).Execute("build \"" + builder + "\"")
+	if compiled.Failed
+		return compiled
+	ToolRunner(tools.Executable(Parent + "/ContentBuild")).Execute("\"" + source + "\" \"" + target + "\"")
 Copied(source Text, target Text)
 	if Directory.Exists(source)
 		Created(target)
