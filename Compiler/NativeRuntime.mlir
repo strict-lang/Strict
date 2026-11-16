@@ -18983,7 +18983,17 @@
     %singleBytes = arith.select %isNarrowResult, %count, %floatsBytes : i64
     %resultBits = arith.addi %resultFormat, %none : i64
     %class = func.call @strict_gpu_class(%singleBytes) : (i64) -> i64
-    %resident = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    %firstResident = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    %hasFirst = arith.cmpi ne, %firstResident, %none : i64
+    cf.cond_br %hasFirst, ^asyncObtained(%firstResident : i64), ^asyncCollect
+  ^asyncCollect:
+    // the lists of the previous layer may still be unreachable garbage, a full collection gives them back first
+    %fully = arith.constant true
+    %gpuMemory = arith.constant 2 : i64
+    func.call @strict_gc_run_for(%fully, %gpuMemory) : (i1, i64) -> ()
+    %collectedResident = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    cf.br ^asyncObtained(%collectedResident : i64)
+  ^asyncObtained(%resident: i64):
     %failure = func.call @strict_gpu_failure_word() : () -> i64
     %hasResident = arith.cmpi ne, %resident, %none : i64
     %hasFailure = arith.cmpi ne, %failure, %none : i64
