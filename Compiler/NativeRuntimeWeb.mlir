@@ -825,7 +825,6 @@
   // CPU read), 0.0 when WebGPU fails; a list value already in a WebGPU buffer is copied there on the GPU; after 1 GB of
   // results a full collection gives back the buffers of dead lists first
   llvm.func @strict_webgpu_kernel(!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
-  llvm.func @strict_webgpu_kernel_fast(!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
   llvm.func @strict_webgpu_crowded() -> i32
   func.func private @strict_gpu_kernel(%name: !llvm.ptr, %count: i64, %values: !llvm.ptr, %valueCount: i64, %mask: i64, %bits: i64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -900,14 +899,7 @@
     %count32 = arith.trunci %count : i64 to i32
     %valueCount32 = arith.trunci %valueCount : i64 to i32
     %bits32 = arith.trunci %bits : i64 to i32
-    %retry = arith.constant -1 : i32
-    %fast = llvm.call @strict_webgpu_kernel_fast(%name, %count32, %table, %valueCount32, %bits32) : (!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
-    %needsSlow = arith.cmpi eq, %fast, %retry : i32
-    cf.cond_br %needsSlow, ^slow, ^have(%fast : i32)
-  ^slow:
-    %waited = llvm.call @strict_webgpu_kernel(%name, %count32, %table, %valueCount32, %bits32) : (!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
-    cf.br ^have(%waited : i32)
-  ^have(%made: i32):
+    %made = llvm.call @strict_webgpu_kernel(%name, %count32, %table, %valueCount32, %bits32) : (!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
     %isMade = arith.cmpi ne, %made, %unused : i32
     cf.cond_br %isMade, ^resides, ^failed
   ^resides:

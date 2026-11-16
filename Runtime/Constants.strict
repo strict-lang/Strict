@@ -3,6 +3,7 @@ constant SevenMethod = MethodEntry("Seven", List(MemberEntry), "Strict/Number", 
 constant Keeping = TypeEntry("Strict/Keeping", List(MemberEntry) + MemberEntry("Seven", "Strict/Number", List(InstructionEntry), true), List(MethodEntry) + SevenMethod)
 constant OnesMethod = MethodEntry("Ones", List(MemberEntry), "Strict/List(Number)", (PayloadDecoder.Ones.entry, InstructionEntry.Return(0)))
 constant Listing = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Listing", List(MemberEntry), List(MethodEntry) + OnesMethod)).Resolved).Prepared
+constant Unset = VmValue("$Constant", 0, "0", List(VmValue))
 Computed Machine
 	Constants(Machine(Resolver(List(TypeEntry) + Keeping).Resolved).Prepared).Value(0, 0).number is 7
 	Listing.types.First.methods.First.instructions.First.payload(1) is 8
@@ -47,3 +48,31 @@ Member(type TypeEntry, slot Number) VmValue
 	let route = Resolver(machine.types).Position(type)
 	let isPrepared = (route >= 0) and (route < machine.prototypes.entries.Length)
 	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))
+Seeded(cache Dictionary(Text, VmValue)) Machine
+	if cache.Length is 0
+		return machine
+	for machine.types
+		if value.Name is in cache
+			let cached = cache(value.Name)
+			let proto = machine.prototypes.At(index)
+			if cached.items.Length is proto.items.Length
+				machine.prototypes.Stored(index, VmValue(proto, items = Merged(proto.items, cached.items)))
+	machine
+Merged(current List(VmValue), cached List(VmValue)) List(VmValue)
+	Constants(Machine.Hello.Prepared).Merged(List(VmValue) + Unset, List(VmValue) + VmValue.OfNumber(7)).First.number is 7
+	for current
+		let keep = (value.kind is "$Constant") and (cached(index).kind is not in ("$Constant", "$Computing"))
+		keep and (cached(index).kind is not in VmValue.ErrorKinds) then cached(index) else value
+Recorded(cache Dictionary(Text, VmValue)) Dictionary(Text, VmValue)
+	mutable result = cache
+	for machine.types
+		let proto = machine.prototypes.At(index)
+		if (proto.items.Length > 0) and IsEvaluated(value, proto.items)
+			result(value.Name) = proto
+	result
+IsEvaluated(type TypeEntry, items List(VmValue)) Boolean
+	Constants(Machine.Hello.Prepared).IsEvaluated(Keeping, List(VmValue) + VmValue.OfNumber(7))
+	for type.members
+		if value.IsConstant and (items(index).kind is not in ("$Constant", "$Computing", "None"))
+			return true
+	false

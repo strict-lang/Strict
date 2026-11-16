@@ -5,6 +5,7 @@ has isMutating Boolean = false
 has part Text = ""
 has isFull Boolean = false
 has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
+has cached Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 constant Unstamped = BinarySources(List(Text))
@@ -28,14 +29,16 @@ Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating, isFull) else 1
 Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
 	let files = Sourced(stale, root, sources)
-	let inference = ResolveCheck.Inference(files)
-	let isOwn = stale.Length is 1
+	let types = ResolveCheck.Inference(files)
+	mutable host = value
 	mutable failed = 0
 	for paths
-		let failures = value is in stale then Verified(value, root, isQuiet, files, inference, isOwn).code else Cached(value)
-		if (failures is 0) and (isQuiet is false)
+		let hit = value is in stale then Answer(0, known) else Answer(Cached(value), known)
+		let got = value is in stale then host.Verified(value, root, isQuiet, files, types, stale.Length is 1) else hit
+		host = value is in stale then Execute(host, known = got.known, cached = got.constants) else host
+		if (got.code is 0) and (isQuiet is false)
 			logger.Log(Summary(0, value))
-		failed = failed + failures
+		failed = failed + got.code
 	failed
 Cached(path Text) Number
 	Execute(Logger).Cached("Missing.strict") is 0
@@ -93,11 +96,11 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	if types.Length is 0
 		return Answer(1, known)
 	let started = Process.Elapsed
-	let failed = isTested then Tested(types, path, isQuiet) else 0
-	if (failed is 0) and (selection is "") and (IsEdited(path) is false)
+	let tested = isTested then Tested(types, path, isQuiet) else Answer(0, known, constants = cached)
+	if (tested.code is 0) and (selection is "") and (IsEdited(path) is false)
 		Stored(cache, root, files, stamped, isOwn, linked)
-	let survived = (failed is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
-	Answer(failed + survived, linked.Known(known), "", Dictionary(Text, Number), files, types)
+	let survived = (tested.code is 0) and isTested then Mutated(types, path, root, files, inference, started) else 0
+	Answer(tested.code + survived, linked.Known(known), files = files, Types = types, constants = tested.constants)
 Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound)
 	Execute(Logger).Stored(BinaryFile.Probe, ".", List(Text), Unstamped, true, LinkRound.Greeting) is not Error
 	File(BinaryFile.Probe.Path).Exists
@@ -117,13 +120,14 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 		return stamped
 	let current = SourceFiles(root).Of(cache.source)
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
-Tested(types List(TypeEntry), path Text, isQuiet = false) Number
+Tested(types List(TypeEntry), path Text, isQuiet = false) Answer
 	let home = Directory.Current
-	let failed = Machine(Started(types, path), isQuiet = isQuiet).Tested(types.First.Name)
+	let machine = Constants(Started(types, path)).Seeded(cached)
+	let failed = Machine(machine, isQuiet = isQuiet).Tested(types.First.Name)
 	Directory.Change(home)
 	if failed > 0
 		logger.Log(Summary(failed, path))
-	failed
+	Answer(failed, known, constants = Constants(machine).Recorded(cached))
 Mutated(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference, started Number) Number
 	let home = Directory.Current
 	let mutants = Mutants(logger, path, Baseline.Budget(started), part, selection is "*")

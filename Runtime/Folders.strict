@@ -10,7 +10,12 @@ Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = 
 	Folders(Logger).Tested("Missing", ".") is 0
 	let files = NativeFolder(logger, isRecursive = isRecursive).Files(folder)
 	let pending = Pending(files, isMutating)
-	mutable failed = Ran(Commands("test", pending, root, isMutating, isFull))
+	mutable failed = 0
+	if pending.Length > 0
+		if (isMutating is false) and (isFull is false)
+			failed = Execute(logger).Failures(pending, pending, root, false)
+		else
+			failed = Ran(Commands("test", pending, root, isMutating, isFull))
 	for files - pending
 		failed = failed + Execute(logger, isMutating = isMutating).Cached(value)
 	failed
