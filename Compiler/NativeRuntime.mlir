@@ -5933,7 +5933,16 @@
   ^done:
     return
   }
+  // the last pinned object a count reached: pinned objects are never freed by their count (only a collection frees
+  // them once unreachable, it forgets this address), so their counts are skipped, also the locate of the next write
+  // of the same constant (VmValue.None in every empty frame slot)
+  llvm.mlir.global internal @strict_rc_pinned_last(0 : i64) : i64
   func.func private @strict_rc_count(%target: i64, %container: i64, %step: i32) {
+    %lastSlot = llvm.mlir.addressof @strict_rc_pinned_last : !llvm.ptr
+    %last = llvm.load %lastSlot : !llvm.ptr -> i64
+    %isLast = arith.cmpi eq, %target, %last : i64
+    cf.cond_br %isLast, ^done, ^counting
+  ^counting:
     %noStep = arith.constant 0 : i32
     %isDown = arith.cmpi slt, %step, %noStep : i32
     cf.cond_br %isDown, ^drop, ^up
@@ -5948,10 +5957,6 @@
     %counted = arith.andi %found, %other : i1
     cf.cond_br %counted, ^count, ^done
   ^count:
-    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
-    %old = llvm.load %counter : !llvm.ptr -> i32
-    %new = arith.addi %old, %step : i32
-    llvm.store %new, %counter : i32, !llvm.ptr
     %freedSize = arith.constant 256 : i64
     %isLarger = arith.cmpi uge, %located#2, %freedSize : i64
     %targetFlags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
@@ -5964,6 +5969,21 @@
     %deviceFlag = arith.constant 64 : i8
     %targetDevice = arith.andi %targetFlagByte, %deviceFlag : i8
     %holdsDevice = arith.cmpi ne, %targetDevice, %noFlags : i8
+    %plainFlags = arith.constant 112 : i8
+    %pinnedPlain = arith.constant 32 : i8
+    %plainBits = arith.andi %targetFlagByte, %plainFlags : i8
+    %isPinnedPlain = arith.cmpi eq, %plainBits, %pinnedPlain : i8
+    %isSmall = arith.cmpi ult, %located#2, %freedSize : i64
+    %skipped = arith.andi %isPinnedPlain, %isSmall : i1
+    cf.cond_br %skipped, ^pinned, ^counter
+  ^pinned:
+    llvm.store %target, %lastSlot : i64, !llvm.ptr
+    cf.br ^done
+  ^counter:
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %old = llvm.load %counter : !llvm.ptr -> i32
+    %new = arith.addi %old, %step : i32
+    llvm.store %new, %counter : i32, !llvm.ptr
     cf.cond_br %entersContainer, ^enter, ^done
   ^enter:
     func.call @strict_rc_enter(%container) : (i64) -> ()
@@ -6181,8 +6201,12 @@
     %up = arith.constant 1 : i32
     %word = llvm.load %slot : !llvm.ptr -> i64
     %target = func.call @strict_rc_target(%word) : (i64) -> i64
+    %lastSlot = llvm.mlir.addressof @strict_rc_pinned_last : !llvm.ptr
+    %last = llvm.load %lastSlot : !llvm.ptr -> i64
+    %isNew = arith.cmpi ne, %target, %last : i64
     %isTarget = arith.cmpi ne, %target, %zero : i64
-    cf.cond_br %isTarget, ^count, ^done
+    %counting = arith.andi %isTarget, %isNew : i1
+    cf.cond_br %counting, ^count, ^done
   ^count:
     %container = func.call @strict_rc_container(%slot) : (!llvm.ptr) -> i64
     func.call @strict_rc_count(%target, %container, %up) : (i64, i64, i32) -> ()
@@ -6950,12 +6974,31 @@
     %countMask = arith.constant 536870911 : i32
     %zeroCount = arith.constant 0 : i32
     %down = arith.constant -1 : i32
+    %lastSlot = llvm.mlir.addressof @strict_rc_pinned_last : !llvm.ptr
+    %last = llvm.load %lastSlot : !llvm.ptr -> i64
+    %isLast = arith.cmpi eq, %target, %last : i64
+    cf.cond_br %isLast, ^done, ^locate
+  ^locate:
     %located:5 = func.call @strict_gc_locate(%target) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %unset = llvm.mlir.zero : !llvm.ptr
     %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
     %other = arith.cmpi ne, %located#1, %container : i64
     %counted = arith.andi %found, %other : i1
-    cf.cond_br %counted, ^count, ^done
+    cf.cond_br %counted, ^flagged, ^done
+  ^flagged:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i8
+    %plainFlags = arith.constant 112 : i8
+    %pinnedPlain = arith.constant 32 : i8
+    %plainBits = arith.andi %flagByte, %plainFlags : i8
+    %isPinnedPlain = arith.cmpi eq, %plainBits, %pinnedPlain : i8
+    %freedSize = arith.constant 256 : i64
+    %isSmall = arith.cmpi ult, %located#2, %freedSize : i64
+    %skipped = arith.andi %isPinnedPlain, %isSmall : i1
+    cf.cond_br %skipped, ^pinned, ^count
+  ^pinned:
+    llvm.store %target, %lastSlot : i64, !llvm.ptr
+    cf.br ^done
   ^count:
     %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %old = llvm.load %counter : !llvm.ptr -> i32
@@ -8785,6 +8828,8 @@
   ^deferred:
     return
   ^collect:
+    %pinnedLastSlot = llvm.mlir.addressof @strict_rc_pinned_last : !llvm.ptr
+    llvm.store %zero, %pinnedLastSlot : i64, !llvm.ptr
     %spilled:2 = func.call @strict_registers_spilled() : () -> (i64, i64)
     %startedAt = func.call @strict_clock() : () -> f64
     %ranBefore = func.call @strict_thread_seconds() : () -> f64
