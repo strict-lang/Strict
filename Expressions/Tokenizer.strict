@@ -135,10 +135,11 @@ IsGrouped(tokens Texts) Boolean
 	Tokenizer.IsGrouped(Tokenizer("value.None is ()").Tokens) is false
 	Tokenizer.IsGrouped(Tokenizer("(a + b) * c").Tokens)
 	Tokenizer.IsGrouped(Tokenizer("(a + b").Tokens) is false
+	Tokenizer.IsGrouped(Tokenizer(") + (").Tokens) and (Tokenizer.IsGrouped(Tokenizer("a + ()").Tokens) is false)
 	if tokens.Count("(") is not tokens.Count(")")
 		return false
 	for tokens
-		if (value is "(") and (index + 1 < tokens.Length) and (tokens(index + 1) is ")")
+		if value is "(" then (index + 1 < tokens.Length then tokens(index + 1) is ")" else false) else false
 			return false
 	true
 Names Texts
@@ -149,7 +150,7 @@ Names Texts
 	mutable isAfterDot = false
 	for as long as position < line.Length
 		let length = line.characters(position).number is Character.Space then 0 else TokenLength(position)
-		if (length > 0) and (isAfterDot is false) and IsName(position, length)
+		if (isAfterDot is false) and IsName(position, length)
 			names.Add(line.Substring(position, length))
 		isAfterDot = length is 0 then isAfterDot else line.characters(position).number is Dot
 		position = position + (length is 0 then 1 else length)
@@ -158,6 +159,7 @@ IsName(start Number, length Number) Boolean
 	Tokenizer("Id = 1").IsName(0, 2) is false
 	Tokenizer("Id >= 1").IsName(0, 2)
 	Tokenizer("x").IsName(0, 1) is false
+	Tokenizer(" A").IsName(0, 0) is false
 	Tokenizer("Validators/Check").IsName(0, 10) is false
 	let first = line.characters(start)
 	mutable after = start + length
