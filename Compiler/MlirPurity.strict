@@ -181,13 +181,14 @@ IsReachingGpu Boolean
 	Doubling.IsReachingGpu is false
 	MlirPurity(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 1))), 2).IsReachingGpu is false
 	Doubling.IsKnown(Timing.function, MlirFunction(Making, safeCalls = Dictionary(("Rows_Timed_1", 2))), 0)
+	MlirPurity(MlirCost.Devices.function, 2).IsReachingGpu
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let isCall = function.method.instructions(value).kind is InstructionType.Invoke
 		let callees = isCall then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
 		let symbol = callees.Length > 0 then callees.First.Symbol else ""
 		if (symbol is in function.safeCalls) and (function.safeCalls(symbol) is 2)
 			return true
-	false
+	MlirCost(function, position).IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
 IsSteady Boolean
 	MlirPurity(MlirLoops.Listing.function, 1).IsSteady
 	MlirPurity(MlirKernel.Calling.function, 1).IsSteady is false

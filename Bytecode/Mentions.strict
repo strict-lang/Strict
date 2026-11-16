@@ -12,11 +12,11 @@ Types Texts
 Distinct(tokens Texts, typed Texts, own Texts) Texts
 	Mentions(List(Text)).Distinct(("a", "a", "b"), List(Text) + "b", List(Text) + "a") is ("b")
 	mutable seen = Dictionary(Text, Boolean)
-	mutable result = List(Mutable(Text))
+	mutable result = List(Text)
 	for tokens
 		if (value is not in seen) and ((value is in typed) or (value is not in own))
 			seen(value) = true
-			result.Add(value)
+			result = result + value
 	result
 CollectedNames(sources Texts) Texts
 	Mentions(List(Text)).CollectedNames(("A + b", "C")) is ("A", "C")

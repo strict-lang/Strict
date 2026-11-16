@@ -135,9 +135,7 @@ Ownership(type TypeEntry, kind Text) Number
 	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
 	if type.Name is kind
 		return type.Name.IndexOf("List") < 0 then 2 else (TypeEntry.Based(type.Name) is "List" then 1 else 2)
-	if kind is "List"
-		return 1
-	TypeEntry.Based(type.Name) is TypeEntry.Based(kind) then 1 else 0
+	kind is "List" then 1 else TypeEntry.Based(type.Name) is TypeEntry.Based(kind) then 1 else 0
 Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42

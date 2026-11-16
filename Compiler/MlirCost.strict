@@ -35,7 +35,7 @@ IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolea
 	for Range(first, last)
 		if (inspected.method.instructions(value).kind is InstructionType.LoopBegin) and MlirGpuCheck(inspected, value).IsGpu
 			return true
-		let callees = depth < 4 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
+		let callees = depth < 8 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
 		if (callees.Length > 0) and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
 			return true
 	false

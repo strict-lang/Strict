@@ -4,6 +4,7 @@ constant Hashed = VmValue("Strict/HashCode(Type)", 0, "", List(VmValue) + VmValu
 constant Letter = VmValue("Strict/Character", 0, "", List(VmValue) + VmValue.OfNumber(97))
 constant Detailed = VmValue("Strict/ErrorWithValue", 0, "", (DimensionError, OneTwo))
 constant Wrapped = VmValue.OfList(List(VmValue) + Letter)
+constant EmptyTextList = VmValue.OfList(List(VmValue) + VmValue.OfText(""))
 constant Undefined = VmValue.OfNumber(0 / 0)
 Result(kind Number, left VmValue, right VmValue) VmValue
 	Result(InstructionType.Add, VmValue.OfNumber(3), VmValue.OfNumber(4)).number is 7
@@ -27,7 +28,7 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	Comparison(InstructionType.GreaterThan, VmValue.OfNumber(1), VmValue.OfNumber(3)) is false
 	Comparison(InstructionType.NotEqual, VmValue.OfNumber(1), VmValue.OfNumber(1)) is false
 	Comparison(InstructionType.Equal, VmValue.OfNumber(1), VmValue.OfNumber(2)) is false
-	if kind is in (InstructionType.Equal, InstructionType.NotEqual)
+	if (kind is InstructionType.Equal) or (kind is InstructionType.NotEqual)
 		return IsSame(left, right) is (kind is InstructionType.Equal)
 	Ordered(kind is InstructionType.LessThan, left, right)
 Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
@@ -43,12 +44,12 @@ Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
 	let rightNumber = right.items.Length is 0 then right.number else Comparable(right).number
 	isLess then leftNumber < rightNumber else leftNumber > rightNumber
 IsSame(left VmValue, right VmValue) Boolean
-	IsSame(DimensionError, VmValue.OfError(""))
-	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false
-	IsSame(DimensionError, VmValue.OfError("x")) is false
-	IsSame(VmValue.OfError(""), DimensionError) and IsSame(VmValue.OfNumber(1), VmValue.OfNumber(1))
-	IsSame(VmValue.OfList(List(VmValue) + VmValue.OfText("")), DimensionError) is false
-	IsSame(DimensionError, VmValue.OfList(List(VmValue) + VmValue.OfText(""))) is false
+	IsSame(DimensionError, VmValue.OfError("")) and IsSame(VmValue.OfNumber(1), VmValue.OfNumber(1))
+	(IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false) and (IsSame(DimensionError, VmValue.OfError("x")) is false)
+	IsSame(VmValue.OfError(""), DimensionError)
+	(IsSame(EmptyTextList, DimensionError) is false) and (IsSame(DimensionError, EmptyTextList) is false)
+	if (left.kind is right.kind) and ((left.kind is "Number") or (left.kind is "Text") or (left.kind is "Boolean"))
+		return left.kind is "Text" then left.text is right.text else left.number is right.number
 	let compared = Comparable(left)
 	let other = Comparable(right)
 	let isError = (compared.kind is "Strict/Error") and (other.kind is "Strict/Error")
@@ -74,10 +75,14 @@ Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Calculated(InstructionType.Divide, OneTwo, VmValue.OfNumber(2)).Length is 2
 	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), Undefined) is VmValue.OfError("ModuloByZero")
 	if (left.kind is "Number") and (right.kind is "Number")
-		if kind is InstructionType.Add
-			return VmValue.OfNumber(left.number + right.number)
+		if kind <= InstructionType.Multiply
+			return VmValue.OfNumber(QuickNumeric(kind, left.number, right.number))
 		return Computed(kind, left.number, right.number)
 	Mixed(kind, left, right)
+QuickNumeric(kind Number, left Number, right Number) Number
+	QuickNumeric(InstructionType.Add, 2, 3) is 5
+	QuickNumeric(InstructionType.Multiply, 2, 3) is 6
+	kind is InstructionType.Add then left + right else kind is InstructionType.Subtract then left - right else left * right
 Mixed(kind Number, left VmValue, right VmValue) VmValue
 	let isValue = (left.kind is not in ("Text", "List")) and (right.kind is not in ("Text", "List"))
 	if isValue and ((left.kind is "Strict/Error") or (right.kind is "Strict/Error"))
