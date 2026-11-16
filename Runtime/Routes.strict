@@ -22,6 +22,12 @@ constant Defaulting = Routes(List(TypeEntry) + TypeEntry(Machine.Doubler, method
 constant Returning = List(InstructionEntry) + InstructionEntry.Return(0)
 constant Textual = Routes(List(TypeEntry) + TypeEntry("Strict/Text", List(MemberEntry), List(MethodEntry) + MethodEntry(TypeEntry.ToNumber, instructions = Returning)))
 constant Texted = List(MemberEntry) + MemberEntry("text", "Strict/Text", List(InstructionEntry), false)
+constant Other = List(MemberEntry) + MemberEntry("other", "Strict/Generic", List(InstructionEntry), false)
+constant Lists = TypeEntry("Strict/List(Text)", List(MemberEntry), List(MethodEntry) + MethodEntry("in", Other, "Strict/Boolean", Reading.instructions))
+constant Searching = Invocation(InstructionEntry.Invoke(1, ("Strict/List(Text)", "in", "Strict/Boolean", "other"), List(Number) + 0, -1), List(VmValue), VmValue.None)
+constant Searchable = Routes((Machine.Doubler, Lists))
+constant Appending = Invocation(Searching, entry = InstructionEntry.Invoke(1, ("Strict/List(Text)", "Add", "Strict/List(Text)", "other"), List(Number) + 0, -1))
+constant Containing = Invocation(Searching, entry = InstructionEntry.Invoke(1, ("Strict/Range", "in", "Strict/Boolean", "other"), List(Number) + 0, -1))
 constant Characters = Routes(List(TypeEntry) + TypeEntry(TypeEntry.CharacterEntry, methods = List(MethodEntry) + MethodEntry("from", Texted, "Strict/Character", Returning)))
 constant DefaultAdd = Invocation(InstructionEntry.Invoke(0, ("Strict/Doubler", "Add", "Strict/Number"), List(Number) + 0, -1), List(VmValue) + VmValue.OfNumber(1), VmValue.None)
 constant Checking = MethodEntry(Failing, instructions = Failing.instructions.Slice(0, 2) + InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0) + Failing.instructions.Last)
@@ -32,13 +38,19 @@ Target(call Invocation) Numbers
 	Doubling.Target(Invocation.Uppered) is (Resolver.Searching, 0, 0)
 	Doubling.Target(Hosted.SystemCall) is (Resolver.Hosting, 0, 0)
 	Doubling.Target(HostedJson.Getting) is (Resolver.Hosting, 0, 0)
-	JsonOnly.Target(HostedJson.Getting) is (Resolver.Native, 0, 0)
+	(JsonOnly.Target(HostedJson.Getting)(0) is Resolver.Native) and (Searchable.Target(Searching)(0) is Resolver.Native)
 	Textual.Called(Invocation.Parsing) is (Resolver.Native, 0, 0)
 	Characters.Called(Invocation.Coding) is (0, 0, 1)
 	if Hosted(call).IsHosted and (IsSourceRun(call) is false)
 		return (Resolver.Hosting, 0, 0)
 	let isText = (call.TypeName is "Strict/Text") and (call.MethodName is in Natives.TextMethods)
-	isText then (Resolver.Searching, 0, 0) else Called(call)
+	IsSearch(call) then (Resolver.Native, 0, 0) else isText then (Resolver.Searching, 0, 0) else Called(call)
+IsSearch(call Invocation) Boolean
+	Doubling.IsSearch(Searching)
+	Routes(List(TypeEntry) + Lists).IsSearch(Searching) is false
+	(Doubling.IsSearch(Appending) is false) and (Doubling.IsSearch(Containing) is false)
+	let isList = call.TypeName is in ("Strict/List(Text)", "Strict/List(Number)")
+	isList and (call.MethodName is in ("in", "Index")) then IsSourceRun(call) is false else false
 IsSourceRun(call Invocation) Boolean
 	JsonOnly.IsSourceRun(HostedJson.Getting)
 	Doubling.IsSourceRun(Hosted.SystemCall) is false
@@ -78,7 +90,7 @@ IsFailing(method MethodEntry) Boolean
 Called(call Invocation) Numbers
 	(Doubling.Called(Resolver.Twice) is (0, 0, 0)) and (Doubling.Called(Invocation.AddCall)(0) is Resolver.Native)
 	(Routes(TypeEntry.Holding).Called(Invocation.Held) is (1, 0, 0)) and (Redirecting.Called(WrapperTwice)(0) is 1)
-	(Ticking.Called(Resolver.Twice) is (0, 0, 0)) and (Redirecting.Called(WrapperFrom)(0) is -1)
+	(Ticking.Called(Resolver.Twice) is (0, 0, 0)) and (Redirecting.Called(WrapperFrom) is (-1, 1, 0))
 	Defaulting.Called(DefaultAdd) is (Resolver.Native, 0, 0)
 	let name = call.MethodName
 	let own = Natives(types).TypeOf(call.TypeName)
@@ -91,4 +103,5 @@ Called(call Invocation) Numbers
 ConstructionSlot(type TypeEntry) Number
 	Doubling.ConstructionSlot(Machine.Doubler) is 1
 	Redirecting.ConstructionSlot(Wrapper) is 1
+	Redirecting.ConstructionSlot(Holder) is 0
 	(type.members.Length is 1) and (type.methods.Length > 0) then 0 else Resolver(types).Position(type) + 1

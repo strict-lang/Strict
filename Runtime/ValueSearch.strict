@@ -1,0 +1,25 @@
+has items List(VmValue)
+constant Pairs = (VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.Numbered)
+Index(element VmValue) Number
+	ValueSearch((VmValue.OfText("a"), VmValue.OfText("b"))).Index(VmValue.OfText("b")) is 1
+	ValueSearch(List(VmValue) + VmValue.OfText("a")).Index(VmValue.OfText("c")) is -1
+	for items
+		if Matches(value, element)
+			return index
+	-1
+Key(key VmValue) Number
+	ValueSearch(Pairs).Key(VmValue.OfNumber(5)) is 1
+	ValueSearch(List(VmValue) + Pairs.First).Key(VmValue.OfNumber(5)) is -1
+	ValueSearch((VmValue.EmptyList, Pairs.Last)).Key(VmValue.OfNumber(5)) is 1
+	for items
+		if value.items.Length is 2 then Matches(value.items.First, key) else false
+			return index
+	-1
+Matches(left VmValue, right VmValue) Boolean
+	ValueSearch.Matches(VmValue.OfText("a"), VmValue.OfText("a"))
+	ValueSearch.Matches(VmValue.OfText("a"), VmValue.OfText("b")) is false
+	ValueSearch.Matches(VmValue.OfNumber(1), VmValue(VmValue.OfNumber(1), number = 2)) is false
+	ValueSearch.Matches(VmValue("A", 0, "", List(VmValue)), VmValue.None) is false
+	ValueSearch.Matches(VmValue.OfList(VmValue.OfNumber(1)), VmValue.EmptyList) is false
+	let isScalar = (left.text is right.text) and (left.number is right.number)
+	isScalar then (left.kind is right.kind then left.items is right.items else false) else false

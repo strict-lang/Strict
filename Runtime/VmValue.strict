@@ -41,14 +41,6 @@ OfError(name Text) VmValue
 	OfError("Missing").items.First.text is "Missing"
 	(OfError("M").kind is "Strict/Error") and (OfError("M").items.Length is 2)
 	VmValue("Strict/Error", 0, "", (OfText(name), OfList(List(VmValue))))
-KeyIndex(key VmValue) Number
-	OfList(OfList(OfNumber(1), OfNumber(3)), OfList(OfNumber(2), OfNumber(4))).KeyIndex(OfNumber(2)) is 1
-	OfList(OfList(OfNumber(1), OfNumber(3))).KeyIndex(OfNumber(5)) is -1
-	OfList(OfList(List(VmValue)), OfList(OfNumber(2), OfNumber(4))).KeyIndex(OfNumber(2)) is 1
-	for items
-		if (value.items.Length is 2) and (value.items.First is key)
-			return index
-	-1
 Counted(arguments List(VmValue)) Number
 	OfList(OfNumber(1), OfNumber(2), OfNumber(1)).Counted(List(VmValue) + OfNumber(1)) is 2
 	OfList(OfNumber(1)).Counted(List(VmValue)) is 1

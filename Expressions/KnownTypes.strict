@@ -9,6 +9,8 @@ constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
 constant Lengths = (Scope(("Length"), ("Length")), NoMembers)
 constant Measured = KnownTypes(("F", "Length"), Lengths, (NoMembers, Scope(("Length"), ("Number"))), (NoMembers, NoMembers))
+constant Sizes = (Scope(("Size"), ("Number")), Scope(("Size"), ("Number")))
+constant Shadowed = KnownTypes(("G", "F"), (Scope(("f"), ("F")), NoMembers), Sizes, (NoMembers, NoMembers))
 constant Nested = KnownTypes(("G", "F", "Length"), (Scope(("f"), ("F")), Lengths(0), NoMembers), (NoMembers, NoMembers, Scope(("Length"), ("Number"))), (NoMembers, NoMembers, NoMembers))
 constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
@@ -47,7 +49,7 @@ IsPlural(typeName Text) Boolean
 	KnownTypes(("Bus"), (NoMembers), (NoMembers), (NoMembers)).IsPlural("Bus") is false
 	Sample.IsPlural("Counts")
 	Sample.IsPlural("Text") is false
-	typeName.Length > 1 and typeName.EndsWith("s") and (not IsKnown(typeName))
+	typeName.Length > 1 and typeName.EndsWith("s") then IsKnown(typeName) is false else false
 BaseName(typeName Text) Text
 	Instantiation.Boxed.ResolvedType("Meter", "Number", 1) is "Number"
 	Instantiation.Boxed.ResolvedType("Meter", "Half", 1) is "Number"
@@ -181,6 +183,7 @@ Holder(typeName Text, name Text, depth Number) Text
 	Measured.Holder("F", "Length", 1) is "Length"
 	Nested.Holder("G", "Length", 2) is "f"
 	Sample.Holder("Count", "Twice", 1) is ""
+	Shadowed.Holder("G", "Size", 1) is ""
 	if MethodsOf(typeName).TypeOf(name) is not ""
 		return ""
 	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))

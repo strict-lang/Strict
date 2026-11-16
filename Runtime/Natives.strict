@@ -33,7 +33,7 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")
 	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(1)).Length is 1
 	Shapes.Keyed("set", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))).items.Last.items.Last.number is 5
-	let found = pairs.KeyIndex(arguments.First)
+	let found = ValueSearch(pairs.items).Key(arguments.First)
 	if name is "in"
 		return VmValue.OfBoolean(found >= 0)
 	if name is "get"
@@ -101,11 +101,10 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 	Shapes.Queried("Fail", VmValue.None, NewShape).kind is "Strict/Error"
 	if call.TypeName.StartsWith("Strict/Dictionary(")
 		return Keyed(name, instance, call.Arguments)
+	let position = name is in ("in", "Index") then ValueSearch(instance.items).Index(call.Arguments.First) else -1
 	if name is "in"
-		return VmValue.OfBoolean(call.Arguments.First is in instance.items)
-	if name is "Index"
-		return VmValue.OfNumber(instance.items.Index(call.Arguments.First))
-	Foreign(call, types, folder).Called
+		return VmValue.OfBoolean(position >= 0)
+	name is "Index" then VmValue.OfNumber(position) else Foreign(call, types, folder).Called
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and (Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2)
 	(Shapes.Searched("Substring", "abc", BcTwo).text is "ab") and (Shapes.Searched("Substring", "a", BcTwo) is Cut)

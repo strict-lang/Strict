@@ -13,14 +13,18 @@ TypeOf(name Text) Text
 	Scope(("a", "b"), ("A", "B")).TypeOf("b") is "B"
 	Scope(("a", "b"), ("A", "B")).TypeOf("c") is ""
 	Scope(("a", "a"), ("A", "B")).TypeOf("a") is "B"
+	Scope(("a", "b"), ("A", "B")).Indexed.With("c", "C").TypeOf("a") is "A"
+	if name is not in names
+		return ""
 	for names.Length - indexed
 		let position = names.Length - 1 - index
 		if names(position) is name
 			return types(position)
-	name is in positions then types(positions(name)) else ""
+	types(positions(name))
 Has(name Text, type Text) Boolean
 	Scope(("to", "to"), ("A", "B")).Has("to", "A")
 	Scope(("to", "to"), ("A", "B")).Has("to", "C") is false
+	Scope(("a", "b"), ("A", "B")).Has("a", "B") is false
 	for names
 		if (value is name) and (types(index) is type)
 			return true

@@ -6,6 +6,7 @@ constant LessThan = 60
 constant EqualsSign = 61
 constant GreaterThan = 62
 constant LowercaseE = 101
+constant WordCodes = Tokenizer("").Words
 Tokens Texts
 	Tokenizer("a + b").Tokens is ("a", "+", "b")
 	Tokenizer("Add(5, x.y)").Tokens is ("Add", "(", "5", ",", "x", ".", "y", ")")
@@ -73,7 +74,7 @@ IsDecimalPoint(position Number) Boolean
 	Tokenizer("a2.b").IsDecimalPoint(2) is false
 	Tokenizer("1.").IsDecimalPoint(1) is false
 	Tokenizer("a.5").IsDecimalPoint(1) is false
-	if position + 1 >= line.Length or (not IsDigitCode(line.characters(position + 1).number))
+	if position + 1 is line.Length or (not IsDigitCode(line.characters(position + 1).number))
 		return false
 	IsDigitCode(line.characters(position - 1).number)
 IsExponentSign(start Number, position Number) Boolean
@@ -100,9 +101,17 @@ IsWordCode(code Number) Boolean
 	IsWordCode(122) and IsWordCode(65) and IsWordCode(48)
 	IsWordCode(123) is false and (IsWordCode(96) is false) and (IsWordCode(91) is false)
 	IsWordCode(64) is false and (IsWordCode(58) is false) and (IsWordCode(47) is false)
-	let isLower = (code >= Character.LowercaseA) and (code <= Character.LowercaseZ)
-	let isUpper = (code >= Character.UppercaseA) and (code <= Character.UppercaseZ)
-	isLower or isUpper or IsDigitCode(code)
+	IsWordCode(228) is false and (IsWordCode(-1) is false) and (IsWordCode(-200) is false)
+	(code >= Character.zeroCharacter) and (code <= Character.LowercaseZ) then WordCodes(code) else false
+Words Booleans
+	Tokenizer("").Words.Length is 123
+	Tokenizer("").Words(97) and Tokenizer("").Words(48) and (Tokenizer("").Words(95) is false)
+	Tokenizer("").Words(65) and Tokenizer("").Words(90) and (Tokenizer("").Words(91) is false)
+	(Tokenizer("").Words(64) is false) and (Tokenizer("").Words(96) is false)
+	for Range(0, Character.LowercaseZ + 1)
+		let isLower = value >= Character.LowercaseA
+		let isUpper = (value >= Character.UppercaseA) and (value <= Character.UppercaseZ)
+		isLower or isUpper or IsDigitCode(value)
 IsDigit(character Text) Boolean
 	IsDigit("7")
 	IsDigit("a") is false
