@@ -8,6 +8,7 @@ constant Reporting = TracedFrame(Frame(Frame.Doubling, MethodEntry(TestCodegen.R
 constant Pairs = TracedFrame(Frame(Machine.Pairing, Frame.Twice.method, "Strict/Pair"))
 constant Printed = InstructionEntry(InstructionType.Print, "a", List(Number), 4)
 constant Same = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "None", (Printed, Printed, InstructionEntry(InstructionType.JumpEnd, List(Text), List(Number), 3), Printed)), "A"))
+constant Ending = TracedFrame(Frame(Frame.Doubling, MethodEntry("Twice", List(MemberEntry), "Strict/Number", (Used, InstructionEntry(InstructionType.LoopEnd, List(Text), List(Number) + 2, 4))), "Strict/Doubler"))
 constant Seven = VmValue.OfNumber(7)
 constant Letters = "abcdefghijklmnopqrstuvwxyz"
 constant Started = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, Looping.Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 2))
@@ -91,13 +92,14 @@ Ended(position Number, place Text, result VmValue) Texts
 	Lined.Ended(4, "A|0", Seven) is ("$Result A|0|7")
 	let instructions = frame.method.instructions
 	let entry = instructions(position)
-	let isLast = (position + 1 >= instructions.Length) or (instructions(position + 1).line is not entry.line)
+	let isLast = (position + 1 is instructions.Length) or (instructions(position + 1).line is not entry.line)
 	let isControl = (entry.kind > InstructionType.Return) and (entry.kind <= InstructionType.JumpEnd)
 	isLast and (isControl is false) then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
 Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Counted).Length is 0
 	Lined.Iteration(3, Started).Length is 0
 	Lined.Iteration(2, Started).Last is "$Set Strict/Doubler|4|for|0"
+	Ending.Iteration(1, Started).Length is 2
 	let entry = frame.method.instructions(position)
 	let begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
 	let state = slots(Frame.LoopSlot)
@@ -111,6 +113,7 @@ Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfList(List(VmValue))) is "()"
 	Pairs.Shown(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
 	Lined.Shown(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
+	Lined.Shown(VmValue.OfError("x")) is ValueCode(VmValue.OfError("x")).Code
 	constant MaxShownLength = 80
 	let items = result.items
 	let elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")

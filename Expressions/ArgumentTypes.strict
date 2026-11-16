@@ -32,6 +32,12 @@ constant Parsing = SyntaxParser(Tokenizer("settings.Parsed(5)").Tokens).Parse
 constant Indexing = ArgumentTypes(IndexedValues.Typed.inference)
 constant Mixed = "CopyChangesMustBeNamed: Area(area, size, depth = 2) copies area, name every change like depth = 2"
 constant MixedCopy = SyntaxParser(Tokenizer("Area(area, depth = 2, size)").Tokens).Parse
+constant TypeLimited = SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse
+constant CountNamed = Counted.With("Count", "Count")
+constant NoScopes = (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant OddMembers = (Scope(List(Text) + "code", List(Text) + "Number"), KnownTypes.NoMembers, Scope(List(Text) + "text", List(Text) + "Text"), Scope(("first", "second"), ("Number", "Generic")))
+constant Odd = ArgumentTypes(TypeInference(KnownTypes(("Character", "Empty", "Word", "Pair"), OddMembers, NoScopes, NoScopes), Shapes))
+constant AreaCall = SyntaxNode("MethodCall", "Area", (SyntaxNode("Identifier", "area")))
 Checked(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Checked(Grown, Counted, Counted).StartsWith("ArgumentTypeMismatch")
 	Sizing.Checked(Listed, Counted, Counted).StartsWith("LogicalOperandIsAList")
@@ -49,13 +55,13 @@ ConstantAccess(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("count.Grow").Tokens).Parse, Counted, Counted) is ""
 	Sizing.ConstantAccess(Limited, Counted, Counted).EndsWith(": Limit is read from an instance, write Count.Limit")
 	Sizing.ConstantAccess(Limited, Counted, Counted).StartsWith("ConstantNeedsTypeName")
-	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Count.Limit").Tokens).Parse, Counted, Counted) is ""
+	Sizing.ConstantAccess(TypeLimited, Counted, Counted) is ""
 	Sizing.ConstantAccess(SyntaxParser(Tokenizer("Limit(count)").Tokens).Parse, Counted, Counted) is ""
 	let isMember = (node.Kind is in ("Member", "MethodCall")) and (node.children.Length > 0)
 	let first = isMember then node.children(0) else node
 	let isTypeName = (first.Kind is "Type") or (scope.TypeOf(first.text) is "") and inference.types.IsKnown(first.text)
 	let owner = isMember and (isTypeName is false) then inference.TypeOf(first, scope, current) else ""
-	if (owner is "") or (inference.ConstantOf(owner, node.text) is "")
+	if inference.ConstantOf(owner, node.text) is ""
 		return ""
 	"ConstantNeedsTypeName: " + node.text + " is read from an instance, write " + owner + "." + node.text
 Operands(node SyntaxNode) Text
@@ -125,6 +131,7 @@ TooMany(call SyntaxNode, name Text, types Texts) Text
 	Logged.Compared(Made, "Wrong", "from", Counted, Counted) is "TooManyArguments: Wrong got 2 of 1"
 	(Sizing.TooMany(DepthCopies(1), "Area", List(Text) + "Size") is "") and (Logged.TooMany(Made, "Wrong", ("")) is "")
 	(Couples.TooMany(Coupled, "Couple", List(Text)) is "") and (Sizing.TooMany(Created, "Count", ("Size", "Number")) is "")
+	Sizing.TooMany(Spread, "Count.Spread", List(Text) + "Areas") is ""
 	mutable given = 0
 	for call.children
 		if (value.Kind is not "Reassignment") and ((index > 0) or (call.Kind is not "MethodCall"))
@@ -140,6 +147,8 @@ Owner(instance Text, method Text) Text
 	Inheriting.Owner("Settings", "to") is "Settings"
 	Inheriting.Compared(Parsing, "Settings", "Parsed", Counted, Counted).EndsWith(".Parsed got a Number for a Texts")
 	Sizing.Owner("Count", "Grow") is "Count"
+	Sizing.ConstantAccess(SyntaxNode("Member", "Limit", (SyntaxNode("Type", "Count"))), CountNamed, Counted) is ""
+	Sizing.ConstantAccess(TypeLimited, CountNamed, Counted).StartsWith("ConstantNeedsTypeName")
 	let types = inference.types
 	let isOwn = (types.ParameterScope(instance).Count(method) > 0) or (types.MethodsOf(instance).TypeOf(method) is not "")
 	isOwn or (types.Inherited(instance, method) is "") then instance else "Any"
@@ -147,6 +156,7 @@ Declared(instance Text, method Text) Texts
 	Sizing.Declared("Count", "Grow") is ("Area")
 	Sizing.Declared("Size", "from") is ("Number")
 	Couples.Declared("Couple", "from").Length is 0
+	(Sizing.Declared("Size", "Missing") is ("")) and (Couples.Declared("Couple", "Missing") is (""))
 	let parameters = inference.types.ParameterScope(Owner(instance, method))
 	if (method is "from") and ("Generic" is in inference.types.MembersOf(instance).types)
 		return List(Text)
@@ -161,6 +171,10 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Text", "Letter", "from") is -1
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
 	Sizing.Matched(("Text", "Number"), ("Number", "Text"), "Letter", "from") is 0
+	Sizing.Issue(SyntaxParser(Tokenizer("Size(count)").Tokens).Parse, Counted, Counted) is ""
+	(Odd.Mismatch("Word", "Empty") is false) and (Odd.IsBaseMismatch("Text", "Empty") is false)
+	(Couples.Mismatch("Text", "Texts") is false) and (Couples.IsBaseMismatch("Text", "Texts") is false)
+	Sizing.Mismatch("Count", "Character") is false
 	let members = inference.types.MembersOf(instance).types
 	let isMemberCall = ((arguments - members).Length is 0) and (Mismatched(arguments, members) < 0)
 	(method is "from") and isMemberCall then -1 else Mismatched(arguments, types)
@@ -172,6 +186,8 @@ Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Mismatch("Size", "Size") is false
 	Sizing.Mismatch("Count", "Xyz") is false
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
+	(Odd.Mismatch("Character", "Word") is false) and (Odd.Mismatch("Empty", "Number") is false)
+	(Odd.IsBaseMismatch("Text", "Character") is false) and (Odd.IsBaseMismatch("Text", "Word") is false)
 	for Range((call.Kind is "MethodCall" then 1 else 0), call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
 Mismatched(arguments Texts, types Texts) Number
@@ -229,6 +245,9 @@ IsListed(types Texts) Boolean
 	(Sizing.Copied(Copies(1), Counted, Counted) is "") and (Sizing.Copied(Copies(2), Counted, Counted) is "")
 	(Sizing.Copied(Copies(3), Counted, Counted) is "") and (Sizing.Copied(Copies(4), Counted, Counted) is "")
 	(Sizing.Copied(Copies(5), Counted, Counted) is "") and (Sizing.Copied(Copies(6), Counted, Counted) is "")
+	Sizing.ConstantAccess(SyntaxNode("Member", "Limit"), Counted, Counted) is ""
+	Sizing.ConstantAccess(SyntaxNode("Value", "count"), Counted, Counted) is ""
+	Sizing.Issue(SyntaxParser(Tokenizer("Xyz(xyz, size, a = 1)").Tokens).Parse, Counted.With("xyz", "Xyz"), Counted) is ""
 	(types.Length is 1) and (inference.types.BaseName(types.First) is in ("List", "Generic", "Generics"))
 IsScalar(type Text) Boolean
 	Sizing.IsScalar("Boolean")
@@ -238,5 +257,7 @@ IsScalar(type Text) Boolean
 	Sizing.Mismatch("Xyz", "Area") is false
 	Sizing.IsBaseMismatch("Count", "Area") is false
 	Sizing.IsBaseMismatch("Text", "Area")
+	Odd.TooMany(Made, "Pair", List(Text) + "Number") is ""
+	Sizing.Issue(AreaCall, Counted, Counted).StartsWith("Copy") is false
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).Split(" ")(2) is "copies"
 	type is in ("Boolean", "Number", "Text")
