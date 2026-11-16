@@ -1,0 +1,1 @@
+- Native object cache of a package (`Networking/native/Socket.o` and its `.nativecache`) is not keyed by platform: a Linux build in the same tree (WSL) links the Windows object and fails with `R_AMD64_IMAGEBASE`, and the other way round.
