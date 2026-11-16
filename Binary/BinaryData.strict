@@ -18,12 +18,14 @@ UInt32(at Number) Number
 Int32(at Number) Number
 	Sample.Int32(0) is 4
 	Sample.Int32(4) is -2147287041
+	BinaryData((0, 0, 0, 128)).Int32(0) is -2147483648
 	let unsigned = UInt32(at)
 	unsigned >= Int32SignBit then unsigned - HashCode.UnsignedRange else unsigned
 Int16(at Number) Number
 	Sample.Int16(4) is -1
 	Sample.Int16(6) is -32766
 	Sample.Int16(0) is 4
+	BinaryData((0, 128)).Int16(0) is -32768
 	let unsigned = UInt16(at)
 	unsigned >= Int16SignBit then unsigned - UInt16Range else unsigned
 UInt16(at Number) Number
@@ -32,17 +34,18 @@ UInt16(at Number) Number
 Int8(at Number) Number
 	Sample.Int8(4) is -1
 	Sample.Int8(0) is 4
+	BinaryData((128)).Int8(0) is -128
 	bytes(at) >= HighBit then bytes(at) - Byte.Values else bytes(at)
 Float32(at Number) Number
 	(Sample.Float32(8) is 1.5) and (BinaryData((1, 2, 3, 64)).Float32(0) is 2 + 197121 / 4194304)
-	Sample.Float32(18) is -1
-	(Sample.Float32(0) is 4 * 2 ^ -149) and (BinaryData((0, 0, 128, 255)).Float32(0) is -1 / 0)
+	(Sample.Float32(18) is -1) and (BinaryData((255, 0, 0, 75)).Float32(0) is 8388863)
+	(Sample.Float32(0) * 2 ^ 149 is 4) and (BinaryData((0, 0, 128, 255)).Float32(0) is -1 / 0)
 	(BinaryData((0, 0, 128, 127)).Float32(0) is 1 / 0) and (BinaryData((1, 0, 128, 127)).Float32(0) is not 1 / 0)
-	BinaryData((1, 0, 128, 127)).Float32(0).IsFinite is false
+	(BinaryData((1, 0, 128, 127)).Float32(0).IsFinite is false) and (BinaryData((0, 0, 128, 128)).Float32(0) < 0)
 	let exponent = (bytes(at + 3) % HighBit) * 2 + (bytes(at + 2) / HighBit).Floor
 	let mantissa = (bytes(at + 2) % HighBit) * UInt16Range + bytes(at + 1) * Byte.Values + bytes(at)
 	if exponent is InfinityExponent
-		return mantissa is 0 then (bytes(at + 3) >= HighBit then -1 / 0 else 1 / 0) else 0 / 0
+		return mantissa is 0 then (bytes(at + 3) > HighBit then -1 / 0 else 1 / 0) else 0 / 0
 	let fraction = mantissa / MantissaRange
 	let magnitude = exponent is 0 then mantissa * 2 ^ -SubnormalShift else (1 + fraction) * 2 ^ (exponent - ExponentBias)
 	bytes(at + 3) >= HighBit then -magnitude else magnitude
@@ -55,8 +58,10 @@ Text(at Number) Text
 TextLength(at Number) Number
 	Sample.TextLength(12) is 5
 	BinaryData((0, 200, 3)).TextLength(1) is 456
+	BinaryData((128, 3)).TextLength(0) is 384
 	bytes(at) >= HighBit then bytes(at) % HighBit + bytes(at + 1) * HighBit else bytes(at)
 TextEnd(at Number) Number
 	Sample.TextEnd(12) is 18
 	BinaryData((0, 200, 3)).TextEnd(1) is 459
+	BinaryData((128, 3)).TextEnd(0) is 386
 	at + (bytes(at) >= HighBit then 2 else 1) + TextLength(at)

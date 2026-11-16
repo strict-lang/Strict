@@ -18,10 +18,12 @@ Block(number Number) Numbers
 	Deflate((1, 2, 3)).Block(1) is (1, 0, 0, 255, 255)
 	let start = number * StoredBlockLimit
 	let size = (bytes.Length - start).Clamp(0, StoredBlockLimit)
-	let final = start + size >= bytes.Length then 1 else 0
 	let complement = StoredBlockLimit - size
-	let header = (final, size % Byte.Values, (size / Byte.Values).Floor, complement % Byte.Values)
+	let header = (Final(start + size), size % Byte.Values, (size / Byte.Values).Floor, complement % Byte.Values)
 	header + (complement / Byte.Values).Floor + Inflate.Part(bytes, start, size)
+Final(end Number) Number
+	(Deflate((1, 2, 3)).Final(2) is 0) and (Deflate((1, 2, 3)).Final(3) is 1)
+	end >= bytes.Length then 1 else 0
 Adler Numbers
 	Deflate((1, 2, 3)).Adler is (0, 13, 0, 7)
 	constant AdlerModulus = 65521
@@ -38,16 +40,16 @@ Zlib Numbers slow
 	(List(Number) + ZlibHeader + 1) + Packed(Codes) + Adler
 Codes Numbers
 	Deflate(Repeated).Codes is RepeatedCodes
+	Deflate((1, 2, 3, 1, 2, 3)).Codes is (3, 3, 140, 8, 76, 8, 204, 8, 64, 7, 0, 0, 8, 5, 0, 0, 0, 7)
 	mutable codes = List(Mutable(Number)) + 3 + 3
 	mutable heads = Heads
 	mutable position = 0
-	for bytes.Length
-		if position < bytes.Length
-			let candidate = heads(Key(position)) - 1
-			heads(Key(position)) = position + 1
-			let length = Matched(candidate, position)
-			codes = codes + Symbols(length, position, candidate)
-			position = position + (length >= 3 then length else 1)
+	for as long as position < bytes.Length
+		let candidate = heads(Key(position)) - 1
+		heads(Key(position)) = position + 1
+		let length = Matched(candidate, position)
+		codes = codes + Symbols(length, position, candidate)
+		position = position + (length >= 3 then length else 1)
 	codes + 0 + 7
 Matched(candidate Number, position Number) Number
 	Deflate(Repeated).Matched(0, 3) is 6

@@ -61,6 +61,7 @@ Matched(output Numbers, symbol Number, position Number, distances Huffman) Numbe
 	Copied(output, length, DistanceBases(code.number) + Bits(afterLength + code.bits, DistanceBits(code.number)))
 After(symbol Number, position Number, distances Huffman) Number
 	Inflate((0, 73)).After(265, 8, FixedDistanceCodes) is 15
+	Inflate((0, 73)).After(269, 8, FixedDistanceCodes) is 18
 	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
 	let afterLength = position + LengthBits(symbol - Symbol.FirstLength)
 	let code = distances.Decoded(value, afterLength)
@@ -94,6 +95,7 @@ Lengths(state Inflation, codes Huffman, count Number) Inflation
 	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 2).output is (1, 2)
 	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 4).output is (1, 2, 0, 1)
 	StoredSample.Lengths(Inflation((1, 2), 0), Huffman.Sample, 4).position is 3
+	StoredSample.Lengths(Inflation((1, 2, 3), 0), Huffman.Sample, 2).output is (1, 2, 3)
 	mutable current = state
 	for count
 		if current.output.Length >= count
@@ -125,6 +127,7 @@ Bits(position Number, count Number) Number
 	StoredSample.Bits(8, 2) is 2
 	Inflate((255, 255, 255)).Bits(7, 13) is 8191
 	Inflate((255)).Bits(7, 1) is 1
+	(Inflate((255)).Bits(8, 0) is 0) and (Inflate((0, 0, 255)).Bits(7, 13) is 7680)
 	if count is 0
 		return 0
 	let at = (position / 8).Floor
