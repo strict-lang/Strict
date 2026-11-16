@@ -1,4 +1,5 @@
 has mutants Mutants
+constant ExcludedPackages = ("Compiler", "Bytecode", "Runtime", "Probe", "NeuralNetworks")
 constant Reader = MethodEntry("Read", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/File", "ReadLines", "Strict/List(Text)"), List(Number), -1))
 constant Calling = MethodEntry("Call", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/T", "Read", "None"), List(Number), -1))
 constant Reading = List(TypeEntry) + TypeEntry("Strict/T", List(MemberEntry), (Calling, Reader))
@@ -10,7 +11,7 @@ constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEn
 Kept(types List(TypeEntry)) List(KeptMethod)
 	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
 	Libraries.Kept(Mutants.Doubled).Length is 0
-	let methods = IsBase or IsInternal then List(MethodEntry) else Picked(Usable(types))
+	let methods = IsBase or IsExcluded then List(MethodEntry) else Picked(Usable(types))
 	let tested = mutants.Tested(types, mutants.Runner(types.First), methods)
 	for methods
 		let kept = Checked(tested, value, TestCodegen.Runner + index)
@@ -105,15 +106,16 @@ IsBase Boolean
 	Baseline(Mutants(Logger, "Math/Size.strict")).IsBase is false
 	let folder = Path(mutants.path).PathOnly.text
 	File((folder is "" then "." else folder) + "/Strict.strict").Exists
-IsInternal Boolean
-	Baseline(Mutants(Logger, "Compiler/NativeBuild.strict")).IsInternal
-	Baseline(Mutants(Logger, ".\\Bytecode\\BinaryNames.strict")).IsInternal
-	Baseline(Mutants(Logger, "Expressions/Tokenizer.strict")).IsInternal is false
-	Baseline(Mutants(Logger, "Math/MlirLike.strict")).IsInternal is false
-	Baseline(Mutants(Logger, "Probe/MatrixSpeed.strict")).IsInternal
-	Baseline(Mutants(Logger, ".\\Runtime\\Frame.strict")).IsInternal
-	Baseline(Mutants(Logger, "Math/Machine.strict")).IsInternal is false
-	Path(Path(mutants.path).PathOnly.text).FileName.text is in ("Compiler", "Bytecode", "Runtime", "Probe")
+IsExcluded Boolean
+	Baseline(Mutants(Logger, "Compiler/NativeBuild.strict")).IsExcluded
+	Baseline(Mutants(Logger, ".\\Bytecode\\BinaryNames.strict")).IsExcluded
+	Baseline(Mutants(Logger, "Expressions/Tokenizer.strict")).IsExcluded is false
+	Baseline(Mutants(Logger, "Math/MlirLike.strict")).IsExcluded is false
+	Baseline(Mutants(Logger, "Probe/MatrixSpeed.strict")).IsExcluded
+	Baseline(Mutants(Logger, ".\\Runtime\\Frame.strict")).IsExcluded
+	Baseline(Mutants(Logger, "Math/Machine.strict")).IsExcluded is false
+	Baseline(Mutants(Logger, "NeuralNetworks/Attention.strict")).IsExcluded
+	Path(Path(mutants.path).PathOnly.text).FileName.text is in ExcludedPackages
 Reason(started Machine, runner Text, limit Number) Text
 	Baseline(Mutants.Sample).Reason(Machine.Hello, TestCodegen.Runner, 1) is ""
 	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"

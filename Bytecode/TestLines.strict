@@ -68,9 +68,10 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", "+", (One, One)), true, CodeBlock.Empty) is false
 	Plain.IsTest(SyntaxNode("Declaration", "let a", SyntaxParser("1", "is", "1").Parse), false, CodeBlock.Empty) is false
 	Even.IsTest(SyntaxNode("Call", "IsEven", One), true, CodeBlock.Empty)
+	Plain.IsTest(SyntaxNode("Not", "", SyntaxNode("Boolean", "false")), true, CodeBlock.Empty)
 	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
 		return false
-	if isLeading and IsCalling(line, block) or (line to Text).IndexOf(" is ") >= 0
+	if isLeading and (IsCalling(line, block) or line.Kind is "Not") or (line to Text).IndexOf(" is ") >= 0
 		return values.TypeOf(line, block) is "Boolean"
 	false
 IsCalling(line SyntaxNode, block CodeBlock) Boolean

@@ -47,7 +47,14 @@ Ended(id Text) Boolean
 	Missing.Ended("0") is false
 	Process.OperatingSystem is not "Windows" or Missing.Ended("999999")
 	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in Stopped
-	isClosed or Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped
+	isClosed or Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped or IsGone(id)
+IsGone(id Text) Boolean slow
+	Missing.IsGone("999999") and Missing.IsGone(Process.Id to Text) is false
+	for Range(0, 5)
+		if Process.RunTool("tasklist", "/FI \"PID eq " + id + "\" /NH").Output.IndexOf(" " + id + " ") < 0
+			return true
+		Process.Wait(0.1)
+	false
 Restarted(old Text) Text slow
 	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0

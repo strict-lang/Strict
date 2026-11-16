@@ -1,6 +1,6 @@
 not Boolean
 	not true is false
-	not false is true
+	not false
 	value then false else true
 and(other) Boolean
 	(true and false) is false
