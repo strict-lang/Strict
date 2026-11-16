@@ -19,7 +19,7 @@ constant Listed = (VmValue.OfText("ab"), VmValue.OfText("a"), VmValue.None, VmVa
 constant Stopping = (Listed(3), Listed(0), Listed(0), Listed(2), Listed(4))
 constant Broken = (Listed(3), Listed(0), Listed(0), Listed(2), VmValue.OfError("ModuloByZero"))
 Finished(arguments List(VmValue)) List(VmValue)
-	mutable slots = arguments
+	mutable slots = FrameSlots.Rooted(arguments)
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
 		if position >= method.instructions.Length or (index % CheckSteps is End then MutationCache.IsLate(machine) else false)

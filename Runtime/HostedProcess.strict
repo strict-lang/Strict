@@ -2,6 +2,7 @@ has call Invocation
 constant RunToolsCall = InstructionEntry.Invoke(2, ("Strict/Process", "RunTools", "Strict/List(ProcessResult)", "name", "arguments"), (0, 1), -1)
 constant Running = Invocation(RunToolsCall, (VmValue.OfText("missingStrictTool"), VmValue.OfList((VmValue.OfText("a"), VmValue.OfText("b")))), VmValue.None)
 constant Sampling = Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/Sampler", "Taken", "Strict/Boolean", "tick"), List(Number) + 0, -1), List(VmValue) + VmValue.OfNumber(-5), VmValue.None)
+constant Rooting = Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/FrameSlots", "Rooted", "Strict/List(VmValue)", "slots"), List(Number) + 0, -1), List(VmValue) + Frame.Listed(7), VmValue.None)
 constant Collecting = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Collected", "None"), List(Number), -1), List(VmValue), VmValue.None)
 Seconds Number
 	HostedProcess(Running).Seconds is Process.ToolSeconds
@@ -11,7 +12,7 @@ Seconds Number
 Result VmValue
 	HostedProcess(Hosted.SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	HostedProcess(Running).Result.items.Last.items.First.number is 127
-	if TypeEntry.ShortName(call.TypeName) is in ("TestBudget", "ConstantCache", "Memo", "Sampler")
+	if TypeEntry.ShortName(call.TypeName) is in ("TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots")
 		return Direct
 	if call.MethodName is "Started"
 		return VmValue.OfNumber(Process(call.Instance.Member(0).text).Started(call.Arguments.First.text))
@@ -22,6 +23,9 @@ Result VmValue
 	Hosted(call).Processed
 Direct VmValue
 	(HostedProcess(Sampling).Direct.kind is not "None") and (HostedProcess(Sampling).Direct.IsTrue is false)
+	HostedProcess(Rooting).Direct is Frame.Listed(7)
+	if TypeEntry.ShortName(call.TypeName) is "FrameSlots"
+		return call.Arguments.First
 	if TypeEntry.ShortName(call.TypeName) is "Memo"
 		return Memoized
 	if TypeEntry.ShortName(call.TypeName) is "Sampler"

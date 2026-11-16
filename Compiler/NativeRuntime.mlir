@@ -619,6 +619,46 @@
     %taken = func.call @strict_boolean(%isNew) : (i1) -> f64
     return %taken : f64
   }
+  // the slots of a VM frame (flag 256 on their block): writes into it are not counted, a copy of it is rooted too, a
+  // reclaim treats its items like the stack that holds the frame, so a call no longer counts and drops every slot
+  func.func private @strict_frameslots_rooted(%self: f64, %slots: f64) -> f64 {
+    %rootedFlag = arith.constant 256 : i16
+    %view = func.call @strict_ptr(%slots) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %own = arith.andi %found, %isStart : i1
+    cf.cond_br %own, ^flag, ^done
+  ^flag:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %old = llvm.load %flags : !llvm.ptr -> i16
+    %new = arith.ori %old, %rootedFlag : i16
+    llvm.store %new, %flags : i16, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return %slots : f64
+  }
+  func.func private @strict_rc_rooted(%list: f64) -> i1 {
+    %rootedFlag = arith.constant 256 : i16
+    %noFlags = arith.constant 0 : i16
+    %false = arith.constant false
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    cf.cond_br %found, ^flags, ^done(%false : i1)
+  ^flags:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagBits = llvm.load %flags : !llvm.ptr -> i16
+    %rooted = arith.andi %flagBits, %rootedFlag : i16
+    %isRooted = arith.cmpi ne, %rooted, %noFlags : i16
+    cf.br ^done(%isRooted : i1)
+  ^done(%result: i1):
+    return %result : i1
+  }
   func.func private @strict_testbudget_started(%self: f64, %place: f64, %isSlow: f64) -> f64 {
     %limit = arith.constant 0.2 : f64
     %started = func.call @strict_test_begin(%self, %place, %isSlow, %limit) : (f64, f64, f64, f64) -> f64
@@ -5944,7 +5984,10 @@
     %lastSlot = llvm.mlir.addressof @strict_rc_pinned_last : !llvm.ptr
     %last = llvm.load %lastSlot : !llvm.ptr -> i64
     %isLast = arith.cmpi eq, %target, %last : i64
-    cf.cond_br %isLast, ^done, ^counting
+    %uncounted = arith.constant -1 : i64
+    %isRooted = arith.cmpi eq, %container, %uncounted : i64
+    %notCounted = arith.ori %isLast, %isRooted : i1
+    cf.cond_br %notCounted, ^done, ^counting
   ^counting:
     %noStep = arith.constant 0 : i32
     %isDown = arith.cmpi slt, %step, %noStep : i32
@@ -6252,6 +6295,10 @@
     cf.cond_br %any, ^counted, ^done
   ^counted:
     %container = func.call @strict_rc_container(%start) : (!llvm.ptr) -> i64
+    %uncounted = arith.constant -1 : i64
+    %isRooted = arith.cmpi eq, %container, %uncounted : i64
+    cf.cond_br %isRooted, ^done, ^words
+  ^words:
     func.call @strict_rc_words(%start, %words, %container) : (!llvm.ptr, i64, i64) -> ()
     cf.br ^done
   ^done:
@@ -6267,6 +6314,15 @@
   ^flag:
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %old = llvm.load %flags : !llvm.ptr -> i16
+    %rootedFlag = arith.constant 256 : i16
+    %rooted = arith.andi %old, %rootedFlag : i16
+    %noFlags = arith.constant 0 : i16
+    %isRooted = arith.cmpi ne, %rooted, %noFlags : i16
+    cf.cond_br %isRooted, ^rooted, ^holding
+  ^rooted:
+    %uncounted = arith.constant -1 : i64
+    return %uncounted : i64
+  ^holding:
     %holds = arith.constant 4 : i16
     %new = arith.ori %old, %holds : i16
     llvm.store %new, %flags : i16, !llvm.ptr
@@ -6406,6 +6462,16 @@
     %cleared = arith.andi %old, %otherFlags : i16
     %new = arith.select %seen, %set, %cleared : i16
     llvm.store %new, %flags : i16, !llvm.ptr
+    %rootedFlag = arith.constant 256 : i16
+    %rooted = arith.andi %old, %rootedFlag : i16
+    %noFlags = arith.constant 0 : i16
+    %isRooted = arith.cmpi ne, %rooted, %noFlags : i16
+    %changed = arith.cmpi ne, %old, %new : i16
+    %entered = arith.andi %isRooted, %changed : i1
+    cf.cond_br %entered, ^slots, ^loop(%next : i64)
+  ^slots:
+    %blockEnd = arith.addi %located#1, %located#2 : i64
+    func.call @strict_rc_seen_range(%located#1, %blockEnd, %seen) : (i64, i64, i1) -> ()
     cf.br ^loop(%next : i64)
   ^done:
     return
@@ -6712,7 +6778,7 @@
     %zero = arith.constant 0 : i64
     %zeroCount = arith.constant 0 : i32
     %noFlags = arith.constant 0 : i16
-    %heldFlags = arith.constant -16 : i16
+    %heldFlags = arith.constant 240 : i16
     %holdsFlag = arith.constant 4 : i16
     %headerBytes = arith.constant 64 : i64
     %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
@@ -7413,7 +7479,12 @@
     %none = arith.constant 0 : i32
     %words = arith.divui %bytes, %eight : i64
     %objectPointer = llvm.inttoptr %object : i64 to !llvm.ptr
-    cf.br ^loop(%zero : i64)
+    %objectBits = arith.bitcast %object : i64 to f64
+    %isRootedObject = func.call @strict_rc_rooted(%objectBits) : (f64) -> i1
+    %isSearching = arith.cmpi eq, %step, %none : i32
+    cf.cond_br %isRootedObject, ^rootedObject, ^loop(%zero : i64)
+  ^rootedObject:
+    cf.cond_br %isSearching, ^loop(%zero : i64), ^done
   ^loop(%index: i64):
     %more = arith.cmpi ult, %index, %words : i64
     cf.cond_br %more, ^word, ^done
@@ -8187,7 +8258,7 @@
   ^flag:
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
     %value = llvm.load %flags atomic monotonic {alignment = 2 : i64} : !llvm.ptr -> i16
-    %sharedFlag = arith.constant -128 : i16
+    %sharedFlag = arith.constant 128 : i16
     %shared = arith.andi %value, %sharedFlag : i16
     %noFlags = arith.constant 0 : i16
     %result = arith.cmpi ne, %shared, %noFlags : i16
@@ -8204,8 +8275,8 @@
     cf.cond_br %found, ^flag, ^done
   ^flag:
     %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
-    %sharedFlag = arith.constant -128 : i16
-    %pinnedShared = arith.constant -96 : i16
+    %sharedFlag = arith.constant 128 : i16
+    %pinnedShared = arith.constant 160 : i16
     %old = llvm.atomicrmw _or %flags, %pinnedShared monotonic : !llvm.ptr, i16
     %shared = arith.andi %old, %sharedFlag : i16
     %noFlags = arith.constant 0 : i16
@@ -11432,6 +11503,13 @@
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %capacity = arith.addf %length, %extra : f64
     %copy = func.call @strict_list_new(%capacity, %length) : (f64, f64) -> f64
+    %isRooted = func.call @strict_rc_rooted(%list) : (f64) -> i1
+    cf.cond_br %isRooted, ^rooted, ^filled
+  ^rooted:
+    %zero = arith.constant 0.0 : f64
+    %rootedCopy = func.call @strict_frameslots_rooted(%zero, %copy) : (f64, f64) -> f64
+    cf.br ^filled
+  ^filled:
     %from = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %to = func.call @strict_list_items(%copy) : (f64) -> !llvm.ptr
     %bytesf = arith.mulf %length, %eight : f64
