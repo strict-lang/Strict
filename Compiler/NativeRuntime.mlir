@@ -9151,8 +9151,10 @@
     %keep = arith.select %fewPages, %poolMinimum, %thresholdPages : i64
     %returning = func.call @strict_thread_seconds() : () -> f64
     func.call @strict_gc_trim_pool(%keep) : (i64) -> ()
-    %keepBytes = arith.shli %keep, %pageShift : i64
-    func.call @strict_gc_trim_runs(%keepBytes) : (i64) -> ()
+    // free runs beyond 64 MB go back (the same cap as strict_gc_release). Keeping 8x the live bytes left a dropped
+    // text encoder, about 15 GB, committed next to a resident H3 until a later allocation reused those runs
+    %runKeep = arith.constant 67108864 : i64
+    func.call @strict_gc_trim_runs(%runKeep) : (i64) -> ()
     %allocatedSlot = llvm.mlir.addressof @strict_gc_allocated : !llvm.ptr
     %returned = func.call @strict_thread_seconds() : () -> f64
     %returnedPages = arith.subf %returned, %returning : f64

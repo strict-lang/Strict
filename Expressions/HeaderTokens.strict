@@ -1,4 +1,5 @@
 has tokens Texts
+constant Trailing = ("slow", "native")
 constant Loading = HeaderTokens(Tokenizer("Loaded(path Text) Image slow").Tokens)
 constant Deleting = HeaderTokens(Tokenizer("Deleted(path Text) slow").Tokens)
 constant Made = HeaderTokens(Tokenizer("Made(pair Couple(Text, Number), count Number) Couple(Number, Text)").Tokens)
@@ -97,7 +98,7 @@ ReturnType Text
 	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnType is "List"
 	HeaderTokens(List(Text)).ReturnType is "None"
 	constant start = ParametersEnd + 1
-	start >= tokens.Length or tokens(start) is "slow" then "None" else TypeName(start)
+	start >= tokens.Length or tokens(start) is in Trailing then "None" else TypeName(start)
 ParametersEnd Number
 	HeaderTokens("Add", "(", "x", ")", "Number").ParametersEnd is 3
 	HeaderTokens("Add", "(", "x", "Iterator", "(", "Text", ")", ")").ParametersEnd is 7
@@ -165,7 +166,8 @@ ReturnsSlow Boolean
 	HeaderTokens(Tokenizer("Merged Numbers slow").Tokens).ReturnsSlow
 	Loading.ReturnsSlow and Deleting.ReturnsSlow
 	HeaderTokens("Run", "Number").ReturnsSlow is false
-	tokens.Last is "slow"
+	HeaderTokens(Tokenizer("Generated Numbers native").Tokens).ReturnsSlow
+	tokens.Last is in Trailing
 MutableParameters Texts
 	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).MutableParameters is ("list")
 	mutable names = List(Mutable(Text))

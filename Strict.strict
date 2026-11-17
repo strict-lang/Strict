@@ -2,6 +2,7 @@ has logger
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant BuildWait = 90
+constant QuietSeconds = 10
 constant Informing = ("version", "--version", "help", "--help")
 constant RunHelp = List(Text) + "strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed"
 constant CodeHelp = ("strict run -c <code> [arguments]  run these lines on the Strict VM (short: strict -c <code>)", "strict run <file.strict> [args]   run a single .strict script file on the Strict VM")
@@ -203,11 +204,16 @@ Launched(rest Texts, folder Text) Number slow
 	let cache = NativeCache("build", (rest(0), rest(1)), isRunning = true)
 	let fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
 	if fresh is ""
-		let tested = Execute(logger, "*").Served(rest(0), rest(1), true).code
+		let tested = Retested(rest)
 		if tested is not 0
 			return tested
-		logger.Log(Execute.Summary(0, rest(0)))
 	Started(rest, folder, fresh)
+Retested(rest Texts) Number slow
+	let quietUntil = Process.Elapsed + QuietSeconds
+	let tested = Execute(logger, "", quietUntil = quietUntil).Served(rest(0), rest(1)).code
+	if tested is 0 and Process.Elapsed >= quietUntil
+		logger.Log(Execute.Summary(0, rest(0)))
+	tested
 Compiled(rest Texts, fresh Text) Number slow
 	if fresh is not ""
 		return 0

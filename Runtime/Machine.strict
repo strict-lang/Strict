@@ -8,6 +8,7 @@ has deadline Number = 0
 has isQuiet = false
 has isSampling = false
 has places Dictionary(Text, Number) = Dictionary(Text, Number)
+has quietUntil Number = 0
 constant Hello = Machine(List(TypeEntry) + TypeEntry.HelloLogger)
 constant TwiceMethod = MethodEntry("Twice", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 21), InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), InstructionEntry.Return(1)))
 constant Doubler = TypeEntry("Strict/Doubler", List(MemberEntry), List(MethodEntry) + TwiceMethod)
@@ -198,11 +199,13 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 Logged(message Text)
 	Hello.Logged("") is not Error
 	Machine(Hello, isQuiet = true).Logged("a") is not Error
-	if message is not "" and IsShown(message)
-		logger.Log(message)
-IsShown(message Text) Boolean
-	Hello.IsShown("a")
-	Machine(Hello, isQuiet = true).IsShown("a") is false
-	Machine(Hello, isQuiet = true).IsShown("Test failed: a")
-	Machine(Hello, isQuiet = true).IsShown("  got: 1")
-	isQuiet is false or message.StartsWith("Test failed: ") or message.StartsWith("  got: ")
+	let isLate = isQuiet and quietUntil > 0 and Process.Elapsed >= quietUntil
+	if message is not "" and IsShown(message, isLate)
+		logger.Log(isLate then "Still testing after " + Process.Elapsed.Round(1) + " s: " + message else message)
+IsShown(message Text, isLate Boolean) Boolean
+	Hello.IsShown("a", false)
+	Machine(Hello, isQuiet = true).IsShown("a", false) is false
+	Machine(Hello, isQuiet = true).IsShown("a", true)
+	Machine(Hello, isQuiet = true).IsShown("Test failed: a", false)
+	Machine(Hello, isQuiet = true).IsShown("  got: 1", false)
+	isQuiet is false or isLate or message.StartsWith("Test failed: ") or message.StartsWith("  got: ")

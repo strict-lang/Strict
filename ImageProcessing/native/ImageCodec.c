@@ -90,14 +90,14 @@ static void Converted(double pixels, size_t first, size_t count, unsigned char* 
 	}
 }
 
-/* Rows of an image that become a JPEG of their own on one thread, Joined puts them into one file. */
+/* Rows of an image that become a JPEG or PNG strip of their own on one thread, Joined puts them into one file. */
 typedef struct
 {
 	double pixels;
 	unsigned char* bytes;
 	unsigned char* data;
-	size_t first, size, room;
-	int width, rows, quality, written;
+	size_t first, size, room, rawSize;
+	int width, rows, quality, written, isPng, isFirst, isLast;
 } Strip;
 
 static void Appended(void* context, void* bytes, int count)
@@ -116,8 +116,81 @@ static void Appended(void* context, void* bytes, int count)
 	strip->size += count;
 }
 
+static void ClearFinalDeflate(unsigned char* zlib, int zlen)
+{
+	if ((zlib[2] & 6) == 2)
+	{
+		zlib[2] &= (unsigned char)~1;
+		return;
+	}
+	int pos = 2;
+	while (pos + 5 <= zlen - 4)
+	{
+		int len = zlib[pos + 1] | (zlib[pos + 2] << 8);
+		if (zlib[pos] & 1)
+			zlib[pos] &= (unsigned char)~1;
+		pos += 5 + len;
+	}
+}
+
+static void EncodedPng(Strip* strip)
+{
+	int width = strip->width, rows = strip->rows, stride = width * 4;
+	unsigned char* stripBytes = strip->bytes + strip->first;
+	Converted(strip->pixels, strip->first, (size_t)rows * stride, strip->bytes);
+	size_t rawSize = (size_t)rows * (stride + 1);
+	unsigned char* filt = malloc(rawSize);
+	signed char* line = malloc(stride);
+	if (!filt || !line)
+	{
+		free(filt);
+		free(line);
+		return;
+	}
+	for (int row = 0; row < rows; row++)
+	{
+		int bestFilter = 0, bestValue = 0x7fffffff, maxFilter = !strip->isFirst && row == 0 ? 2 : 5, filter = 0;
+		for (; filter < maxFilter; filter++)
+		{
+			stbiw__encode_png_line(stripBytes, stride, width, rows, row, 4, filter, line);
+			int est = 0;
+			for (int i = 0; i < stride; i++)
+				est += abs((signed char)line[i]);
+			if (est < bestValue)
+			{
+				bestValue = est;
+				bestFilter = filter;
+			}
+		}
+		if (filter != bestFilter)
+			stbiw__encode_png_line(stripBytes, stride, width, rows, row, 4, bestFilter, line);
+		filt[(size_t)row * (stride + 1)] = (unsigned char)bestFilter;
+		memcpy(filt + (size_t)row * (stride + 1) + 1, line, stride);
+	}
+	free(line);
+	int zlen = 0;
+	unsigned char* zlib = stbi_zlib_compress(filt, (int)rawSize, &zlen, stbi_write_png_compression_level);
+	free(filt);
+	if (!zlib || zlen < 6)
+	{
+		free(zlib);
+		return;
+	}
+	if (!strip->isLast)
+		ClearFinalDeflate(zlib, zlen);
+	strip->data = zlib;
+	strip->size = (size_t)zlen;
+	strip->rawSize = rawSize;
+	strip->written = 1;
+}
+
 static void Encoded(Strip* strip)
 {
+	if (strip->isPng)
+	{
+		EncodedPng(strip);
+		return;
+	}
 	Converted(strip->pixels, strip->first, (size_t)strip->rows * strip->width * 3, strip->bytes);
 	strip->written = stbi_write_jpg_to_func(Appended, strip, strip->width, strip->rows, 3, strip->bytes + strip->first,
 		strip->quality);
@@ -243,6 +316,101 @@ STRICT_EXPORT double ImageCodec_SaveJpeg(double self, double path, double pixels
 	return written ? 0 : strict_fail("ImageNotWritable");
 }
 
+static void WriteBe32(unsigned char* out, unsigned int value)
+{
+	out[0] = (unsigned char)(value >> 24);
+	out[1] = (unsigned char)(value >> 16);
+	out[2] = (unsigned char)(value >> 8);
+	out[3] = (unsigned char)value;
+}
+
+static unsigned int CombinedAdler(unsigned int adler1, unsigned int adler2, size_t len2)
+{
+	const unsigned int base = 65521;
+	unsigned int rem = (unsigned int)(len2 % base);
+	unsigned int s1 = adler1 & 0xffff;
+	unsigned int s2 = (rem * s1) % base;
+	s1 += (adler2 & 0xffff) + base - 1;
+	s2 += ((adler2 >> 16) & 0xffff) + ((adler1 >> 16) & 0xffff) + base - rem;
+	while (s1 >= base)
+		s1 -= base;
+	while (s2 >= base)
+		s2 -= base;
+	return (s2 << 16) | s1;
+}
+
+static int JoinedPng(FILE* file, const Strip* strips, int count, int width, int height)
+{
+	static const unsigned char sig[8] = { 137, 80, 78, 71, 13, 10, 26, 10 };
+	static const unsigned char iend[12] = { 0, 0, 0, 0, 'I', 'E', 'N', 'D', 0xAE, 0x42, 0x60, 0x82 };
+	unsigned char ihdr[25] = { 0, 0, 0, 13, 'I', 'H', 'D', 'R' };
+	WriteBe32(ihdr + 8, (unsigned int)width);
+	WriteBe32(ihdr + 12, (unsigned int)height);
+	ihdr[16] = 8;
+	ihdr[17] = 6;
+	WriteBe32(ihdr + 21, stbiw__crc32(ihdr + 4, 17));
+	size_t zlen = 6;
+	for (int index = 0; index < count; index++)
+		zlen += strips[index].size - 6;
+	unsigned char* idat = malloc(8 + zlen + 4);
+	if (!idat)
+		return 0;
+	WriteBe32(idat, (unsigned int)zlen);
+	memcpy(idat + 4, "IDAT", 4);
+	idat[8] = strips[0].data[0];
+	idat[9] = strips[0].data[1];
+	size_t at = 10;
+	unsigned int adler = 1;
+	for (int index = 0; index < count; index++)
+	{
+		const Strip* strip = strips + index;
+		size_t body = strip->size - 6;
+		memcpy(idat + at, strip->data + 2, body);
+		at += body;
+		const unsigned char* tail = strip->data + strip->size - 4;
+		unsigned int part = ((unsigned int)tail[0] << 24) | ((unsigned int)tail[1] << 16) |
+			((unsigned int)tail[2] << 8) | tail[3];
+		adler = index == 0 ? part : CombinedAdler(adler, part, strip->rawSize);
+	}
+	WriteBe32(idat + at, adler);
+	WriteBe32(idat + 8 + zlen, stbiw__crc32(idat + 4, (int)(4 + zlen)));
+	int written = fwrite(sig, 1, 8, file) == 8 && fwrite(ihdr, 1, 25, file) == 25 &&
+		fwrite(idat, 1, 12 + zlen, file) == 12 + zlen && fwrite(iend, 1, 12, file) == 12;
+	free(idat);
+	return written;
+}
+
+static int StripedPng(const char* path, double pixels, int width, int height, unsigned char* bytes)
+{
+	int rows = height < 64 ? height : (height + 23) / 24;
+	if (rows < 8)
+		rows = 8;
+	int count = (height + rows - 1) / rows;
+	Strip strips[STRIPS] = { 0 };
+	if (count < 2 || count > STRIPS)
+	{
+		Converted(pixels, 0, strict_count(pixels), bytes);
+		return stbi_write_png(path, width, height, 4, bytes, width * 4);
+	}
+	for (int index = 0; index < count; index++)
+	{
+		int left = height - index * rows;
+		strips[index] = (Strip){ pixels, bytes, 0, (size_t)index * rows * width * 4, 0, 0, 0,
+			width, left < rows ? left : rows, 0, 0, 1, index == 0, index == count - 1 };
+	}
+	EncodedAll(strips, count);
+	int written = 1;
+	for (int index = 0; index < count; index++)
+		written = written && strips[index].written && strips[index].data;
+	FILE* file = written ? stbiw__fopen(path, "wb") : 0;
+	written = file && JoinedPng(file, strips, count, width, height);
+	if (file)
+		written = !fclose(file) && written;
+	for (int index = 0; index < count; index++)
+		STBIW_FREE(strips[index].data);
+	return written;
+}
+
 STRICT_EXPORT double ImageCodec_SavePng(double self, double path, double pixels, double width)
 {
 	int height = 0;
@@ -250,9 +418,8 @@ STRICT_EXPORT double ImageCodec_SavePng(double self, double path, double pixels,
 	unsigned char* bytes = Room(pixels, width, 4, &height, &failure);
 	if (!bytes)
 		return strict_fail(failure);
-	Converted(pixels, 0, strict_count(pixels), bytes);
 	strict_folders(strict_text(path));
-	int written = stbi_write_png(strict_text(path), (int)width, height, 4, bytes, (int)width * 4);
+	int written = StripedPng(strict_text(path), pixels, (int)width, height, bytes);
 	free(bytes);
 	return written ? 0 : strict_fail("ImageNotWritable");
 }

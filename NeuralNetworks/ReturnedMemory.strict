@@ -1,0 +1,25 @@
+has logger
+Anchor Numbers slow
+	ReturnedMemory.Anchor.Length is 25000000
+	for 25000000
+		1
+Spike Numbers slow
+	ReturnedMemory.Spike.Length is 25000000
+	for 25000000
+		2
+Used(values Numbers) Number
+	ReturnedMemory.Used((1, 2)) is 2
+	values.Length
+Measured(anchor Numbers) Numbers slow
+	ReturnedMemory.Measured((1, 2)).Length is 2
+	let before = GpuMemory.HostAvailable
+	let used = Used(Spike) + anchor.Length
+	(before, GpuMemory.HostAvailable)
+Recovered Number slow
+	ReturnedMemory.Recovered is 1
+	let anchor = Anchor
+	let measured = Measured(anchor)
+	Process.Collected
+	let after = GpuMemory.HostAvailable
+	logger.Log("spike " + (measured(0) - measured(1)).Round + " left " + (measured(0) - after).Round)
+	measured(0) - after < 150000000 then 1 else 0

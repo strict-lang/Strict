@@ -6,6 +6,7 @@ has part Text = ""
 has isFull Boolean = false
 has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 has cached Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
+has quietUntil Number = 0
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 constant Unstamped = BinarySources(List(Text))
@@ -36,7 +37,7 @@ Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = L
 		let hit = value is in stale then Answer(0, known) else Answer(Cached(value), known)
 		let got = value is in stale then host.Verified(value, root, isQuiet, files, types, stale.Length is 1) else hit
 		host = value is in stale then Execute(host, known = got.known) else host
-		if got.code is 0 and isQuiet is false
+		if got.code is 0 and isQuiet is false and quietUntil is 0
 			logger.Log(Summary(0, value))
 		failed = failed + got.code
 	failed
@@ -85,7 +86,7 @@ Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 		return Answer(Failures((path), stale, root, isQuiet, sources), known)
 	let files = Sourced((path), root, sources)
 	let answer = Verified(path, root, isQuiet, files, ResolveCheck.Inference(files), true)
-	if answer.code is 0 and isQuiet is false
+	if answer.code is 0 and isQuiet is false and quietUntil is 0
 		logger.Log(Summary(0, path))
 	answer
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
@@ -123,7 +124,7 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 Tested(types List(TypeEntry), path Text, isQuiet = false) Answer
 	let home = Directory.Current
 	let machine = Constants(Started(types, path)).Seeded(cached)
-	let failed = Machine(machine, isQuiet = isQuiet).Tested(types.First.Name)
+	let failed = Machine(machine, isQuiet = isQuiet or quietUntil > 0, quietUntil = quietUntil).Tested(types.First.Name)
 	Directory.Change(home)
 	if failed > 0
 		logger.Log(Summary(failed, path))

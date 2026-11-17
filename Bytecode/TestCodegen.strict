@@ -1,6 +1,7 @@
 has types TypeCodegen
 has isQuiet Boolean = false
 has selection Text = ""
+constant Everything = "**"
 constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
 constant Counter = CodeBlock.Empty.Declare("failed", "Number").Declare("started", "Number")
 constant TestedNumber = Counter.Declare(ErrorCodegen.Tested, "Number")
@@ -48,9 +49,14 @@ Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 			added.Add(value)
 	added.Length is 0 then methods else Reachable(known, methods + added)
 Included(line Text) Boolean
+	TestCodegen(Even.types, false, "*").Included("Generated Numbers native") is false
+	TestCodegen(Even.types, false, Everything).Included("Generated Numbers native")
+	TestCodegen(Even.types, false, "").Included("Loaded Numbers slow") is false
+	Even.Included("IsEven(number Number) Boolean")
 	let header = HeaderTokens(Tokenizer(line).Tokens)
-	let matched = selection is in ("", "*") or header.tokens(0) is selection
-	matched and (selection is not "" or TypeSource.IsSlow(types.fullName, header) is false)
+	let matched = selection is in ("", "*", Everything) or header.tokens(0) is selection
+	let isAllowed = header.tokens.Last is not "native" or selection is Everything
+	matched and isAllowed and (selection is not "" or TypeSource.IsSlow(types.fullName, header) is false)
 Method(start Number, block CodeBlock) CodeBlock slow
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0
