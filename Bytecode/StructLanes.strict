@@ -17,14 +17,22 @@ constant Halves = TypeEntry("Strict/Halves", (Real, MemberEntry("half", "Strict/
 constant Custom = TypeEntry("Strict/Custom", (Real, Imaginary), List(MethodEntry) + MethodEntry("from", List(MemberEntry), "Strict/Custom", List(InstructionEntry)))
 constant Kept = TypeEntry("Strict/Kept", (Real, MemberEntry("Zero", "Strict/Kept", List(InstructionEntry), true)), List(MethodEntry))
 constant Splitting = StructLanes(Inliner((Caller, Pair), true).Inlined)
+constant Width = MemberEntry("Width", "Strict/Number", List(InstructionEntry), false, 32)
+constant Height = MemberEntry("Height", "Strict/Number", List(InstructionEntry), false, 32)
+constant Iterated = MemberEntry("iterator", "Strict/Iterator", List(InstructionEntry), false)
+constant Validating = MethodEntry("Validated", List(MemberEntry), "Strict/Size", List(InstructionEntry))
+constant Widths = (0, Number.SingleBits, Number.DoubleBits)
+constant DataLess = List(Text) + "Strict/Iterator"
+constant Sized = TypeEntry("Strict/Size", (Width, Height, Iterated), List(MethodEntry) + Validating)
 Members(type TypeEntry) Texts
 	StructLanes.Members(Pair) is ("real", "imaginary")
 	StructLanes.Members(Caller).Length is 0
 	StructLanes.Members(Kept).Length is 0
 	StructLanes.Members(Halves).Length is 0
 	StructLanes.Members(Custom).Length is 0
+	StructLanes.Members(Sized) is ("Width", "Height")
 	for type.methods
-		if value.Name is in ("from", "Validated")
+		if value.Name is "from"
 			return List(Text)
 	let fields = Fields(type)
 	fields.Length < 2 or fields.Length > 4 or "" is in fields then List(Text) else fields
@@ -32,15 +40,16 @@ Fields(type TypeEntry) Texts
 	StructLanes.Fields(Pair) is ("real", "imaginary")
 	StructLanes.Fields(Kept) is ("real")
 	StructLanes.Members(TypeEntry("Strict/Five", (Real, Real, Real, Real, Real), List(MethodEntry))).Length is 0
+	let bits = type.members.Length > 0 then type.members.First.Bits else 0
 	for type.members
-		if value.IsConstant is false
-			IsLane(value) then value.Name else ""
+		if value.IsConstant is false and value.typeName is not in DataLess
+			IsLane(value) and value.Bits is bits then value.Name else ""
 IsLane(member MemberEntry) Boolean
 	StructLanes.IsLane(Real)
-	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)) is false
+	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32))
 	StructLanes.IsLane(MemberEntry("named", "Strict/Text", List(InstructionEntry), false)) is false
 	StructLanes.IsLane(MemberEntry("real", "Strict/Number", (InstructionEntry.Return(0)), false)) is false
-	member.typeName is "Strict/Number" and member.Bits is in (0, Number.DoubleBits) and member.initial.Length is 0
+	member.typeName is "Strict/Number" and member.Bits is in Widths and member.initial.Length is 0
 Split List(TypeEntry)
 	Sample.Split.First.methods.First.instructions.Length is 11
 	Splitting.Split.First.methods.First.instructions.Length is 20
@@ -140,6 +149,10 @@ Rebuilt(register Number, type Text, base Number, line Number) List(InstructionEn
 Named(kind Number, register Number, name Text, line Number) InstructionEntry
 	StructLanes.Named(InstructionType.LoadVariableToRegister, 2, "a", 7).line is 7
 	InstructionEntry(kind, List(Text) + name, (register, -1), line)
+IsLaned(member MemberEntry) Boolean
+	StructLanes.IsLaned(LaneCalls.Sample.Divided(LaneCalls.Drawer.members).First)
+	StructLanes.IsLaned(Real) is false
+	member.Name.IndexOf("_") > 0
 Lane(owner Text, member Text) Text
 	StructLanes.Lane("lanes2", "real") is "lanes2_real"
 	owner + "_" + member

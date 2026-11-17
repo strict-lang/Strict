@@ -9,6 +9,8 @@ constant Defaulted = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "St
 constant Made = InstructionEntry.Invoke(6, ("Strict/Drawer", "from", "Strict/Drawer", "offset", "count"), (4, 3), -1)
 constant Offsets = InstructionEntry(InstructionType.FieldLoad, ("offset", "Drawer"), (3, 2, -1, -2))
 constant Sample = LaneCalls((StructLanes.Pair, Drawer))
+constant Sizing = LaneCalls(List(TypeEntry) + StructLanes.Sized)
+constant Sized = MemberEntry("Size", "Strict/Size", List(InstructionEntry), false)
 constant Twin = TypeEntry("Strict/Pair", StructLanes.Pair.members, List(MethodEntry) + Shifting)
 constant Stub = TypeEntry("Strict/Drawer", Drawer.members, List(MethodEntry) + MethodEntry("Shifted", (Offset, Counted), "Strict/Number", List(InstructionEntry)))
 constant Paired = InstructionEntry.Invoke(5, ("Strict/Pair", "Shifted", "Strict/Number", "offset", "count"), (4, 3), -1)
@@ -45,8 +47,10 @@ Divided(members List(MemberEntry)) List(MemberEntry)
 Split(member MemberEntry, lanes Texts) List(MemberEntry)
 	Sample.Split(Offset, ("real", "imaginary")).First.Name is "offset_real"
 	Sample.Split(Offset, ("real", "imaginary")).First.typeName is "Strict/Number"
+	Sizing.Split(Sized, ("Width", "Height")).Last.Bits is 32
+	let bits = member.Bits > 0 then member.Bits else Inliner(types).TypeOf(member.typeName).members.First.Bits
 	for lanes
-		MemberEntry(StructLanes.Lane(member.Name, value), "Strict/Number", List(InstructionEntry), false, member.Bits)
+		MemberEntry(StructLanes.Lane(member.Name, value), "Strict/Number", List(InstructionEntry), false, bits)
 Signature(call InstructionEntry) Texts
 	Sample.Signature(Shift) is ("offset Pair")
 	Sample.Signature(Made) is ("offset Pair")

@@ -17,6 +17,8 @@ constant Colored = MemberEntry("colors", "Strict/List(Rgb)", List(InstructionEnt
 constant Coloring = MlirLanes.Collecting
 constant Laned = MlirGpuContract(MlirFunction(Coloring.types, TypeEntry(MlirLanes.Rgb, members = MlirLanes.Rgb.members + Colored), Coloring.method), 2)
 constant Unbound = MlirGpuContract(Coloring, 2)
+constant Lane = MemberEntry("Size_Width", "Strict/Number", List(InstructionEntry), false, 32)
+constant Sized = MlirGpuContract(MlirFunction(Weights.types, TypeEntry(GpuChoiceSamples.Weighted, members = GpuChoiceSamples.Weighted.members + Lane), Weights.method), 2)
 constant Filtering = MlirGpuContract(MlirFunction(Weights.types, Contracted, Weights.method), 0)
 Issue Text
 	Weighing.Issue.IndexOf(": " + Rule + ": ") > 0
@@ -45,8 +47,9 @@ HasContractOn(kind Text) Boolean
 	Laned.HasContractOn("List(Rgb)")
 	Laned.HasContractOn("List(Number)") is false
 	Unbound.HasContractOn("List(Rgb)") is false
+	Sized.HasContractOn("Number") is false
 	for function.type.members
-		if value.Bits is 32 and TypeEntry.ShortName(value.typeName) is kind
+		if value.Bits is 32 and kind.StartsWith("List(") and TypeEntry.ShortName(value.typeName) is kind
 			return true
 	false
 IsRequired Boolean
@@ -64,9 +67,9 @@ IsRequired Boolean
 	HasContract and isPlain and MlirNarrowing(function, position).IsFew is false and check.IsGpu is false
 HasContract Boolean
 	Weighing.HasContract
-	Free.HasContract is false
+	Free.HasContract is false and Sized.HasContract is false
 	for function.type.members
-		if value.Bits is 32
+		if value.Bits is 32 and StructLanes.IsLaned(value) is false
 			return true
 	false
 Blocker(inspected MlirFunction, first Number, last Number, depth Number) Text
