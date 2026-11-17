@@ -54,6 +54,9 @@ LibraryExtension(code Number) Text
 	Platform.LibraryExtension(Linux) is ".so"
 	Platform.LibraryExtension(MacOS) is ".dylib"
 	code is Windows then ".dll" else IsIOS(code) then ".a" else code is MacOS then ".dylib" else ".so"
+ObjectExtension(code Number) Text
+	Platform.ObjectExtension(Windows) is ".windows.o" and Platform.ObjectExtension(Linux) is ".linux.o"
+	"." + NameOf(code).Lower + ".o"
 IsIOS(code Number) Boolean
 	IsIOS(IOSSimulator)
 	IsIOS(MacOS) is false

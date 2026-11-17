@@ -8,6 +8,9 @@ constant Readers = KnownTypes(("Reader", "File"), (KnownTypes.NoMembers, KnownTy
 constant Reading = InputOutputs(TypeInference(Readers, (KnownTypes.NoMembers, KnownTypes.NoMembers)))
 constant Checking = ("Checked Boolean", "\tLoaded(\"a\").Length is 0", "\tlet loaded = Loaded(\"b\")", "\tloaded.Length is 1", "\tloaded.Length > 0", "IsLoaded Boolean", "\tLoaded(\"c\").Length > 0")
 constant Checks = MethodBodies("Reader", TypeShape(Checking), Reading.inference)
+constant Flags = ("Checked Boolean", "\tLoaded(\"a\").Length is 0", "\tlet isLoaded = Loaded(\"b\").Length > 0", "\tisLoaded")
+constant Flagging = MethodBodies("Reader", TypeShape(Flags), Reading.inference)
+constant Constants = BodyParser(("Run", "\tconstant a = true", "\tconstant b = 1"))
 constant Reversed = ("Reader.Shown||Reader.Loaded", "Reader.Loaded||File.ReadLines", "File.ReadLines|slow|")
 constant Reached = ("File.ReadLines|slow|", "Reader.Loaded||File.ReadLines", "Reader.Shown||Reader.Loaded", "Reader.Twice||Number.+")
 Named(paths Texts) Texts slow
@@ -23,6 +26,7 @@ Read(paths Texts) List(Texts) slow
 Parsed(paths Texts, contents List(Texts)) List(Texts)
 	Reading.Parsed(List(Text) + "Demo/Reader.strict", List(Texts) + Loading).First is Reading.Records("Reader", Loading)
 	Reading.Parsed(List(Text) + "Demo/TextReader.strict", List(Texts) + Loading).First.First.StartsWith("File.Loaded")
+	"Reader.Loaded" is in Reading.Used(Flagging, Flagging.Statements, Flags, 0)
 	for paths
 		let name = Path(value).FileName.RemoveExtension.text
 		Records(name is in Traits then "File" else name, contents(index))
@@ -48,10 +52,16 @@ Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Numbe
 	mutable keys = List(Mutable(Text))
 	for statements
 		if value.line > header and value.line <= last
-			isTesting = isTesting and value.line < last and bodies.StatementType(value) is "Boolean"
+			isTesting = isTesting and value.line < last and IsTest(bodies, value)
 			if isTesting is false
 				keys = keys + SureCalls(inference).Calls(bodies.typeName, value.statement, value.scope)
 	keys
+IsTest(bodies MethodBodies, scoped ScopedStatement) Boolean
+	Reading.IsTest(Flagging, Flagging.Statements.First) and Reading.IsTest(Flagging, Flagging.Statements(1)) is false
+	Reading.IsTest(Flagging, ScopedStatement(Constants.Statement(1, 1), KnownTypes.NoMembers, 1))
+	Reading.IsTest(Flagging, ScopedStatement(Constants.Statement(2, 1), KnownTypes.NoMembers, 2)) is false
+	let isConstant = scoped.statement.text.StartsWith("constant ")
+	(scoped.statement.Kind is not "Declaration" or isConstant) and bodies.StatementType(scoped) is "Boolean"
 Settled(records Texts) Texts
 	InputOutputs.Settled(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
 	InputOutputs.Settled(List(Text) + "Reader.Loaded||File.ReadLines").Length is 0

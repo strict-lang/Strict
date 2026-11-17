@@ -1,2 +1,0 @@
-- Native object cache of a package (`Networking/native/Socket.o` and its `.nativecache`) is not keyed by platform: a Linux build in the same tree (WSL) links the Windows object and fails with `R_AMD64_IMAGEBASE`, and the other way round.
-- `InputOutputMustBeSlow` misses IO behind a Boolean `let`: `Validators/InputOutputs.strict` `Used` counts every Boolean line before the last as a test line, a `let` included (`NeuralNetworks/MachineUse.IsChecked` only showed it once the let was inlined).

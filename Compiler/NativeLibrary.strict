@@ -1,8 +1,9 @@
 has sources NativeSources
 constant Adding = NativeLibrary(NativeSources.Adding)
 constant Failing = "clang failed for Compiler/output/Cut.o: no"
-constant NoObject = "clang failed for Compiler/output/No.o"
+constant NoObject = "clang failed for Compiler/output/No" + Platform.ObjectExtension(Platform.Current)
 constant RandomSuffixRange = 999999
+constant AdderObject = "Examples/NativeAdd/native/Adder" + Platform.ObjectExtension(Platform.Current)
 Built(platform Number, root Text) Text
 	Adding.Built(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
 	let folder = sources.folders.First
@@ -17,11 +18,11 @@ Built(platform Number, root Text) Text
 	let result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
 	Finished(result, output, library, shared)
 Objects(files Texts, platform Number, root Text, options Text) Texts slow
-	Adding.Objects(NativeSources.Adding.Files, Platform.Current, ".", "") is ("Examples/NativeAdd/native/Adder.o")
+	Adding.Objects(NativeSources.Adding.Files, Platform.Current, ".", "") is (AdderObject)
 	mutable missing = List(Mutable(Text))
 	mutable previous = List(Mutable(Text))
 	for files
-		let waited = Waited(Path(value).RemoveExtension.text + ".o", sources.Inputs(platform, root) + value, options)
+		let waited = Waited(Object(value, platform), sources.Inputs(platform, root) + value, options)
 		previous.Add(waited)
 		if waited is ""
 			missing.Add(value)
@@ -36,8 +37,10 @@ Compiled(files Texts, platform Number, root Text, options Text) Texts slow
 	let suffix = "." + RandomSuffixRange.Random.Floor + ".o"
 	let flags = " -I\"" + root + "/Compiler\"" + Toolchain.Optimized + options
 	for ToolRunner(Toolchain(platform, root).Located("clang")).ExecuteAll(Commands(files, suffix, flags))
-		let base = Path(files(index)).RemoveExtension.text
-		Finished(value, base + suffix, base + ".o", options)
+		Finished(value, Path(files(index)).RemoveExtension.text + suffix, Object(files(index), platform), options)
+Object(file Text, platform Number) Text
+	Adding.Object("a/b.c", Platform.Linux) is "a/b.linux.o"
+	Path(file).RemoveExtension.text + Platform.ObjectExtension(platform)
 Commands(files Texts, suffix Text, flags Text) Texts
 	Adding.Commands(List(Text) + "a/b.c", ".1.o", " -O2") is ("-c \"a/b.c\" -O2 -o \"a/b.1.o\"")
 	for files

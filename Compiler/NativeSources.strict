@@ -41,7 +41,7 @@ Arguments(platform Number, root Text) Text
 		arguments = arguments + " \"" + value + "\""
 	arguments + " -I\"" + root + "/Compiler\"" + Flags(platform, root)
 Objects(platform Number, root Text, cpu = "native") Text
-	Adding.Objects(Platform.Current, ".").StartsWith(" \"Examples/NativeAdd/native/Adder.o\"")
+	Adding.Objects(Platform.Current, ".").StartsWith(" \"" + NativeLibrary.AdderObject + "\"")
 	NativeSources(List(Text)).Objects(Platform.Current, ".") is ""
 	if folders.Length is 0
 		return ""
