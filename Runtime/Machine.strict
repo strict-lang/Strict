@@ -208,4 +208,6 @@ IsShown(message Text, isLate Boolean) Boolean
 	Machine(Hello, isQuiet = true).IsShown("a", true)
 	Machine(Hello, isQuiet = true).IsShown("Test failed: a", false)
 	Machine(Hello, isQuiet = true).IsShown("  got: 1", false)
-	isQuiet is false or isLate or message.StartsWith("Test failed: ") or message.StartsWith("  got: ")
+	Machine(Hello, isQuiet = true).IsShown("Test slow: a", false)
+	let isReport = message.StartsWith("Test failed: ") or message.StartsWith("Test slow: ")
+	isQuiet is false or isLate or isReport or message.StartsWith("  got: ")

@@ -2,7 +2,7 @@ has logger
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant BuildWait = 90
-constant QuietSeconds = 10
+constant QuietSeconds = 5
 constant Informing = ("version", "--version", "help", "--help")
 constant RunHelp = List(Text) + "strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed"
 constant CodeHelp = ("strict run -c <code> [arguments]  run these lines on the Strict VM (short: strict -c <code>)", "strict run <file.strict> [args]   run a single .strict script file on the Strict VM")
@@ -115,7 +115,7 @@ Ran(arguments Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 		return Answer(command is in Informing then 0 else 2, known)
 	if command is in ("build", "check", "update", "format", "suggest")
 		return command is "build" then Answer(Native(command, rest), known) else Tool(command, rest, known)
-	command is "test" then Tested(rest, known) else Answer(Launched(rest, folder), known)
+	command is "test" then Examined(rest, known) else Answer(Launched(rest, folder), known)
 Cleaned(command Text, rest Texts) Texts slow
 	Strict(Logger).Cleaned("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
 	Strict(Logger).Cleaned("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
@@ -138,6 +138,13 @@ Message(command Text, rest Texts) Text slow
 		return Text.Combine(Help, "\n")
 	let isFolder = command is "test" and Directory.Exists(rest(0))
 	command is in ("check", "update") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
+Examined(rest Texts, known Dictionary(Text, TypeEntry)) Answer slow
+	"nightly" is in rest then Answer(Nightly(rest), known) else Tested(rest, known)
+Nightly(rest Texts) Number slow
+	if File(rest(0)).Exists is false
+		return Folders(logger).Nightly(rest(0), rest(1)) + Native("test", (rest(0), rest(1), "native"))
+	let unit = Execute(logger).Served(rest(0), rest(1), true).code
+	unit > 0 then unit else Execute(logger, "*").Served(rest(0), rest(1), true).code
 Tested(rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 	Strict.Tested(("Missing.strict", ".")).code is 1
 	let request = TestRequest(rest)

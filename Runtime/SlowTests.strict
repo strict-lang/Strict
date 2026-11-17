@@ -1,10 +1,26 @@
 constant Slowest = 1000
+constant Recommended = 500
 Overran(elapsed Number, place Text) Text
 	SlowTests.Overran(1200, "a").StartsWith("Test failed: a took 1200 ms on the VM")
-	SlowTests.Overran(500, "a") is ""
-	let limit = " ms on the VM, slow tests may take " + Slowest + " ms at most: mark the method native"
-	elapsed > Slowest then "Test failed: " + place + " took " + elapsed.Round + limit else ""
+	SlowTests.Overran(700, "a").StartsWith("Test slow: a took 700 ms on the VM, from 500 ms on")
+	SlowTests.Overran(400, "a") is ""
+	let took = place + " took " + elapsed.Round + " ms on the VM"
+	if elapsed > Slowest
+		return "Test failed: " + took + ", slow tests may take " + Slowest + " ms at most: mark the method native"
+	elapsed > Recommended then "Test slow: " + took + ", from " + Recommended + " ms on mark the method native" else ""
 Overrun(elapsed Number) Number
 	SlowTests.Overrun(1200) is 1
 	SlowTests.Overrun(5) is 0
 	elapsed > Slowest then 1 else 0
+Marker(path Text) Text
+	SlowTests.Marker("Examples/Sum.strict").EndsWith("Examples/obj/Sum.slowpassed")
+	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".slowpassed")
+Unit(path Text) Text slow
+	SlowTests.Unit("Missing.strict") is "0"
+	File(BinaryFile(FileCompiler.Normalized(path)).Path).Modified to Text
+Passed(path Text) slow
+	File(Marker(path)).Write(List(Text) + Unit(path))
+IsPassed(path Text) Boolean slow
+	SlowTests.IsPassed("Missing.strict") is false
+	let marker = Marker(path)
+	(File(marker).Exists then File(marker).ReadLines else List(Text)) is (Unit(path))

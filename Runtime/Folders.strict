@@ -32,11 +32,16 @@ IsChanged(path Text) Boolean slow
 	let entries = cache.Head(File(cache.Path).ReadBytes)
 	let isTested = cache.IsCurrent(entries) and BinaryLinks(cache).IsTested(entries)
 	Execute(logger).IsEdited(path) or isTested is false
-Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false) Texts
+Nightly(folder Text, root Text) Number slow
+	Folders(Logger).Nightly("Missing", ".") is 0
+	Ran(Commands("test", Execute(logger, "*").Stale(NativeFolder(logger).Files(folder)), root, false, false, true))
+Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false, isNightly = false) Texts
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
 	Folders(Logger).Commands("test", List(Text) + "a.strict", ".", true, true) is ("test \"a.strict\" \".\" mutations")
-	let options = (command is "test" and isFull is false then " unit" else "") + (isMutating then " mutations" else "")
+	Folders(Logger).Commands("test", List(Text) + "a", ".", false, false, true) is ("test \"a\" \".\" nightly")
+	let checked = (command is "test" and isFull is false then " unit" else "") + (isMutating then " mutations" else "")
+	let options = isNightly then " nightly" else checked
 	for paths
 		command + " \"" + value + "\" \"" + root + "\"" + options
 Cleaned(folder Text) Number

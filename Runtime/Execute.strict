@@ -58,12 +58,13 @@ Sourced(stale Texts, root Text, sources Texts) Texts
 		return stale.Length is 0 then List(Text) else sources
 	SourceFiles(root).Of(FileCompiler.Normalized(stale.First), stale)
 Stale(paths Texts) Texts
-	if selection is not ""
+	if selection is not "" and selection is not "*"
 		return paths
 	for paths
 		let cache = BinaryFile(FileCompiler.Normalized(value))
 		let entries = cache.Unpacked(File(cache.Path).ReadBytes)
-		if IsEdited(value) or cache.IsFresh(entries) is false or BinaryLinks(cache).IsTested(entries) is false
+		let isCurrent = IsEdited(value) is false and cache.IsFresh(entries) and BinaryLinks(cache).IsTested(entries)
+		if isCurrent is false or selection is "*" and SlowTests.IsPassed(value) is false
 			value
 IsEdited(path Text) Boolean
 	Execute(Logger).IsEdited("Execute.strict") is false
@@ -128,6 +129,8 @@ Tested(types List(TypeEntry), path Text, isQuiet = false) Answer
 	Directory.Change(home)
 	if failed > 0
 		logger.Log(Summary(failed, path))
+	if failed is 0 and selection is "*" and IsEdited(path) is false
+		SlowTests.Passed(path)
 	Answer(failed, known, constants = Constants(machine).Recorded(cached))
 Mutated(types List(TypeEntry), path Text, root Text, files Texts, inference TypeInference, started Number) Number
 	let home = Directory.Current
