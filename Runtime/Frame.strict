@@ -34,6 +34,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	MutationCache.Exhausted(slots)
 Ended(slots List(VmValue)) List(VmValue)
 	Twice.Ended(Listed)(0).text is "ab"
+	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0, Listed), 0, Listed).items(1).items.Length is 1
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
 	let stopped = machine.deadline > 0 or depth is 0 then MutationCache.Stopped(machine.deadline) else ""
 	stopped is "" then Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
@@ -131,14 +132,14 @@ Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Invocation(entry, arguments, instance, depth + 1, flag + 1 + entry.payload(flag))
 Traced(error VmValue, position Number, slots List(VmValue)) VmValue
 	Twice.Traced(VmValue.OfError("a"), 0, Listed).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
-	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0, Listed), 0, Listed).items(1).items.Length is 1
 	if error.kind is "Strict/ErrorWithValue"
 		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position, slots), error.items(1)))
 	let traces = error.items(1).items
-	let isShown = traces.Length < 2 and slots.Length > MembersSlot
-	let rest = isShown then slots.Slice(MembersSlot, slots.Length - MembersSlot) else List(VmValue)
+	let isShown = traces.Length < 2 and slots.Length > MembersSlot and owner is in machine.places
 	let resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolved(owner, machine.folder)
-	let trace = TraceEntry(method, owner, machine.types).Trace(rest, resolved, method.instructions(position).line)
+	let rest = isShown then slots.Slice(MembersSlot, slots.Length - MembersSlot) else List(VmValue)
+	let start = isShown then machine.types(machine.places(owner)).members.Length else -1
+	let trace = TraceEntry(method, owner, start).Trace(rest, resolved, method.instructions(position).line)
 	let isRepeated = traces.Length > 0 and traces.Last is trace
 	let traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))

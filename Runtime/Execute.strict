@@ -35,7 +35,7 @@ Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = L
 	for paths
 		let hit = value is in stale then Answer(0, known) else Answer(Cached(value), known)
 		let got = value is in stale then host.Verified(value, root, isQuiet, files, types, stale.Length is 1) else hit
-		host = value is in stale then Execute(host, known = got.known, cached = got.constants) else host
+		host = value is in stale then Execute(host, known = got.known) else host
 		if got.code is 0 and isQuiet is false
 			logger.Log(Summary(0, value))
 		failed = failed + got.code

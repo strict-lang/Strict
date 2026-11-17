@@ -1,5 +1,6 @@
 has X Number with value.Bits is 32
 has Y Number with value.Bits is 32
+constant Zero = Vector2(0, 0)
 constant One = Vector2(1, 1)
 constant Left = Vector2(-1, 0)
 constant Right = Vector2(1, 0)
@@ -11,7 +12,7 @@ Numbers Numbers
 	Vector2(1, 2).Numbers is (1, 2)
 	(X, Y)
 Length Number
-	Vector2(0, 0).Length is 0
+	Zero.Length is 0
 	Vector2(3, 4).Length is 5
 	(X * X + Y * Y).SquareRoot
 +(other) Vector2
@@ -32,11 +33,14 @@ Normalize Vector2
 	Vector2(X / Length, Y / Length)
 Atan Degrees
 	Vector2(0, 0).Atan is 0
-	Vector2(1, 0).Atan is 90
+	Vector2(1, 0).Atan is 90 and Vector2(-1, 0).Atan is -90
 	Vector2(-1, -1).Atan is -135
 	Vector2(1, -1).Atan is 135 and Vector2(1, 1).Atan is 45 and Vector2(0, -1).Atan is 180
+	Vector2(2, 1).Atan is Degrees(63.43494882292201) and Vector2(-2, -1).Atan is Degrees(-116.56505117707799)
+	Vector2(1, 2).Atan is Degrees(26.56505117707799) and Vector2(2, -1).Atan is Degrees(116.56505117707799)
 	let half = Y < 0 then (X < 0 then -HalfTurn else HalfTurn) else 0
-	Degrees(Y is 0 then (X > 0 then QuarterTurn else X < 0 then -QuarterTurn else 0) else Ratio(X / Y).Atan + half)
+	let turn = X > 0 then QuarterTurn else -QuarterTurn
+	Degrees(X.Absolute > Y.Absolute then turn - Ratio(Y / X).Atan else Ratio(Y is 0 then 0 else X / Y).Atan + half)
 -(other) Vector2
 	Vector2(4, 7) - Vector2(1, 2) is Vector2(3, 5)
 	Vector2(X - other.X, Y - other.Y)

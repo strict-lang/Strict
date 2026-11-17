@@ -45,7 +45,7 @@ Saved(route Number, slot Number, result VmValue)
 	let items = Storage(machine.types).Replaced(prototype.items, slot, result)
 	machine.prototypes.Stored(route, VmValue(prototype, items = items))
 Member(type TypeEntry, slot Number) VmValue
-	let route = Resolver(machine.types).Position(type)
+	let route = type.Name is in machine.places then machine.places(type.Name) else Resolver(machine.types).Position(type)
 	let isPrepared = route >= 0 and route < machine.prototypes.entries.Length
 	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))
 Seeded(cache Dictionary(Text, VmValue)) Machine

@@ -1,1 +1,1 @@
-- DeltaEngine and Ben still read `.numbers` of Vector2/Vector3 (21 and 38 uses), now `has X Number`/`has Y Number` fields (`.Numbers` gives the list), and Size refuses a width or height of 0 that DeltaEngine's Rectangle allowed.
+- A method declared `Numbers` that returns a Vector2 is no type error: DeltaEngine's SoulCraft `Renderer3D.Projected(point Numbers) Numbers` returning `camera.Projected(...)` (a Vector2) gave `(0, 1, 2, 3, 4, 5, 6, 7, 8, 9)` on the VM instead of failing the check.

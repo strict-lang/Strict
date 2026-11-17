@@ -1,15 +1,20 @@
 has method Bytecode/MethodEntry
 has owner Text
-has types List(TypeEntry)
+has start Number
 constant MaxShown = 40
+constant MaxItems = 4
 constant Parameters = (MemberEntry("by", "Strict/Number", List(InstructionEntry), false), MemberEntry("name", "Strict/Text", List(InstructionEntry), false))
-constant Shifting = TraceEntry(MethodEntry("Shifted", Parameters, "Strict/Number", List(InstructionEntry)), "Strict/Doubler", Frame.Doubling.types)
+constant Shifting = TraceEntry(MethodEntry("Shifted", Parameters, "Strict/Number", List(InstructionEntry)), "Strict/Doubler", 0)
+constant Member = TraceEntry(Shifting.method, Shifting.owner, 1)
+constant Five = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2), VmValue.OfNumber(3), VmValue.OfNumber(4), VmValue.OfNumber(5)))
+constant Nested = VmValue.OfList((VmValue.OfList(List(VmValue) + VmValue.OfNumber(1)), VmValue.OfNumber(2)))
 Called(rest List(VmValue)) Text
 	Shifting.Called((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
 	Shifting.Called(List(VmValue)) is "Doubler.Shifted"
+	TraceEntry(Shifting.method, Shifting.owner, -1).Called((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted"
+	Member.Called((VmValue.OfNumber(7), VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
 	let name = TypeEntry.ShortName(owner) + "." + method.Name
-	let start = Natives(types).TypeOf(owner).members.Length
-	if method.parameters.Length is 0 or rest.Length < start + method.parameters.Length
+	if start < 0 or method.parameters.Length is 0 or rest.Length < start + method.parameters.Length
 		return name
 	mutable shown = List(Mutable(Text))
 	for method.parameters
@@ -21,5 +26,17 @@ Trace(rest List(VmValue), file Text, line Number) VmValue
 	VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText(Called(rest)), VmValue.OfText(file), VmValue.OfNumber(line)))
 Shown(argument VmValue) Text
 	Shifting.Shown(VmValue.OfText("a")) is "\"a\"" and Shifting.Shown(VmValue.OfNumber(2)) is "2"
+	Shifting.Shown(Nested) is "List"
+	if IsFlat(argument) is false
+		return TypeEntry.ShortName(argument.kind)
 	let code = ValueCode(argument).Code
 	code.Length > MaxShown then code.Substring(0, MaxShown) + "..." else code
+IsFlat(argument VmValue) Boolean
+	Shifting.IsFlat(VmValue.OfNumber(2)) and Shifting.IsFlat(Nested) is false
+	Shifting.IsFlat(Five) is false
+	if argument.items.Length > MaxItems
+		return false
+	for argument.items
+		if value.items.Length > 0
+			return false
+	true
