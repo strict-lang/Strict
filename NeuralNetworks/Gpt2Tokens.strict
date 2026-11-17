@@ -130,9 +130,10 @@ Specials(added Json) Dictionary(Text, Number)
 Merged(word Text) Numbers
 	Tiny.Merged(" ab") is (4)
 	Tiny.Merged("ba") is (1, 0)
+	Gpt2Tokens.Parsed("{\"\\u00c3\": 0, \"\\u00a9\": 1}", List(Text)).Merged(Text.Utf8((195, 169))) is (0, 1)
 	mutable symbols = List(Mutable(Number))
-	for word
-		symbols.Add(ids(value to Text))
+	for word.Bytes
+		symbols.Add(ids(Text.Utf8((value))))
 	mutable best = Best(symbols)
 	for as long as best >= 0
 		symbols = Joined(symbols, best)
