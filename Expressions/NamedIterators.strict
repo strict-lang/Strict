@@ -61,7 +61,7 @@ Expanded(loop SyntaxNode) SyntaxNode
 		return CountedIterators(iterating.names, loop.line).Flattened(iterables, loop.children.Last)
 	let renamed = iterating.Iterables(iterables)
 	let body = iterating.Renamed(loop.children.Last, iterables.Length)
-	iterating.Looped(renamed, body, iterating.Mentions(SyntaxNode("Body", "", renamed + body)), 0)
+	iterating.Looped(renamed, body, iterating.Mentions(SyntaxNode(loop.Kind, "", renamed + body)), 0)
 Destructured(iterable SyntaxNode, body SyntaxNode) SyntaxNode
 	Sizes.Destructured(Sizing.children(0), Sizing.children.Last).children(0) to Text is "((1, 2), (3, 4))"
 	Sizes.Destructured(Sizing.children(0), Sizing.children.Last).children.Last.Lines("\t")(1) is "\tlet width = value(1)"

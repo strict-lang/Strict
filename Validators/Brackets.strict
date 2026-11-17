@@ -5,14 +5,15 @@ constant NoPrecedence = 99
 constant NotHint = ", write not without brackets"
 constant UnneededHint = ", brackets are not needed here"
 constant Sample = Brackets(("Run", "\tif (a < 1) or (a > 2)", "\t(a or b) and c", "\t(a + b).Length", "\tf(1, (a then b else c))", "\tnot (a and b)"))
-constant Kept = Brackets(("\tif (not a) or b", "\ta is (not b)", "\t((a + b)) * c", "\t3 + (4)", "\tDecisionTree((-1))", "\t(a then b else c) then d else e"))
+constant Kept = Brackets(("\t(not a and b) or c", "\tif (not a) or b", "\ta is (not b)", "\t((a + b)) * c", "\t3 + (4)", "\tDecisionTree((-1))", "\t(a then b else c) then d else e", "\tf(a < 1) or b", "\tif (a < 1", "\tif (a < 1, b)"))
 Issues List(ValidationIssue)
 	Sample.Issues.Length is 2 and Sample.Issues.First.Line is 2
-	Kept.Issues.Length is 2
+	Sample.Issues.First.ruleName is "BracketsMustBeNecessary"
+	Kept.Issues.Length is 3 and Kept.Issues.Last.target is "( ( a + b ) )" + UnneededHint
+	Kept.Issues.First.target is "( not a and b )" + UnneededHint
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
-		if "(" is in value
-			issues = issues + LineIssues(Tokenizer(value.Trim).Tokens, index + 1)
+		issues = "(" is in value then issues + LineIssues(Tokenizer(value.Trim).Tokens, index + 1) else issues
 	issues
 LineIssues(tokens Texts, line Number) List(ValidationIssue)
 	Sample.LineIssues(("if", "(", "a", "<", "1", ")"), 3).First.target is "( a < 1 )" + UnneededHint
@@ -42,20 +43,22 @@ Closing(tokens Texts, open Number) Number
 HasComma(tokens Texts, open Number, close Number) Boolean
 	Sample.HasComma(("(", "1", ",", "2", ")"), 0, 4)
 	Sample.HasComma(("(", "f", "(", "1", ",", "2", ")", ")"), 0, 7) is false
+	Sample.HasComma(("(", "f", "(", "1", ")", ",", "2", ")"), 0, 7)
 	mutable depth = 0
 	for Range(open + 1, close)
 		depth = depth + (tokens(value) is "(" then 1 else tokens(value) is ")" then -1 else 0)
-		if depth is 0 and tokens(value) is ","
+		if depth < 1 and tokens(value) is ","
 			return true
 	false
 InnerLowest(tokens Texts, open Number, close Number) Number
 	Sample.InnerLowest(("(", "a", "+", "b", "*", "c", ")"), 0, 6) is 11
-	Sample.InnerLowest(("(", "-", "1", ")"), 0, 3) is NoPrecedence
+	Sample.InnerLowest(("(", "-", "1", ")"), 0, 3) is NoPrecedence and Sample.InnerLowest(("(", "or", ")"), 0, 2) is 4
+	Sample.InnerLowest(("(", "(", "a", "or", "b", ")", "-", "(", "c", ")", ")"), 0, 10) is 11
 	mutable depth = 0
 	mutable lowest = NoPrecedence
 	for Range(open + 1, close)
 		depth = depth + (tokens(value) is "(" then 1 else tokens(value) is ")" then -1 else 0)
-		if depth is 0 and (tokens(value) is not "-" or value > open + 1 and tokens(value - 1) is not in Openers)
+		if depth < 1 and (tokens(value) is not "-" or tokens(value - 1) is not in Openers)
 			let precedence = Precedence(tokens(value))
 			if precedence > 0 and precedence < lowest
 				lowest = precedence
@@ -63,6 +66,8 @@ InnerLowest(tokens Texts, open Number, close Number) Number
 LeftPrecedence(tokens Texts, open Number) Number
 	Sample.LeftPrecedence(("a", "is", "not", "(", "b", ")"), 3) is 7
 	Sample.LeftPrecedence(("not", "(", "a", "and", "b", ")"), 1) is -1
+	Sample.LeftPrecedence(("-", "(", "a", ")"), 1) is -1 and Sample.LeftPrecedence(("a", "-", "(", "b", ")"), 2) is 11
+	Sample.LeftPrecedence(("a", "+", "-", "(", "b", ")"), 3) is -1
 	if open is 0
 		return 0
 	let previous = tokens(open - 1)
@@ -74,6 +79,14 @@ LeftPrecedence(tokens Texts, open Number) Number
 IsCompoundIs(tokens Texts, open Number, previous Text) Boolean
 	Sample.IsCompoundIs(("a", "is", "not", "in", "(", "b", ")"), 4, "in")
 	Sample.IsCompoundIs(("not", "(", "a", ")"), 1, "not") is false
+	Sample.IsCompoundIs(("is", "not", "(", "b", ")"), 2, "not")
+	Sample.IsCompoundIs(("is", "not", "in", "(", "b", ")"), 3, "in")
+	Sample.IsCompoundIs(("not", "in", "(", "is"), 2, "in") is false
+	Sample.IsCompoundIs(("not", "(", "is"), 1, "not") is false
+	Sample.IsCompoundIs(("is", "x", "(", "b", ")"), 2, "x") is false
+	Sample.IsCompoundIs(("a", "x", "not", "in", "(", "b", ")"), 4, "in") is false
+	Sample.IsCompoundIs(("a", "is", "x", "in", "(", "b", ")"), 4, "in") is false
+	Sample.IsCompoundIs(("a", "is", "not", "x", "(", "b", ")"), 4, "x") is false
 	let isTwo = open >= 2 and tokens(open - 2) is "is" and previous is in ("not", "in")
 	isTwo or open >= 3 and tokens(open - 3) is "is" and tokens(open - 2) is "not" and previous is "in"
 RedundantDetail(tokens Texts, open Number, close Number) Text
@@ -92,24 +105,38 @@ RedundantDetail(tokens Texts, open Number, close Number) Text
 IsProtectedNot(tokens Texts, open Number) Boolean
 	Sample.IsProtectedNot(("a", "is", "(", "not", "b", ")"), 2)
 	Sample.IsProtectedNot(("(", "not", "a", ")"), 0) is false
+	Sample.IsProtectedNot(("a", "is", "(", "b", ")"), 2) is false
+	Sample.IsProtectedNot(("a", "or", "(", "not", "b", ")"), 2) is false
+	Sample.IsProtectedNot(("(", "not", "a", "is"), 0) is false
 	open > 0 and tokens(open - 1) is "is" and tokens(open + 1) is "not"
 IsWrappedGroup(tokens Texts, open Number, after Text) Boolean
 	Sample.IsWrappedGroup(("(", "(", "a", "+", "b", ")", ")", "*", "c"), 1, ")")
 	Sample.IsWrappedGroup(("f", "(", "(", "a", "<", "1", ")", ")"), 2, ")") is false
+	Sample.IsWrappedGroup(("if", "-", "(", "b", ")"), 2, ")") is false
+	Sample.IsWrappedGroup(("(", "(", "a", ")", "*", "c"), 1, "*") is false
+	Sample.IsWrappedGroup(("(", "a", ")", "if", "("), 0, ")") is false
 	open > 0 and tokens(open - 1) is "(" and after is ")" and IsGroupOpen(tokens, open - 1)
 IsDouble(tokens Texts, open Number, close Number) Boolean
 	Sample.IsDouble(("(", "(", "a", "+", "b", ")", ")"), 0, 6)
 	Sample.IsDouble(("(", "(", "a", ",", "b", ")", ")"), 0, 6) is false
-	if tokens(open + 1) is not "(" or Closing(tokens, open + 1) is not close - 1 or HasComma(tokens, open + 1, close - 1)
+	Sample.IsDouble(("(", "(", "not", "a", ")", ")"), 0, 5)
+	Sample.IsDouble(("(", "(", "a", ")", ")"), 0, 4) is false
+	Sample.IsDouble(("(", "(", "not", "a", ",", "b", ")", ")"), 0, 7) is false
+	Sample.IsDouble(("(", "(", "not", "a", ")", "and", "(", "b", ")", ")"), 0, 9) is false
+	if tokens(open + 1) is not "(" or Closing(tokens, open + 1) is not close - 1 or HasComma(tokens, open + 1, close)
 		return false
-	InnerLowest(tokens, open + 1, close - 1) < NoPrecedence or tokens(open + 2) is "not"
+	InnerLowest(tokens, open + 1, close) < NoPrecedence or tokens(open + 2) is "not"
 InnerRedundant(tokens Texts, open Number, after Text, inner Number, left Number) Boolean
 	Sample.InnerRedundant(("(", "a", "<", "1", ")", "or", "b"), 0, "or", 7, 0)
 	Sample.InnerRedundant(("(", "a", "or", "b", ")", "and", "c"), 0, "and", 4, 0) is false
+	Sample.InnerRedundant(("x", "("), 1, "then", 4, 0) and Sample.InnerRedundant(("=", "("), 1, "", 1, 0)
+	Sample.InnerRedundant(("(", ","), 0, "", 1, 0) and Sample.InnerRedundant(("x", "("), 1, ",", 7, 0)
+	Sample.InnerRedundant(("x", "("), 1, ",", 1, 0) is false and Sample.InnerRedundant((",", "("), 1, "", 1, 0) is false
+	Sample.InnerRedundant(("x", "("), 1, "", 4, 6) is false and Sample.InnerRedundant(("x", "("), 1, "", 13, 11) is false
 	let right = Precedence(after)
-	let needsRight = right > 0 and (inner < right or inner is 1 and right is 1)
+	let needsRight = inner < right or inner is 1 and right is 1
 	let hasComma = after is "," or open > 0 and tokens(open - 1) is ","
-	if inner is NoPrecedence or left > 0 and inner <= left or needsRight or hasComma and inner is 1
+	if inner is NoPrecedence or inner <= left or needsRight or hasComma and inner is 1
 		return false
 	left is in BooleanPrecedences or right is in BooleanPrecedences or left is 0 and right is 0
 Precedence(operator Text) Number

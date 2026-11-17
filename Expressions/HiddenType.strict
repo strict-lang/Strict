@@ -25,21 +25,22 @@ Ambiguous(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.Ambiguous(Twiced, Valued, Owning).StartsWith("AmbiguousName: Count")
 	Counting.Ambiguous(Twiced, Valued, FileCheck.Counted) is ""
 	Counting.Ambiguous(OuterCount, Looped, FileCheck.Counted).StartsWith("AmbiguousName: outer.Count inside a loop")
-	let first = call.children.Length > 0 then call.children(0) else call
-	let isMember = call.Kind is in ("Member", "MethodCall") and first.Kind is "Identifier"
 	let outside = OuterType(call, scope)
 	if outside is not ""
 		return "AmbiguousName: outer." + outside + " inside a loop is the value outside the loop, not the type"
-	if isMember is false or IsMethod(first.text, scope, current) is false
+	let isMember = call.Kind is in ("Member", "MethodCall") then call.children(0).Kind is "Identifier" else false
+	if isMember then IsMethod(call.children(0).text, scope, current) is false else true
 		return ""
-	let tip = ", use outer." + first.text + " for the type or value." + first.text + " for the method"
-	"AmbiguousName: " + first.text + " is a method and a type" + tip
+	let first = call.children(0).text
+	let tip = ", use outer." + first + " for the type or value." + first + " for the method"
+	"AmbiguousName: " + first + " is a method and a type" + tip
 OuterType(call SyntaxNode, scope Scope) Text
 	Counting.OuterType(OuterCount, Looped) is "Count"
 	Counting.OuterType(OuterTwice, Looped) is "Count"
 	Counting.OuterType(OuterCount, Valued) is ""
 	Counting.OuterType(Twiced, Looped) is ""
 	Counting.Ambiguous(OuterCount, FileCheck.Counted, FileCheck.Counted) is ""
+	Counting.Ambiguous(SyntaxNode("Call", "Count"), Valued, FileCheck.Counted) is ""
 	if call.Kind is not in ("Member", "MethodCall")
 		return ""
 	let first = call.children(0)

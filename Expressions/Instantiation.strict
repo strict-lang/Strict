@@ -16,7 +16,7 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(SyntaxNode("Call", "Couple"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
 	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, Scope(("Couple"), ("Text"))) is ""
-	let isType = types.IsKnown(node.text) and current.TypeOf(node.text) is "" and scope.TypeOf(node.text) is ""
+	let isType = current.TypeOf(node.text) is "" and scope.TypeOf(node.text) is ""
 	let declared = isType then ConstructorTypes(node) else List(Text)
 	mutable arguments = List(Mutable(Text))
 	for declared
@@ -25,6 +25,7 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
 ConstructorTypes(node SyntaxNode) Texts
 	Pairing.Argument("Couple(Text, Number)", "missing") is "Unknown"
+	Pairing.Name(Mixed, Inferring, Scope(("Couple"), ("Text")), KnownTypes.NoMembers) is ""
 	Pairing.Position("Couple(Text, Number)", "first") is 0
 	Pairing.IsGeneric("Generics") and Pairing.IsGeneric("Text") is false
 	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)

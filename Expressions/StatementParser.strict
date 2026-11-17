@@ -45,6 +45,7 @@ Keyword(first Text) SyntaxNode
 	StatementParser("return").Keyword("return").Kind is "Return"
 	StatementParser(Tokenizer("for y, x in Range(0, 2), 3").Tokens).Keyword("for") to Text is "for y, x in Range(0, 2), 3"
 	StatementParser("return").Keyword("return").text is "return"
+	StatementParser(Tokenizer("for as long as").Tokens).Keyword("for").text is ""
 	if first is "else"
 		return ParseElse
 	if tokens.Length is 1
@@ -56,8 +57,10 @@ IsNamed Boolean
 	StatementParser(Tokenizer("for y, x in 2, 3").Tokens).IsNamed
 	StatementParser(Tokenizer("for x in list").Tokens).IsNamed
 	StatementParser(Tokenizer("for list").Tokens).IsNamed is false
+	StatementParser(("let", "a", "=")).ParseStatement.Kind is "Declaration"
 	StatementParser(Tokenizer("for a, b").Tokens).IsNamed is false
 	StatementParser(Tokenizer("if a, b in c").Tokens).IsNamed is false
+	StatementParser(Tokenizer("let a = for b").Tokens).ParseStatement to Text is ForProblem + "let a = for()" + ForHint
 	StatementParser(Tokenizer("for x is in list").Tokens).IsNamed is false
 	StatementParser(Tokenizer("for x in").Tokens).IsNamed is false
 	tokens.Length > 3 and tokens(0) is "for" and tokens(2) is in (",", "in") and "in" is in tokens
@@ -129,7 +132,7 @@ AssignmentIndex Number
 	mutable assignment = -1
 	for tokens
 		depth = depth + Syntax.BracketDelta(value)
-		if depth is 0 and value is "="
+		if depth < 1 and value is "="
 			assignment = index
 	assignment
 Problem(line Text) Text

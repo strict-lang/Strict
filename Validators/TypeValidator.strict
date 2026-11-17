@@ -108,7 +108,7 @@ Copied Texts
 	mutable copied = List(Mutable(Text))
 	for shape.lines
 		if shape.IsMethodHeader(value)
-			copied = copied + Unnamed(SyntaxNode("Body", "", BodyParser(shape.lines).Method(index + 1).Statements))
+			copied = copied + Unnamed(BodyParser(shape.lines).Method(index + 1))
 	copied
 Unnamed(node SyntaxNode) Texts
 	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, a = 1)").Tokens).Parse) is ("b")

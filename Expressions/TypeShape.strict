@@ -50,6 +50,7 @@ IsContract Boolean
 MemberScope Scope
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.TypeOf("count") is "Number"
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.names.Length is 1
+	TypeShape("has count Number", "", "Run").MemberScope.names.Length is 1
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for lines.Slice(0, MembersEnd)
@@ -126,7 +127,7 @@ Overload(name Text, position Number) Number
 	TypeShape("MadeUp Text", "\t\"a\"", "Made Text", "\t\"b\"", "Made(a Text) Text").Overload("Made", 3) is 0
 	mutable ordinal = -1
 	for lines.Slice(0, position + 1)
-		if value.StartsWith(name) and Tokenizer(value).Tokens.First is name
+		if value.StartsWith(name) then Tokenizer(value).Tokens.First is name else false
 			ordinal = ordinal + 1
 	ordinal
 EnumValue(position Number) Number

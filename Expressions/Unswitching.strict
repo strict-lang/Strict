@@ -32,6 +32,8 @@ Found(start Number) Number
 	-1
 Hoisted(at Number) Texts
 	Blurring.Hoisted(2).Length is 7
+	Hoisting(0).StartsWith("\tif bitmap.IsInside(pixel, -1, -1) and ") and Hoisting(3) is "\telse"
+	Hoisting(2).StartsWith("\t\t\tsum = sum + ")
 	Hoisting(1) is "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
 	let tabs = lines(at).Substring(0, BodyParser.Indent(lines(at)))
 	let end = Callees(lines, folder).BlockEnd(at)
@@ -119,7 +121,7 @@ Call(at Number) Texts
 	let line = lines(at).TrimStart
 	let text = line.StartsWith("if ") then line.Substring(3, line.Length - 3) else ""
 	let open = text.IndexOf("(")
-	if open < 1 or text.EndsWith(")") is false or Callees(lines, folder).Closing(text, open) is not text.Length - 1
+	if open < 1 or Callees(lines, folder).Closing(text, open) is not text.Length - 1
 		return List(Text)
 	let dot = text.Substring(0, open).IndexOf(".")
 	let named = List(Text) + (dot < 0 then "" else text.Substring(0, dot)) + text.Substring(dot + 1, open - dot - 1)
@@ -159,6 +161,7 @@ IsMonotone(at Number) Boolean
 Bound(at Number, parameters Texts) Texts
 	Blurring.Bound(2, ("pixel", "x", "y")) is ("x", "y")
 	Blurring.Bound(3, ("pixel", "x", "y")).Length is 0
+	Single.Bound(1, ("a", "b")).Length is 0
 	let names = LoopNames(at)
 	let variables = Monotone(Names(at) + LoopVariables)
 	mutable bound = List(Mutable(Text))

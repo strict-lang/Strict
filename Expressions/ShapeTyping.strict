@@ -1,6 +1,7 @@
 has inference TypeInference
 constant NoScope = Scope(List(Text), List(Text))
 constant NoScopes = (NoScope, NoScope)
+constant Aliasing = "constant a = "
 constant Samples = (Scope(List(Text) + "Sample", List(Text) + "Box(3).Inner"), NoScope)
 constant Chained = ShapeTyping(TypeInference(KnownTypes(("Box", "Item"), NoScopes, (Scope(List(Text) + "Inner", List(Text) + "Item"), Scope(List(Text) + "Weight", List(Text) + "Number")), NoScopes), Samples))
 constant Counting = ShapeTyping(ResolveCheck.Counting)
@@ -54,8 +55,7 @@ Result(shape TypeShape, position Number, typeName Text) Text
 	Swapped.Result(Local, 1, "User") is "Couple(Text, Number)"
 	Swapped.Result(Plain, 0, "User") is "Text"
 	let bodies = MethodBodies(typeName, shape, inference)
-	let header = HeaderTokens(Tokenizer(shape.lines(position)).Tokens)
-	mutable scope = bodies.HeaderScope(header, shape.MemberScope.With("self type", typeName))
+	mutable scope = bodies.HeaderScope(HeaderTokens(Tokenizer(shape.lines(position)).Tokens), shape.MemberScope)
 	let body = BodyParser(shape.lines).Method(position + 1)
 	for body.children
 		scope = bodies.Declare(value, scope)
@@ -90,16 +90,14 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 		return ""
 	let node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
 	let own = node.Kind is in ("Call", "Identifier") then inference.types.MethodsOf(typeName).TypeOf(node.text) else ""
-	let isInferred = own is "" and node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call")
-	isInferred then Inferred(node, typeName, known) else own
+	node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call") then Inferred(node, typeName, known) else own
 Inferred(node SyntaxNode, typeName Text, known Scope) Text
 	Chained.Inferred(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
 	Chained.Expanded(SyntaxNode("Identifier", "x")) is SyntaxNode("Identifier", "x")
 	Boxed.Inferred(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
 	Chained.Inferred(SyntaxParser(Tokenizer("Box.Sample.Weight").Tokens).Parse, "User", KnownTypes.NoMembers) is "Number"
-	let owner = node.Kind is "Member" then node.children(0).text else ""
-	let aliased = owner is "" then "" else inference.ConstantOf(owner, node.text)
-	let chained = aliased is "" then "" else ChainType(Tokenizer("constant a = " + aliased).Tokens, owner, NoScope)
+	let alias = node.Kind is "Member" then inference.ConstantOf(node.children(0).text, node.text) else ""
+	let chained = alias is "" then "" else ChainType(Tokenizer(Aliasing + alias).Tokens, node.children(0).text, NoScope)
 	let current = inference.types.ShapeScope(typeName).WithAll(known.names, known.types)
 	chained is "" then inference.TypeOf(Expanded(node), NoScope, current) else chained
 Expanded(node SyntaxNode) SyntaxNode

@@ -6,7 +6,7 @@ Calls Texts
 	Blurring.Calls(0) is "bitmap.IsInside(pixel, -1, -1)"
 	Blurring.Calls(1) is "bitmap.IsInside(pixel, 2 - 1, -1)"
 	Blurring.Calls(3) is "bitmap.IsInside(pixel, 2 - 1, 2 - 1)"
-	Corners(Unswitching.Single, 1).Calls.Length is 2
+	Corners(Unswitching.Single, 1).Calls.Length is 2 and Corners(Unswitching.Single, 1).Calls(0).StartsWith("f(")
 	for 2 ^ unswitching.LoopNames(at).Length
 		Call(value)
 Call(corner Number) Text

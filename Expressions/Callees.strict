@@ -42,7 +42,7 @@ Parts(text Text) Texts
 	for text.Length
 		let character = text(index)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
-		if depth is 0 and character is ","
+		if depth < 1 and character is ","
 			parts.Add(text.Substring(start, index - start))
 			start = index + 2
 	parts + text.Substring(start, text.Length - start)
@@ -53,7 +53,7 @@ Closing(text Text, open Number) Number
 	for Range(open, text.Length)
 		let character = text(value)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
-		if depth is 0
+		if depth < 1
 			return value
 	-1
 BlockEnd(at Number) Number

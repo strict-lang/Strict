@@ -41,6 +41,7 @@ ParseUnaryOrCall(start Number, end Number) SyntaxNode
 	ParseCallOrMember(start, end)
 Leaf(token Text) SyntaxNode
 	SyntaxParser("1").Leaf("1").Kind is "Number"
+	SyntaxParser("x", "a", "=").ParseRange(1, 3).Kind is not "Reassignment"
 	SyntaxParser("1").Leaf("\"a\"").Kind is "Text"
 	SyntaxParser("1").Leaf("true").Kind is "Boolean"
 	SyntaxParser("1").Leaf("x").Kind is "Identifier"
@@ -65,7 +66,7 @@ LowestOperatorIndex(start Number, end Number) Number
 	for end - start
 		depth = depth + BracketDelta(tokens(start + index))
 		let precedence = OperatorPrecedence(start + index, start)
-		if depth is 0 and precedence > 0 and precedence <= bestPrecedence
+		if depth < 1 and precedence > 0 and precedence <= bestPrecedence
 			best = start + index
 			bestPrecedence = tokens(best) is "else" then precedence - 0.5 else precedence
 	best
@@ -147,7 +148,7 @@ Parts(start Number, end Number) SyntaxNodes
 	mutable segment = start
 	for end - start
 		depth = depth + BracketDelta(tokens(start + index))
-		if depth is 0 and tokens(start + index) is ","
+		if depth < 1 and tokens(start + index) is ","
 			parts.Add(ParseRange(segment, start + index))
 			segment = start + index + 1
 	parts + ParseRange(segment, end)

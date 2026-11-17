@@ -68,10 +68,13 @@ Normals(count Number) Numbers slow
 	if count < BatchSize
 		return Error("FewerThanSixteen")
 	let tail = count % BatchSize is 0 then count else count - BatchSize
-	let uniforms = Uniforms(Uints(count * 2 - tail))
+	let uniforms = Uniforms(Uints(Needed(count, tail)))
 	for count
 		let offset = index % BatchSize
 		Normal(uniforms, index >= tail then count else index - offset, index >= tail then index - tail else offset)
+Needed(count Number, tail Number) Number
+	MersenneTwister(List(Number)).Needed(16, 16) is 16 and MersenneTwister(List(Number)).Needed(20, 4) is 36
+	count * 2 - tail
 Uniforms(uints Numbers) Numbers
 	MersenneTwister(List(Number)).Normals(8) is Error("FewerThanSixteen")
 	MersenneTwister(List(Number)).Uniforms((16777216, 8388608)) is (0, 0.5)

@@ -72,7 +72,7 @@ ValueEnd(start Number) Number
 		after = after + 1
 	after
 StringEnd(start Number) Number
-	Escaped.StringEnd(1) is 16
+	Escaped.StringEnd(1) is 16 and Json("\"ab").StringEnd(0) is 3
 	Json("\"a\\\\\" ").StringEnd(0) is 5
 	mutable at = text.IndexOf("\"", start + 1)
 	for as long as Slashes(at) % 2 is 1

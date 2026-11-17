@@ -39,7 +39,9 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
 	survivors.Length
 Lines(types List(TypeEntry)) Texts
-	Sample.Lines(Doubled).Length is 0
+	Sample.Lines(Doubled).Length is 0 and Sample.Lines(List(TypeEntry)).Length is 0
+	if types.Length is 0
+		return List(Text)
 	let kept = Baseline(value).Kept(types)
 	let methods = Baseline(value).Methods(kept)
 	let tested = Tested(types, Runner(types.First), methods)

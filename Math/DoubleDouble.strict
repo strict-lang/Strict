@@ -1,5 +1,7 @@
 has high Number
 has low Number = 0
+constant Product = DoubleDouble(1000000012250000000, 30.625)
+constant Factor = DoubleDouble(1000000009, -0.25)
 +(other) DoubleDouble
 	(DoubleDouble(10000000000000000) + DoubleDouble(1)).low is 1
 	(DoubleDouble(1, 0.00000000000000001) + DoubleDouble(-1)).high * 100000000000000000 is 1
@@ -14,7 +16,7 @@ has low Number = 0
 	value + DoubleDouble(-other.high, -other.low)
 *(other) DoubleDouble
 	(DoubleDouble(1, 0.00000000000000001) * DoubleDouble(2)).low * 100000000000000000 is 2
-	(DoubleDouble(1000000003, 0.5) * DoubleDouble(1000000009, -0.25)) is DoubleDouble(1000000012250000000, 30.625)
+	DoubleDouble(1000000003, 0.5) * Factor is Product
 	let product = high * other.high
 	let left = Split(high)
 	let right = Split(other.high)
@@ -23,6 +25,7 @@ has low Number = 0
 /(other) DoubleDouble
 	(DoubleDouble(1) / DoubleDouble(3) * DoubleDouble(3) - DoubleDouble(1)).high.Absolute < 0.0000000000000000000000000001
 	(DoubleDouble(10) / DoubleDouble(4)).high is 2.5
+	(Product / Factor - DoubleDouble(1000000003.5)).high.Absolute < 0.00000000001
 	let first = high / other.high
 	let rest = value - other * DoubleDouble(first)
 	let second = rest.high / other.high

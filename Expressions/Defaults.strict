@@ -7,6 +7,10 @@ constant Joint = Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).T
 constant Zero = Scope(("b default"), ("0"))
 constant Sampled = Defaults(("has x Number", "Add(a Number) Number", "\ta"))
 constant Fresh = Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "b"), Paired).names.Length
+constant Adding = Defaults(("A(x Number) N", "\tx"))
+constant Named = Scope(("A"), ("N"))
+constant Widths = Defaults(List(Text) + "has width Number with value > 0")
+constant Empty = Defaults(List(Text))
 Added(scope Scope) Scope
 	Defaults(("has a Number", "has b Number = 0", "constant C = 3")).Added(KnownTypes.NoMembers).names is ("b default")
 	Defaults(List(Text) + "mutable count = 2 with value > 0").Added(KnownTypes.NoMembers).TypeOf("count default") is "2"
@@ -34,6 +38,7 @@ Constructors(scope Scope, names Texts, members Scope) Scope
 	Scope(("from", "from types"), (Text.Combine(names, ","), Text.Combine(types, ","))).WithAll(scope.names, scope.types)
 Parameters(methods Scope, isContract Boolean) Scope
 	Defaults(("A(x Number) N", "\tx")).Parameters(Scope(("A"), ("N")), false).TypeOf("A types") is "Number"
+	"\t types" is not in Defaults(("A(x Number) N", "\tx")).Parameters(Scope(("A"), ("N")), false).names
 	mutable scope = isContract then Scope(List(Text) + " trait", List(Text) + "true") else Scope(List(Text), List(Text))
 	let shape = TypeShape(lines)
 	for lines
@@ -44,6 +49,10 @@ Parameters(methods Scope, isContract Boolean) Scope
 	scope.WithAll(added.names, added.types)
 Of(methods Scope, members Scope, names Texts) Scope
 	Sampled.Of(Scope(("Add"), ("Number")), Scope(("x"), ("Number")), ("x")).TypeOf("from") is "x"
+	" constrained" is not in Sampled.Of(Scope(("Add"), ("Number")), Scope(("x"), ("Number")), ("x")).names
+	Widths.Of(KnownTypes.NoMembers, KnownTypes.NoMembers, List(Text)).TypeOf(" constrained") is "true"
+	Adding.Parameters(Named, true).TypeOf(" trait") is "true" and Adding.Parameters(Named, false).TypeOf(" trait") is ""
+	Defaults(("A(x Number) N", "\tA(1) is 1", "\tx")).Parameters(Named, false).TypeOf("A types") is "Number"
 	let parameters = Added(Parameters(methods, TypeShape(lines).IsContract))
 	let kind = Constraint.Kind(lines)
 	Constructors(kind is "" then parameters else parameters.With(TypeShape.Constrained, kind), names, members)
@@ -63,6 +72,9 @@ ConstantScope(end Number) Scope
 ConstantAt(line Text, next Number) Text
 	Defaults(List(Text)).ConstantAt("constant A", 3) is "3"
 	Defaults(List(Text)).ConstantAt("constant A = ", 3) is ""
+	Empty.ConstantAt("constant A = 5", 0) is "5" and Empty.ConstantAt("constant A=5", 0) is ""
+	Defaults(("has a Number", "constant A = ", "constant Bb = 10")).ConstantScope(3).names is ("Bb")
+	Empty.NextEnum("constant A = B", 4) is 4 and Empty.NextEnum("constant A =", 4) is 4
 	if line.IndexOf("=") < 0
 		return next to Text
 	let equal = line.IndexOf(" = ")

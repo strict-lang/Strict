@@ -22,6 +22,7 @@ Count(literal SyntaxNode) Number
 	CountedIterators.Count(SyntaxNode("Number", "2.5")) is -1
 	CountedIterators.Count(SyntaxNode("Number", "-3")) is -1
 	CountedIterators.Count(SyntaxNode("Number", "08")) is -1
+	CountedIterators.Count(SyntaxNode("Number", "0")) is 0
 	let count = literal.text to Number
 	count >= 0 and count % 1 is 0 and count to Text is literal.text then count else -1
 Flattened(iterables SyntaxNodes, body SyntaxNode) SyntaxNode

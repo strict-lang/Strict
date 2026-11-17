@@ -50,7 +50,7 @@ Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Defaulted.Chosen("D", "from", ("Number", "Number")) is 1
 	Picking.Chosen("Picker", "Put", List(Text) + "Number") is 1
 	let exact = Ordinal(owner, method, argumentTypes, true)
-	exact >= 0 then exact else Ordinal(owner, method, argumentTypes, false)
+	exact < 0 then Ordinal(owner, method, argumentTypes, false) else exact
 Ordinal(owner Text, method Text, arguments Texts, isExact Boolean) Number
 	Scaling.Ordinal("Scaler", "Scaled", List(Text) + "Number", true) is -1
 	Picking.Ordinal("Picker", "Mixed", List(Text) + "Generics", true) is -1
@@ -189,6 +189,7 @@ Ambiguities(path Text, lines Texts) Texts
 			ResolveCheck.Located(path, index + 1, rule + value + " like line " + first)
 Signatures(lines Texts) Texts
 	Scaling.Signatures(Valued) is ("Value(name, default)", "", "Value(name, default)", "")
+	Picking.Typed(SyntaxNode("Call", "Chosen"), "Picker", LabelInference, Relabeled, Relabeled) is "Unknown"
 	let shape = TypeShape(lines)
 	for lines
 		let tokens = Tokenizer(value).Tokens

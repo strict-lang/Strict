@@ -88,6 +88,8 @@ LoopNames(path Text, lines Texts) Texts
 IsDeclared(line Text) Boolean
 	DefaultCheck.IsDeclared("\tmutable outer = 1")
 	(DefaultCheck.IsDeclared("constant outer = 1") or DefaultCheck.IsDeclared("\tlet")) is false
+	Counting.IsConstant(SyntaxNode("Index", "List")) is false
+	Counting.IsConstant(SyntaxParser(Tokenizer("Number(1)").Tokens).Parse)
 	let tokens = Tokenizer(line.Trim).Tokens
 	line.StartsWith("\t") and tokens.Length > 1 and tokens(0) is in ("let", "mutable", "constant")
 IsLoopName(name Text, lines Texts, position Number) Boolean

@@ -2,6 +2,8 @@ has typeName Text
 has shape TypeShape
 has inference TypeInference
 constant FromGeneric = HeaderTokens(Tokenizer("from(generic)").Tokens)
+constant NumberHeader = HeaderTokens(Tokenizer("Add(number Number) Number").Tokens)
+constant Unlined = SyntaxNode("Body", "", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2")))
 constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
@@ -22,7 +24,7 @@ Statements ScopedStatements
 	for shape.lines
 		if shape.IsMethodHeader(value)
 			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
-			statements = statements + Flatten(BodyParser(shape.lines).Method(index + 1), parameters, index + 1)
+			statements = statements + Flatten(BodyParser(shape.lines).Method(index + 1), parameters)
 		if value.StartsWith("constant ") and value.IndexOf(" = ") > 0
 			statements.Add(ScopedStatement(BodyParser(shape.lines).Statement(index, 0), members, index))
 	statements
@@ -58,7 +60,7 @@ IteratedType Text
 	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(1)) is "Numbers"
 	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(3)) is "Number"
 	typeName is "Text" then "Characters" else InstanceType
-Flatten(body SyntaxNode, outerScope Scope, start Number) ScopedStatements
+Flatten(body SyntaxNode, outerScope Scope, start = 0) ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b") is "Number"
 	MethodBodies("Demo", TypeShape(BodyParser.Positions), NoInference).Statements.Last.line is 5
 	mutable statements = List(Mutable(ScopedStatement))
@@ -162,7 +164,8 @@ IsSelector(statement SyntaxNode) Boolean
 	IsSelector(StatementParser(Tokenizer("if a is b").Tokens).ParseStatement) is false
 	IsSelector(SyntaxNode("If", "", (SyntaxNode("Call", "", (CheckedA, SyntaxNode.missing)), SyntaxNode.nested))) is false
 	IsSelector(StatementParser(Tokenizer("if a is").Tokens).ParseStatement) is false
-	if not (statement.HasValue and statement.HasBody)
+	IsSelector(SyntaxNode("If", "", (SyntaxNode("Body", ""), SyntaxNode("Body", "")))) is false
+	if not statement.HasBody
 		return false
 	let condition = statement.children(0)
 	condition.Kind is "Binary" and condition.children(1).Kind is "Missing"
@@ -176,4 +179,7 @@ RefParameters(header HeaderTokens) Texts
 Initialized(header HeaderTokens) Texts
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("a mutable") is "mutable"
 	MethodBodies("Demo", Sample, NoInference).Initialized(AddOther).Length is 0
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Generic"
+	MethodBodies("Demo", Sample, NoInference).HeaderScope(NumberHeader, NoScope).TypeOf("number") is "Number"
+	MethodBodies("Demo", Sample, NoInference).Flatten(Unlined, NoScope, 5).Last.line is 6
 	header.tokens(0) is "from" then shape.MemberScope.names else List(Text)

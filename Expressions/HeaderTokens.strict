@@ -95,6 +95,7 @@ ReturnType Text
 	HeaderTokens("Run").ReturnType is "None"
 	HeaderTokens("Add", "(", "x", ")").ReturnType is "None"
 	HeaderTokens("Add", "(", "x", ")", "Mutable", "(", "List", ")").ReturnType is "List"
+	HeaderTokens(List(Text)).ReturnType is "None"
 	constant start = ParametersEnd + 1
 	start >= tokens.Length or tokens(start) is "slow" then "None" else TypeName(start)
 ParametersEnd Number
@@ -107,7 +108,7 @@ ParametersEnd Number
 	mutable end = 0
 	for tokens
 		depth = depth + brackets.BracketDelta(value)
-		if depth is 0 and end is 0
+		if depth < 1 and end is 0
 			end = index
 	end
 IsParameterStart(position Number) Boolean
@@ -138,14 +139,14 @@ ParameterNames Texts
 	HeaderTokens("Run", "Number").ParameterNames.Length is 0
 	mutable names = List(Mutable(Text))
 	for ParametersEnd
-		if index > 1 and IsParameterStart(index)
+		if IsParameterStart(index)
 			names.Add(tokens(index))
 	names
 ParameterTypes Texts
 	HeaderTokens(Tokenizer("Add(x Number, mutable count, t = \"a\")").Tokens).ParameterTypes is ("Number", "Count", "Text")
 	mutable types = List(Mutable(Text))
 	for ParametersEnd
-		if index > 1 and IsParameterStart(index)
+		if IsParameterStart(index)
 			types.Add(ParameterType(index))
 	types
 ParameterType(position Number) Text
@@ -169,6 +170,6 @@ MutableParameters Texts
 	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).MutableParameters is ("list")
 	mutable names = List(Mutable(Text))
 	for ParametersEnd
-		if index > 1 and tokens(index - 1) is "mutable"
+		if tokens(index - 1) is "mutable"
 			names.Add(tokens(index))
 	names

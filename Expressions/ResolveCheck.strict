@@ -5,6 +5,8 @@ constant Joined = ("Names Texts", "\t\"a\" + \"b\"")
 constant Joining = MethodBodies("Demo", TypeShape(Joined), Counting)
 constant Missing = ("Names Texts", "\tmissing")
 constant Missed = MethodBodies("Demo", TypeShape(Missing), Counting)
+constant Drawn = ("Count Number", "\t1 is 1", "\tDrawn(1)")
+constant Drawing = MethodBodies("Demo", TypeShape(Drawn), TypeInference(KnownTypes(("Demo"), (KnownTypes.NoMembers), (ReturnTypes.Drawers), (KnownTypes.NoMembers)), (KnownTypes.NoMembers)))
 constant WriterParameters = Scope(("Write", "Write", "Read", "Seek", "Seek", TypeShape.Constrained, TypeShape.Constrained), ("lines", "bytes", "", "", "", "a", "b"))
 constant Writers = KnownTypes(("W", "V"), (KnownTypes.NoMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (WriterParameters, Scope(("Go", "Go"), ("a", "b"))))
 constant OverloadShapes = (TypeShape("Write(lines Texts)"), TypeShape("Go Number", "\t1"))
@@ -29,6 +31,8 @@ Misplaced(path Text, lines Texts) Texts
 Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.StartsWith("A.strict:line 2: ")
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").First is "A:line 2: NameNotFound: missing"
+	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").Length is 1
+	ResolveCheck.Found(FileCheck(Counting, ("Drawn")), Drawing, Drawn, "A").First is "A:line 3: " + ReturnTypes.Unvalued
 	for bodies.Statements
 		let found = check.Unknown(value, bodies.Methods)
 		let returns = ReturnTypes(check.inference)
@@ -80,6 +84,7 @@ Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scop
 	OverloadedMembers(types, shapes, shape.MemberScope.types, scope)
 OverloadedMembers(types KnownTypes, shapes List(TypeShape), memberTypes Texts, scope Scope) Scope
 	OverloadedMembers(Counting.types, List(TypeShape), List(Text) + "N", KnownTypes.NoMembers).names.Length is 0
+	OverloadedMembers(Writers, (OverloadShapes(1), OverloadShapes(0)), ("V"), KnownTypes.NoMembers).names is ("Go", "Go")
 	mutable traits = KnownTypes.NoMembers
 	for memberTypes
 		let position = types.Index(value)

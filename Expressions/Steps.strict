@@ -1,6 +1,7 @@
 has tokens Texts
 constant SecondStep = Steps(Tokenizer("B(a Number, b Number with Step 0.5)").Tokens)
 constant Rounded = ("has price Number with Step 0.01", "T(a Number) Number with Step 0.5", "	L(a Numbers with Step 1)")
+constant NotNumber = "A:line 1: StepMustBeOnNumber: Numbers, only a Number is rounded to its step"
 constant Mixed = Steps(Tokenizer("B(a Number with Step 0.5, b List(Number) with Step 0.5)").Tokens)
 Of(nameIndex Number) Text
 	Steps(Tokenizer("has price Number with Step 0.01").Tokens).Of(1) is "0.01" and SecondStep.Of(2) is ""
@@ -32,15 +33,15 @@ Members(lines Texts) Scope
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for lines
-		if TypeShape(lines).IsMemberLine(value) and value.IndexOf("Step") > 0
-			let line = Tokenizer(value).Tokens
-			let step = Steps(line).Of(1)
+		if TypeShape(lines).IsMemberLine(value)
+			let step = value.IndexOf("Step") > 0 then Steps(Tokenizer(value).Tokens).Of(1) else ""
 			if step is not ""
-				names.Add(HeaderTokens(line).MemberName + " step")
+				names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " step")
 				types.Add(step)
 	Scope(names, types)
 Unnumbered(path Text, lines Texts) Texts
 	Steps(List(Text)).Unnumbered("A", Rounded).Length is 0
+	Steps(List(Text)).Unnumbered("A", List(Text) + "has a Numbers with Step 1") is (NotNumber)
 	for lines
 		let type = value.StartsWith("	") then "" else Steps(Tokenizer(value).Tokens).Unrounded
 		if type is not ""

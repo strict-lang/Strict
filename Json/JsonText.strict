@@ -30,7 +30,7 @@ Escape(position Number) Text
 	let code = raw(position) to Text
 	let high = Hex(position + 1)
 	if code is "u"
-		let offset = (high - HighSurrogate) * SurrogateValues - LowSurrogate
+		let offset = high % SurrogateValues * SurrogateValues - LowSurrogate
 		return Utf8(IsPair(position) then SupplementaryStart + offset + Hex(position + 7) else high)
 	let found = "ntrbf".IndexOf(code)
 	found < 0 then code else Controls(found)
@@ -38,6 +38,7 @@ IsPair(position Number) Boolean
 	Escaped.IsPair(17)
 	Escaped.IsPair(11) is false
 	JsonText("\\ud800\\udc00").IsPair(1) and JsonText("\\udc00\\udc00").IsPair(1) is false
+	JsonText("\\ud800abcdef").IsPair(1) is false
 	let high = Hex(position + 1)
 	high >= HighSurrogate and high < LowSurrogate and raw.StartsWith("\\u", position + 5)
 Hex(position Number) Number
