@@ -1,7 +1,7 @@
 has Size
 Area = Size.Area
 Doubled(factor = 2) = Area * factor
-IsSquare = Size.Width is Size.Height
+IsSquare = Width is Height
 Scaled(factor Number) Number
 	ComputedRectangle(Size(2, 3)).Scaled(2) is 24
 	ComputedRectangle(Size(2, 3)).IsSquare is false
@@ -10,4 +10,4 @@ Scaled(factor Number) Number
 	Doubled(factor) * 2
 Widened(extra Number) ComputedRectangle
 	ComputedRectangle(Size(2, 3)).Widened(1) is ComputedRectangle(Size(3, 3))
-	ComputedRectangle(Size(Size.Width + extra, Size.Height))
+	ComputedRectangle(Size(Width + extra, Height))

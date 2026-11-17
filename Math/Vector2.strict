@@ -1,23 +1,22 @@
-has numbers with Length is 2 and value.Bits is 32
+has X Number with value.Bits is 32
+has Y Number with value.Bits is 32
 constant One = Vector2(1, 1)
 constant Left = Vector2(-1, 0)
 constant Right = Vector2(1, 0)
 constant Up = Vector2(0, -1)
 constant Down = Vector2(0, 1)
-X Number
-	Vector2(1, 2).X is 1
-	numbers.X
-Y Number
-	Vector2(1, 2).Y is 2
-	numbers.Y
+constant QuarterTurn = 90
+constant HalfTurn = 180
+Numbers Numbers
+	Vector2(1, 2).Numbers is (1, 2)
+	(X, Y)
 Length Number
 	Vector2(0, 0).Length is 0
 	Vector2(3, 4).Length is 5
 	(X * X + Y * Y).SquareRoot
 +(other) Vector2
-	Vector2(0, 0) + Vector2.One is (1, 1)
-	Vector2(1, 2) + Vector2(4, 5) is (5, 7)
-	Vector2(1, 2) + (3, 4) is (4, 6)
+	Vector2(0, 0) + Vector2.One is Vector2(1, 1)
+	Vector2(1, 2) + Vector2(4, 5) is Vector2(5, 7)
 	Vector2(1, 0) + Vector2(0, 1) - Vector2(0, -2) is Vector2(1, 3)
 	Vector2(X + other.X, Y + other.Y)
 *(other) Number
@@ -35,7 +34,9 @@ Atan Degrees
 	Vector2(0, 0).Atan is 0
 	Vector2(1, 0).Atan is 90
 	Vector2(-1, -1).Atan is -135
-	Degrees(0)
+	Vector2(1, -1).Atan is 135 and Vector2(1, 1).Atan is 45 and Vector2(0, -1).Atan is 180
+	let half = Y < 0 then (X < 0 then -HalfTurn else HalfTurn) else 0
+	Degrees(Y is 0 then (X > 0 then QuarterTurn else X < 0 then -QuarterTurn else 0) else Ratio(X / Y).Atan + half)
 -(other) Vector2
 	Vector2(4, 7) - Vector2(1, 2) is Vector2(3, 5)
 	Vector2(X - other.X, Y - other.Y)

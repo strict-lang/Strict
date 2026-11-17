@@ -1,34 +1,32 @@
-has numbers with Length is 4 and value.Bits is 32
+has X Number with value.Bits is 32
+has Y Number with value.Bits is 32
+has Z Number with value.Bits is 32
+has W Number with value.Bits is 32
 constant Identity = Quaternion(0, 0, 0, 1)
 constant HalfTurn = Quaternion(0, 0, 1, 0)
-X Number
-	Quaternion(1, 2, 3, 4).X is 1
-	numbers.X
-Y Number
-	Quaternion(1, 2, 3, 4).Y is 2
-	numbers.Y
-Z Number
-	Quaternion(1, 2, 3, 4).Z is 3
-	numbers.Z
-W Number
-	Quaternion(1, 2, 3, 4).W is 4
-	numbers.W
+Numbers Numbers
+	Quaternion(1, 2, 3, 4).Numbers is (1, 2, 3, 4)
+	(X, Y, Z, W)
 Dot(other) Number
 	Identity.Dot(HalfTurn) is 0
 	Quaternion(1, 2, 3, 4).Dot(Quaternion(5, 6, 7, 8)) is 70
 	X * other.X + Y * other.Y + Z * other.Z + W * other.W
 Normalize Quaternion
 	Quaternion(0, 0, 0, 2).Normalize is Identity
-	Quaternion(numbers / Dot(value).SquareRoot)
+	let length = Dot(value).SquareRoot
+	Quaternion(X / length, Y / length, Z / length, W / length)
 Lerp(other, alpha Number) Quaternion
 	Identity.Lerp(Quaternion(0, 0, 0, -1), 0.5) is Identity
 	Identity.Lerp(HalfTurn, 1) is HalfTurn
-	Quaternion(Blended(other, Dot(other) < 0 then -1 else 1, alpha)).Normalize
+	let blended = Blended(other, Dot(other) < 0 then -1 else 1, alpha)
+	Quaternion(blended(0), blended(1), blended(2), blended(3)).Normalize
 Blended(other Quaternion, sign Number, alpha Number) Numbers
 	Identity.Blended(HalfTurn, 1, 0.5) is (0, 0, 0.5, 0.5)
 	Quaternion(1, 2, 3, 4).Blended(Quaternion(5, 6, 7, 8), 2, 0.25) is (3.25, 4.5, 5.75, 7)
+	let mine = Numbers
+	let theirs = other.Numbers
 	for 4
-		numbers(index) + (other.numbers(index) * sign - numbers(index)) * alpha
+		mine(index) + (theirs(index) * sign - mine(index)) * alpha
 Rotation Matrix
 	Identity.Rotation is Matrix.Identity
 	HalfTurn.Rotation.Transformed(Vector3.UnitX) is Vector3(-1, 0, 0)

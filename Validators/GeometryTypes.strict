@@ -1,6 +1,6 @@
 has lines Texts
 has typeName Text
-constant Exempt = ("Size", "Vector2", "Vector3", "Rectangle")
+constant Exempt = ("Size", "Vector2", "Vector3", "Quaternion", "Rectangle")
 constant WidthHint = "width and height must use has Size"
 constant Vector2Hint = "x and y must use has Vector2"
 constant Vector3Hint = "x, y and z must use has Vector3"
@@ -11,6 +11,7 @@ constant BoxLines = ("has Center Vector2", "has Width Number", "has Height Numbe
 Issues List(ValidationIssue)
 	Sample.Issues.First to Text is "WidthAndHeightMustBeSize: " + WidthHint
 	GeometryTypes(("has Width Number", "has Height Number"), "Size").Issues.Length is 0
+	GeometryTypes(("has X Number", "has Y Number", "has Z Number", "has W Number"), "Quaternion").Issues.Length is 0
 	GeometryTypes(HelpLines, "Resolution").Issues.Length is 0
 	GeometryTypes(BoxLines, "Box").Issues.First to Text is "CenterAndSizeMustBeRectangle: " + RectangleHint
 	GeometryTypes(("has x Number", "has y Number", "has width Number", "has height Number"), "Box").Issues.Length is 2

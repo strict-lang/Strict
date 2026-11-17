@@ -45,7 +45,18 @@ Outer(tokens Texts) Texts
 Missing(files Texts) Texts
 	Typo.Missing(Directory.Files(".", "*.strict")) is ("Numbr")
 	Mentions(("Run", "\tVectr2(1, 2)")).Missing(Directory.Files(".", "*.strict")) is ("Vectr2")
-	Unknown(Names(files))
+	Mentions(("has Size", "Run", "\tWidth + Area + Depth")).Missing(Directory.Files("Math", "*.strict")) is ("Depth")
+	Unknown(Names(files) + Composed(files))
+Composed(files Texts) Texts
+	Mentions(("has Size", "has logger")).Composed(("Math/Size.strict", "Logger.strict")).First is "Width"
+	let members = TypeShape(lines).MemberScope.types
+	mutable names = List(Mutable(Text))
+	for files
+		if Path(value.Replace("\\", "/")).FileName.RemoveExtension.text is in members
+			let shape = TypeShape(File(value).ReadLines)
+			if shape.MemberScope.names.Length > 0
+				names = names + shape.MemberScope.names + shape.MethodScope.names
+	names
 Unknown(names Texts) Texts
 	Typo.Unknown(List(Text) + "Number") is ("Numbr", "Other")
 	let all = names + Constants

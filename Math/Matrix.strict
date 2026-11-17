@@ -37,8 +37,7 @@ Clip(point Vector3) Numbers
 		Projected(index, point)
 Transformed(point Vector3) Vector3
 	Moved.Transformed(Vector3.One) is Vector3(2, 3, 4)
-	for 3
-		Projected(index, point)
+	Vector3(Projected(0, point), Projected(1, point), Projected(2, point))
 Projected(row Number, point Vector3) Number
 	Moved.Projected(3, Vector3.One) is 1
 	values(row) * point.X + values(4 + row) * point.Y + values(8 + row) * point.Z + values(LastColumn + row)
@@ -82,5 +81,5 @@ Inverse Matrix
 	Matrix(rotation + (-(first * shift), -(second * shift), -(third * shift), 1))
 Unscaled Matrix
 	(Moved * Matrix.Scaling(2)).Unscaled is Moved
-	let x = Axis(0).Normalize.numbers + 0
-	Matrix(x + Axis(1).Normalize.numbers + 0 + Axis(2).Normalize.numbers + 0 + Axis(3).numbers + 1)
+	let x = Axis(0).Normalize.Numbers + 0
+	Matrix(x + Axis(1).Normalize.Numbers + 0 + Axis(2).Normalize.Numbers + 0 + Axis(3).Numbers + 1)

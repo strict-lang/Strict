@@ -118,8 +118,7 @@ ShapeScope(typeName Text) Scope
 	Nested.DeclaredType("G", "Length", 1) is ""
 	Measured.DeclaredType("F", "Length", 0) is ""
 	Sample.ShapeScope("Count").TypeOf("Increment") is "Count"
-	let typeMethods = MethodsOf(typeName)
-	MembersOf(typeName).WithAll(typeMethods.names, typeMethods.types)
+	Composition(value).Scoped(typeName)
 ElementType(typeName Text) Text
 	Sample.ElementType("Texts") is "Text" and Sample.ElementType("Range") is "Number"
 	Sample.ElementType("Iterator(Text)") is "Text" and Sample.ElementType("Text") is "Character"

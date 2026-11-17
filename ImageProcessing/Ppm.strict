@@ -8,7 +8,7 @@ Loaded(path Text) Bitmap slow
 	File(path).Exists then Decoded(File(path).ReadBytes) else Error("MissingFile")
 Decoded(bytes Bytes) Bitmap
 	Ppm.Decoded(Sample).Colors is (Color(1, 2, 3), Color(4, 5, 6))
-	Ppm.Decoded(Sample).Size.Height is 1
+	Ppm.Decoded(Sample).Height is 1
 	Ppm.Decoded(Spaced).Colors is (Color(1, 2, 3), Color(4, 5, 6), Color(7, 8, 9), Color(10, 11, 12))
 	let width = Field(bytes, 1)
 	let height = Field(bytes, 2)
@@ -21,7 +21,7 @@ Save(bitmap Bitmap, path Text) slow
 	File(path).Write(Encoded(bitmap))
 Encoded(bitmap Bitmap) Bytes
 	Ppm.Encoded(Ppm.Decoded(Sample)) is Sample
-	let header = Signature + Digits(bitmap.Size.Width) + Character.Space + Digits(bitmap.Size.Height) + MaximumLine
+	let header = Signature + Digits(bitmap.Width) + Character.Space + Digits(bitmap.Height) + MaximumLine
 	let rgb = Rgb(bitmap.Colors)
 	for header.Length + rgb.Length
 		index < header.Length then header(index) else rgb(index - header.Length)

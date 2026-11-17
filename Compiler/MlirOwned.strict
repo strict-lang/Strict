@@ -41,16 +41,16 @@ constant Reusing = UnsharedReuse + FreshJoined + DeadReleased
 constant Putting = ("    %t#r$ = llvm.getelementptr %t#rp[$] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t#ra$ = llvm.load %r& : !llvm.ptr -> f64", "    func.call @strict_rc_put(%t#r$, %t#ra$) : (!llvm.ptr, f64) -> ()")
 constant Rebuilt = MlirOwned(MlirFunction((MlirFunction.Shape, MlirInstances.Outer), MlirInstances.Outer, MethodEntry("Run", List(MemberEntry), "None", Rebuilding)), 7)
 IsOwned(name Text, depth = 0, seed = "") Boolean
-	Owner.IsOwned("moved")
+	Owner.IsOwned("moved") and Holding.IsOwned("held") is false
 	MlirOwned(Copying, 2).IsOwned("moved") is false
-	Holding.IsOwned("held") is false
 	Delaying.IsReread(3, "held")
 	Rewriting.IsSafeRead(3, "moved")
 	MlirOwned(MlirMembered.Moved.function, 0).IsSafeRead(2, "entity")
 	Owner.IsOwned("listResult0") is false
 	Rebuilt.IsKept(4, "size", "moved") is false and Rebuilt.IsKept(4, "shape", "kept") is false
 	Rebuilt.IsKept(9, "shape", "moved") is false
-	let isTemporary = name is in Temporaries or name.StartsWith("listResult") or name.StartsWith("conditional")
+	let isItem = name.IndexOf("(") > 0
+	let isTemporary = isItem or name is in Temporaries or name.StartsWith("listResult") or name.StartsWith("conditional")
 	let isOuter = name is in function.Parameters or name is in MlirInstances(function, 0).StoredNames(function.type)
 	isTemporary is false and isOuter is false and IsReference(name) and IsContained(name, depth, seed)
 IsReference(name Text) Boolean

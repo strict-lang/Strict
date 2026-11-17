@@ -4,6 +4,9 @@ has target CallTarget
 has isOptimizing Boolean = true
 constant NoNode = SyntaxNode("Identifier", "x")
 constant NewGreeter = SyntaxNode("Call", "Greeter")
+constant Boxing = ValueCodegen(TypeInference(CallTarget.Sizes, CallTarget.NoScopes), MethodCodegen.NoScope, CallTarget.Boxed)
+constant BoxWidth = SyntaxNode("Member", "Width", List(SyntaxNode) + SyntaxNode("Identifier", "box"))
+constant Boxes = CodeBlock.Empty.Declare("box", "Box")
 constant GreeterText = SyntaxNode("Member", "text", NewGreeter)
 constant One = SyntaxNode("Number", "1")
 constant Hi = SyntaxNode("Text", "\"Hi\"")
@@ -82,7 +85,15 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 		return DefaultInstance(value).Called(node, block)
 	let first = node.children(0)
 	let isListVariable = first.Kind is "Identifier" and inference.types.IsPlural(TypeOf(first, block))
-	node.text is in ("Add", "Remove") and isListVariable then Elements.Added(node, block) else InstanceCall(node, block)
+	node.text is in ("Add", "Remove") and isListVariable then Elements.Added(node, block) else Held(node, block)
+Held(node SyntaxNode, block CodeBlock) CodeBlock
+	Boxing.Held(BoxWidth, Boxes).instructions.Last.texts is ("Width", "Size")
+	Plain.Held(GreeterText, CodeBlock.Empty) is Plain.InstanceCall(GreeterText, CodeBlock.Empty)
+	let isComposed = node.Kind is in ("Member", "MethodCall")
+	let holder = isComposed then target.Holding(TypeOf(node.children(0), block), node.text) else ""
+	let held = SyntaxNode("Member", holder, List(SyntaxNode) + node.children(0), node.line)
+	let children = List(SyntaxNode) + held + node.children.Slice(1, node.children.Length - 1)
+	InstanceCall(holder is "" then node else SyntaxNode(node.Kind, node.text, children, node.line), block)
 Constructed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Constructed(SyntaxNode("Call", "Dictionary", (One, One)), CodeBlock.Empty) is Plain.Leaf(Ones, CodeBlock.Empty)
 	Plain.Constructed(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)

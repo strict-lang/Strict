@@ -10,6 +10,7 @@ constant LoopSlot = 4
 constant IndexSlot = 5
 constant MembersSlot = 6
 constant CheckSteps = 4096
+constant OutOfRange = VmValue.OfError("IndexOutOfRange")
 constant End = 4095
 constant Doubling = Machine(Resolver(List(TypeEntry) + Machine.Doubler).Resolved)
 constant Twice = Frame(Doubling, Doubling.types.First.methods.First, "Strict/Doubler")
@@ -105,7 +106,7 @@ Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Next(InstructionEntry.LoopBegin(2, -1), 0, Listed) is 4
 	let collection = Local(entry.payload(2), slots)
 	let wrapped = Accessor(machine).Wrapped(collection, slots(entry.payload(1)).number)
-	wrapped < 0 then Traced(VmValue.OfError("IndexOutOfRange"), position) else Accessor(machine).Item(collection, wrapped)
+	wrapped < 0 then Traced(OutOfRange, position, slots) else Accessor(machine).Item(collection, wrapped)
 Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0
 	Calling.Other(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0
@@ -115,7 +116,7 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	let call = Called(entry, slots)
 	let accessed = entry.payload.Length > call.Resolution + 3 then Accessor(machine).Accessed(call) else VmValue.None
 	let result = accessed.kind is "None" then machine.Call(call) else accessed
-	result.kind is in VmValue.ErrorKinds then Traced(result, position) else result
+	result.kind is in VmValue.ErrorKinds then Traced(result, position, slots) else result
 Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Instance.number is 4
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Arguments.First.number is 3
@@ -128,16 +129,16 @@ Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	for entry.payload(count)
 		arguments.Add(slots(entry.payload(count + 1 + index)))
 	Invocation(entry, arguments, instance, depth + 1, flag + 1 + entry.payload(flag))
-Traced(error VmValue, position Number) VmValue
-	Twice.Traced(VmValue.OfError("a"), 0).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
-	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0), 0).items(1).items.Length is 1
+Traced(error VmValue, position Number, slots List(VmValue)) VmValue
+	Twice.Traced(VmValue.OfError("a"), 0, Listed).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
+	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0, Listed), 0, Listed).items(1).items.Length is 1
 	if error.kind is "Strict/ErrorWithValue"
-		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position), error.items(1)))
-	let called = VmValue.OfText(TypeEntry.ShortName(owner) + "." + method.Name)
-	let resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolved(owner, machine.folder)
-	let file = VmValue.OfText(resolved)
-	let trace = VmValue("Strict/Stacktrace", 0, "", (called, file, VmValue.OfNumber(method.instructions(position).line)))
+		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position, slots), error.items(1)))
 	let traces = error.items(1).items
+	let isShown = traces.Length < 2 and slots.Length > MembersSlot
+	let rest = isShown then slots.Slice(MembersSlot, slots.Length - MembersSlot) else List(VmValue)
+	let resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolved(owner, machine.folder)
+	let trace = TraceEntry(method, owner, machine.types).Trace(rest, resolved, method.instructions(position).line)
 	let isRepeated = traces.Length > 0 and traces.Last is trace
 	let traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
@@ -152,14 +153,14 @@ Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 		return Looping.Ended(slots(LoopSlot), -1 is in entry.payload and slots(FlagSlot).IsTrue is false)
 	let failed = Looping.Failed(slots(entry.payload(0)), Ending(entry, slots))
 	if failed.kind is not "None"
-		return Traced(failed, position)
+		return Traced(failed, position, slots)
 	Looping.Begun(slots(LoopSlot), slots(entry.payload(0)), Ending(entry, slots), position)
 Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
 	Twice.Entered(InstructionEntry.LoopBegin(2, -1), Listed, 0) is 4
 	Twice.Entered(MethodEntry.CountingLoop.instructions(0), Listed, 0) is 1
 	Twice.Entered(InstructionEntry.LoopBegin(2, -1), Broken, 0) is Twice.method.instructions.Length
 	Twice.Finished(Listed).Index(VmValue.OfNumber(42)) is ResultSlot
-	Twice.Traced(VmValue("Strict/ErrorWithValue", 0, "", (VmValue.OfError("a"), Listed(5))), 0).items(0).Traces.Length > 0
+	Twice.Traced(VmValue("Strict/ErrorWithValue", 0, "", (VmValue.Failed, Listed(5))), 0, Listed).items(0).Traces is not ""
 	if slots(LoopSlot).kind is in VmValue.ErrorKinds
 		return method.instructions.Length
 	Looping.IsEmpty(slots(entry.payload(0)), Ending(entry, slots)) then method.LoopEndOf(position) + 1 else position + 1

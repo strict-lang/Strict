@@ -1,18 +1,14 @@
-has numbers with Length is 3 and value.Bits is 32
+has X Number with value.Bits is 32
+has Y Number with value.Bits is 32
+has Z Number with value.Bits is 32
 constant Zero = Vector3(0, 0, 0)
 constant One = Vector3(1, 1, 1)
 constant UnitX = Vector3(1, 0, 0)
 constant UnitY = Vector3(0, 1, 0)
 constant UnitZ = Vector3(0, 0, 1)
-X Number
-	Vector3(1, 2, 3).X is 1
-	numbers.X
-Y Number
-	Vector3(1, 2, 3).Y is 2
-	numbers.Y
-Z Number
-	Vector3(1, 2, 3).Z is 3
-	numbers.Z
+Numbers Numbers
+	Vector3(1, 2, 3).Numbers is (1, 2, 3)
+	(X, Y, Z)
 Length Number
 	Vector3(2, 3, 6).Length is 7
 	(X * X + Y * Y + Z * Z).SquareRoot

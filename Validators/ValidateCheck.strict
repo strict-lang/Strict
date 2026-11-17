@@ -31,7 +31,7 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		let typeName = Path(value).FileName.RemoveExtension.text
 		let found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
 		let reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
-		Logged(value, found + reached) + Unresolved(value, inference)
+		Logged(value, found + reached + ComposedMembers(lines, typeName, inference).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number slow
 	Reported(ResolveCheck(logger).Unresolved(path, inference))
 Reported(issues Texts) Number

@@ -1,0 +1,25 @@
+has method Bytecode/MethodEntry
+has owner Text
+has types List(TypeEntry)
+constant MaxShown = 40
+constant Parameters = (MemberEntry("by", "Strict/Number", List(InstructionEntry), false), MemberEntry("name", "Strict/Text", List(InstructionEntry), false))
+constant Shifting = TraceEntry(MethodEntry("Shifted", Parameters, "Strict/Number", List(InstructionEntry)), "Strict/Doubler", Frame.Doubling.types)
+Called(rest List(VmValue)) Text
+	Shifting.Called((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
+	Shifting.Called(List(VmValue)) is "Doubler.Shifted"
+	let name = TypeEntry.ShortName(owner) + "." + method.Name
+	let start = Natives(types).TypeOf(owner).members.Length
+	if method.parameters.Length is 0 or rest.Length < start + method.parameters.Length
+		return name
+	mutable shown = List(Mutable(Text))
+	for method.parameters
+		shown.Add(value.Name + " " + Shown(rest(start + index)))
+	name + "(" + Text.Combine(shown, ", ") + ")"
+Trace(rest List(VmValue), file Text, line Number) VmValue
+	Shifting.Trace(List(VmValue), "D.strict", 3).items(0).text is "Doubler.Shifted"
+	Shifting.Trace(List(VmValue), "D.strict", 3).items(2).number is 3
+	VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText(Called(rest)), VmValue.OfText(file), VmValue.OfNumber(line)))
+Shown(argument VmValue) Text
+	Shifting.Shown(VmValue.OfText("a")) is "\"a\"" and Shifting.Shown(VmValue.OfNumber(2)) is "2"
+	let code = ValueCode(argument).Code
+	code.Length > MaxShown then code.Substring(0, MaxShown) + "..." else code

@@ -1,0 +1,51 @@
+has lines Texts
+has typeName = "Box"
+has inference Expressions/TypeInference = TypeInference.NoInference
+constant Rule = "ComposedMemberMustBeDirect"
+constant Fields = (Scope(("Width", "Height"), ("Number", "Number")), Scope(List(Text) + "Size", List(Text) + "Size"))
+constant Sizes = KnownTypes(("Size", "Box"), Fields, (Scope(List(Text) + "Area", List(Text) + "Number"), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Sized = TypeInference(Sizes, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Sample = ComposedMembers(("has Size", "constant Edge = Size.Width", "Run(area Box)", "\tarea.Size.Width + Size.Area", "\tarea.Size.Depth + area.Size"), "Box", Sized)
+constant Boxing = CallTarget(Sizes, TypeShape(Sample.lines), "Strict/Box", List(Text))
+constant Scoped = Scope(("Size", "area"), ("Size", "Box"))
+constant Other = ComposedMembers(List(Text) + "Run(area Box)", "Other", Sized)
+constant Areas = ComposedMembers(List(Text) + "has Area Size", "Box", Sized)
+constant Area = CallTarget(Sizes, TypeShape(Areas.lines), "Box", List(Text))
+Issues List(ValidationIssue)
+	Sample.Issues.Length is 3 and Sample.Issues.First.Line is 2
+	Sample.Issues(1) to Text is Rule + ": area.Size.Width, write area.Width"
+	Sample.Issues.Last to Text is Rule + ": Size.Area, write Area"
+	let target = CallTarget(inference.types, TypeShape(lines), typeName, List(Text))
+	mutable issues = List(Mutable(ValidationIssue))
+	for MethodBodies(typeName, TypeShape(lines), inference).Statements
+		issues = issues + NodeIssues(value.statement, value.scope, value.line + 1, target)
+	issues
+NodeIssues(node SyntaxNode, scope Scope, line Number, target Bytecode/CallTarget) List(ValidationIssue)
+	Sample.NodeIssues(FileCheck.Parsed("(Size.Width)"), Scoped, 4, Boxing).First.Line is 4
+	ComposedMembers(("has Size", "Run", "\tif Size.Width > 1", "\t\tSize.Height"), "Box", Sized).Issues.Length is 2
+	mutable issues = List(Mutable(ValidationIssue))
+	let composed = Composed(node, scope, target)
+	if composed is not ""
+		issues.Add(ValidationIssue(Rule, composed, line))
+	for node.children
+		if value.Kind is not "Body"
+			issues = issues + NodeIssues(value, scope, line, target)
+	issues
+Composed(node SyntaxNode, scope Scope, target Bytecode/CallTarget) Text
+	Sample.Composed(FileCheck.Parsed("area.Size"), Scoped, Boxing) is ""
+	Sample.Composed(FileCheck.Parsed("Size(1, 2).Width"), Scoped, Boxing) is ""
+	Sample.Composed(FileCheck.Parsed("Width"), Scoped, Boxing) is ""
+	Other.Composed(FileCheck.Parsed("area.Size.Width"), Scoped, Boxing) is "area.Size.Width, write area.Width"
+	if node.Kind is not in ("Member", "MethodCall") or node.children(0).Kind is not in ("Member", "Identifier")
+		return ""
+	let held = node.children(0)
+	let owner = held.Kind is "Member" then inference.TypeOf(held.children(0), scope, scope) else typeName
+	Written(held, node.text, owner, target)
+Written(held SyntaxNode, name Text, owner Text, target Bytecode/CallTarget) Text
+	Sample.Written(FileCheck.Parsed("area.Size"), "Height", "Box", Boxing) is "area.Size.Height, write area.Height"
+	Sample.Written(FileCheck.Parsed("Size"), "Area", "Box", Boxing) is "Size.Area, write Area"
+	Areas.Written(FileCheck.Parsed("Area"), "Width", "Box", Area) is ""
+	if inference.types.MembersOf(owner).TypeOf(held.text) is not held.text
+		return ""
+	let direct = held.Kind is "Member" then held.children(0) to Text + "." + name else name
+	target.Holding(owner, name) is held.text then held to Text + "." + name + ", write " + direct else ""

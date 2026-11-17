@@ -4,19 +4,15 @@ constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "S
 constant Cosine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Cos", "Strict/Math/Ratio"), List(Number), 0), List(VmValue), VmValue.OfNumber(0))
 constant Arcsine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Ratio", "Asin", "Strict/Math/Degrees"), List(Number), 0), List(VmValue), VmValue.OfNumber(1))
 constant Arccosine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Ratio", "Acos", "Strict/Math/Degrees"), List(Number), 0), List(VmValue), VmValue.OfNumber(1))
-constant Aiming = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Vector2", "Atan", "Strict/Number"), List(Number), 0), List(VmValue), VmValue("Strict/Math/Vector2", 0, "", (VmValue.OfNumber(1), VmValue.OfNumber(0))))
 Measured VmValue
 	HostedMath(Sine).Measured.number is 1
 	HostedMath(Logging).Measured.number is 0
-	HostedMath(Aiming).Measured.number is 90
 	let type = TypeEntry.ShortName(call.TypeName)
 	let number = call.Instance.number
 	if type is in ("Number", "Time")
 		return VmValue.OfNumber(type is "Time" then Time.Now else Numbered(number))
 	if type is "Degrees"
 		return VmValue.OfNumber(Turned(Degrees(number)).number)
-	if type is "Vector2"
-		return VmValue.OfNumber(Vector2(call.Instance.items.First.number, call.Instance.items.Last.number).Atan.number)
 	VmValue.OfNumber(Inverted(Ratio(number)).number)
 Numbered(number Number) Number
 	HostedMath(Logging).Numbered(1) is 0

@@ -13,12 +13,14 @@ constant Picking = InstructionEntry(InstructionType.IndexCall, "pairs", (2, 1, -
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + Pairs, List(MethodEntry))
 constant Mixed = Copying + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy")
 constant Chained = Copying + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "copy"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "again"))
+constant ElementStore = (StructLanes.Constructed, StructLanes.Named(InstructionType.StoreRegisterToVariable, 2, "pairs(0)", 0))
 Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) Texts
 	Sample.Variables(Copying, List(Text), 4) is ("pair Pair", "copy Pair")
 	Sample.Variables(Copying, List(Text), 0) is ("pair Pair")
 	Sample.Variables(Mixed, List(Text), 4) is ("pair Pair")
 	Sample.Variables(Chained, List(Text), 1) is ("pair Pair", "copy Pair")
 	Sample.Variables(Chained, List(Text), 4) is ("pair Pair", "copy Pair", "again Pair")
+	Sample.Variables(ElementStore, List(Text), 4).Length is 0
 	let found = Scan(instructions, candidates)
 	found is candidates or rounds is 0 then found else Variables(instructions, found, rounds - 1)
 Scan(instructions List(InstructionEntry), candidates Texts) Texts
@@ -28,7 +30,7 @@ Scan(instructions List(InstructionEntry), candidates Texts) Texts
 	mutable stores = List(Text)
 	for instructions
 		if value.kind is InstructionType.StoreRegisterToVariable
-			let type = Typed(laned, value.payload(0) to Text)
+			let type = value.texts(0).IndexOf("(") > 0 then "" else Typed(laned, value.payload(0) to Text)
 			stores = stores + (value.texts(0) + " " + (type is "" then "-" else type))
 		if value.kind is in Naming and value.texts.Length > 0
 			stores = stores + (value.texts(0) + " -")

@@ -20,6 +20,16 @@ constant NoneScope = KnownTypes.NoMembers
 constant RangeMembers = Scope(("iterator", "from"), ("Iterator", "Number"))
 constant TypeNames = ("Number", "Iterator", "Range", "One", "Any")
 constant TypeMembers = (IteratorMember, NoneScope, RangeMembers, Scope(List(Text) + "from", List(Text) + "Iterator"), NoneScope)
+constant SizeScopes = (Scope(("Width", "Height"), ("Number", "Number")), Scope(List(Text) + "Size", List(Text) + "Size"))
+constant Sizes = KnownTypes(("Size", "Box"), SizeScopes, (Scope(List(Text) + "Area", List(Text) + "Number"), NoneScope), (NoneScope, NoneScope))
+constant Selfish = CallTarget(KnownTypes(("Size", "Box"), SizeScopes, (Scope(("Area", "Size"), ("Number", "Size")), NoneScope), (NoneScope, NoneScope)), TypeShape("has Size"), "Strict/Box", List(Text))
+constant Readers = KnownTypes(("Reader", "Disk"), (NoneScope, Scope(List(Text) + "Reader", List(Text) + "Reader")), (Scope(List(Text) + "ReadBytes", List(Text) + "Bytes"), NoneScope), (NoneScope, NoneScope))
+constant Trees = KnownTypes(("Tree", "List"), (Scope(List(Text) + "children", List(Text) + "List(Tree)"), IteratorMember), (NoneScope, Scope(List(Text) + "First", List(Text) + "Generic")), (NoneScope, NoneScope))
+constant Treed = CallTarget(Trees, TypeShape("has children List(Tree)"), "Strict/Tree", List(Text))
+constant Anything = CallTarget(KnownTypes(("Size", "Box", "Any"), (SizeScopes(0), SizeScopes(1), NoneScope), (Sizes.methods(0), NoneScope, Sizes.methods(0)), Sizes.parameters + NoneScope), Boxed.shape, "Strict/Box", List(Text))
+constant Reading = CallTarget(Readers, TypeShape("has Reader"), "Strict/Disk", List(Text))
+constant Widened = CallTarget(Sizes, TypeShape("has Size", "has Width Number"), "Strict/Box", List(Text))
+constant Boxed = CallTarget(Sizes, TypeShape("has Size"), "Strict/Box", List(Text))
 constant CodeMethod = Scope(List(Text) + "Code", List(Text) + "Text")
 constant NumberTypes = KnownTypes(TypeNames, TypeMembers, (FloorMethod, LengthMethod, NoneScope, NoneScope, CodeMethod), (NoneScope, NoneScope, NoneScope, NoneScope, NoneScope))
 constant Iterated = CallTarget(NumberTypes, Greeter, "Strict/C", List(Text))
@@ -124,9 +134,10 @@ ImplicitOwner(name Text, scope Scope) Text
 	Iterated.ImplicitOwner("Length", InNumbers) is ""
 	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).ImplicitOwner("x", NoScope) is "a"
 	CallTarget(NoTypes, TypeShape("has a A", "x Number"), "Strict/C", List(Text)).ImplicitOwner("x", NoScope) is ""
+	Boxed.ImplicitOwner("Width", NoScope) is "Size"
 	if scope.TypeOf("outer") is not "" and IsLoopMember(scope.TypeOf("value"), name)
 		return "value"
-	Header(name).tokens.Length > 0 then "" else InheritingMember(name)
+	Header(name).tokens.Length > 0 then "" else Holding(TypeName, name)
 IsLoopMember(type Text, name Text) Boolean
 	Iterated.IsLoopMember("Number", "Floor")
 	Iterated.IsLoopMember("Number", "Length") is false
@@ -147,12 +158,26 @@ IsMember(type Text, name Text) Boolean
 	CallTarget(NoTypes, TypeShape("has x x"), "Strict/C", List(Text)).IsMember("C", "x")
 	let member = type is TypeName then shape.MemberScope.TypeOf(name) else types.MembersOf(type).TypeOf(name)
 	member is not "" and (member is not name or types.MethodsOf(member).TypeOf(name) is "")
-InheritingMember(name Text) Text
-	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).InheritingMember("x") is "a"
-	Plain.InheritingMember("x") is ""
-	let members = shape.MemberScope
+Holding(type Text, name Text) Text
+	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).Holding("C", "x") is "a"
+	Plain.Holding("Greeter", "x") is ""
+	Boxed.Holding("Box", "Width") is "Size" and Boxed.Holding("Box", "Area") is "Size"
+	Boxed.Holding("Box", "Depth") is "" and Widened.Holding("Box", "Width") is "" 
+	Boxed.Holding("List(Box)", "Width") is "" and Selfish.Holding("Box", "Width") is ""
+	Anything.Holding("Box", "Area") is "" and Anything.Holding("Box", "Width") is "Size"
+	let isComposite = type is TypeName or types.IsKnown(type) and types.IsPlural(type) is false and type.IndexOf("(") < 0
+	let isInherited = types.MethodsOf(type).TypeOf(name) is not "" or types.MethodsOf("Any").TypeOf(name) is not ""
+	let isOwn = IsMember(type, name) or isInherited
+	isComposite and isOwn is false then Holder(type, name) else ""
+Holder(type Text, name Text) Text
+	Boxed.Holder("Box", "Width") is "Size" and Selfish.Holder("Box", "Width") is ""
+	Reading.Holder("Disk", "ReadBytes") is ""
+	Treed.Holder("Tree", "First") is "children"
+	let members = type is TypeName then shape.MemberScope else types.MembersOf(type)
 	for members.names
-		if types.MethodsOf(members.types(index)).TypeOf(name) is not ""
+		let fields = types.MembersOf(members.types(index))
+		let provides = types.MethodsOf(members.types(index)).TypeOf(name) is not "" or fields.TypeOf(name) is not ""
+		if provides and fields.names.Length > 0 and IsMember(type, value)
 			return value
 	""
 FullName(type Text) Text

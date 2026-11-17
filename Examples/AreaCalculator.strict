@@ -7,7 +7,7 @@ Area Number
 Perimeter Number
 	AreaCalculator(Size(3, 4)).Perimeter is 14
 	AreaCalculator(Size(10, 5)).Perimeter is 30
-	Size.Width + Size.Width + Size.Height + Size.Height
+	Width + Width + Height + Height
 Run
 	constant rect = AreaCalculator(Size(5, 10))
 	logger.Log("Area: " + rect.Area)

@@ -1,5 +1,5 @@
 has Size
 Perimeter Number
-	2 * (Size.Width + Size.Height)
+	2 * (Width + Height)
 Area Number
-	Doubler(Size.Width).Twice * Size.Height
+	Doubler(Width).Twice * Height
