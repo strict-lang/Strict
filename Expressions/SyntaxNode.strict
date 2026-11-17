@@ -21,8 +21,12 @@ Precedence Number
 	SyntaxNode("Number", "1").Precedence is 0
 	SyntaxNode("Binary", "x").Precedence is 0
 	SyntaxNode("Not", "").Precedence is 3 and SyntaxNode("Number", "+").Precedence is 0
+	SyntaxNode("Member", "Floor", (SyntaxNode("Negate", "", (identifier, identifier)), identifier)) to Text is "(-a).Floor"
+	SyntaxNode("Binary", "*", (SyntaxNode("Negate", "", (identifier, identifier)), two)) to Text is "-a * 2"
 	if Kind is "Not"
 		return 3
+	if Kind is "Negate"
+		return MemberPrecedence - 1
 	Kind is not "Binary" or text is not in operators then 0 else precedences(operators.Index(text))
 to Text
 	SyntaxNode("Number", "1") to Text is "1"
