@@ -11,4 +11,9 @@ Result VmValue
 	if call.MethodName is "Left"
 		TestBudget.Left(arguments(0).number)
 		return VmValue.None
-	VmValue.OfNumber(TestBudget.Finished(arguments(0).number))
+	Measured(arguments)
+Measured(arguments List(VmValue)) VmValue
+	if call.MethodName is "Overran"
+		return VmValue.OfText(SlowTests.Overran(arguments(0).number, arguments(1).text))
+	let elapsed = arguments(0).number
+	VmValue.OfNumber(call.MethodName is "Overrun" then SlowTests.Overrun(elapsed) else TestBudget.Finished(elapsed))

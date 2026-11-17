@@ -7,3 +7,5 @@ Entered Number
 Left(entered Number)
 Expired Text
 	""
+Overran(elapsed Number, place Text) Text
+Overrun(elapsed Number) Number
