@@ -104,7 +104,7 @@ Local(slot Number, slots List(VmValue)) VmValue
 	let state = slots(LoopSlot)
 	let isIndex = slot is IndexSlot or slot is Resolver.OuterIndexSlot
 	if slot > 0 and state.items.Length > 0
-		return state.items(isIndex then 2 else 3)
+		return Looping.Read(state, isIndex)
 	Looping.Current(state, slot < 0, isIndex, slots(isIndex then IndexSlot else ValueSlot))
 Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Indexed(InstructionEntry(InstructionType.IndexCall, "list", (6, 6, 7)), Listed, 0).number is 20
@@ -120,7 +120,7 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0
 	Calling.Other(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0
 	Twice.Other(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed, 0).kind is "Changing"
-	Twice.Other(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1
+	Looping.Read(Twice.Other(InstructionEntry.LoopBegin(6, 8), Listed, 0), false).number is 1
 	Twice.Other(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed, 0).Length is 3
 	let call = Called(entry, slots)
 	let accessed = entry.payload.Length > call.Resolution + 3 then Accessor(machine).Accessed(call) else VmValue.None
@@ -152,12 +152,12 @@ Traced(error VmValue, position Number, slots List(VmValue)) VmValue
 	let traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
 Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
-	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0).items(3).number is 1
+	Looping.Read(Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0), false).number is 1
 	Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0) is Looping.Begun(Looping.Counting, Listed(6), Listed(8), 0)
-	Twice.Looped(InstructionEntry(InstructionType.LoopEnd, List(Text), (-1)), Listed, 0).items(2).number is 1
-	Twice.Looped(InstructionEntry(InstructionType.LoopEnd, List(Text), (1)), Stopping, 0).items(2).number is 1
+	Twice.Looped(InstructionEntry(InstructionType.LoopEnd, List(Text), (-1)), Listed, 0).number is 1
+	Twice.Looped(InstructionEntry(InstructionType.LoopEnd, List(Text), (1)), Stopping, 0).number is 1
 	Twice.Looped(InstructionEntry(InstructionType.LoopEnd, List(Text), (-1)), Stopping, 0).kind is "None"
-	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).items(2).number is 1
+	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).number is 1
 	if entry.kind is InstructionType.LoopEnd
 		return Looping.Ended(slots(LoopSlot), -1 is in entry.payload and slots(FlagSlot).IsTrue is false)
 	let failed = Looping.Failed(slots(entry.payload(0)), Ending(entry, slots))

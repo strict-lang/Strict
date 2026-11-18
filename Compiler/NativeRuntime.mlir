@@ -10548,7 +10548,7 @@
     %result = func.call @strict_bits(%view) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_list_items(%list: f64) -> !llvm.ptr {
+  func.func private @strict_list_items(%list: f64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -11268,13 +11268,35 @@
     %length = llvm.load %view : !llvm.ptr -> f64
     return %length : f64
   }
-  func.func private @strict_list_get(%list: f64, %index: f64) -> f64 {
+  func.func private @strict_list_get(%list: f64, %index: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0.0 : f64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
     %negative = arith.cmpf olt, %index, %zero : f64
     %wrapped = arith.addf %index, %length : f64
     %chosen = arith.select %negative, %wrapped, %index : f64
     %at = arith.fptosi %chosen : f64 to i64
+    // f64 items in the holder are read right away, only a list without them (packed or stale) checks its format
+    %plainHolder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %noHolder = llvm.mlir.zero : !llvm.ptr
+    %hasHolder = llvm.icmp "ne" %plainHolder, %noHolder : !llvm.ptr
+    cf.cond_br %hasHolder, ^probe, ^formats
+  ^probe:
+    %plainWord = llvm.load %plainHolder : !llvm.ptr -> f64
+    %plainBits = arith.bitcast %plainWord : f64 to i64
+    %noItems = arith.constant 0 : i64
+    %hasItems = arith.cmpi ne, %plainBits, %noItems : i64
+    cf.cond_br %hasItems, ^plain, ^formats
+  ^plain:
+    %plainAddress = func.call @strict_ptr(%plainWord) : (f64) -> !llvm.ptr
+    %plainSlot = llvm.getelementptr %plainAddress[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %plainValue = llvm.load %plainSlot : !llvm.ptr -> f64
+    return %plainValue : f64
+  ^formats:
+    %packedValue = func.call @strict_list_get_packed(%list, %at) : (f64, i64) -> f64
+    return %packedValue : f64
+  }
+  // a list without f64 items in its holder: a packed format read where it is, or a stale holder restored
+  func.func private @strict_list_get_packed(%list: f64, %at: i64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     // Bytes (format 9) are read where they are, unpacking would turn every byte into 8
     %packed = func.call @strict_list_packed(%list) : (f64) -> i64
     %byteFormat = arith.constant 9 : i64
