@@ -8,6 +8,9 @@ constant Constant = MethodEntry("Built", List(MemberEntry), "Strict/Text", (Inst
 constant Unreturned = MethodEntry("", List(MemberEntry), "", (InstructionEntry.LoadNumber(0, 1)))
 constant Early = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Return(0), InstructionEntry.Return(0)))
 constant Storing = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Named(Inliner.Store, 0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), InstructionEntry.Return(0)))
+constant Eight = Inliner.Summing.Slice(0, 3) + Inliner.Summing.Slice(0, 3) + Inliner.Summing.Slice(2, 2)
+constant Mixing = MethodEntry(Inliner.Plain, instructions = Eight)
+constant Long = MethodEntry(Inliner.Plain, instructions = Eight.Slice(0, 3) + Eight)
 constant Adding = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Binary(InstructionType.Add, (0, 0, 0)), InstructionEntry.Return(0)))
 constant Recursing = MethodEntry(Adding, instructions = Inliner.Again.instructions + Adding.instructions)
 constant Valued = MethodEntry(Adding, instructions = List(InstructionEntry) + Placeholder.instructions.First + Adding.instructions)
@@ -63,8 +66,9 @@ IsSmall Boolean
 	Listing.IsSmall
 	InlineRules(MethodEntry.CountingLoop).IsSmall is false
 	InlineRules(StructLanes.Squared).IsSmall is false
+	InlineRules(Mixing).IsSmall and InlineRules(Long).IsSmall is false
 	let instructions = callee.instructions
-	if instructions.Length is 0 or instructions.Length > 6 or instructions.Last.kind is not InstructionType.Return
+	if instructions.Length is 0 or instructions.Length > 10 or instructions.Last.kind is not InstructionType.Return
 		return false
 	for instructions
 		let isEarly = value.kind is InstructionType.Return and index < instructions.Length - 1
@@ -165,6 +169,12 @@ IsOwnCall(entry InstructionEntry) Boolean
 	Listing.IsOwnCall(StructLanes.Constructed) is false
 	Listing.IsOwnCall(Inliner.Scaled) is false
 	entry.kind is InstructionType.Invoke and IsOwn(entry) and entry.texts(1) is not "from"
+IsPlain Boolean
+	InlineRules(Inliner.Plain).IsPlain and Listing.IsPlain is false and InlineRules(Inliner.Again).IsPlain is false
+	for callee.instructions
+		if value.kind is in (InstructionType.Invoke, InstructionType.CheckError)
+			return false
+	true
 IsUnchecked Boolean
 	InlineRules(StructLanes.Squared).IsUnchecked
 	InlineRules(Inliner.Failing).IsUnchecked is false

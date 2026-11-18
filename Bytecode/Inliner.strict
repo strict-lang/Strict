@@ -26,6 +26,10 @@ constant Shifted = MemberEntry("shift", "Strict/Number", List(InstructionEntry) 
 constant Shifting = MethodEntry("Shift", List(MemberEntry) + Shifted, "Strict/Number", First.instructions)
 constant Unfilled = InstructionEntry.Invoke(1, ("Strict/Shifter", "Shift", "Strict/Number"), List(Number), -1)
 constant Shifter = TypeEntry("Strict/Shifter", List(MemberEntry), List(MethodEntry) + Shifting)
+constant Summing = (InstructionEntry.LoadNumber(0, 2), InstructionEntry.LoadNumber(1, 3), InstructionEntry(InstructionType.Add, List(Text), (3, 0, 1, 2)), InstructionEntry.Return(2))
+constant Plain = MethodEntry("Y", List(MemberEntry), "Strict/Number", Summing)
+constant CallingY = InstructionEntry.Invoke(1, ("Strict/Examples/Owner", "Y", "Strict/Number"), List(Number), -1)
+constant Owner = TypeEntry("Strict/Examples/Owner", List(MemberEntry), List(MethodEntry) + Plain)
 constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionEntry))
 constant Failing = MethodEntry(StructLanes.Squared, instructions = (StructLanes.Made, StructLanes.Squared.instructions(9)) + StructLanes.Squared.instructions)
 constant Failed = Inliner((StructLanes.Caller, TypeEntry(StructLanes.Pair.Name, StructLanes.Pair.members, List(MethodEntry) + Failing)), true)
@@ -50,6 +54,7 @@ Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Caller).First.instructions(3).kind is InstructionType.IndexCall
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6)).Name is ""
 	Sample.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
+	Inliner(List(TypeEntry) + Owner).Inlinable(Owner, CallingY, InstructionEntry.Return(1)).Name is "Y"
 	for type.methods
 		MethodEntry(value.Name, value.parameters, value.declaredType, Expanded(type, value.instructions, 3), value.Slots)
 Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) List(InstructionEntry)
@@ -101,7 +106,7 @@ Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry, isWatch
 	let isMatched = IsMatched(call, next)
 	let isLanable = rules.IsLaned(type, call, IsReturning(callee))
 	let isLaned = isSplitting and (isMatched or rules.IsUnchecked or isWatching is false) and isLanable
-	isMatched and rules.Fits(owner, type, call) or isLaned then callee else NoMethod
+	(isMatched or rules.IsPlain) and rules.Fits(owner, type, call) or isLaned then callee else NoMethod
 IsMatched(call InstructionEntry, next InstructionEntry) Boolean
 	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(5))
 	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(6)) is false
