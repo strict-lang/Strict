@@ -3,7 +3,3 @@ OfNumber(amount Number) Number
 	Allocations.OfNumber(7) < Allocations.OfNumber(2000)
 	let earlier = Process.Executed(5)
 	VmValue.OfNumber(amount).number is amount then Process.Executed(5) else earlier
-Iterated(loop VmValue, iteration Number) Number
-	Allocations.Iterated(Looping.Counting.items(0), 2000) < Allocations.Iterated(Looping.Ranged.items(0), 2000)
-	let earlier = Process.Executed(5)
-	Looping.Iterated(loop, iteration).items.Length is 4 then Process.Executed(5) else earlier

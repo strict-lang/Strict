@@ -2,8 +2,8 @@ constant Counting = Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 7)
 constant Ranged = Begun(VmValue.None, VmValue.OfNumber(5), VmValue.OfNumber(2), 7)
 constant Listed = Begun(VmValue.None, VmValue.OfList(VmValue.OfNumber(4), VmValue.OfNumber(6)), VmValue.None, 7)
 Begun(state VmValue, iterable VmValue, ending VmValue, begin Number) VmValue
-	Counting.items(2).number is 0 and Counting.items(0).kind is "Loop"
-	Ranged.items(3).number is 5 and Ranged.items(0).items(4).number is 3
+	Counting.number is 0 and Counting.items(0).kind is "Loop"
+	Read(Ranged, false).number is 5 and Ranged.items(0).items(4).number is 3
 	Begun(Counting, VmValue.OfNumber(0), VmValue.None, 9) is Counting
 	Listed.items(0).number is 1 and Begun(VmValue.None, VmValue.OfText("ab"), VmValue.None, 7).items(0).number is 2
 	let start = Start(iterable, ending)
@@ -15,22 +15,18 @@ Begun(state VmValue, iterable VmValue, ending VmValue, begin Number) VmValue
 	let code = iterable.kind is "List" then 1 else iterable.kind is "Text" then 2 else 0
 	Iterated(VmValue("Loop", code, "", List(VmValue) + iterable + bounds + count + state), 0)
 Iterated(loop VmValue, iteration Number) VmValue
-	Iterated(Counting.items(0), 2).items(3).number is 2
-	Iterated(Ranged.items(0), 1).items(2).number is 4 and Iterated(Listed.items(0), 1).items(2).number is 1
-	Iterated(VmValue("Loop", 2, "", List(VmValue) + VmValue.OfText("ab")), 1).items(3).text is "b"
-	Allocations.Iterated(Counting.items(0), 2000) < Allocations.Iterated(Ranged.items(0), 2000)
-	let counted = VmValue.OfNumber(iteration)
-	let isCounting = loop.number is 0 then loop.items(1).number is 0 and loop.items(2).number >= 0 else false
-	let element = isCounting then counted else Element(loop, iteration)
-	VmValue.OfList(loop, counted, loop.number > 0 then counted else element, element)
+	Read(Iterated(Counting.items(0), 2), false).number is 2
+	Read(Iterated(Ranged.items(0), 1), true).number is 4 and Read(Iterated(Listed.items(0), 1), true).number is 1
+	Read(Iterated(VmValue("Loop", 2, "", List(VmValue) + VmValue.OfText("ab")), 1), false).text is "b"
+	VmValue("Iteration", iteration, "", List(VmValue) + loop)
 Ended(state VmValue, isStopped Boolean) VmValue
-	Ended(Counting, false).items(2).number is 1
+	Ended(Counting, false).number is 1 and Ended(Counting, false).items is Counting.items
 	Ended(Ended(Ended(Counting, false), false), false).kind is "None"
 	Ended(Counting, true).kind is "None"
 	Ended(Iterated(Counting.items(0), 5), false).kind is "None"
 	let loop = state.items(0)
-	let next = state.items(1).number + 1
-	isStopped or next >= loop.items(4).number then loop.items(5) else Iterated(loop, next)
+	let next = state.number + 1
+	isStopped or next >= loop.items(4).number then loop.items(5) else VmValue(state, number = next)
 Next(state VmValue, position Number, begin Number) Number
 	Next(Counting, 9, 7) is 8
 	Next(VmValue.None, 9, 7) is 10
@@ -43,7 +39,12 @@ Current(state VmValue, isOuter Boolean, isIndex Boolean, fallback VmValue) VmVal
 	Current(VmValue.None, true, true, VmValue.OfNumber(4)).number is 4
 	Current(Listed, false, false, VmValue.None).number is 4 and Current(Listed, false, true, VmValue.None).number is 0
 	let current = isOuter and state.items.Length > 0 then state.items(0).items(5) else state
-	current.items.Length is 0 then fallback else current.items(isIndex then 2 else 3)
+	current.items.Length is 0 then fallback else Read(current, isIndex)
+Read(state VmValue, isIndex Boolean) VmValue
+	Read(Ended(Listed, false), false).number is 6 and Read(Ended(Listed, false), true).number is 1
+	Read(Ended(Ranged, false), true).number is 4
+	let loop = state.items(0)
+	isIndex and loop.number > 0 then VmValue.OfNumber(state.number) else Element(loop, state.number)
 IsEmpty(iterable VmValue, ending VmValue) Boolean
 	IsEmpty(VmValue.OfNumber(0), VmValue.None)
 	IsEmpty(VmValue.OfText("a"), VmValue.None) is false
