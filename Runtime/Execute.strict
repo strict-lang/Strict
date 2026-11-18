@@ -7,6 +7,7 @@ has isFull Boolean = false
 has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 has cached Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
 has quietUntil Number = 0
+has inferred InferenceCache = InferenceCache.None
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 constant Unstamped = BinarySources(List(Text))
@@ -80,16 +81,15 @@ Kept(path Text, root Text) Number
 Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 	Execute(Logger).Served("Missing.strict", ".").code is 1
 	Execute(Logger).Served("Missing.strict", ".", true).Types.Length is 0
-	if Directory.Exists(path) or File(path).Exists is false or selection is not ""
+	let isFile = File(path).Exists and Directory.Exists(path) is false and selection is in ("", "*")
+	if isFile then Stale((path)).Length is 0 else true
 		return Answer(Test(path, root, isQuiet, sources), known)
-	let stale = Stale((path))
-	if stale.Length is 0
-		return Answer(Failures((path), stale, root, isQuiet, sources), known)
 	let files = Sourced((path), root, sources)
-	let answer = Verified(path, root, isQuiet, files, ResolveCheck.Inference(files), true)
+	let joined = inferred.Of(files, FileCompiler.Normalized(path))
+	let answer = Verified(path, root, isQuiet, files, joined.Result.joined, true)
 	if answer.code is 0 and isQuiet is false and quietUntil is 0
 		logger.Log(Summary(0, path))
-	answer
+	Answer(answer, inferred = joined)
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let stamped = BinarySources(files).Stamped

@@ -1,0 +1,34 @@
+has files Texts
+has shapes List(TypeShape)
+has templates Texts
+constant Writers = ("File.strict", "TextWriter.strict", "BytesWriter.strict")
+constant Writing = Inferring(Writers, ResolveCheck.Shapes(Writers), List(Text))
+constant None = Inferring(List(Text), List(TypeShape), List(Text))
+Raw TypeInference
+	Writing.Raw.types.names is ("File", "TextWriter", "BytesWriter")
+	None.Raw.constants.Length is 0
+	mutable members = List(Mutable(Scope))
+	mutable methods = List(Mutable(Scope))
+	mutable parameters = List(Mutable(Scope))
+	mutable constants = List(Mutable(Scope))
+	for shapes
+		members.Add(value.MemberScope.Indexed.Owned(ResolveCheck.TypeName(files(index))))
+		methods.Add(value.MethodScope)
+		parameters.Add(Defaults(value.lines).Of(methods.Last, members.Last, value.ConstructorNames(members.Last, templates)))
+		constants.Add(value.ConstantScope)
+	TypeInference(KnownTypes(ResolveCheck.TypeNames(files), members, methods, parameters), constants)
+Refined(inference TypeInference) TypeInference
+	None.Refined(ResolveCheck.Counting).types.methods.Length is 0
+	Writing.Refined(Writing.Raw).types.ParameterScope("File").Count("Write") is 3
+	let types = KnownTypes(inference.types, positions = ResolveCheck.Positions(inference.types.names))
+	let indexed = TypeInference(types, inference.constants)
+	mutable methods = List(Mutable(Scope))
+	mutable parameters = List(Mutable(Scope))
+	for shapes
+		methods.Add(Typed(indexed, index))
+		parameters.Add(ResolveCheck.OverloadedMembers(types, shapes, types.members(index).types, types.parameters(index)))
+	TypeInference(KnownTypes(types, methods = methods, parameters = parameters), inference.constants)
+Typed(indexed TypeInference, index Number) Scope
+	Writing.Typed(Writing.Raw, 0).owner is "File"
+	let name = indexed.types.names(index)
+	ShapeTyping(indexed).Typed(shapes(index), indexed.types.methods(index), name).Indexed.Owned(name)

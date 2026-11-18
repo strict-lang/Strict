@@ -1,0 +1,30 @@
+has entries List(KeptInference)
+has Result KeptInference = KeptInference.Empty
+constant Limit = 8
+constant None = InferenceCache(List(KeptInference))
+constant Logged = None.Of(KeptInference.Pair, "Logger.strict")
+constant Texted = KeptInference.Writer + "Text.strict"
+constant Written = Logged.Of(Texted, "Text.strict")
+Of(files Texts, path Text) InferenceCache
+	Logged.entries.Length is 1 and Logged.Result.joined is ResolveCheck.Inference(KeptInference.Pair)
+	Written.entries.Length is 1 and Written.Of(KeptInference.Pair, "Logger.strict").entries.Length is 1
+	None.Of(KeptInference.Pair, "TextWriter.strict").entries.Length is 0
+	let rest = Result.Rest(files, path)
+	let joined = Fitting(rest).Of(files, path)
+	if joined.folder is ""
+		return InferenceCache(entries, joined)
+	let others = Others(rest)
+	let kept = others.Slice(0, others.Length < Limit then others.Length else Limit - 1)
+	InferenceCache(List(KeptInference) + joined + kept, joined)
+Fitting(rest Texts) KeptInference
+	Logged.Fitting(KeptInference.Writer).base.files is KeptInference.Writer
+	Logged.Fitting(KeptInference.Pair).folder is ""
+	for entries
+		if value.Fits(rest)
+			return value
+	KeptInference.Empty
+Others(rest Texts) List(KeptInference)
+	Logged.Others(KeptInference.Writer).Length is 0 and Logged.Others(KeptInference.Pair).Length is 1
+	for entries
+		if value.Fits(rest) is false
+			value

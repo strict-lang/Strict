@@ -1,6 +1,7 @@
 has root Text
 constant Imaging = List(Text) + "./Compression/Deflate.strict"
 constant Plain = SourceFiles(".")
+constant Nothing = "-"
 constant Compressed = Directory.Files("./Compression", "*.strict")
 Of(path Text, others Texts = List(Text)) Texts slow
 	SourceFiles(".").Of("./Missing/A.strict").Length is Directory.Files(".", "*.strict").Length
@@ -40,7 +41,7 @@ Reached(known Texts, frontier Texts, reached Texts, searched = List(Text)) Texts
 	for frontier
 		mentioned = Added(mentioned, Mentioned(value))
 	let unmatched = Mentions.Unmatched(mentioned, known) - searched
-	let indexed = Added(known, Nearby(unmatched))
+	let indexed = unmatched.Length is 0 then known else Added(known, Nearby(unmatched))
 	let all = Added(reached, frontier)
 	Reached(indexed, Matching(mentioned, indexed) - all, all, searched + unmatched)
 Matching(names Texts, files Texts) Texts
@@ -86,14 +87,19 @@ Packages(file Text) Texts
 	constant kind = "packages"
 	if Memo.Has(file, kind)
 		let cached = Memo.Texts(file, kind)
-		return cached.First is "-" then List(Text) else cached
+		return cached.First is Nothing then List(Text) else cached
 	let found = PackagesIn(File(file).ReadLines)
-	let stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + "-" else found)
+	let stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
 	found.Length is 0 then List(Text) else stored
 Mentioned(file Text) Texts
 	"Number" is in SourceFiles(".").Mentioned("./Math/Vector2.strict")
 	constant kind = "mentions"
-	Memo.Has(file, kind) then Memo.Texts(file, kind) else Memo.Kept(file, kind, Mentions(File(file).ReadLines).Types)
+	let cached = Memo.Texts(file, kind)
+	if cached.Length > 0
+		return cached.First is Nothing then List(Text) else cached
+	let found = Mentions(File(file).ReadLines).Types
+	let stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
+	found.Length is 0 then found else stored
 PackagesIn(lines Texts) Texts
 	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"
 	mutable result = List(Mutable(Text))

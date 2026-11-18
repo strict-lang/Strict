@@ -1,0 +1,10 @@
+# Performance
+
+From Ben's VM handoff of 2026-11-18 (a trial is a 20 line type with 20 to 30 tests, `strict test <file> shown` through the resident server).
+
+- A file its own dependencies mention gets the full inference on every call: `Calculation.strict` in Ben 0.9 s for 520 files, most of Ben's 61 types 1.4 to 1.6 s outside their tests. `KeptInference` only keeps the others for a leaf. Next: keep the raw scopes of every unchanged file and type again only the files whose dependencies hold the changed one.
+- A kept trial call is 0.33 to 0.45 s (522 files, was 1.3 to 1.5 s), a base type trial 0.17 to 0.2 s. Left: `SourceFiles.Reached` 0.1 to 0.15 s (`FolderIndex` lists every folder of every sibling project per round, `Matching` walks all indexed files per round), `FileCompiler.Resolved` loops over all files, `BinarySources.Stamped` runs twice (10 to 15 ms each), the process itself 60 to 70 ms.
+- The same exe answers that trial in 0.33 s when the server was started from a console (`strict serve 2`) and in 0.44 s when the client started it (hidden PowerShell start), both with `STRICT_THREADS=47`. Cause not found, priority class and logs are the same.
+- Ben's search is 115 to 264 times slower on the VM than native (`Planner.Planned(Evens)` 5 s against 43.5 ms). No heavy loop, the time is in one line methods (`Entry.Mixed` 10.3 %, `Datum.IsFailed`, `Skill.IsLearned`), texts compared as tags (`Calculation.Applied` 7.3 %, `kind is "Error"`), `Number.Floor` written in Strict (3 %) and small values built on the heap (`Datum.OfNumber`, five members, 4.4 %). Wanted in that order: a call path for leaf methods of one expression or inlining them, text against constant text by identity first, `Floor` and its neighbours as VM natives, small immutable values without an object each.
+- `strict build Ben.strict windows` 64 s, 37.9 s of it GPU preparation (PTX 11.2 s, cubins 9.1 s), 14 to 25 s on 2026-11-16. Ben has no GPU loop of its own, only `Advisor` through NeuralNetworks.
+- A folder of 100 new trials takes 17 s the first time (170 ms a file), 4.4 to 4.9 s for the 24 failing ones afterwards.
