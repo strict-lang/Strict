@@ -160,6 +160,7 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
+	Hello.Call(Invocation.Emptied).items.First.text is "IndexOutOfRange"
 	Hello.Typed((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
 	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, (VmValue.OfNumber(4)), VmValue.None)(5).number is 4
@@ -176,7 +177,7 @@ Routed(call Invocation) VmValue
 	if route is Resolver.Native and entry.payload(at + 1) > 0
 		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
 	let skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
-	skip then Natives(types, folder).Result(call) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
+	skip then call.Native(Natives(types, folder)) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	let type = types(route)
