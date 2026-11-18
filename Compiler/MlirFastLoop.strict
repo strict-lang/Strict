@@ -122,7 +122,8 @@ Counted Texts
 	Doubling.Counted(3) is "  ^loop2(%t2ki: i64):"
 	let label = "^loop" + position
 	let whole = "    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
-	let start = ("    " + Temp("zi") + " = arith.constant 0 : i64", "    cf.br " + label + "(" + Temp("zi") + " : i64)")
+	mutable start = List(Text) + ("    " + Temp("zi") + " = arith.constant 0 : i64")
+	start = start + MlirCounter(function, position).Started + ("    cf.br " + label + "(" + Temp("zi") + " : i64)")
 	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("ki") + ", " + Temp("ni") + " : i64"
 	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
 	List(Text) + whole + start + ("  " + label + "(" + Temp("ki") + ": i64):") + check + branch + ("  " + label + "body:")

@@ -117,8 +117,11 @@ Slots Texts
 	for VariableNames
 		lines = lines + Slot("%v_" + value)
 	for method.instructions
-		lines = value.kind is InstructionType.LoopBegin then lines + MlirRangeLoop(outer, index).Slots else lines
+		lines = value.kind is InstructionType.LoopBegin then lines + LoopSlots(index) else lines
 	lines + MlirGrouped(value, 0).Memos + MlirHanded(value, 0).Slots + MlirLines(value).Allocated + Entry
+LoopSlots(position Number) Texts
+	Counter.LoopSlots(0) is Counter.Slot("%loop0")
+	MlirRangeLoop(value, position).Slots + MlirCounter(value, position).Slot
 Entry Texts
 	Counter.Entry.Length is 4
 	"  ^stackChecked:" is in MlirGroups.Norming.function.Entry

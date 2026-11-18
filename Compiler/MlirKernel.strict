@@ -192,7 +192,7 @@ Versioned Texts
 	let loop = MlirFastLoop(fast, position)
 	let packed = MlirPacked(function, position)
 	let copy = Renamed(loop.Started + loop.Counted + loop.Current + loop.Looped + loop.Exited, "")
-	let joined = ("    cf.br ^loop" + position + "joined", "  ^loop" + position + "generic:")
+	let joined = MlirCounter(function, position).Finished("") + ("  ^loop" + position + "generic:")
 	Renamed(loop.Checked, "") + packed.Branch + packed.Dispatched + copy + joined
 Joined Texts
 	Doubling.Joined is ("    cf.br ^loop2joined", "  ^loop2joined:")

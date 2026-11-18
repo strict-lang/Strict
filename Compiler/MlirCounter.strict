@@ -21,11 +21,20 @@ constant Sixteen = MethodEntry("Sixteen", Doubler.method.parameters, "None", Cou
 constant Unrolling = MlirFastLoop(MlirFunction(Doubler.types, Doubler.type, Sixteen, List(Number), 2), 2)
 constant Unrollable = 16
 constant Unrolled = " {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}"
+constant ModuloSlot = "%mok"
+constant ExactLimit = 4503599627370496
+constant ValueWrite = InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult")
+constant ValueLoad = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.LoadNumber(2, 7))
+constant ValueRem = (List(InstructionEntry) + MlirLoops.Emptied + MlirKernel.NumbersLoop) + ValueLoad + Remaining + ValueWrite + InstructionEntry.Jump(InstructionType.LoopEnd, 7)
+constant FastRem = MlirCounter(MlirFunction(Doubler.types, Doubler.type, MethodEntry("Rem", Doubler.method.parameters, "Strict/List(Number)", ValueRem), List(Number), 2), 2)
 Remainder(entry InstructionEntry, lines Texts) Texts
 	MlirStatements(Quartering.function, 5).Calculated(Remaining)(1) is "    %t5i = arith.remsi %t2ki, %t5w : i64"
 	Quartering.Remainder(Divided.First, List(Text)).Last is "    llvm.store %t5c, %r3 : f64, !llvm.ptr"
 	MlirCounter(MlirFunction(Quartering.function, FastLoop = -1), 5).Remainder(Divided.First, ("x")) is ("x")
-	Whole(Divisor(entry.payload(1), entry.payload(2)), "remsi", entry.payload(3), lines)
+	let fast = Divisor(entry.payload(1), entry.payload(2))
+	if fast > 0
+		return Whole(fast, "remsi", entry.payload(3), lines)
+	IsFastModulo(entry) is false then lines else lines.Slice(0, 2) + FastFloating(Temp("a"), Temp("b")) + lines.Last
 Floor(entry InstructionEntry, lines Texts) Texts
 	MlirNatives(Quartering.function, 7).Emitted(Floored, Number, "strict_floor")(1) is Quotient
 	Quartering.At(7).Floor(Floored, List(Text)).Last is "    llvm.store %t7c, %r5 : f64, !llvm.ptr"
@@ -76,3 +85,88 @@ Temp(suffix Text) Text
 At(at Number) MlirCounter
 	Quartering.At(7).position is 7
 	MlirCounter(function, at)
+BeforeNames Texts
+	FastRem.BeforeNames is ("forResult")
+	mutable names = List(Mutable(Text))
+	for position
+		let before = function.method.instructions(index)
+		if before.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+			names.Add(before.texts.Last)
+	names
+IsPureLoop Boolean
+	FastRem.IsPureLoop
+	if MlirLoops(function, position).IsCollecting is false
+		return false
+	let names = BeforeNames
+	for Range(position + 1, function.method.LoopEndOf(position))
+		let inner = function.method.instructions(value)
+		if inner.kind is InstructionType.StoreRegisterToVariable
+			if inner.texts(0).IndexOf("(") >= 0 or inner.texts(0) is in names
+				return false
+	true
+IsFastModulo(entry InstructionEntry) Boolean
+	FastRem.At(5).IsFastModulo(Remaining)
+	Quartering.IsFastModulo(Remaining) is false
+	if function.FastLoop < 0 or entry.kind is not InstructionType.Modulo
+		return false
+	let divisor = Constant(entry.payload(2), function.FastLoop)
+	if divisor <= 0 or divisor >= ExactLimit or Divisor(entry.payload(1), entry.payload(2)) > 0
+		return false
+	MlirCounter(function, function.FastLoop).IsPureLoop
+HasFastModulo Boolean
+	FastRem.HasFastModulo
+	Quartering.At(2).HasFastModulo is false
+	if IsPureLoop is false
+		return false
+	let loop = MlirFunction(function, FastLoop = position)
+	for Range(position + 1, function.method.LoopEndOf(position))
+		if MlirCounter(loop, value).IsFastModulo(function.method.instructions(value))
+			return true
+	false
+FastFloating(left Text, right Text) Texts
+	FastRem.At(5).FastFloating("%a", "%b").First is "    %t5mq = arith.divf %a, %b : f64"
+	FastRem.At(5).FastFloating("%a", "%b").Length is 13
+	mutable lines = List(Mutable(Text))
+	lines.Add("    " + Temp("mq") + " = arith.divf " + left + ", " + right + " : f64")
+	lines.Add("    " + Temp("mt") + " = llvm.intr.trunc(" + Temp("mq") + ") : (f64) -> f64")
+	lines.Add("    " + Temp("mp") + " = arith.mulf " + Temp("mt") + ", " + right + " : f64")
+	lines.Add("    " + Temp("c") + " = arith.subf " + left + ", " + Temp("mp") + " : f64")
+	lines + ExactCheck(left)
+ExactCheck(left Text) Texts
+	FastRem.At(5).ExactCheck("%a").Last is "    llvm.store %t5mal, %mok2 : i1, !llvm.ptr"
+	let slot = ModuloSlot + function.FastLoop
+	mutable lines = List(Text) + ("    " + Temp("mlt") + " = llvm.intr.trunc(" + left + ") : (f64) -> f64")
+	lines = lines + ("    " + Temp("mle") + " = arith.cmpf oeq, " + Temp("mlt") + ", " + left + " : f64")
+	lines = lines + ("    " + Temp("mls") + " = llvm.intr.fabs(" + left + ") : (f64) -> f64")
+	lines = lines + ("    " + Temp("mll") + " = arith.constant 9007199254740992.0 : f64")
+	lines = lines + ("    " + Temp("mlb") + " = arith.cmpf olt, " + Temp("mls") + ", " + Temp("mll") + " : f64")
+	lines = lines + ("    " + Temp("mok") + " = arith.andi " + Temp("mle") + ", " + Temp("mlb") + " : i1")
+	lines = lines + ("    " + Temp("mpr") + " = llvm.load " + slot + " : !llvm.ptr -> i1")
+	lines = lines + ("    " + Temp("mal") + " = arith.andi " + Temp("mpr") + ", " + Temp("mok") + " : i1")
+	lines + ("    llvm.store " + Temp("mal") + ", " + slot + " : i1, !llvm.ptr")
+Finished(letter Text) Texts
+	Quartering.At(2).Finished("") is List(Text) + "    cf.br ^loop2joined"
+	FastRem.Finished("").Last is "    cf.cond_br %f2mok, ^loop2joined, ^loop2generic"
+	let label = "^loop" + position
+	if HasFastModulo is false
+		return List(Text) + ("    cf.br " + label + "joined")
+	let flag = "%f" + letter + position + "mok"
+	mutable lines = List(Mutable(Text))
+	lines.Add("    " + flag + " = llvm.load " + ModuloSlot + position + " : !llvm.ptr -> i1")
+	lines.Add("    cf.cond_br " + flag + ", " + label + "joined, " + label + "generic")
+	lines
+Slot Texts
+	Quartering.At(2).Slot.Length is 0
+	FastRem.Slot is List(Text) + "    %mok2 = llvm.alloca %one x i1 : (i64) -> !llvm.ptr"
+	if HasFastModulo is false
+		return List(Text)
+	List(Text) + ("    " + ModuloSlot + position + " = llvm.alloca %one x i1 : (i64) -> !llvm.ptr")
+Started Texts
+	Quartering.At(2).Started.Length is 0
+	FastRem.Started.Last is "    llvm.store %t2mt, %mok2 : i1, !llvm.ptr"
+	if HasFastModulo is false
+		return List(Text)
+	mutable lines = List(Mutable(Text))
+	lines.Add("    " + Temp("mt") + " = arith.constant true")
+	lines.Add("    llvm.store " + Temp("mt") + ", " + ModuloSlot + position + " : i1, !llvm.ptr")
+	lines

@@ -30,6 +30,7 @@ Locals(lists List(Numbers), count Number) Numbers
 		raw(index + Shift) + raw(index) * raw(index + 1)
 Remainders(numbers Numbers) Numbers
 	LoopSpeed.Remainders((7, 8, 9)) is (0, 1, 2)
+	LoopSpeed.Remainders((15.5, -8, 13.999999999999998, 9007199254740996)) is (1.5, -1, 6.999999999999998, 1)
 	for numbers
 		value % Divisor
 Gathered(table Numbers, picks Numbers) Numbers

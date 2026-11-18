@@ -478,9 +478,15 @@
     %leftSmall = arith.cmpf olt, %leftSize, %limit : f64
     %rightSmall = arith.cmpf olt, %rightSize, %limit : f64
     %rightSet = arith.cmpf one, %right, %zero : f64
+    %leftTrunc = llvm.intr.trunc(%left) : (f64) -> f64
+    %rightTrunc = llvm.intr.trunc(%right) : (f64) -> f64
+    %leftExact = arith.cmpf oeq, %leftTrunc, %left : f64
+    %rightExact = arith.cmpf oeq, %rightTrunc, %right : f64
     %small = arith.andi %leftSmall, %rightSmall : i1
-    %usable = arith.andi %small, %rightSet : i1
-    cf.cond_br %usable, ^convert, ^checked
+    %whole = arith.andi %leftExact, %rightExact : i1
+    %valid = arith.andi %small, %rightSet : i1
+    %usable = arith.andi %valid, %whole : i1
+    cf.cond_br %usable, ^integral, ^checked
   ^checked:
     cf.cond_br %rightSet, ^fractional, ^zero
   ^zero:
@@ -488,20 +494,12 @@
     %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
     return %error : f64
-  ^convert:
-    %leftWhole = arith.fptosi %left : f64 to i64
-    %rightWhole = arith.fptosi %right : f64 to i64
-    %leftBack = arith.sitofp %leftWhole : i64 to f64
-    %rightBack = arith.sitofp %rightWhole : i64 to f64
-    %leftExact = arith.cmpf oeq, %leftBack, %left : f64
-    %rightExact = arith.cmpf oeq, %rightBack, %right : f64
-    %whole = arith.andi %leftExact, %rightExact : i1
-    cf.cond_br %whole, ^integral, ^fractional
   ^integral:
-    %rest = arith.remsi %leftWhole, %rightWhole : i64
-    %restNumber = arith.sitofp %rest : i64 to f64
-    %signed = llvm.intr.copysign(%restNumber, %left) : (f64, f64) -> f64
-    return %signed : f64
+    %quotient = arith.divf %left, %right : f64
+    %truncated = llvm.intr.trunc(%quotient) : (f64) -> f64
+    %product = arith.mulf %truncated, %right : f64
+    %rest = arith.subf %left, %product : f64
+    return %rest : f64
   ^fractional:
     %fraction = arith.remf %left, %right : f64
     return %fraction : f64
