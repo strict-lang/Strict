@@ -15,8 +15,9 @@ IsOperation Boolean
 	MlirListOperators(MlirLists.Listed, 1).IsOperation is false
 	MlirListOperators(Mixed, 5).IsOperation
 	let entry = function.method.instructions(position)
-	let isList = IsList(entry.payload(1)) or entry.kind is InstructionType.Add and IsList(entry.payload(2))
-	isList and entry.kind is in Operators
+	if entry.kind is not in Operators
+		return false
+	IsList(entry.payload(1)) or entry.kind is InstructionType.Add and IsList(entry.payload(2))
 IsList(register Number) Boolean
 	MlirListOperators(Mixed, 2).IsList(0)
 	MlirListOperators(Mixed, 2).IsList(1) is false

@@ -93,7 +93,8 @@ Function Texts
 	Twice.Function(1) is "    %one = arith.constant 1 : i64"
 	"    llvm.store %p1, %v_number : f64, !llvm.ptr" is in Twice.Function
 	let typed = MlirDeviceCalls(function, 0, function).Parameters + MlirDeviceMembers(function).Typed(function.Float)
-	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix
+	let extra = function.Whole.Length > 0 then "x" else ""
+	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix + extra
 	let returned = MlirExact(function, 0).Returned
 	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + returned + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
@@ -123,17 +124,20 @@ Slot(name Text) Texts
 	lines + MlirExact(function, 0).Slots(name)
 Entry Texts
 	Twice.Entry is ("    llvm.store %p0, %v_value : f64, !llvm.ptr", "    llvm.store %p1, %v_number : f64, !llvm.ptr")
-	"    llvm.store %m0, %v_heads : f64, !llvm.ptr" is in MlirDevice(MlirDeviceMembers.Head, 0).Entry
 	Summing.Entry.Last is "    llvm.store %p2_b, %v_input_b : i64, !llvm.ptr"
+	"    llvm.store %m0, %v_heads : f64, !llvm.ptr" is in MlirDevice(MlirDeviceMembers.Head, 0).Entry
 	let calls = MlirDeviceCalls(function, 0, function)
 	let exact = MlirExact(function, 0)
 	mutable lines = (List(Text) + function.Store("%p0", "%v_value")) + exact.Set("%p0_e", "%p0_q", "%v_value")
 	for function.method.parameters
 		let number = "%p" + (index + 1)
-		let slot = "%v_" + value.Name
-		let stored = (List(Text) + function.Store(number, slot)) + exact.Set(number + "_e", number + "_q", slot)
-		lines = calls.IsList(index) then lines + Stores(number, slot) else lines + stored
+		let stored = StoredParameter(number, "%v_" + value.Name, value.Name, exact)
+		lines = calls.IsList(index) then lines + Stores(number, "%v_" + value.Name) else lines + stored
 	lines + MlirDeviceMembers(function).Stored(function.Float)
+StoredParameter(number Text, slot Text, name Text, exact MlirExact) Texts
+	Doubling.StoredParameter("%p0", "%v_value", "value", MlirExact(Doubling.function, 0)).Length is 1
+	let denom = name is in function.Whole then "%one" else number + "_q"
+	(List(Text) + function.Store(number, slot)) + exact.Set(number + "_e", denom, slot)
 Indexed Texts
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
 	Doubling.Indexed.First is "    %thread = func.call @strict_device_thread_index() : () -> i32"

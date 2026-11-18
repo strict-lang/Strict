@@ -1,0 +1,122 @@
+has types List(TypeEntry) = List(TypeEntry)
+constant Nested = TypeEntry("Strict/Nested", (MemberEntry("left", "Strict/Pair", List(InstructionEntry), false), MemberEntry("right", "Strict/Pair", List(InstructionEntry), false)), List(MethodEntry))
+constant DefaultLow = MemberEntry("low", "Strict/Number", List(InstructionEntry) + InstructionEntry.LoadNumber(0, 0), false)
+constant DefaultedType = TypeEntry("Strict/Defaulted", (MemberEntry("high", "Strict/Number", List(InstructionEntry), false), DefaultLow), List(MethodEntry))
+constant DefaultedCall = InstructionEntry.Invoke(2, ("Strict/Defaulted", "from", "Defaulted", "high"), List(Number) + 0, -1)
+constant NestedCall = InstructionEntry.Invoke(2, ("Strict/Nested", "from", "Nested", "left", "right"), (0, 1), -1)
+constant Sample = LaneNesting((StructLanes.Pair, Nested, DefaultedType))
+SubFields(member MemberEntry, bits Number, owner Text) Texts
+	Sample.SubFields(StructLanes.Real, 0, "Strict/Pair") is List(Text) + "real"
+	Sample.SubFields(Nested.members.First, 0, "Strict/Nested") is ("left_real", "left_imaginary")
+	if StructLanes.IsLane(member)
+		return member.Bits is bits then List(Text) + member.Name else List(Text)
+	if types.Length is 0 or member.initial.Length > 0 or IsPlainType(member.typeName)
+		return List(Text)
+	let sub = Inliner(types).TypeOf(member.typeName)
+	if sub.Name is "" or sub.Name is owner or LaneCalls(types).LeafBits(sub) is not bits
+		return List(Text)
+	for StructLanes(types).Members(sub)
+		StructLanes.Lane(member.Name, value)
+Built(entry InstructionEntry, laned Texts, base Number) List(InstructionEntry)
+	Sample.Built(StructLanes.Constructed, List(Text), 8).Last.texts is ("lanes2_imaginary")
+	Sample.Built(DefaultedCall, List(Text), 8).Last.texts is ("lanes2_low")
+	let owner = Inliner(types).TypeOf(entry.texts(0))
+	mutable lines = List(InstructionEntry)
+	for LoadReuse(List(InstructionEntry)).InvokeReads(entry)
+		lines = lines + Assigned(entry, Member(owner, entry.texts(3 + index)), entry.payload(value), laned, base)
+	lines + Defaults(entry, owner, entry.texts.Slice(3, entry.texts.Length - 3), base)
+Assigned(entry InstructionEntry, member MemberEntry, source Number, laned Texts, base Number) List(InstructionEntry)
+	Sample.Assigned(NestedCall, Nested.members.First, 0, ("0 Pair"), 8).First.texts is ("lanes0_real")
+	let target = StructLanes.Lane("lanes" + entry.payload(0), member.Name)
+	let subType = Inliner(types).TypeOf(member.typeName)
+	if StructLanes.IsLane(member) or StructLanes(types).Members(subType).Length is 0
+		return List(InstructionEntry) + StructLanes.Named(InstructionType.StoreRegisterToVariable, source, target, entry.line)
+	if LaneFlow(types).Typed(laned, source to Text) is not ""
+		return StructLanes(types).Moves("lanes" + source, target, subType.Name, base, entry.line)
+	Unpacked(source, subType, target, base, entry.line)
+Unpacked(source Number, subType TypeEntry, target Text, base Number, line Number) List(InstructionEntry)
+	Sample.Unpacked(0, StructLanes.Pair, "lanes2_left", 8, 0).First.texts is ("real", "Pair")
+	mutable lines = List(InstructionEntry)
+	let short = TypeEntry.ShortName(subType.Name)
+	for StructLanes(types).Members(subType)
+		let field = InstructionEntry(InstructionType.FieldLoad, (value, short), (base, source, -1, -2), line)
+		let stored = StructLanes.Named(InstructionType.StoreRegisterToVariable, base, StructLanes.Lane(target, value), line)
+		lines = lines + (field, stored)
+	lines
+Defaults(entry InstructionEntry, owner TypeEntry, passed Texts, base Number) List(InstructionEntry)
+	Sample.Defaults(DefaultedCall, DefaultedType, List(Text) + "high", 8).Last.texts is ("lanes2_low")
+	mutable lines = List(InstructionEntry)
+	for owner.members
+		if value.IsConstant is false and StructLanes.IsLane(value) and value.initial.Length is 1
+			if value.Name is not in passed
+				lines = lines + DefaultLane(entry, value, base)
+	lines
+DefaultLane(entry InstructionEntry, member MemberEntry, base Number) List(InstructionEntry)
+	Sample.DefaultLane(DefaultedCall, DefaultLow, 8).First.kind is InstructionType.LoadConstantToRegister
+	let init = member.initial.First
+	let number = PayloadDecoder(init).Value(init.kind is InstructionType.Set then 0 else 1).number
+	let loaded = InstructionEntry.LoadNumber(base, number)
+	let numbered = InstructionEntry(loaded.kind, loaded.texts, loaded.payload, entry.line)
+	let target = StructLanes.Lane("lanes" + entry.payload(0), member.Name)
+	(numbered, StructLanes.Named(InstructionType.StoreRegisterToVariable, base, target, entry.line))
+Rebuilt(register Number, type Text, base Number, line Number) List(InstructionEntry)
+	Sample.Rebuilt(2, "Strict/Nested", 8, 0).Last.texts(3) is "left"
+	mutable lines = List(InstructionEntry)
+	mutable args = List(Number)
+	mutable names = List(Text)
+	for Inliner(types).TypeOf(type).members
+		if value.IsConstant is false and value.typeName is not in StructLanes.DataLess
+			let slot = base + lines.Length
+			lines = lines + MemberBuilt(register, value, slot, line)
+			args = args + slot
+			names = names + value.Name
+	let made = InstructionEntry.Invoke(register, (type, "from", TypeEntry.ShortName(type)) + names, args, -1)
+	lines + InstructionEntry(made.kind, made.texts, made.payload, line)
+MemberBuilt(register Number, member MemberEntry, target Number, line Number) List(InstructionEntry)
+	Sample.MemberBuilt(2, Nested.members.First, 8, 0).Last.texts(1) is "from"
+	let lane = StructLanes.Lane("lanes" + register, member.Name)
+	if StructLanes.IsLane(member)
+		return List(InstructionEntry) + StructLanes.Named(InstructionType.LoadVariableToRegister, target, lane, line)
+	SubBuilt(lane, Inliner(types).TypeOf(member.typeName), target, line)
+SubBuilt(lane Text, sub TypeEntry, target Number, line Number) List(InstructionEntry)
+	Sample.SubBuilt("lanes2_left", StructLanes.Pair, 8, 0).Last.texts(1) is "from"
+	let members = StructLanes(types).Members(sub)
+	mutable lines = List(InstructionEntry)
+	mutable args = List(Number)
+	for members
+		let slot = target + 1 + index
+		lines = lines + StructLanes.Named(InstructionType.LoadVariableToRegister, slot, lane + "_" + value, line)
+		args = args + slot
+	let made = InstructionEntry.Invoke(target, (sub.Name, "from", TypeEntry.ShortName(sub.Name)) + members, args, -1)
+	lines + InstructionEntry(made.kind, made.texts, made.payload, line)
+Member(owner TypeEntry, name Text) MemberEntry
+	LaneNesting.Member(StructLanes.Pair, "real").Name is "real"
+	LaneNesting.Member(StructLanes.Pair, "missing").Name is ""
+	for owner.members
+		if value.Name is name
+			return value
+	MemberEntry("", "", List(InstructionEntry), false)
+DirectFields(type TypeEntry) Texts
+	Sample.DirectFields(StructLanes.Pair) is ("real", "imaginary")
+	for type.members
+		if value.IsConstant is false and value.typeName is not in StructLanes.DataLess
+			if StructLanes.IsLane(value)
+				value.Name
+			else
+				if IsPlainType(value.typeName) then false else StructLanes(types).Members(Type(value.typeName)).Length > 0
+					value.Name
+MembersOf(type Text) Texts
+	Sample.MembersOf("Pair") is ("real", "imaginary")
+	StructLanes(types).Members(Inliner(types).TypeOf(type))
+MethodSignature(type TypeEntry, call InstructionEntry) Texts
+	LaneNesting((StructLanes.Pair, LaneCalls.Stub)).MethodSignature(LaneCalls.Stub, LaneCalls.Shift).Length is 0
+	let callee = Inliner(types).Declared(type, call)
+	if StructLanes(types).Members(type).Length > 0 or callee.instructions.Length is 0
+		return List(Text)
+	LaneCalls(types).Laned(callee.parameters)
+IsPlainType(name Text) Boolean
+	LaneNesting.IsPlainType("Strict/Text") and LaneNesting.IsPlainType("Strict/Pair") is false
+	name is in ("Strict/Text", "Strict/Boolean", "Strict/Error", "Strict/Character", "Strict/None") or "(" is in name
+Type(name Text) TypeEntry
+	Sample.Type("Pair").Name is "Strict/Pair"
+	Inliner(types).TypeOf(name)

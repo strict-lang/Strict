@@ -52,9 +52,9 @@ Stored(entry InstructionEntry, laned Texts, loaded Texts) Text
 	Sample.Stored(Kept, ("2 Pair"), List(Text)) is "pair Pair" and Sample.Stored(Kept, List(Text), List(Text)) is "pair -"
 	Sample.Stored(Kept, List(Text), ("2 other")) is "pair ?other"
 	Sample.Stored(ElementStore.Last, ("2 Pair"), ("2 other")) is "pairs(0) -"
-	let isElement = entry.texts(0).IndexOf("(") > 0
-	let type = isElement then "" else Typed(laned, entry.payload(0) to Text)
-	let source = isElement then "" else Typed(loaded, entry.payload(0) to Text)
+	let isFixed = entry.texts(0).IndexOf("(") > 0 or entry.texts(0).StartsWith("changed_")
+	let type = isFixed then "" else Typed(laned, entry.payload(0) to Text)
+	let source = isFixed then "" else Typed(loaded, entry.payload(0) to Text)
 	entry.texts(0) + " " + (type is not "" then type else source is "" then "-" else "?" + source)
 Loaded(entry InstructionEntry, loaded Texts) Texts
 	Sample.Loaded(Reloaded, List(Text)) is ("5 pair") and Sample.Loaded(StructLanes.Constructed, ("2 a", "5 b")) is ("5 b")
@@ -121,8 +121,18 @@ IsBuilt(entry InstructionEntry) Boolean
 	if entry.kind is not InstructionType.Invoke or entry.texts(1) is not "from"
 		return false
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
-	let isPlain = reads.Length is entry.texts.Length - 3
-	isPlain and StructLanes.Members(Inliner(types).TypeOf(entry.texts(0))).Length is reads.Length
+	let type = Inliner(types).TypeOf(entry.texts(0))
+	if reads.Length is not entry.texts.Length - 3 or StructLanes(types).Members(type).Length is 0
+		return false
+	IsFull(type, entry.texts.Slice(3, entry.texts.Length - 3))
+IsFull(type TypeEntry, passed Texts) Boolean
+	Sample.IsFull(StructLanes.Pair, ("real", "imaginary"))
+	Sample.IsFull(StructLanes.Pair, List(Text) + "real") is false
+	for type.members
+		if value.IsConstant is false and value.typeName is not in StructLanes.DataLess and value.Name is not in passed
+			if StructLanes.IsLane(value) is false or value.initial.Length is 0
+				return false
+	true
 Typed(entries Texts, name Text) Text
 	Sample.Typed(("pair Pair", "other Strict/Other"), "other") is "Strict/Other"
 	Sample.Typed(("pair Pair"), "pa") is ""
@@ -154,4 +164,4 @@ Element(typeName Text) Text
 	let short = TypeEntry.ShortName(typeName)
 	let plural = short.EndsWith("s") then short.Substring(0, short.Length - 1) else ""
 	let element = Inliner(types).TypeOf(short.StartsWith("List(") then short.Substring(5, short.Length - 6) else plural)
-	StructLanes.Members(element).Length > 0 then element.Name else ""
+	StructLanes(types).Members(element).Length > 0 then element.Name else ""

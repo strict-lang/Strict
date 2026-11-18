@@ -158,18 +158,25 @@ Callees(inspected MlirFunction) List(MlirFunction)
 	for inspected.method.instructions
 		if value.kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, index).IsGpu
 			let isKernel = MlirWholeKernel(inspected, index).IsKernel
-			found = isKernel then found else found + Devices(inspected, index + 1, inspected.method.LoopEndOf(index), 0)
+			let plain = isKernel then List(MlirFunction) else Devices(inspected, index + 1, inspected.method.LoopEndOf(index), 0)
+			found = isKernel then found else found + plain + GuardedCallees(inspected, index)
 	found
+GuardedCallees(inspected MlirFunction, at Number) List(MlirFunction)
+	MlirGpu.GuardedCallees(Doubling.function, 2).Length is 0
+	let loop = MlirGuards(MlirFunction(inspected, Float = "f32", Guarded = at), at)
+	loop.IsUseful then Devices(loop.function, at + 1, inspected.method.LoopEndOf(at), 0) else List(MlirFunction)
 Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(MlirFunction)
 	MlirGpu.Devices(Doubling.function, 0, 7, 0).First.Symbol is "Rows_Twice_1"
 	MlirGpu.Devices(Doubling.function, 0, 7, 3).Length is 0
 	mutable found = List(Mutable(MlirFunction))
 	for Range(first, limit)
-		let entry = inspected.method.instructions(value)
-		let isRounding = MlirDeviceCalls(inspected, value, inspected).IsRounding(entry)
+		let callAt = value
+		let entry = inspected.method.instructions(callAt)
+		let isRounding = MlirDeviceCalls(inspected, callAt, inspected).IsRounding(entry)
 		if depth < 3 and entry.kind is InstructionType.Invoke and isRounding is false
-			for MlirModule(inspected.types, "").Called(inspected, value)
-				found = found + value + Devices(value, 0, value.method.instructions.Length, depth + 1)
+			for MlirModule(inspected.types, "").Called(inspected, callAt)
+				let sub = MlirCalleeGuards(inspected, callAt).WithWhole(value)
+				found = found + sub + Devices(sub, 0, sub.method.instructions.Length, depth + 1)
 	found
 Functions(callees List(MlirFunction)) Texts
 	MlirGpu.Functions(List(MlirFunction) + MlirDevice.Twice.function).First.IndexOf("@Rows_Twice_1_device(") > 0
@@ -178,7 +185,9 @@ Functions(callees List(MlirFunction)) Texts
 	mutable lines = List(Mutable(Text))
 	mutable symbols = List(Mutable(Text))
 	for callees
-		if value.Symbol is not in symbols
-			lines = lines + MlirDevice(value, 0).Function + MlirDevice(MlirFunction(value, Float = "f32"), 0).Function
-			symbols.Add(value.Symbol)
+		let key = value.Symbol + (value.Whole.Length > 0 then "x" else "")
+		if key is not in symbols
+			let plain = value.Whole.Length > 0 then List(Text) else MlirDevice(value, 0).Function
+			lines = lines + plain + MlirDevice(MlirFunction(value, Float = "f32"), 0).Function
+			symbols.Add(key)
 	lines

@@ -50,20 +50,28 @@ OrdinaryOperated(entry InstructionEntry) Texts
 	operands + Rational(entry.kind) + exact.Set(Temp("n"), Temp("d"), target)
 Compared(entry InstructionEntry, float Text, target Text) Texts
 	Single.Compared(Less, "%f", "%c").Last is "    %c = arith.select %x2v, %x2i, %f : i1"
-	Double.Compared(Adding, "%f", "%c").Length is 0
-	Single.Compared(Less, "%f", "%c") is Comparisons
+	Double.Compared(Adding, "%f", "%c").Length is 0 and Single.Compared(Less, "%f", "%c") is Comparisons
 	if exact.Parts.Length is 0
 		return List(Text)
-	let operands = exact.Loaded(Temp("a"), "%r" + entry.payload(1)) + exact.Loaded(Temp("b"), "%r" + entry.payload(2))
-	let whole = Predicate(entry.kind)
-	let compared = "    " + Temp("i") + " = arith.cmpi " + whole + ", " + Temp("l") + ", " + Temp("r") + " : i64"
-	let isKnown = MlirGuards(exact.function, exact.at).IsKnown(("%r" + entry.payload(1), "%r" + entry.payload(2)))
-	let fallback = isKnown then Temp("i") else float
+	let guards = MlirGuards(exact.function, exact.at)
+	let left = "%r" + entry.payload(1)
+	let right = "%r" + entry.payload(2)
+	if guards.IsWhole(left) and guards.IsWhole(right)
+		return WholeCompared(left, right, Predicate(entry.kind), target)
+	SelectedCompared(left, right, Predicate(entry.kind), float, target, guards.IsKnown((left, right)))
+SelectedCompared(left Text, right Text, predicate Text, float Text, target Text, known Boolean) Texts
+	Wrapped.SelectedCompared("%r1", "%r6", "slt", "%f", "%c", true).Last.EndsWith("%x5i : i1")
+	let compared = "    " + Temp("i") + " = arith.cmpi " + predicate + ", " + Temp("l") + ", " + Temp("r") + " : i64"
+	let fallback = known then Temp("i") else float
 	let chosen = "    " + target + " = arith.select " + Temp("v") + ", " + Temp("i") + ", " + fallback + " : i1"
-	operands + Crossed + Valid + compared + chosen
+	exact.Loaded(Temp("a"), left) + exact.Loaded(Temp("b"), right) + Crossed + Valid + compared + chosen
+WholeCompared(left Text, right Text, predicate Text, target Text) Texts
+	MlirRational(MlirExact(MlirGuards.Shifted, 6)).WholeCompared("%r3", "%r1", "slt", "%c").Length is 3
+	let loaded = (MlirTyped.Integer.Load(Temp("a_e"), left + "_e"), MlirTyped.Integer.Load(Temp("b_e"), right + "_e"))
+	loaded + ("    " + target + " = arith.cmpi " + predicate + ", " + Temp("a_e") + ", " + Temp("b_e") + " : i64")
 Valid Texts
 	Single.Valid.Last is "    %x2v = arith.andi %x2w, %x2y : i1"
-	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (1, 2)), "%f", "%c").Last.EndsWith("%x5i : i1")
+	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (1, 2)), "%f", "%c").Last.EndsWith("%x5b_e : i64")
 	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (1, 9)), "%f", "%c").Last.EndsWith("%f : i1")
 	Wrapped.Compared(InstructionEntry.Binary(InstructionType.LessThan, (9, 1)), "%f", "%c").Last.EndsWith("%f : i1")
 	let left = "    " + Temp("w") + " = arith.cmpi ne, " + Temp("a_q") + ", %inexact : i64"

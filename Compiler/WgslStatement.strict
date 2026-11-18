@@ -162,7 +162,7 @@ Recorded(entry InstructionEntry, slots Number) Texts
 Fielded(entry InstructionEntry) Texts
 	WgslStatement(Records, 5).Fielded(MlirDeviceRecords.Field)(1).EndsWith("r3 = n_of(n_item(v_pairsl.x, k5)); }")
 	let list = "v_" + function.method.instructions(MlirKinds(function).Writer(at, entry.payload(1))).texts(0) + "l"
-	let member = StructLanes.Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
+	let member = StructLanes(function.types).Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
 	let position = "k" + at
 	let target = "r" + entry.payload(0)
 	let item = "n_of(n_item(" + list + ".x, " + position + "))"

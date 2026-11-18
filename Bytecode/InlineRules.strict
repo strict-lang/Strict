@@ -1,5 +1,7 @@
 has callee MethodEntry
+has types List(TypeEntry) = List(TypeEntry)
 constant Accessors = ("X", "Y", "Z", "W")
+constant InlinedInstructionLimit = 320
 constant Listing = InlineRules(Inliner.First)
 constant Placeholder = MethodEntry("Cos", List(MemberEntry), "Strict/Number", (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry.Return(0)))
 constant Cached = TypeEntry("Strict/List(Number)", (Inliner.Elements, MemberEntry("X", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry) + Inliner.First)
@@ -139,13 +141,13 @@ IsLaned(type TypeEntry, call InstructionEntry, isReturning Boolean) Boolean
 	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Pair, StructLanes.Constructed, false) is false
 	InlineRules(StructLanes.Squared).IsLaned(StructLanes.Pair, StructLanes.Constructed, true)
 	InlineRules(Converting).IsLaned(StructLanes.Pair, StructLanes.Calling(4), false) is false
-	constant inlinedInstructionLimit = 80
-	let isInstance = IsOwn(call) is false
-	let lanes = StructLanes.Members(type)
-	let isStruct = isInstance and lanes.Length > 0 and IsContained(lanes)
-	let isOwnStruct = isReturning and isInstance is false and IsContained(MemberNames(type) + "value")
-	let isSmall = callee.instructions.Length < inlinedInstructionLimit and callee.Name is not "to"
-	(isStruct or isOwnStruct) and isSmall and IsStraight(isInstance)
+	if callee.instructions.Length >= InlinedInstructionLimit or callee.Name is "to"
+		return false
+	if IsOwn(call)
+		return isReturning and IsStraight(false) and IsContained(MemberNames(type) + "value")
+	if StructLanes(types).Members(type).Length is 0
+		return false
+	IsStraight(true) and IsContained(LaneNesting(types).DirectFields(type))
 IsStraight(isInstance Boolean) Boolean
 	InlineRules(StructLanes.Squared).IsStraight(true)
 	InlineRules(Inliner.Again).IsStraight(true) is false

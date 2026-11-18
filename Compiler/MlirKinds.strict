@@ -55,13 +55,16 @@ Calculated(writer Number, entry InstructionEntry) Text
 	MlirKinds(MlirListOperators.Mixed).Calculated(5, MlirListOperators.Mixed.method.instructions(5)) is "List(Number)"
 	if entry.kind > InstructionType.ArithmeticSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
 		return "Boolean"
-	if entry.kind < InstructionType.StoreSeparator or entry.kind > InstructionType.ArithmeticSeparator
+	if entry.kind < InstructionType.StoreSeparator or entry.kind >= InstructionType.Modulo
 		return "Number"
 	let left = MlirLayout(function).Represented(KindOf(writer, entry.payload(1)))
+	if left.StartsWith("List(") or entry.kind is InstructionType.Add and left is "Text"
+		return left
+	entry.kind is InstructionType.Add then AddedRight(writer, entry) else "Number"
+AddedRight(writer Number, entry InstructionEntry) Text
+	Graded.AddedRight(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
 	let right = MlirLayout(function).Represented(KindOf(writer, entry.payload(2)))
-	if left.StartsWith("List(") or entry.kind is InstructionType.Add and right.StartsWith("List(")
-		return left.StartsWith("List(") then left else right
-	entry.kind is InstructionType.Add and (left is "Text" or right is "Text") then "Text" else "Number"
+	right.StartsWith("List(") or right is "Text" then right else "Number"
 IsText(position Number, register Number) Boolean
 	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (0, 4, 9))) is "Text"
 	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (4, 4, 9))) is "Number"

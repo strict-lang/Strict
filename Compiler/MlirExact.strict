@@ -84,14 +84,20 @@ Parameters(name Text) Texts
 Position(slot Text, target Text) Texts
 	Double.Position("%r1", "%k").Last is "    %k = arith.fptosi %kf : f64 to i64"
 	"    %kd = arith.divsi %k_e, %ks : i64" is in Single.Position("%r1", "%k")
+	MlirExact(MlirGuards.Shifted, 6).Position("%r3", "%k") is List(Text) + "    %k = llvm.load %r3_e : !llvm.ptr -> i64"
 	let loaded = function.Load(target + "f", slot)
 	if Parts.Length is 0
 		return (loaded, "    " + target + " = arith.fptosi " + target + "f : f64 to i64")
+	if MlirGuards(function, at).IsWhole(slot)
+		return List(Text) + MlirTyped.Integer.Load(target, slot + "_e")
+	ReducedPosition(slot, target, loaded)
+ReducedPosition(slot Text, target Text, loaded Text) Texts
+	"    %kd = arith.divsi %k_e, %ks : i64" is in Single.ReducedPosition("%r1", "%k", Single.Load("%kf", "%r1"))
 	let narrow = "    " + target + "n = arith.fptosi " + target + "f : f32 to i32"
 	let whole = "    " + target + "j = arith.extsi " + target + "n : i32 to i64"
 	let valid = "    " + target + "v = arith.cmpi eq, " + target + "_q, %one : i64"
-	let fallback = MlirGuards(function, at).IsWhole(slot) then target + "_e" else target + "j"
-	(loaded, narrow, whole) + Loaded(target, slot) + valid + MlirRational(MlirExact(function, at)).Whole(target, fallback)
+	let prefix = (loaded, narrow, whole) + Loaded(target, slot) + valid
+	prefix + MlirRational(MlirExact(function, at)).Whole(target, target + "j")
 Integer(name Text, operation Text) Text
 	Single.Integer("n", "arith.addi %a, %b") is "    %x2n = arith.addi %a, %b : i64"
 	"    " + Temp(name) + " = " + operation + " : i64"

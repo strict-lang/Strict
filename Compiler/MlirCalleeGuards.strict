@@ -1,0 +1,96 @@
+has function MlirFunction
+has at Number
+constant Shifts = MlirGuards.Shifts
+StoredOrigin(stored Number, seen = List(Text)) Texts
+	MlirCalleeGuards(MlirGuards.Nested, 2).StoredOrigin(4) is ("offset")
+	let entry = function.method.instructions(stored)
+	if entry.kind is InstructionType.StoreConstantToVariable
+		return MlirWholeValues(stored).IsWhole(PayloadDecoder(entry).Value(0)) then List(Text) else List(Text) + "?"
+	MlirGuards(function, at).Origins(stored, entry.payload(0), seen)
+StoreOrigins(first Number, limit Number, name Text, seen = List(Text)) Texts
+	MlirCalleeGuards(MlirGuards.Nested, 2).StoreOrigins(2, 5, "step") is ("offset")
+	mutable result = List(Text)
+	for Range(first, limit)
+		let entry = function.method.instructions(value)
+		if entry.kind is InstructionType.StoreRegisterToVariable and entry.texts(0) is name
+			result = result + MlirGuards(function, at).Origins(value, entry.payload(0), seen)
+		if entry.kind is InstructionType.StoreConstantToVariable and entry.texts.Last is name
+			if MlirWholeValues(value).IsWhole(PayloadDecoder(entry).Value(0)) is false
+				result = result + "?"
+	result
+FreeNumbers Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 2).FreeNumbers is ("offset")
+	for MlirGpuCheck(function, at).Free
+		if MlirKinds(function).VariableKind(at, value) is "Number"
+			value
+Sites(candidates Texts, depth Number) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).Sites(List(Text), 0).Length is 0
+	if depth > 2 or candidates.Length is 0
+		return List(Text)
+	let args = PayloadDecoder(function.method.instructions(at)).Arguments
+	mutable names = List(Text)
+	for MlirModule(function.types, "").Called(function, at)
+		let sub = value.type.Name is function.type.Name then MlirFunction(value, Guarded = -1, Whole = candidates) else value
+		names = names + Resolved(value, args, SubSites(sub, candidates, depth))
+	names
+Resolved(sub MlirFunction, args Numbers, used Texts) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).Resolved(MlirGuards.Shifted, List(Number), List(Text)) is List(Text)
+	let guards = MlirGuards(function, at)
+	mutable result = List(Text)
+	for used
+		let param = sub.method.ParameterNames.Index(value)
+		let found = param >= 0 and param < args.Length then guards.Origins(at, args(param)) else List(Text) + value
+		result = result + guards.Whole(found)
+	result
+SubSites(sub MlirFunction, candidates Texts, depth Number) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).SubSites(MlirGuards.Shifted, List(Text), 0) is ("offset")
+	let guards = MlirGuards(sub, 0)
+	mutable names = List(Text)
+	for sub.method.instructions
+		let origins = guards.Sited(index)
+		if "?" is not in origins
+			names = names + guards.Whole(origins)
+		if value.kind is InstructionType.Invoke
+			names = names + MlirCalleeGuards(sub, index).Sites(PassedNames(sub, index, candidates), depth + 1)
+	names
+PassedNames(caller MlirFunction, callPos Number, candidates Texts) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).PassedNames(MlirDevice.Doubling.function, 4, List(Text)).Length is 0
+	let entry = caller.method.instructions(callPos)
+	if entry.kind is not InstructionType.Invoke
+		return candidates
+	let guards = MlirGuards(caller, callPos)
+	let args = PayloadDecoder(entry).Arguments
+	let sub = MlirModule(caller.types, "").Called(caller, callPos)
+	let members = sub.Length is 0 then candidates else Filtered(candidates, sub.First.method.ParameterNames)
+	members + PassedArgs(args, sub, guards)
+Filtered(candidates Texts, params Texts) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).Filtered(("a", "b"), List(Text) + "a") is List(Text) + "b"
+	for candidates
+		if value is not in params
+			value
+PassedArgs(args Numbers, sub List(MlirFunction), guards MlirGuards) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).PassedArgs(List(Number), List(MlirFunction), Shifts).Length is 0
+	mutable names = List(Text)
+	for args
+		if sub.Length > 0 and index < sub.First.method.parameters.Length and guards.IsWhole("%r" + value)
+			names = names + sub.First.method.parameters(index).Name
+	names
+WithWhole(callee MlirFunction) MlirFunction
+	MlirCalleeGuards(MlirDevice.Doubling.function, 4).WithWhole(MlirGuards.Shifted).Whole.Length is 0
+	let entry = function.method.instructions(at)
+	if entry.kind is not InstructionType.Invoke or function.Guarded < 0 and function.Whole.Length is 0
+		return callee
+	let allowed = function.Whole.Length > 0 then function.Whole else MlirGuards(function, function.Guarded).Parameters
+	let owned = callee.type.Name is function.type.Name then WholeMembers(allowed, callee) else List(Text)
+	let combined = (owned + WholeArguments(PayloadDecoder(entry).Arguments, callee, MlirGuards(function, at))).Unique
+	combined.Length is 0 then callee else MlirFunction(callee, Whole = combined)
+WholeMembers(allowed Texts, callee MlirFunction) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).WholeMembers(List(Text) + "offset", MlirGuards.Shifted).Length is 0
+	for allowed
+		if value is in MlirDeviceMembers(callee).Names
+			value
+WholeArguments(args Numbers, callee MlirFunction, guards MlirGuards) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).WholeArguments(List(Number), MlirGuards.Shifted, Shifts).Length is 0
+	for callee.method.parameters
+		if index < args.Length and guards.IsWhole("%r" + args(index))
+			value.Name

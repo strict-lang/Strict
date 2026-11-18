@@ -64,10 +64,10 @@ Names(method MethodEntry) Texts
 	names
 IsChange(name Text) Boolean
 	Keeping.IsChange(ChangedInstance.Name) and Keeping.IsChange("changed_0") and Keeping.IsChange("changed_12")
-	Keeping.IsChange("changed_X") is false and Keeping.IsChange("changed") is false and Keeping.IsChange("count") is false
+	(Keeping.IsChange("changed_0_high") or Keeping.IsChange("changed_X") or Keeping.IsChange("changed")) is false
 	constant Prefix = "changed_"
-	let isLonger = name.Length > Prefix.Length and name.StartsWith(Prefix)
-	name is ChangedInstance.Name or (isLonger then Tokenizer.IsDigit(name(Prefix.Length)) else false)
+	let isIndexed = name.Length > Prefix.Length and name.StartsWith(Prefix) and name.LastIndexOf("_") is Prefix.Length - 1
+	name is ChangedInstance.Name or (isIndexed then Tokenizer.IsDigit(name(Prefix.Length)) else false)
 Offset(name Text) Number
 	Keeping.Offset(ChangedInstance.Name) is 1
 	Keeping.Offset("changed_2") is 4

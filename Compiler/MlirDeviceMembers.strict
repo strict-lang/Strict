@@ -1,6 +1,7 @@
 has function MlirFunction
 constant Head = MlirFunction(List(TypeEntry) + GpuChoiceSamples.Headed, GpuChoiceSamples.Headed, GpuChoiceSamples.Head)
 constant Heading = MlirDeviceMembers(MlirGpuCheck.Heading.function)
+constant WholeHead = MlirDeviceMembers(MlirFunction(Head, Whole = List(Text) + "heads"))
 Names Texts
 	MlirDeviceMembers(Head).Names is ("heads", "weights")
 	Heading.Names is ("heads", "weights")
@@ -91,13 +92,15 @@ Arguments(prefix Text, isNamed Boolean) Texts
 	mutable names = List(Text)
 	for Names
 		let name = prefix + (isNamed then value else index to Text)
-		names = IsList(value) then names + (name + "_d", name + "_n", name + "_b") else names + name
+		let plain = value is in function.Whole then (name, name + "_e") else List(Text) + name
+		names = IsList(value) then names + (name + "_d", name + "_n", name + "_b") else names + plain
 	names
 Types(float Text) Texts
 	MlirDeviceMembers(Head).Types("f32") is ("f32", "!llvm.ptr", "i64", "i64")
 	mutable types = List(Text)
 	for Names
-		types = IsList(value) then types + MlirTyped.Types else types + float
+		let plain = value is in function.Whole then (float, "i64") else List(Text) + float
+		types = IsList(value) then types + MlirTyped.Types else types + plain
 	types
 Loads(prefix Text, float Text) Texts
 	MlirDeviceMembers(Head).Loads("%x", "f64").Last is "    %x1_b = llvm.load %v_weights_b : !llvm.ptr -> i64"
@@ -111,6 +114,12 @@ Stored(float Text) Texts
 	let slots = Arguments("%v_", true)
 	mutable lines = List(Mutable(Text))
 	for Arguments("%m", false)
-		let exact = types(index) is float then MlirExact(function, 0).Converted(value, float, slots(index)) else List(Text)
+		let exact = ExactStore(value, types(index), float, slots(index), slots)
 		lines = (lines + MlirTyped(types(index)).Store(value, slots(index))) + exact
 	lines
+ExactStore(member Text, type Text, float Text, slot Text, slots Texts) Texts
+	WholeHead.ExactStore("%m0_e", "i64", "f32", "%v_heads_e", ("%v_heads", "%v_heads_e")).First.IndexOf("%v_heads_q") > 0
+	if type is "i64" and slot.EndsWith("_e")
+		return List(Text) + MlirTyped.Integer.Store("%one", slot.Substring(0, slot.Length - 2) + "_q")
+	let needsExact = type is float and slot + "_e" is not in slots
+	needsExact then MlirExact(function, 0).Converted(member, float, slot) else List(Text)

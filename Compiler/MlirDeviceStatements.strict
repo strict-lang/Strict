@@ -156,7 +156,7 @@ Callee MlirFunction
 	Reading.Emitted(13) is "    %d6b = llvm.load %v_input_b : !llvm.ptr -> i64"
 	Reading.Emitted(16) is "    cf.br ^d6done"
 	Calling.Callee.Symbol is "Rows_Twice_1"
-	MlirModule(function.types, "").Called(function, at).First
+	MlirCalleeGuards(function, at).WithWhole(MlirModule(function.types, "").Called(function, at).First)
 Finished(entry InstructionEntry) Texts
 	MlirDeviceStatements(Checked, 5).Finished(Checked.method.instructions(5)).Length is 0
 	MlirDeviceStatements(Absolute.function, 3).Finished(Absolute.function.method.instructions(3)).Length is 2
