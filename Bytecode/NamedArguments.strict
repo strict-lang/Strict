@@ -3,6 +3,7 @@ constant PartMembers = Scope(("buffer", "light", "mask"), ("Number", "Number", "
 constant Constructing = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Number", "0", "0"))
 constant Types = KnownTypes(("Part", "Number"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Constructing, KnownTypes.NoMembers))
 constant Parts = NamedArguments(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
+constant Foreign = NamedArguments(ValueCodegen(Parts.values, target = CallTarget(Types, CallTarget.Greeter, "Strict/Number", List(Text))))
 constant Curving = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Curve", "0", "Curve.Flat"))
 constant CurveTypes = KnownTypes(("Part", "Curve"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Curving, KnownTypes.NoMembers))
 constant Curved = NamedArguments(ValueCodegen(TypeInference(CurveTypes, CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
@@ -75,11 +76,22 @@ Argument(call SyntaxNode, owner Text, prefix Text, name Text) SyntaxNode
 	Parts.Argument(Masked, "Part", "", "light").text is "0"
 	Parts.Argument(Masked, "Part", "", "mask").text is "3"
 	Shined.Argument(SyntaxNode("Call", "Shine"), "Part", "Shine ", "mask").Kind is "Member"
+	Foreign.Argument(SyntaxNode("Call", "Part"), "Part", "", "buffer") to Text is "0"
+	Parts.Argument(SyntaxNode("Call", "Part"), "Part", "", "buffer").Kind is "Identifier"
 	for call.children
 		if value.Kind is "Reassignment" and value.children(0).text is name
 			return value.children(1)
 	let fallback = Fallback(owner, prefix + name)
-	fallback is "" then SyntaxNode("Identifier", name) else Qualified(owner, fallback)
+	fallback is "" then Unset(owner, name) else Qualified(owner, fallback)
+Unset(owner Text, name Text) SyntaxNode
+	Foreign.Unset("Part", "buffer") to Text is "0" and Parts.Unset("Part", "buffer").Kind is "Identifier"
+	Foreign.Unset("Part", "missing").Kind is "Identifier"
+	let type = values.inference.types.MembersOf(owner).TypeOf(name)
+	if owner is TypeEntry.ShortName(values.target.TypeName) or type is not in ("Number", "Text", "Boolean")
+		return SyntaxNode("Identifier", name)
+	if type is "Number"
+		return SyntaxNode("Number", "0")
+	type is "Text" then SyntaxNode("Text", "\"\"") else SyntaxNode("Boolean", "false")
 Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
 	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1) to Text is "Shine(1, 0, Curve.Flat)"
 	Shined.Defaulted(SyntaxParser(Tokenizer("Shine(1)").Tokens).Parse, "Part", 0) to Text is "Shine(1, Curve.Flat)"
