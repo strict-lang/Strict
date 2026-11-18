@@ -5486,6 +5486,33 @@
   ^word:
     %value = llvm.call @strict_word(%at) : (i64) -> i64
     %next = arith.addi %at, %eight : i64
+    // a span is one 8 byte value, tag 32765 in bits 48-63. A 4 byte word (wasm) holds the tag in its own top 16
+    // bits, so the 48 bit test below never sees it and a full collection frees the window. The high half is at
+    // 4 mod 8; the low half is the word before it. Seeing the window keeps the text, MossWeb's seed is such a span
+    %spanFour = arith.constant 4 : i64
+    %spanShift = arith.constant 16 : i64
+    %spanMask = arith.constant 65535 : i64
+    %spanHalfTag = arith.constant 32765 : i64
+    %spanWide = arith.constant 32 : i64
+    %isNarrowWord = arith.cmpi eq, %eight, %spanFour : i64
+    %narrowTag = arith.shrui %value, %spanShift : i64
+    %narrowSpan = arith.andi %narrowTag, %spanMask : i64
+    %isSpanHalf = arith.cmpi eq, %narrowSpan, %spanHalfTag : i64
+    %slot = arith.andi %at, %spanFour : i64
+    %isHighSlot = arith.cmpi eq, %slot, %spanFour : i64
+    %lowAt = arith.subi %at, %spanFour : i64
+    %hasLow = arith.cmpi uge, %lowAt, %aligned : i64
+    %isWasmSpan = arith.andi %isNarrowWord, %isSpanHalf : i1
+    %isAlignedSpan = arith.andi %isWasmSpan, %isHighSlot : i1
+    %isKeptSpan = arith.andi %isAlignedSpan, %hasLow : i1
+    cf.cond_br %isKeptSpan, ^spanHalf, ^classify
+  ^spanHalf:
+    %lowHalf = llvm.call @strict_word(%lowAt) : (i64) -> i64
+    %highBits = arith.shli %value, %spanWide : i64
+    %spanBits = arith.ori %highBits, %lowHalf : i64
+    func.call @strict_span_seen(%spanBits) : (i64) -> ()
+    cf.br ^classify
+  ^classify:
     %word = arith.andi %value, %address : i64
     %afterStart = arith.cmpi uge, %word, %skipStart : i64
     %beforeEnd = arith.cmpi ult, %word, %skipEnd : i64
