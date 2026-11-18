@@ -77,3 +77,11 @@ Failed(iterable VmValue, ending VmValue) VmValue
 	Failed(VmValue.OfNumber(3), VmValue.OfNumber(5)).kind is "None"
 	let failing = iterable.kind is in VmValue.ErrorKinds then iterable else ending
 	failing.kind is in VmValue.ErrorKinds then failing else VmValue.None
+Returned(slots List(VmValue)) List(VmValue)
+	Returned(Frame.Broken)(Frame.ResultSlot).kind is "Strict/Error"
+	Returned(Frame.Listed) is Frame.Listed
+	if slots(Frame.LoopSlot).kind is not in VmValue.ErrorKinds
+		return slots
+	mutable failed = slots
+	failed(Frame.ResultSlot) = slots(Frame.LoopSlot)
+	failed

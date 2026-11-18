@@ -9,3 +9,5 @@ Expired Text
 	""
 Overran(elapsed Number, place Text) Text
 Overrun(elapsed Number) Number
+Watched(place Text, isSlow Boolean) Number
+Busy(depth Number, step Number) Number

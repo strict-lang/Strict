@@ -23,7 +23,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = FrameSlots.Rooted(arguments)
 	mutable position = 0
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
-		if position >= method.instructions.Length or (index % CheckSteps is End then MutationCache.IsLate(machine) else false)
+		if position >= method.instructions.Length or (index % CheckSteps is End then IsLate(index, position) else false)
 			return position >= method.instructions.Length then Ended(slots) else MutationCache.Exhausted(slots, machine.deadline)
 		let entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
@@ -37,7 +37,15 @@ Ended(slots List(VmValue)) List(VmValue)
 	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0, Listed), 0, Listed).items(1).items.Length is 1
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
 	let stopped = machine.deadline > 0 or depth is 0 then MutationCache.Stopped(machine.deadline) else ""
-	stopped is "" then Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
+	stopped is "" then Looping.Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
+IsLate(step Number, position Number) Boolean
+	Twice.IsLate(End, 0) is false
+	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").IsLate(End, 0)
+	if TestBudget.Busy(depth, step) is 1
+		let line = method.instructions(position.Clamp(0, method.instructions.Length - 1)).line
+		let place = owner.Split("/").Last + "." + method.Name + " line " + line
+		machine.Logged("Slow: " + place + " has computed 1 s on the VM, it is stopped after 10 s, mark its tests native")
+	MutationCache.IsLate(machine)
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	Twice.Value(InstructionEntry(InstructionType.LoadVariableToRegister, "a", (6, 8)), 0, Listed).number is 5
 	Twice.Value(InstructionEntry.Binary(InstructionType.LessThan, (6, 8)), 0, Listed).IsTrue
@@ -165,14 +173,6 @@ Entered(entry InstructionEntry, slots List(VmValue), position Number) Number
 	if slots(LoopSlot).kind is in VmValue.ErrorKinds
 		return method.instructions.Length
 	Looping.IsEmpty(slots(entry.payload(0)), Ending(entry, slots)) then method.LoopEndOf(position) + 1 else position + 1
-Returned(slots List(VmValue)) List(VmValue)
-	Twice.Returned(Broken)(ResultSlot).kind is "Strict/Error"
-	Twice.Returned(Listed) is Listed
-	if slots(LoopSlot).kind is not in VmValue.ErrorKinds
-		return slots
-	mutable failed = slots
-	failed(Frame.ResultSlot) = slots(LoopSlot)
-	failed
 Ending(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Ending(InstructionEntry.LoopBegin(6, 8), Listed).number is 5
 	Twice.Ending(InstructionEntry.LoopBegin(6, -1), Listed).kind is "None"
