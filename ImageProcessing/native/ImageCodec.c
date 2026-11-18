@@ -285,8 +285,8 @@ static int Striped(const char* path, double pixels, int width, int height, int q
 	for (int index = 0; index < count; index++)
 	{
 		int left = height - index * rows;
-		strips[index] = (Strip){ pixels, bytes, 0, (size_t)index * rows * width * 3, 0, 0, width, left < rows ? left : rows,
-			quality, 0 };
+		strips[index] = (Strip){ pixels, bytes, 0, (size_t)index * rows * width * 3, 0, 0, 0, width,
+			left < rows ? left : rows, quality, 0 };
 	}
 	EncodedAll(strips, count);
 	int written = 1;

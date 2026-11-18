@@ -53,11 +53,13 @@ Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 Included(line Text) Boolean
 	TestCodegen(Even.types, false, "*").Included("Generated Numbers native") is false
 	TestCodegen(Even.types, false, Everything).Included("Generated Numbers native")
+	TestCodegen(Even.types, false, Everything + "Generated").Included("Generated Numbers native")
+	TestCodegen(Even.types, false, Everything + "Other").Included("Generated Numbers native") is false
 	TestCodegen(Even.types, false, "").Included("Loaded Numbers slow") is false
 	Even.Included("IsEven(number Number) Boolean")
 	let header = HeaderTokens(Tokenizer(line).Tokens)
-	let matched = selection is in ("", "*", Everything) or header.tokens(0) is selection
-	let isAllowed = header.tokens.Last is not "native" or selection is Everything
+	let matched = selection is in ("", "*", Everything, header.tokens(0), Everything + header.tokens(0))
+	let isAllowed = header.tokens.Last is not "native" or selection.StartsWith(Everything)
 	matched and isAllowed and (selection is not "" or TypeSource.IsSlow(types.fullName, header) is false)
 Method(start Number, block CodeBlock) CodeBlock slow
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
@@ -119,7 +121,7 @@ Passed(compared CodeBlock, place Text) CodeBlock slow
 	Budgeted(shown, place).Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
 Budgeted(block CodeBlock, place Text) CodeBlock
 	Even.Budgeted(Counter, "x") is Counter
-	if block.scope.TypeOf(" slow test") is not "Budgeted" or selection is Everything
+	if block.scope.TypeOf(" slow test") is not "Budgeted" or selection.StartsWith(Everything)
 		return block
 	let elapsed = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "elapsed"))
 	let named = elapsed.Load(InstructionEntry.LoadText(elapsed.register, place))

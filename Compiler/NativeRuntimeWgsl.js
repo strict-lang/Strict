@@ -679,7 +679,8 @@ fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) g
 		const path = stream.path, isWritten = (stream.flags & 3) !== 0 && path && !path.startsWith('/dev/');
 		const result = closed(stream);
 		if (isWritten && runtimeInitialized && typeof document !== 'undefined') {
-			const data = FS.readFile(path), name = path.split('/').pop();
+			const data = FS.readFile(path), writtenName = path.split('/').pop();
+			const name = writtenName.endsWith('.part') ? writtenName.slice(0, -5) : writtenName;
 			const link = document.createElement('a'), url = URL.createObjectURL(new Blob([data]));
 			link.href = url;
 			link.download = name;
