@@ -131,18 +131,22 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	let member = owner.members(index)
 	if member.IsConstant
 		return Constants(value).Member(owner, index)
-	if owner.Name is instance.kind
-		return instance.Member(index)
-	Ownership(owner, instance.kind) > 0 then instance.Member(index) else instance.As(member.typeName)
+	let mode = Ownership(owner, instance.kind)
+	if mode is 2 and index < instance.items.Length
+		return instance.items(index)
+	mode > 0 then instance.Member(index) else instance.As(member.typeName)
 Ownership(type TypeEntry, kind Text) Number
 	Hello.Ownership(Paired, "Strict/Pair(Number)") > 0
 	Hello.Ownership(Paired, "Strict/Other") is 0
 	Hello.Ownership(Paired, "List") is 1
 	Hello.Ownership(Doubler, "Strict/Doubler") is 2
-	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
-	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
-	if type.Name is kind
-		return type.Name.IndexOf("List") < 0 then 2 else (TypeEntry.Based(type.Name) is "List" then 1 else 2)
+	Hello.Ownership(TypeEntry(Doubler, Name = "Doubler"), "Strict/Doubler") is 2
+	if kind is "None"
+		return 0
+	let long = kind.Length > type.Name.Length then kind else type.Name
+	let short = kind.Length > type.Name.Length then type.Name else kind
+	if long is short or long.Length is short.Length + 7 and long.StartsWith("Strict/") and long.EndsWith(short)
+		return short.IndexOf("List") < 0 then 2 else (TypeEntry.Based(type.Name) is "List" then 1 else 2)
 	kind is "List" then 1 else TypeEntry.Based(type.Name) is TypeEntry.Based(kind) then 1 else 0
 Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
@@ -180,6 +184,8 @@ Routed(call Invocation) VmValue
 	skip then call.Native(Natives(types, folder)) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
+	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
+	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
 	let type = types(route)
 	let prototype = route < prototypes.entries.Length then prototypes.At(route) else Natives(types).Fresh(type)
 	if (method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false) is false
@@ -192,11 +198,10 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 	Machine(List(TypeEntry) + TypeEntry.CharacterEntry).Field(Coded, VmValue.OfText("a")).number is 97
 	let name = entry.texts.Length > 1 then entry.texts.Last else instance.kind
 	let owner = name is in places then types(places(name)) else Natives(types).TypeOf(name)
-	mutable found = instance
 	for owner.members
 		if value.Name is entry.texts(0)
-			found = MemberValue(owner, instance, index)
-	found
+			return MemberValue(owner, instance, index)
+	instance
 Logged(message Text)
 	Hello.Logged("") is not Error
 	Machine(Hello, isQuiet = true).Logged("a") is not Error
