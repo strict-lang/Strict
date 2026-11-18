@@ -19554,6 +19554,23 @@
     %work = arith.maxui %sourceWork, %rowsWork : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
     %enough = arith.cmpi sge, %work, %minimum : i64
+    // a loop over numbers with little work per element (less than 16 times a doubling, MlirCost.Shift) is done sooner by
+    // the CPU threads than its lists are copied to the GPU and back (10M remainders: 0.7 ns each against 4 to 10), so it
+    // only runs there when its lists already live there or STRICT_GPU=all asks for everything
+    %cheapLoopShift = arith.constant 4 : i64
+    %cheapLoopRows = arith.constant 2 : i64
+    %cheapLoopWork = arith.cmpi ult, %workShift, %cheapLoopShift : i64
+    %cheapLoopUnrowed = arith.cmpi eq, %rowsWork, %none : i64
+    %cheapLoopListed = arith.cmpi ne, %kind, %cheapLoopRows : i64
+    %cheapLoopFlat = arith.andi %cheapLoopUnrowed, %cheapLoopListed : i1
+    %cheapLoopLight = arith.andi %cheapLoopWork, %cheapLoopFlat : i1
+    %cheapLoopChosen = arith.cmpi ne, %minimum, %one : i64
+    %cheapLoopStays = arith.andi %cheapLoopLight, %cheapLoopChosen : i1
+    cf.cond_br %cheapLoopStays, ^cheapLoop, ^sized
+  ^cheapLoop:
+    %cheapLoopCold = arith.constant false
+    cf.br ^inputs(%cheapLoopCold : i1)
+  ^sized:
     cf.cond_br %enough, ^ready, ^small
   ^small:
     %never = arith.constant 9223372036854775807 : i64
