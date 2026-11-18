@@ -1,0 +1,77 @@
+has lines Texts
+constant Reading = ErrorValues(("Read(path Text) Data", "\tFile(path).Exists then Data(path) else Error(\"FileNotFound\")"))
+constant Seeded = ("Seeded(seed Number) Twister", "\tSeeded(-1) is Error(\"InvalidSeed\")", "\tif seed < 0", "\t\treturn Error(\"InvalidSeed\")", "\tTwister")
+constant Seeding = ErrorValues(Seeded)
+constant Detailed = ErrorValues(("Read(path Text) Data", "\tFile(path).Exists then Data(path) else Error(\"FileNotFound: \" + path)"))
+constant Emptied = ("Read(data Bytes, name Text) Data", "\tif data.Length is 0", "\t\treturn Error(\"NoData\")", "\tfor data", "\t\treturn Error(\"A\")")
+constant Other = ErrorValues(Emptied)
+constant Valued = ("Text", "Number")
+constant Told = "ErrorMustIncludeValue: FileNotFound knows path, write Error(\"FileNotFound: \" + path)"
+Issues ValidationIssues
+	Reading.Issues.First to Text is Told
+	Seeding.Issues.Length is 1 and Seeding.Issues.First.Line is 4
+	Detailed.Issues.Length is 0 and Other.Issues.Length is 0
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		let known = Known(index)
+		if known is not ""
+			let name = Raised(value)
+			let fix = name + " knows " + known + ", write Error(\"" + name + ": \" + " + known + ")"
+			issues.Add(ValidationIssue("ErrorMustIncludeValue", fix, index + 1))
+	issues
+Raised(line Text) Text
+	Reading.Raised(Reading.lines(1)) is "FileNotFound" and Seeding.Raised(Seeded(1)) is ""
+	Seeding.Raised(Seeded(3)) is "InvalidSeed" and Detailed.Raised(Detailed.lines(1)) is ""
+	Seeding.Raised("\tError(\"Missing\")") is "Missing" and Seeding.Raised("\tlet x = Error(\"Missing\")") is ""
+	let at = line.IndexOf("Error(\"")
+	if at < 0
+		return ""
+	let before = line.Substring(0, at).Trim
+	let rest = line.Substring(at + 7, line.Length - at - 7)
+	let name = rest.Substring(0, rest.IndexOf("\""))
+	let isRaised = before is "" or before.EndsWith("return") or before.EndsWith(" then") or before.EndsWith(" else")
+	isRaised and rest.StartsWith(name + "\")") and name.IndexOf(" ") < 0 and name.IndexOf(":") < 0 then name else ""
+Condition(at Number) Text
+	Reading.Condition(1) is "\tFile(path).Exists" and Seeding.Condition(3) is "\tif seed < 0"
+	Other.Condition(4) is "" and Seeding.Condition(4) is ""
+	let split = lines(at).IndexOf(" then ")
+	if split >= 0
+		return lines(at).Substring(0, split)
+	let indent = BodyParser.Indent(lines(at))
+	for Range(0, at).Reverse
+		if BodyParser.Indent(lines(value)) < indent
+			return lines(value).Trim.StartsWith("if ") then lines(value) else ""
+	""
+Parameters(at Number) Texts
+	Reading.Parameters(1) is ("path") and Other.Parameters(2) is ("name") and Seeding.Parameters(3) is ("seed")
+	for Range(0, at).Reverse
+		if lines(value).StartsWith("\t") is false
+			return Named(HeaderTokens(Tokenizer(lines(value)).Tokens))
+	List(Text)
+Named(header HeaderTokens) Texts
+	Reading.Named(HeaderTokens.Made) is ("count") and Reading.Named(HeaderTokens.Loading) is ("path")
+	let types = header.ParameterTypes
+	for header.ParameterNames
+		if types(index) is in Valued
+			value
+Known(at Number) Text
+	Reading.Known(1) is "path" and Seeding.Known(3) is "seed" and Seeding.Known(1) is ""
+	Other.Known(2) is "" and Detailed.Known(1) is ""
+	let condition = Condition(at).Trim
+	if Raised(lines(at)) is "" or condition.IndexOf(" is Error") >= 0
+		return ""
+	let used = Tokenizer(condition).Tokens
+	for Parameters(at)
+		if IsDirect(used, value)
+			return value
+	""
+IsDirect(used Texts, name Text) Boolean
+	Reading.IsDirect(("File", "(", "path", ")"), "path")
+	Reading.IsDirect(("File", "(", "path", "+", "x", ")"), "path") is false
+	Reading.IsDirect(("x", "+", "path"), "path") is false and Reading.IsDirect(List(Text) + "path", "path")
+	Reading.IsDirect(("a", "+", "path", "or", "path", "is", "b"), "path")
+	for used
+		let isJoined = index > 0 and used(index - 1) is "+" or index + 1 < used.Length and used(index + 1) is "+"
+		if value is name and isJoined is false
+			return true
+	false

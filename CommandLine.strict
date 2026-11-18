@@ -19,14 +19,13 @@ Numeric(name Text, default Number) Number
 	Sample.Numeric("count", 1) is 8
 	Sample.Numeric("seed", 0) is -3
 	Sample.Numeric("width", 720) is 720
-	CommandLine(("--count", "many"), List(Text) + "count").Numeric("count", 1) is Error("InvalidNumber:--count")
+	CommandLine(("--count", "many"), List(Text) + "count").Numeric("count", 1) is Error("InvalidNumber: --count many")
 	let text = Option(name, "")
 	if text is ""
 		return default
 	let number = text to Number
-	if number is Error
-		return Error("InvalidNumber:" + Spelled(name))
-	number.IsFinite and number to Text is text then number else Error("InvalidNumber:" + Spelled(name))
+	let isExact = number is Error then false else number.IsFinite and number to Text is text
+	isExact then number else Error("InvalidNumber: " + Spelled(name) + " " + text)
 Flag(name Text, default Boolean) Boolean
 	Sample.Flag("jsonOutput", false)
 	Sample.Flag("width", false) is false

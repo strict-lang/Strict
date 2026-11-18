@@ -15287,7 +15287,7 @@
     %result = func.call @strict_degrees(%angle) : (f64) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_invalid_number("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00InvalidNumber\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_invalid_number("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00InvalidNumber: \00") : !llvm.array<32 x i8>
   // all of the text has to be the number, strtod alone reads "abc" as 0 and "12 monkeys" as 12
   func.func private @strict_text_number(%text: f64) -> f64 {
     %a = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
@@ -15306,7 +15306,10 @@
   ^invalid:
     %nameLengths = llvm.mlir.addressof @strict_invalid_number : !llvm.ptr
     %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    %nameBits = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    %shown = func.call @strict_trace_cut(%text) : (f64) -> f64
+    %full = func.call @strict_text_concat(%nameBits, %shown) : (f64, f64) -> f64
+    %error = func.call @strict_error_text(%full) : (f64) -> f64
     return %error : f64
   }
   llvm.mlir.global internal constant @strict_true_text("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00true\00") : !llvm.array<21 x i8>

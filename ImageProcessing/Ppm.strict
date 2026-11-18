@@ -5,7 +5,7 @@ constant Whitespace = (9, 10, 13, Character.Space)
 constant MaximumLine = (10, 50, 53, 53, 10)
 Loaded(path Text) Bitmap slow
 	Ppm.Loaded("ImageProcessing/Missing.ppm") is Error
-	File(path).Exists then Decoded(File(path).ReadBytes) else Error("MissingFile")
+	File(path).Exists then Decoded(File(path).ReadBytes) else Error("MissingFile: " + path)
 Decoded(bytes Bytes) Bitmap
 	Ppm.Decoded(Sample).Colors is (Color(1, 2, 3), Color(4, 5, 6))
 	Ppm.Decoded(Sample).Height is 1
