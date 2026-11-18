@@ -8,6 +8,7 @@ constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + LaneFlow.Pairs,
 constant Holding = MlirFunction((StructLanes.Pair, Holder), Holder, Reals)
 constant Sample = MlirDeviceRecords(Holding, 4)
 constant Fielding = MlirDeviceRecords(Holding, 5)
+constant Singles = MlirFunction(Holding, Float = "f32")
 constant IndexedOffset = ("    %d4kf = llvm.load %r1 : !llvm.ptr -> f64", "    %d4k = arith.fptosi %d4kf : f64 to i64", "    %d4q = arith.constant 2 : i64", "    %d4s = arith.muli %d4k, %d4q : i64")
 constant IndexedBounds = ("    %d4n = llvm.load %v_pairs_n : !llvm.ptr -> i64", "    %d4o = arith.cmpi ult, %d4s, %d4n : i64", "    cf.cond_br %d4o, ^d4read, ^d4fail")
 constant IndexedFailure = ("  ^d4fail:", "    %d4f = arith.constant 1 : i64", "    llvm.store %d4f, %failed : i64, !llvm.ptr", "    cf.br ^d4done")
@@ -27,27 +28,39 @@ Slots(kind Text) Number
 Indexed(entry InstructionEntry) Texts
 	"    %d4s = arith.muli %d4k, %d4q : i64" is in Sample.Indexed(LaneFlow.Picking)
 	Sample.Indexed(LaneFlow.Picking).Last is "  ^d4done:"
+	"    llvm.store %one, %r2_q : i64, !llvm.ptr" is in MlirDeviceRecords(Singles, 4).Indexed(LaneFlow.Picking)
 	let slots = Slots(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	if slots is 0
 		return MlirDeviceStatements(function, at).Indexed(entry)
 	let position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	let factor = MlirTyped.Integer.Constant(Temp("q"), slots to Text)
 	let scaled = Line("s", "arith.muli " + Temp("k") + ", " + Temp("q") + " : i64")
+	let whole = MlirExact(function, at).Set(Temp("s"), "%one", "%r" + entry.payload(0))
+	let checked = Checked(Temp("s"), "%v_" + entry.texts(0)) + MlirDeviceStatements(function, at).Failed
+	position + (factor, scaled) + whole + checked + Kept("%r" + entry.payload(0))
+Kept(slot Text) Texts
+	Sample.Kept("%r2")(1) is "    %d4 = arith.sitofp %d4s : i64 to f64"
 	let float = Line("", "arith.sitofp " + Temp("s") + " : i64 to " + function.Float)
-	let stored = (function.Store(Temp(""), "%r" + entry.payload(0)), "    cf.br ^d" + at + "done", "  ^d" + at + "done:")
-	let failed = MlirDeviceStatements(function, at).Failed + ("  ^d" + at + "read:")
-	position + (factor, scaled) + Checked(Temp("s"), "%v_" + entry.texts(0)) + failed + float + stored
+	let done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
+	("  ^d" + at + "read:", float, MlirTyped(function.Float).Store(Temp(""), slot)) + done
 Fielded(entry InstructionEntry) Texts
 	"    %d5c = arith.constant 1 : i64" is in Fielding.Fielded(Field)
 	Text.Combine(Fielding.Fielded(Field)).IndexOf("%v_pairs_d") > 0
+	"    %d5o = arith.cmpi ult, %d5p, %d5n : i64" is in MlirDeviceRecords(Singles, 5).Fielded(Field)
 	let list = "%v_" + function.method.instructions(MlirKinds(function).Writer(at, entry.payload(1))).texts(0)
 	let member = StructLanes.Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
-	let loaded = function.Load(Temp("v"), "%r" + entry.payload(1))
-	let start = Line("p", "arith.fptosi " + Temp("v") + " : " + function.Float + " to i64")
 	let offset = MlirTyped.Integer.Constant(Temp("c"), member to Text)
 	let added = Line("k", "arith.addi " + Temp("p") + ", " + Temp("c") + " : i64")
 	let device = MlirDeviceStatements(function, at)
-	(loaded, start, offset, added) + Checked(Temp("k"), list) + device.Failed + device.Read(list, "%r" + entry.payload(0))
+	let read = device.Failed + device.Read(list, "%r" + entry.payload(0))
+	let bound = MlirExact(function, at).Parts.Length is 0 then Temp("k") else Temp("p")
+	Start("%r" + entry.payload(1)) + (offset, added) + Checked(bound, list) + read
+Start(slot Text) Texts
+	Fielding.Start("%r2").Last is "    %d5p = arith.fptosi %d5v : f64 to i64"
+	MlirDeviceRecords(Singles, 5).Start("%r2") is List(Text) + "    %d5p = llvm.load %r2_e : !llvm.ptr -> i64"
+	if MlirExact(function, at).Parts.Length > 0
+		return List(Text) + MlirTyped.Integer.Load(Temp("p"), slot + "_e")
+	(function.Load(Temp("v"), slot), Line("p", "arith.fptosi " + Temp("v") + " : " + function.Float + " to i64"))
 Checked(position Text, list Text) Texts
 	Sample.Checked("%p", "%v_pairs").Last is "    cf.cond_br %d4o, ^d4read, ^d4fail"
 	let compared = Line("o", "arith.cmpi ult, " + position + ", " + Temp("n") + " : i64")

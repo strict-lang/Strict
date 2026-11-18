@@ -7,6 +7,8 @@ constant Reassociated = " fastmath<reassoc,contract>"
 constant AnyError = " = func.call @strict_any_error() : () -> f64"
 constant ListKinds = (InstructionType.IndexCall, InstructionType.InvokeWriteToList, InstructionType.CopyList, InstructionType.InvokeRemove)
 constant Exact = "    %t0c = arith.select %x0v, %x0i, %t0f : i1"
+constant Flagged = ("    %t0d = arith.uitofp %f : i1 to f32", "    llvm.store %t0d, %r2 : f32, !llvm.ptr", "    %t0w = arith.extui %f : i1 to i64") + MlirExact.Single.Set("%t0w", "%one", "%r2")
+constant Singled = MlirStatements(MlirFunction(Copy.function, Float = "f32"), 0)
 constant LoadingBranch = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1))
 constant LoadingEnds = (InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpEnd, 1), InstructionEntry.Return(1))
 constant Loading = MlirStatements(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", LoadingBranch + LoadingEnds)), 0)
@@ -145,8 +147,7 @@ Predicate(kind Number) Text
 	kind is InstructionType.NotEqual then "une" else kind is InstructionType.LessThan then "olt" else "ogt"
 Compared(entry InstructionEntry, operands Text) Texts
 	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
-	constant single = MlirStatements(MlirFunction(Copy.function, Float = "f32"), 0)
-	Exact is in single.Compared(InstructionEntry.Binary(InstructionType.LessThan, (0, 1)), "%a, %b")
+	Exact is in Singled.Compared(InstructionEntry.Binary(InstructionType.LessThan, (0, 1)), "%a, %b")
 	let exact = MlirRational(MlirExact(function, position)).Compared(entry, Temp("f"), Temp("") + "c")
 	let compared = Temp("") + (exact.Length is 0 then "c" else "f")
 	let compare = "    " + compared + " = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : " + function.Float
@@ -154,5 +155,11 @@ Compared(entry InstructionEntry, operands Text) Texts
 	entry.payload(0) is not 3 then flagged else flagged + Numbered(Temp("c"), entry)
 Numbered(flag Text, entry InstructionEntry) Texts
 	Copy.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))).Length is 2
+	Singled.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))) is Flagged
 	let number = "    " + Temp("d") + " = arith.uitofp " + flag + " : i1 to " + function.Float
-	(number, function.Store(Temp("d"), "%r" + entry.payload(3)))
+	let slot = "%r" + entry.payload(3)
+	let exact = MlirExact(function, position)
+	if exact.Parts.Length is 0
+		return (number, function.Store(Temp("d"), slot))
+	let whole = "    " + Temp("w") + " = arith.extui " + flag + " : i1 to i64"
+	(number, MlirTyped(function.Float).Store(Temp("d"), slot), whole) + exact.Set(Temp("w"), "%one", slot)
