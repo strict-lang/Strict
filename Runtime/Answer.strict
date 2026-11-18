@@ -6,6 +6,7 @@ has files Texts = List(Text)
 has Types List(TypeEntry) = List(TypeEntry)
 has script ScriptCache = ScriptCache.Empty
 has constants Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
+has inferred InferenceCache = InferenceCache.None
 constant Sources = ("./Character.strict", "./Number.strict")
 constant Known = Dictionary(("Strict/Character:", TypeEntry.CharacterEntry))
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("items", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
@@ -17,7 +18,7 @@ Stamped(started Number) Answer
 	for files
 		let modified = File(value).Modified
 		stamped(value) = modified < started then modified else -1
-	Answer(code, known, folder, stamped, files, Types, script, constants)
+	Answer(value, stamps = stamped)
 Fresh(current Text) Dictionary(Text, TypeEntry)
 	Character.Fresh("elsewhere").Length is 0
 	Character.Fresh(".").Length is 1
@@ -49,6 +50,7 @@ Carried(last Answer) Answer
 	Character.Carried(Answer(0, Known)).files is Sources
 	Answer(0, Known, script = ScriptCache.Sample).Carried(Character).script.IsFresh(".", ".")
 	let kept = script.files.Length > 0 then script else last.script
+	let inference = inferred.entries.Length is 0 then last.inferred else inferred
 	if files.Length > 0
-		return Answer(code, known, folder, stamps, files, Types, kept, constants)
-	Answer(code, known, last.folder, last.stamps, last.files, Types, kept, constants)
+		return Answer(value, script = kept, inferred = inference)
+	Answer(value, folder = last.folder, stamps = last.stamps, files = last.files, script = kept, inferred = inference)

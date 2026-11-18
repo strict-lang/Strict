@@ -1,0 +1,85 @@
+has folder Text
+has base Inferring
+has stamps Numbers
+has raw TypeInference
+has refined TypeInference
+has mentioned Texts
+has joined TypeInference
+constant Nothing = ResolveCheck.Counting
+constant Empty = KeptInference("", Inferring.None, List(Number), Nothing, Nothing, List(Text), Nothing)
+constant Pair = ("Logger.strict", "TextWriter.strict")
+constant Swapped = ("TextWriter.strict", "Logger.strict")
+constant Writer = List(Text) + "TextWriter.strict"
+constant Loggers = Empty.Of(Pair, "Logger.strict")
+constant One = List(Scope) + KnownTypes.NoMembers
+constant Counted = TypeInference(KnownTypes(List(Text) + "TextWriter", List(Scope) + KnownTypes.CountMembers, One, One), One)
+constant Doctored = KeptInference(Loggers, raw = Counted, refined = Counted)
+Of(files Texts, path Text) KeptInference
+	Loggers.joined is ResolveCheck.Inference(Pair) and Loggers.base.files is Writer
+	Loggers.Of(Swapped, "Logger.strict").joined is ResolveCheck.Inference(Swapped)
+	Doctored.Of(Pair, "Logger.strict").joined.types.members(1) is KnownTypes.CountMembers
+	Empty.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
+	let at = files.Index(path)
+	let rest = Rest(files, path)
+	let isKept = IsKept(rest)
+	let names = isKept then mentioned else Mentioned(rest)
+	let name = ResolveCheck.TypeName(path)
+	if at < 0 or name is in names or name + "s" is in names
+		return KeptInference(value, joined = ResolveCheck.Inference(files))
+	(isKept then value else Fresh(rest, names)).Joined(files, at)
+IsKept(rest Texts) Boolean
+	Loggers.IsKept(Writer) and Empty.IsKept(List(Text)) is false
+	Loggers.IsKept(List(Text) + "Text.strict") is false
+	KeptInference(Loggers, stamps = List(Number) + 1).IsKept(Writer) is false
+	Fits(rest) then Stamps(rest) is stamps else false
+Fits(rest Texts) Boolean
+	Loggers.Fits(Writer) and Loggers.Fits(Pair) is false and Empty.Fits(List(Text)) is false
+	folder is Directory.Current and rest is base.files
+Rest(files Texts, path Text) Texts
+	Empty.Rest(Pair, "Logger.strict") is Writer and Empty.Rest(Pair, "Text.strict") is Pair
+	let at = files.Index(path)
+	at < 0 then files else files.Slice(0, at) + files.Slice(at + 1, files.Length - at - 1)
+Stamps(sources Texts) Numbers
+	Empty.Stamps(List(Text) + "Missing.strict") is (0)
+	for sources
+		File(value).Modified
+Mentioned(sources Texts) Texts
+	Empty.Mentioned(Pair).Slice(0, 3) is ("Logger", "TextWriter", "TextWriter")
+	"Logger" is not in Empty.Mentioned(Writer)
+	mutable names = ResolveCheck.TypeNames(sources)
+	for sources
+		names = names + SourceFiles(".").Mentioned(value)
+	names
+Fresh(rest Texts, names Texts) KeptInference
+	Empty.Fresh(Writer, List(Text)).refined is ResolveCheck.Inference(Writer)
+	Empty.Fresh(Writer, List(Text)).IsKept(Writer)
+	let current = Stamps(rest)
+	let shapes = BuildProfile(Logger).Shapes(rest)
+	let inferring = Inferring(rest, shapes, ResolveCheck.Generics(rest, shapes))
+	let inferred = inferring.Raw
+	KeptInference(Directory.Current, inferring, current, inferred, inferring.Refined(inferred), names, inferred)
+Joined(files Texts, at Number) KeptInference
+	Loggers.Joined(Swapped, 1).joined.types.names is ("TextWriter", "Logger")
+	let shape = ResolveCheck.Shapes(List(Text) + files(at)).First
+	let name = ResolveCheck.TypeName(files(at))
+	let templates = shape.UsesGenerics then base.templates + name else base.templates
+	let leaf = Inferring(List(Text) + files(at), List(TypeShape) + shape, templates).Raw
+	let shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at, base.shapes.Length - at)
+	let indexed = Whole(raw, leaf, at, files)
+	let typed = Inferring(files, shapes, templates).Typed(indexed, at)
+	let own = leaf.types
+	let overloaded = ResolveCheck.OverloadedMembers(indexed.types, shapes, own.members.First.types, own.parameters.First)
+	let renewed = KnownTypes(own, methods = List(Scope) + typed, parameters = List(Scope) + overloaded)
+	KeptInference(value, joined = Whole(refined, TypeInference(renewed, leaf.constants), at, files))
+Whole(kept TypeInference, leaf TypeInference, at Number, files Texts) TypeInference
+	Loggers.Whole(Counted, Counted, 1, Pair).types.Index("TextWriter") is 1
+	let names = ResolveCheck.TypeNames(files)
+	let members = Among(kept.types.members, at, leaf.types.members)
+	let methods = Among(kept.types.methods, at, leaf.types.methods)
+	let parameters = Among(kept.types.parameters, at, leaf.types.parameters)
+	let types = KnownTypes(names, members, methods, parameters, ResolveCheck.Positions(names))
+	TypeInference(types, Among(kept.constants, at, leaf.constants))
+Among(scopes Scopes, at Number, added Scopes) Scopes
+	Empty.Among(KnownTypes.NoMemberPair, 1, List(Scope) + KnownTypes.CountMembers)(1) is KnownTypes.CountMembers
+	Empty.Among(KnownTypes.NoMemberPair, 1, List(Scope) + KnownTypes.CountMembers).Length is 3
+	scopes.Slice(0, at) + added + scopes.Slice(at, scopes.Length - at)

@@ -67,18 +67,6 @@ AllFiles(root Text) Texts
 	for Directory.Directories(root)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Refined(inference TypeInference, shapes List(TypeShape)) TypeInference
-	ResolveCheck.Refined(Counting, List(TypeShape)).types.methods.Length is 0
-	Inference(("File.strict", "TextWriter.strict", "BytesWriter.strict")).types.ParameterScope("File").Count("Write") is 3
-	let types = KnownTypes(inference.types, positions = Positions(inference.types.names))
-	let indexed = TypeInference(types, inference.constants)
-	mutable methods = List(Mutable(Scope))
-	mutable parameters = List(Mutable(Scope))
-	for shapes
-		let typed = ShapeTyping(indexed).Typed(value, types.methods(index), types.names(index))
-		methods.Add(typed.Indexed.Owned(types.names(index)))
-		parameters.Add(OverloadedMembers(types, shapes, types.members(index).types, types.parameters(index)))
-	TypeInference(KnownTypes(types, methods = methods, parameters = parameters), inference.constants)
 Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
 	ResolveCheck.Overloaded(Counting.types, List(TypeShape), TypeShape("has a"), KnownTypes.NoMembers).names.Length is 0
 	OverloadedMembers(types, shapes, shape.MemberScope.types, scope)
@@ -108,17 +96,8 @@ TypeNames(files Texts) Texts
 		TypeName(value)
 Inference(files Texts) TypeInference
 	let shapes = BuildProfile(Logger).Shapes(files)
-	let generics = Generics(files, shapes)
-	mutable members = List(Mutable(Scope))
-	mutable methods = List(Mutable(Scope))
-	mutable parameters = List(Mutable(Scope))
-	mutable constants = List(Mutable(Scope))
-	for shapes
-		members.Add(value.MemberScope.Indexed.Owned(TypeName(files(index))))
-		methods.Add(value.MethodScope)
-		parameters.Add(Defaults(value.lines).Of(methods.Last, members.Last, value.ConstructorNames(members.Last, generics)))
-		constants.Add(value.ConstantScope)
-	Refined(TypeInference(KnownTypes(TypeNames(files), members, methods, parameters), constants), shapes)
+	let inferring = Inferring(files, shapes, Generics(files, shapes))
+	inferring.Refined(inferring.Raw)
 Shapes(files Texts) List(TypeShape)
 	for files
 		TypeShape(Fusion(File(value).ReadLines, Path(value).PathOnly.text).Fused)
