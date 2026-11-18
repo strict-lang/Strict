@@ -2,9 +2,12 @@ has types TypeCodegen
 has isQuiet Boolean = false
 has selection Text = ""
 constant Everything = "**"
+constant Unmarked = "*unit"
 constant Overran = ("Strict/Runtime/TestBudget", "Overran", "Strict/Text", "elapsed", "place")
 constant Overrun = ("Strict/Runtime/TestBudget", "Overrun", "Strict/Number", "elapsed")
 constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
+constant Inner = TypeCodegen(Even.types, fullName = "Strict/Compiler/Even")
+constant Inward = TestCodegen(Inner, false, Unmarked)
 constant Counter = CodeBlock.Empty.Declare("failed", "Number").Declare("started", "Number")
 constant TestedNumber = Counter.Declare(ErrorCodegen.Tested, "Number")
 constant OneIsOne = SyntaxNode("Binary", "is", (MethodCodegen.One, MethodCodegen.One))
@@ -55,12 +58,14 @@ Included(line Text) Boolean
 	TestCodegen(Even.types, false, Everything).Included("Generated Numbers native")
 	TestCodegen(Even.types, false, Everything + "Generated").Included("Generated Numbers native")
 	TestCodegen(Even.types, false, Everything + "Other").Included("Generated Numbers native") is false
-	TestCodegen(Even.types, false, "").Included("Loaded Numbers slow") is false
-	Even.Included("IsEven(number Number) Boolean")
+	Even.Included("IsEven(number Number) Boolean") and TestCodegen(Even.types).Included("Loaded Numbers slow") is false
+	Inward.Included("IsEven Boolean") and Inward.Included("Loaded Numbers slow") is false
+	TestCodegen(Inner).Included("IsEven Boolean") is false
 	let header = HeaderTokens(Tokenizer(line).Tokens)
-	let matched = selection is in ("", "*", Everything, header.tokens(0), Everything + header.tokens(0))
+	let matched = selection is in ("", "*", Unmarked, Everything, header.tokens(0), Everything + header.tokens(0))
 	let isAllowed = header.tokens.Last is not "native" or selection.StartsWith(Everything)
-	matched and isAllowed and (selection is not "" or TypeSource.IsSlow(types.fullName, header) is false)
+	let isSlow = selection is Unmarked then header.ReturnsSlow else TypeSource.IsSlow(types.fullName, header)
+	matched and isAllowed and (selection is in ("", Unmarked) and isSlow) is false
 Method(start Number, block CodeBlock) CodeBlock slow
 	Even.Method(0, Counter).instructions.Index(EvenFailed) > 0
 	Even.Method(0, Counter).instructions.Index(EvenPassed) > 0

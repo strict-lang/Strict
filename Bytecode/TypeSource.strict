@@ -82,5 +82,9 @@ IsSlow(fullName Text, header HeaderTokens) Boolean
 	TypeSource.IsSlow("Game/Compiler/Even", HeaderTokens("Run", "Number")) is false
 	TypeSource.IsSlow("Strict/Compiler", HeaderTokens("Run", "Number")) is false
 	TypeSource.IsSlow("Strict/Math/Size", HeaderTokens("Run", "Number")) is false
+	header.ReturnsSlow or IsInternal(fullName)
+IsInternal(fullName Text) Boolean
+	TypeSource.IsInternal("Strict/Runtime/Frame") and TypeSource.IsInternal("Game/Runtime/Frame") is false
+	TypeSource.IsInternal("Strict/Runtime") is false
 	let parts = fullName.Split("/")
-	header.ReturnsSlow or parts.Length > 2 and parts(0) is "Strict" and parts(1) is in InternalPackages
+	parts.Length > 2 and parts(0) is "Strict" and parts(1) is in InternalPackages
