@@ -1,0 +1,65 @@
+has flow LaneFlow
+has stores Texts
+constant Sample = LaneHopes(LaneFlow.Sample, ("a Pair", "a ?b", "b ?a", "c Pair", "c -", "d ?c", "e ?e", "f Pair", "f Other", "g ?f"))
+Hoped Texts
+	Sample.Hoped is ("a Pair", "b Pair")
+	LaneHopes(LaneFlow.Sample, ("a Pair", "b -")).Hoped is ("a Pair")
+	let open = Open(Names)
+	Resolved(open, List(Text), open.Length)
+Names Texts
+	Sample.Names is ("a", "b", "c", "d", "e", "f", "g")
+	mutable names = List(Mutable(Text))
+	for stores
+		if Name(value) is not in names
+			names.Add(Name(value))
+	names
+Name(store Text) Text
+	Sample.Name("a ?b") is "a"
+	store.Substring(0, store.IndexOf(" "))
+Source(store Text) Text
+	Sample.Source("a ?b") is "b" and Sample.Source("a Pair") is "" and Sample.Source("a -") is ""
+	let at = store.IndexOf(" ?")
+	at < 0 then "" else store.Substring(at + 2, store.Length - at - 2)
+Open(names Texts) Texts
+	Sample.Open(Sample.Names) is ("a", "b", "e", "f", "g")
+	let kept = Still(names)
+	kept.Length is names.Length then names else Open(kept)
+Still(names Texts) Texts
+	Sample.Still(Sample.Names) is ("a", "b", "d", "e", "f", "g")
+	for names
+		if IsOpen(value, names)
+			value
+IsOpen(name Text, names Texts) Boolean
+	Sample.IsOpen("a", ("a", "b")) and Sample.IsOpen("c", List(Text) + "c") is false
+	Sample.IsOpen("d", ("a", "d")) is false
+	for stores
+		let source = Source(value)
+		if Name(value) is name and (value.EndsWith(" -") or source is not "" and source is not in names)
+			return false
+	true
+Resolved(open Texts, known Texts, rounds Number) Texts
+	Sample.Resolved(("a", "b"), List(Text), 2) is ("a Pair", "b Pair")
+	let next = Typed(open, known)
+	next is known or rounds is 0 then next else Resolved(open, next, rounds - 1)
+Typed(open Texts, known Texts) Texts
+	Sample.Typed(("a", "b"), List(Text)) is List(Text) + "a Pair"
+	for open
+		let type = TypeOf(value, known)
+		if type is not ""
+			value + " " + type
+TypeOf(name Text, known Texts) Text
+	Sample.TypeOf("a", List(Text)) is "Pair" and Sample.TypeOf("b", List(Text)) is ""
+	Sample.TypeOf("f", List(Text)) is "" and Sample.TypeOf("b", List(Text) + "a Pair") is "Pair"
+	mutable type = ""
+	for stores
+		let found = Name(value) is name then Kind(value, known) else ""
+		if found is not "" and type is not "" and found is not type
+			return ""
+		type = found is "" then type else found
+	type
+Kind(store Text, known Texts) Text
+	Sample.Kind("a Pair", List(Text)) is "Pair" and Sample.Kind("a ?b", List(Text) + "b Other") is "Other"
+	Sample.Kind("a ?b", List(Text)) is ""
+	let source = Source(store)
+	let start = Name(store).Length + 1
+	source is "" then store.Substring(start, store.Length - start) else flow.Typed(known, source)

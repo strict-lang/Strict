@@ -14,29 +14,53 @@ constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + Pairs, List(Met
 constant Mixed = Copying + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy")
 constant Chained = Copying + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "copy"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "again"))
 constant Changing = InstructionEntry.Invoke(6, ("Strict/Ticker", "Next", "Strict/Number"), List(Number), 3)
+constant Crossed = (StructLanes.Constructed, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "x"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "y"))
+constant Crossing = Crossed + (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 5, "x"), StructLanes.Constructed, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "y"))
+constant Cycle = Crossing + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "x"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "y"))
 constant ElementStore = (StructLanes.Constructed, StructLanes.Named(InstructionType.StoreRegisterToVariable, 2, "pairs(0)", 0))
 Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) Texts
 	Sample.Variables(Copying, List(Text), 4) is ("pair Pair", "copy Pair")
-	Sample.Variables(Copying, List(Text), 0) is ("pair Pair")
-	Sample.Variables(Mixed, List(Text), 4) is ("pair Pair")
+	Sample.Variables(Copying, List(Text), 0) is ("pair Pair") and Sample.Variables(Mixed, List(Text), 4) is ("pair Pair")
 	Sample.Variables(Chained, List(Text), 1) is ("pair Pair", "copy Pair")
 	Sample.Variables(Chained, List(Text), 4) is ("pair Pair", "copy Pair", "again Pair")
 	Sample.Variables(ElementStore, List(Text), 4).Length is 0
+	Sample.Variables(Cycle, List(Text), 4) is ("x Pair", "y Pair")
 	let found = Scan(instructions, candidates)
-	found is candidates or rounds is 0 then found else Variables(instructions, found, rounds - 1)
+	if found is not candidates
+		return rounds is 0 then found else Variables(instructions, found, rounds - 1)
+	let hoped = LaneHopes(value, Stores(instructions, found)).Hoped
+	let kept = Scan(instructions, hoped)
+	kept.Length is hoped.Length and (kept - hoped).Length is 0 then kept else found
 Scan(instructions List(InstructionEntry), candidates Texts) Texts
 	Sample.Scan(Copying, ("pair Pair")) is ("pair Pair", "copy Pair")
 	Sample.Scan(Checked, ("pair Pair")) is ("pair Pair")
+	Agreed(Stores(instructions, candidates))
+Stores(instructions List(InstructionEntry), candidates Texts) Texts
+	Sample.Stores(Copying, List(Text)) is ("pair Pair", "copy ?pair") and Sample.Stores(Mixed, List(Text)).Last is "copy -"
 	mutable laned = List(Text)
+	mutable loaded = List(Text)
 	mutable stores = List(Text)
 	for instructions
 		if value.kind is InstructionType.StoreRegisterToVariable
-			let type = value.texts(0).IndexOf("(") > 0 then "" else Typed(laned, value.payload(0) to Text)
-			stores = stores + (value.texts(0) + " " + (type is "" then "-" else type))
+			stores = stores + Stored(value, laned, loaded)
 		if value.kind is in Naming and value.texts.Length > 0
 			stores = stores + (value.texts(0) + " -")
+		loaded = Loaded(value, loaded)
 		laned = Tracked(value, laned, candidates + fixed)
-	Agreed(stores)
+	stores
+Stored(entry InstructionEntry, laned Texts, loaded Texts) Text
+	Sample.Stored(Kept, ("2 Pair"), List(Text)) is "pair Pair" and Sample.Stored(Kept, List(Text), List(Text)) is "pair -"
+	Sample.Stored(Kept, List(Text), ("2 other")) is "pair ?other"
+	Sample.Stored(ElementStore.Last, ("2 Pair"), ("2 other")) is "pairs(0) -"
+	let isElement = entry.texts(0).IndexOf("(") > 0
+	let type = isElement then "" else Typed(laned, entry.payload(0) to Text)
+	let source = isElement then "" else Typed(loaded, entry.payload(0) to Text)
+	entry.texts(0) + " " + (type is not "" then type else source is "" then "-" else "?" + source)
+Loaded(entry InstructionEntry, loaded Texts) Texts
+	Sample.Loaded(Reloaded, List(Text)) is ("5 pair") and Sample.Loaded(StructLanes.Constructed, ("2 a", "5 b")) is ("5 b")
+	let written = LoadReuse(List(InstructionEntry)).Written(entry)
+	let kept = Without(loaded, written)
+	entry.kind is InstructionType.LoadVariableToRegister then kept + (written + " " + entry.texts(0)) else kept
 Agreed(stores Texts) Texts
 	Sample.Agreed(("a Pair", "b -", "a Pair", "c Pair", "c -")) is ("a Pair")
 	LaneFlow(Sample.types, List(Text), ("pair Pair")).Scan(Copying, List(Text)) is ("pair Pair", "copy Pair")
@@ -48,7 +72,7 @@ IsUniform(stores Texts, entry Text) Boolean
 	Sample.IsUniform(("a Pair", "a -"), "a Pair") is false
 	Sample.IsUniform(("a Pair", "b -"), "a Pair")
 	Sample.IsUniform(("ab Pair", "a Pair"), "a Pair")
-	if entry.EndsWith(" -")
+	if entry.EndsWith(" -") or entry.IndexOf(" ?") > 0
 		return false
 	let prefix = entry.Substring(0, entry.IndexOf(" ") + 1)
 	for stores

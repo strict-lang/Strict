@@ -3,7 +3,6 @@ constant PartMembers = Scope(("buffer", "light", "mask"), ("Number", "Number", "
 constant Constructing = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Number", "0", "0"))
 constant Types = KnownTypes(("Part", "Number"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Constructing, KnownTypes.NoMembers))
 constant Parts = NamedArguments(ValueCodegen(TypeInference(Types, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(Types, CallTarget.Greeter, "Strict/Part", List(Text))))
-constant Foreign = NamedArguments(ValueCodegen(Parts.values, target = CallTarget(Types, CallTarget.Greeter, "Strict/Number", List(Text))))
 constant Curving = Scope(("from", "from types", "light default", "mask default"), ("buffer,light,mask", "Number,Number,Curve", "0", "Curve.Flat"))
 constant CurveTypes = KnownTypes(("Part", "Curve"), (PartMembers, KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Curving, KnownTypes.NoMembers))
 constant Curved = NamedArguments(ValueCodegen(TypeInference(CurveTypes, CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
@@ -77,8 +76,6 @@ Argument(call SyntaxNode, owner Text, prefix Text, name Text, scope Scope) Synta
 	Parts.Argument(Masked, "Part", "", "light", CallTarget.NoScope).text is "0"
 	Parts.Argument(Masked, "Part", "", "mask", CallTarget.NoScope).text is "3"
 	Shined.Argument(SyntaxNode("Call", "Shine"), "Part", "Shine ", "mask", CallTarget.NoScope).Kind is "Member"
-	Foreign.Argument(SyntaxNode("Call", "Part"), "Part", "", "buffer", CallTarget.NoScope) to Text is "0"
-	Parts.Argument(SyntaxNode("Call", "Part"), "Part", "", "buffer", CallTarget.NoScope).Kind is "Identifier"
 	for call.children
 		if value.Kind is "Reassignment" and value.children(0).text is name
 			return value.children(1)
@@ -90,16 +87,6 @@ Captured(name Text, scope Scope) SyntaxNode
 	Boxing.Captured("Width", Scope(List(Text) + "Width", List(Text) + "Number")).Kind is "Identifier"
 	let isHeld = scope.TypeOf(name) is "" and values.target.Holding(values.target.TypeName, name) is not ""
 	isHeld then SyntaxNode("Number", "0") else SyntaxNode("Identifier", name)
-	fallback is "" then Unset(owner, name) else Qualified(owner, fallback)
-Unset(owner Text, name Text) SyntaxNode
-	Foreign.Unset("Part", "buffer") to Text is "0" and Parts.Unset("Part", "buffer").Kind is "Identifier"
-	Foreign.Unset("Part", "missing").Kind is "Identifier"
-	let type = values.inference.types.MembersOf(owner).TypeOf(name)
-	if owner is TypeEntry.ShortName(values.target.TypeName) or type is not in ("Number", "Text", "Boolean")
-		return SyntaxNode("Identifier", name)
-	if type is "Number"
-		return SyntaxNode("Number", "0")
-	type is "Text" then SyntaxNode("Text", "\"\"") else SyntaxNode("Boolean", "false")
 Defaulted(call SyntaxNode, owner Text, start Number, scope Scope) SyntaxNode
 	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1, CallTarget.NoScope) to Text is "Shine(1, 0, Curve.Flat)"
 	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(1, Curve.Flat)"

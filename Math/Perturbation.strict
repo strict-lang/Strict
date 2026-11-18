@@ -57,7 +57,7 @@ Next(position Number, delta Complex, added Complex) Complex
 Shifted(point Complex, delta Complex, isRebased Boolean) Complex
 	Tiny.Shifted(Complex(3, 1), Complex(2, 2), true) is Complex(2, 1)
 	Tiny.Shifted(Complex(3, 1), Complex(2, 2), false) is Complex(2, 2)
-	isRebased then point - orbit(0) else delta * 1
+	isRebased then point - orbit(0) else delta
 Reached(next Number, delta Complex) Complex
 	Tiny.Reached(1, Complex(1, 1)) is Complex(1, 2)
 	orbit(next) + delta
