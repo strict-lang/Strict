@@ -9,6 +9,7 @@ constant Untyped = TypeEntry("", List(MemberEntry), List(MethodEntry))
 constant Taking = MlirChanged(MlirFunction((Ticker, Caller), Caller, Calls), 0)
 constant Food = List(MemberEntry) + MemberEntry("food", "Strict/Number", List(InstructionEntry), false)
 constant Fed = MethodEntry("Fed", Food, "Strict/Number", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "changed_0"), InstructionEntry.Return(0)))
+constant Laned = MethodEntry(Next, instructions = List(InstructionEntry) + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "changed_X"))
 constant Keeping = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Next), 2)
 constant Feeding = MlirChanged(MlirFunction((Ticker, Caller), Ticker, Fed), 2)
 Kept(isUnchanged Boolean) Texts
@@ -54,13 +55,19 @@ With(emitted Texts) Texts
 	emitted + Taken
 Names(method MethodEntry) Texts
 	Keeping.Names(Next) is (ChangedInstance.Name)
-	Keeping.Names(Calls).Length is 0
+	Keeping.Names(Calls).Length is 0 and Keeping.Names(Laned).Length is 0
 	mutable names = List(Mutable(Text))
 	for method.instructions
-		let isChanged = value.kind is InstructionType.StoreRegisterToVariable and value.texts(0).StartsWith("changed_")
-		if isChanged and value.texts(0) is not in names
+		let isStored = value.kind is InstructionType.StoreRegisterToVariable
+		if isStored and IsChange(value.texts(0)) and value.texts(0) is not in names
 			names.Add(value.texts(0))
 	names
+IsChange(name Text) Boolean
+	Keeping.IsChange(ChangedInstance.Name) and Keeping.IsChange("changed_0") and Keeping.IsChange("changed_12")
+	Keeping.IsChange("changed_X") is false and Keeping.IsChange("changed") is false and Keeping.IsChange("count") is false
+	constant Prefix = "changed_"
+	let isLonger = name.Length > Prefix.Length and name.StartsWith(Prefix)
+	name is ChangedInstance.Name or (isLonger then Tokenizer.IsDigit(name(Prefix.Length)) else false)
 Offset(name Text) Number
 	Keeping.Offset(ChangedInstance.Name) is 1
 	Keeping.Offset("changed_2") is 4
