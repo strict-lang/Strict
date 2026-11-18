@@ -27,10 +27,11 @@ Trace(rest List(VmValue), file Text, line Number) VmValue
 Shown(argument VmValue) Text
 	Shifting.Shown(VmValue.OfText("a")) is "\"a\"" and Shifting.Shown(VmValue.OfNumber(2)) is "2"
 	Shifting.Shown(Nested) is "List"
-	if IsFlat(argument) is false
-		return TypeEntry.ShortName(argument.kind)
-	let code = ValueCode(argument).Code
-	code.Length > MaxShown then code.Substring(0, MaxShown) + "..." else code
+	IsFlat(argument) is false then TypeEntry.ShortName(argument.kind) else Cut(ValueCode(argument).Code)
+Cut(text Text) Text
+	TraceEntry.Cut("abc") is "abc"
+	TraceEntry.Cut("1234567890123456789012345678901234567890123") is "1234567890123456789012345678901234567890..."
+	text.Length > MaxShown then text.Substring(0, MaxShown) + "..." else text
 IsFlat(argument VmValue) Boolean
 	Shifting.IsFlat(VmValue.OfNumber(2)) and Shifting.IsFlat(Nested) is false
 	Shifting.IsFlat(Five) is false

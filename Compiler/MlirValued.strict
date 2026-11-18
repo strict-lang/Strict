@@ -1,0 +1,55 @@
+has function MlirFunction
+constant MaxShown = 4
+constant Owner = TypeEntry("Strict/Probe", List(MemberEntry), List(MethodEntry))
+constant Simple = (MemberEntry("seed", "Strict/Number", List(InstructionEntry), false), MemberEntry("isFirst", "Strict/Boolean", List(InstructionEntry), false))
+constant Listed = (MemberEntry("line", "Strict/Text", List(InstructionEntry), false), MemberEntry("words", "Strict/List(Text)", List(InstructionEntry), false))
+constant Typed = List(MemberEntry) + MemberEntry("font", "Strict/Fonts/Font", List(InstructionEntry), false)
+constant Generated = MethodEntry("Generated", Simple + Listed + Typed, "Strict/Number", List(InstructionEntry))
+constant Many = MlirValued(MlirFunction(List(TypeEntry) + Owner, Owner, Generated))
+constant Single = MlirValued(MlirFunction(Many.function, method = MethodEntry("Sized", Typed, "Strict/Number", List(InstructionEntry))))
+constant None = MlirValued(MlirFunction.Counter)
+IsShown Boolean
+	Many.IsShown and Single.IsShown and None.IsShown is false
+	function.method.parameters.Length > 0 and MlirForeign(function).IsForeign is false
+Kind(parameter MemberEntry) Text
+	Many.Kind(Simple.First) is "Nseed" and Many.Kind(Simple.Last) is "BisFirst"
+	Many.Kind(Listed.First) is "Tline" and Many.Kind(Listed.Last) is "twords"
+	Many.Kind(Typed.First) is "Ofont Font"
+	Many.Kind(MemberEntry("sizes", "Strict/List(Number)", List(InstructionEntry), false)) is "nsizes"
+	let short = TypeEntry.ShortName(parameter.typeName)
+	let found = ("Number", "Boolean", "Text", "List(Number)", "List(Text)").Index(short)
+	found < 0 then "O" + parameter.Name + " " + short else ("N", "B", "T", "n", "t")(found) + parameter.Name
+Described Texts
+	Many.Described is ("Nseed", "BisFirst", "Tline", "twords", "O...")
+	Single.Described is ("Ofont Font")
+	mutable names = List(Mutable(Text))
+	for function.method.parameters
+		if index < MaxShown
+			names.Add(Kind(value))
+	function.method.parameters.Length > MaxShown then names + "O..." else names
+Named Text
+	None.Named is ""
+	Single.Named is "Ofont Font\\00\\00"
+	Many.Named is "Nseed\\00BisFirst\\00Tline\\00twords\\00O...\\00\\00"
+	IsShown then Text.Combine(Described, "\\00") + "\\00\\00" else ""
+Size Number
+	None.Size is 0 and Single.Size is 12 and Many.Size is 34
+	Named.Length - Named.Split("\\00").Length * 2 + 2
+Helper(helper Text) Text
+	None.Helper("strict_trace") is "strict_trace"
+	Many.Helper("strict_trace_checked") is "strict_traced_checked"
+	IsShown then helper.Replace("strict_trace", "strict_traced") else helper
+Operands Text
+	None.Operands is ""
+	Single.Operands is ", %p1, %zero, %zero, %zero"
+	Many.Operands is ", %p1, %p2, %p3, %p4"
+	if IsShown is false
+		return ""
+	mutable operands = ""
+	for MaxShown
+		operands = operands + (index < function.method.parameters.Length then ", %p" + (index + 1) else ", %zero")
+	operands
+Types Text
+	None.Types is ""
+	Many.Types is ", f64, f64, f64, f64"
+	IsShown then ", f64, f64, f64, f64" else ""

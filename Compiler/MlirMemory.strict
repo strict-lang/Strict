@@ -60,9 +60,11 @@ Traced(operand Text, result Text, helper Text) Texts
 	let instructions = function.method.instructions
 	let line = position < instructions.Length then instructions(position).line else 0
 	let address = "    " + Temp("tw") + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
-	let call = " = func.call @" + helper + "(" + operand + ", " + Temp("tw") + ", " + Temp("twl") + ")"
+	let valued = MlirValued(function)
+	let operands = operand + ", " + Temp("tw") + ", " + Temp("twl") + valued.Operands
+	let call = "    " + result + " = func.call @" + valued.Helper(helper) + "(" + operands + ")"
 	let number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
-	(address, number, "    " + result + call + " : (f64, !llvm.ptr, i64) -> f64")
+	(address, number, call + " : (f64, !llvm.ptr, i64" + valued.Types + ") -> f64")
 Member(path Text) Numbers
 	Pairing.Member("pair.rest") is (1, 2)
 	let dot = path.IndexOf(".")

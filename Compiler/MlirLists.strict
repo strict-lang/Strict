@@ -26,7 +26,7 @@ Temp(suffix Text) Text
 	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).Length is 405
 	Text.Combine(MlirLists(Literals, 0).Cached(List(Text), "%x", "pin")).Length is 400
 	Text.Combine(MlirLists(Written, 1).ElementStored(Versioning)).Length is 266
-	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).Length is 547
+	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).Length is 594
 	Hoisting.ElementStored(InstructionEntry(InstructionType.StoreRegisterToVariable, "x(i)", 0))(1).Length is 44
 	Text.Combine(MlirLists(Listed, 3).Appended(Steps(3))).Length is 216
 	MlirLists(Listed, 2).Emitted is MlirLists(Listed, 2).Indexed(Steps(2))

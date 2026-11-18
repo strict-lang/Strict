@@ -63,7 +63,7 @@ Parse(text Text) Time
 	Time.Parse("1970-01-01") is Time(0)
 	Time.Parse("Nov 14") is Error
 	if text.Length < 10 or text(4) is not "-" or text(7) is not "-"
-		return Error("InvalidTime")
+		return Error("InvalidTime: " + text)
 	let date = Days(text.Substring(0, 4) to Number, text.Substring(5, 2) to Number, text.Substring(8, 2) to Number)
 	let hasClock = text.Length >= ClockLength
 	let hours = hasClock then text.Substring(HourStart, 2) to Number else 0

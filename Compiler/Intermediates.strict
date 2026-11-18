@@ -31,7 +31,7 @@ Deleted(path Text)
 		if File(path).Exists
 			Process.Wait(0.1)
 	if File(path).Exists
-		return Error("FileNotDeleted")
+		return Error("FileNotDeleted: " + path)
 Replaced(executable Text, target Text) Text
 	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
 	Intermediates(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""

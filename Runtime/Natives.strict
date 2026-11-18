@@ -68,10 +68,10 @@ Converted(instance VmValue, target Text) VmValue
 	VmValue.OfText(target is "Strict/Character" then (instance to Text).characters(0) to Text else instance to Text)
 Parsed(text Text) VmValue
 	Shapes.Parsed("5").number is 5
-	Shapes.Parsed("abc").items.First.text is "InvalidNumber"
+	Shapes.Parsed("abc").items.First.text is "InvalidNumber: abc"
 	Shapes.Searched("EndsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("EndsWith", "ab", BcTwo).IsTrue is false
 	let number = text to Number
-	number is Error then VmValue.OfError("InvalidNumber") else VmValue.OfNumber(number)
+	number is Error then VmValue.OfError("InvalidNumber: " + TraceEntry.Cut(text)) else VmValue.OfNumber(number)
 Logical(name Text, left VmValue, call Invocation) VmValue
 	Shapes.Logical("not", VmValue.OfBoolean(true), NewShape).IsTrue is false
 	Shapes.Logical("and", VmValue.TrueValue, NewShape).IsTrue is false

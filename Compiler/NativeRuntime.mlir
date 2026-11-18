@@ -9811,6 +9811,12 @@
   llvm.mlir.global internal constant @strict_error_prefix("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00Error: \00") : !llvm.array<24 x i8>
   llvm.mlir.global internal constant @strict_error_newline("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00\0A\00") : !llvm.array<18 x i8>
   func.func private @strict_error_trace(%value: f64, %location: !llvm.ptr, %line: i64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
+    %none = arith.constant 0.0 : f64
+    %traced = func.call @strict_error_traced(%value, %location, %line, %none) : (f64, !llvm.ptr, i64, f64) -> f64
+    return %traced : f64
+  }
+  // shown is the text of the parameter values of the method, "(seed 6, line \22a\22)", or 0 for none
+  func.func private @strict_error_traced(%value: f64, %location: !llvm.ptr, %line: i64, %shown: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {
     %one = arith.constant 1 : i64
     %error = func.call @strict_failed_error(%value) : (f64) -> f64
     %method = func.call @strict_text_from(%location) : (!llvm.ptr) -> f64
@@ -9825,8 +9831,16 @@
     %file = func.call @strict_text_from(%filePointer) : (!llvm.ptr) -> f64
     %lineNumber = arith.sitofp %line : i64 to f64
     %size = arith.constant 24 : i64
+    %shownBits = arith.bitcast %shown : f64 to i64
+    %noBits = arith.constant 0 : i64
+    %isPlain = arith.cmpi eq, %shownBits, %noBits : i64
+    cf.cond_br %isPlain, ^named(%method : f64), ^valued
+  ^valued:
+    %full = func.call @strict_text_concat(%method, %shown) : (f64, f64) -> f64
+    cf.br ^named(%full : f64)
+  ^named(%called: f64):
     %entryBlock = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
-    llvm.store %method, %entryBlock : f64, !llvm.ptr
+    llvm.store %called, %entryBlock : f64, !llvm.ptr
     func.call @strict_rc_written(%entryBlock) : (!llvm.ptr) -> ()
     %fileSlot = llvm.getelementptr %entryBlock[1] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %file, %fileSlot : f64, !llvm.ptr
@@ -9918,6 +9932,196 @@
   ^done:
     return %value : f64
   }
+  // the method of a trace entry is its name, with the parameter values in brackets after it when it has any
+  func.func private @strict_trace_same(%entryMethod: f64, %method: f64) -> i1 {
+    %entryName = func.call @strict_text_ptr(%entryMethod) : (f64) -> !llvm.ptr
+    %name = func.call @strict_text_ptr(%method) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
+    %compared = llvm.call @strncmp(%entryName, %name, %length) : (!llvm.ptr, !llvm.ptr, i64) -> i32
+    %equal = arith.constant 0 : i32
+    %starts = arith.cmpi eq, %compared, %equal : i32
+    cf.cond_br %starts, ^after, ^different
+  ^after:
+    %slot = llvm.getelementptr %entryName[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %next = llvm.load %slot : !llvm.ptr -> i8
+    %nothing = arith.constant 0 : i8
+    %bracket = arith.constant 40 : i8
+    %isEnd = arith.cmpi eq, %next, %nothing : i8
+    %isValued = arith.cmpi eq, %next, %bracket : i8
+    %same = arith.ori %isEnd, %isValued : i1
+    return %same : i1
+  ^different:
+    %false = arith.constant false
+    return %false : i1
+  }
+  // names lists a kind character and the name of each parameter (N number, B boolean, T text, n numbers, t texts,
+  // O only the text), ended by a 0
+  func.func private @strict_trace_values(%value: f64, %where: !llvm.ptr, %line: i64, %names: !llvm.ptr, %first: f64, %second: f64, %third: f64, %fourth: f64, %checked: i1) -> f64 attributes {llvm.passthrough = ["noinline", "cold"]} {
+    %error = func.call @strict_failed_error(%value) : (f64) -> f64
+    %method = func.call @strict_text_from(%where) : (!llvm.ptr) -> f64
+    cf.cond_br %checked, ^known, ^trace
+  ^known:
+    %here = func.call @strict_traced_in(%error, %method) : (f64, f64) -> i1
+    cf.cond_br %here, ^done, ^trace
+  ^trace:
+    %repeated = func.call @strict_trace_repeated(%error, %method, %line) : (f64, f64, i64) -> i1
+    cf.cond_br %repeated, ^done, ^show
+  ^show:
+    %shown = func.call @strict_trace_shown(%names, %first, %second, %third, %fourth) : (!llvm.ptr, f64, f64, f64, f64) -> f64
+    %traced = func.call @strict_error_traced(%value, %where, %line, %shown) : (f64, !llvm.ptr, i64, f64) -> f64
+    return %traced : f64
+  ^done:
+    return %value : f64
+  }
+  llvm.mlir.global internal constant @strict_trace_space("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00 \00") : !llvm.array<18 x i8>
+  // strict_trace and strict_trace_checked with the first 4 parameter values of the method, their names follow the file
+  func.func private @strict_traced(%value: f64, %where: !llvm.ptr, %line: i64, %first: f64, %second: f64, %third: f64, %fourth: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %failed = func.call @strict_is_failure(%value) : (f64) -> i1
+    cf.cond_br %failed, ^trace, ^done
+  ^trace:
+    %plain = arith.constant false
+    %traced = func.call @strict_traced_values(%value, %where, %line, %first, %second, %third, %fourth, %plain) : (f64, !llvm.ptr, i64, f64, f64, f64, f64, i1) -> f64
+    return %traced : f64
+  ^done:
+    return %value : f64
+  }
+  func.func private @strict_traced_checked(%value: f64, %where: !llvm.ptr, %line: i64, %first: f64, %second: f64, %third: f64, %fourth: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %failed = func.call @strict_is_failure(%value) : (f64) -> i1
+    cf.cond_br %failed, ^trace, ^done
+  ^trace:
+    %checked = arith.constant true
+    %traced = func.call @strict_traced_values(%value, %where, %line, %first, %second, %third, %fourth, %checked) : (f64, !llvm.ptr, i64, f64, f64, f64, f64, i1) -> f64
+    return %traced : f64
+  ^done:
+    return %value : f64
+  }
+  func.func private @strict_traced_values(%value: f64, %where: !llvm.ptr, %line: i64, %first: f64, %second: f64, %third: f64, %fourth: f64, %checked: i1) -> f64 attributes {llvm.passthrough = ["noinline", "cold"]} {
+    %one = arith.constant 1 : i64
+    %methodLength = llvm.call @strlen(%where) : (!llvm.ptr) -> i64
+    %fileAt = arith.addi %methodLength, %one : i64
+    %file = llvm.getelementptr %where[%fileAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %fileLength = llvm.call @strlen(%file) : (!llvm.ptr) -> i64
+    %namesAt = arith.addi %fileLength, %one : i64
+    %names = llvm.getelementptr %file[%namesAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %traced = func.call @strict_trace_values(%value, %where, %line, %names, %first, %second, %third, %fourth, %checked) : (f64, !llvm.ptr, i64, !llvm.ptr, f64, f64, f64, f64, i1) -> f64
+    return %traced : f64
+  }
+  func.func private @strict_trace_shown(%names: !llvm.ptr, %first: f64, %second: f64, %third: f64, %fourth: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %nothing = arith.constant 0 : i8
+    %other = arith.constant 79 : i8
+    %openLengths = llvm.mlir.addressof @strict_open_paren_text : !llvm.ptr
+    %open = llvm.getelementptr %openLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %openBits = func.call @strict_bits(%open) : (!llvm.ptr) -> f64
+    %closeLengths = llvm.mlir.addressof @strict_close_paren_text : !llvm.ptr
+    %close = llvm.getelementptr %closeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %closeBits = func.call @strict_bits(%close) : (!llvm.ptr) -> f64
+    %commaLengths = llvm.mlir.addressof @strict_comma : !llvm.ptr
+    %comma = llvm.getelementptr %commaLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %commaBits = func.call @strict_bits(%comma) : (!llvm.ptr) -> f64
+    %spaceLengths = llvm.mlir.addressof @strict_trace_space : !llvm.ptr
+    %space = llvm.getelementptr %spaceLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %spaceBits = func.call @strict_bits(%space) : (!llvm.ptr) -> f64
+    cf.br ^entry(%names, %none, %openBits : !llvm.ptr, i64, f64)
+  ^entry(%cursor: !llvm.ptr, %index: i64, %text: f64):
+    %kind = llvm.load %cursor : !llvm.ptr -> i8
+    %ended = arith.cmpi eq, %kind, %nothing : i8
+    cf.cond_br %ended, ^close, ^value
+  ^value:
+    %label = llvm.getelementptr %cursor[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %name = func.call @strict_text_from(%label) : (!llvm.ptr) -> f64
+    %length = llvm.call @strlen(%label) : (!llvm.ptr) -> i64
+    %skip = arith.addi %length, %two : i64
+    %next = llvm.getelementptr %cursor[%skip] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %following = arith.addi %index, %one : i64
+    %isFirst = arith.cmpi eq, %index, %none : i64
+    cf.cond_br %isFirst, ^named(%text : f64), ^separate
+  ^separate:
+    %separated = func.call @strict_text_concat(%text, %commaBits) : (f64, f64) -> f64
+    cf.br ^named(%separated : f64)
+  ^named(%start: f64):
+    %withName = func.call @strict_text_concat(%start, %name) : (f64, f64) -> f64
+    %isOther = arith.cmpi eq, %kind, %other : i8
+    cf.cond_br %isOther, ^entry(%next, %following, %withName : !llvm.ptr, i64, f64), ^pick
+  ^pick:
+    %isSecond = arith.cmpi eq, %index, %one : i64
+    %isThird = arith.cmpi eq, %index, %two : i64
+    %isFourth = arith.cmpi eq, %index, %three : i64
+    %early = arith.select %isSecond, %second, %first : f64
+    %middle = arith.select %isThird, %third, %early : f64
+    %picked = arith.select %isFourth, %fourth, %middle : f64
+    %shownValue = func.call @strict_trace_value(%kind, %picked) : (i8, f64) -> f64
+    %spaced = func.call @strict_text_concat(%withName, %spaceBits) : (f64, f64) -> f64
+    %valued = func.call @strict_text_concat(%spaced, %shownValue) : (f64, f64) -> f64
+    cf.br ^entry(%next, %following, %valued : !llvm.ptr, i64, f64)
+  ^close:
+    %closed = func.call @strict_text_concat(%text, %closeBits) : (f64, f64) -> f64
+    return %closed : f64
+  }
+  llvm.mlir.global internal constant @strict_trace_list("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00List\00") : !llvm.array<21 x i8>
+  // like TraceEntry.Shown of the Strict VM: a text in quotes cut after 40 characters, a list of up to 4 values
+  func.func private @strict_trace_value(%kind: i8, %value: f64) -> f64 {
+    %number = arith.constant 78 : i8
+    %boolean = arith.constant 66 : i8
+    %text = arith.constant 84 : i8
+    %texts = arith.constant 116 : i8
+    %isNumber = arith.cmpi eq, %kind, %number : i8
+    cf.cond_br %isNumber, ^number, ^others
+  ^number:
+    %numberText = func.call @strict_number_text(%value) : (f64) -> f64
+    return %numberText : f64
+  ^others:
+    %isBoolean = arith.cmpi eq, %kind, %boolean : i8
+    cf.cond_br %isBoolean, ^boolean, ^texted
+  ^boolean:
+    %booleanText = func.call @strict_boolean_text(%value) : (f64) -> f64
+    return %booleanText : f64
+  ^texted:
+    %isText = arith.cmpi eq, %kind, %text : i8
+    cf.cond_br %isText, ^text, ^list
+  ^text:
+    %quoteLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quote = llvm.getelementptr %quoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteBits = func.call @strict_bits(%quote) : (!llvm.ptr) -> f64
+    %opened = func.call @strict_text_concat(%quoteBits, %value) : (f64, f64) -> f64
+    %quoted = func.call @strict_text_concat(%opened, %quoteBits) : (f64, f64) -> f64
+    %cut = func.call @strict_trace_cut(%quoted) : (f64) -> f64
+    return %cut : f64
+  ^list:
+    %most = arith.constant 4.0 : f64
+    %count = func.call @strict_list_length(%value) : (f64) -> f64
+    %isLong = arith.cmpf ogt, %count, %most : f64
+    cf.cond_br %isLong, ^long, ^short
+  ^long:
+    %listLengths = llvm.mlir.addressof @strict_trace_list : !llvm.ptr
+    %listName = llvm.getelementptr %listLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %listBits = func.call @strict_bits(%listName) : (!llvm.ptr) -> f64
+    return %listBits : f64
+  ^short:
+    %areTexts = arith.cmpi eq, %kind, %texts : i8
+    %listed = func.call @strict_list_text(%value, %areTexts) : (f64, i1) -> f64
+    %shortened = func.call @strict_trace_cut(%listed) : (f64) -> f64
+    return %shortened : f64
+  }
+  func.func private @strict_trace_cut(%text: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %most = arith.constant 40.0 : f64
+    %length = func.call @strict_text_length(%text) : (f64) -> f64
+    %isLong = arith.cmpf ogt, %length, %most : f64
+    cf.cond_br %isLong, ^long, ^short
+  ^long:
+    %start = func.call @strict_text_cut(%text, %zero, %most) : (f64, f64, f64) -> f64
+    %dotsLengths = llvm.mlir.addressof @strict_trace_skipped : !llvm.ptr
+    %dots = llvm.getelementptr %dotsLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %dotsBits = func.call @strict_bits(%dots) : (!llvm.ptr) -> f64
+    %cut = func.call @strict_text_concat(%start, %dotsBits) : (f64, f64) -> f64
+    return %cut : f64
+  ^short:
+    return %text : f64
+  }
   func.func private @strict_traced_in(%error: f64, %method: f64) -> i1 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1.0 : f64
@@ -9932,11 +10136,7 @@
     %entry = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
     %entryBlock = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
     %entryMethod = llvm.load %entryBlock : !llvm.ptr -> f64
-    %entryName = func.call @strict_text_ptr(%entryMethod) : (f64) -> !llvm.ptr
-    %name = func.call @strict_text_ptr(%method) : (f64) -> !llvm.ptr
-    %compared = llvm.call @strcmp(%entryName, %name) : (!llvm.ptr, !llvm.ptr) -> i32
-    %equal = arith.constant 0 : i32
-    %same = arith.cmpi eq, %compared, %equal : i32
+    %same = func.call @strict_trace_same(%entryMethod, %method) : (f64, f64) -> i1
     return %same : i1
   ^different:
     %false = arith.constant false
@@ -9956,11 +10156,7 @@
     %entry = func.call @strict_list_get(%traces, %index) : (f64, f64) -> f64
     %entryBlock = func.call @strict_ptr(%entry) : (f64) -> !llvm.ptr
     %entryMethod = llvm.load %entryBlock : !llvm.ptr -> f64
-    %entryName = func.call @strict_text_ptr(%entryMethod) : (f64) -> !llvm.ptr
-    %name = func.call @strict_text_ptr(%method) : (f64) -> !llvm.ptr
-    %compared = llvm.call @strcmp(%entryName, %name) : (!llvm.ptr, !llvm.ptr) -> i32
-    %equal = arith.constant 0 : i32
-    %sameMethod = arith.cmpi eq, %compared, %equal : i32
+    %sameMethod = func.call @strict_trace_same(%entryMethod, %method) : (f64, f64) -> i1
     %lineSlot = llvm.getelementptr %entryBlock[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %entryLine = llvm.load %lineSlot : !llvm.ptr -> f64
     %lineNumber = arith.sitofp %line : i64 to f64
@@ -15113,7 +15309,7 @@
     %result = func.call @strict_degrees(%angle) : (f64) -> f64
     return %result : f64
   }
-  llvm.mlir.global internal constant @strict_invalid_number("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00InvalidNumber\00") : !llvm.array<30 x i8>
+  llvm.mlir.global internal constant @strict_invalid_number("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00InvalidNumber: \00") : !llvm.array<32 x i8>
   // all of the text has to be the number, strtod alone reads "abc" as 0 and "12 monkeys" as 12
   func.func private @strict_text_number(%text: f64) -> f64 {
     %a = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
@@ -15132,7 +15328,10 @@
   ^invalid:
     %nameLengths = llvm.mlir.addressof @strict_invalid_number : !llvm.ptr
     %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    %nameBits = func.call @strict_bits(%name) : (!llvm.ptr) -> f64
+    %shown = func.call @strict_trace_cut(%text) : (f64) -> f64
+    %full = func.call @strict_text_concat(%nameBits, %shown) : (f64, f64) -> f64
+    %error = func.call @strict_error_text(%full) : (f64) -> f64
     return %error : f64
   }
   llvm.mlir.global internal constant @strict_true_text("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00true\00") : !llvm.array<21 x i8>

@@ -204,10 +204,10 @@ CheckEnvAndConcurrency(folder Text, helper Text) Boolean
 	let lk = folder + "/obj/ConcurrentCheck.strict.lock"
 	let aC = "conc \"" + Process.Current.executable + "\" \"" + src + "\" \"" + lk + "\" \""
 	if Process.RunTool(helper, aC + folder + "/ConcurrentCheck.exe\"", ToolSeconds).exitCode is not 0
-		return Error("ConcurrentBuildFailed")
+		return Error("ConcurrentBuildFailed: " + helper)
 	let aH = "held \"" + Process.Current.executable + "\" \"" + folder + "/HeldCheck.strict\" \""
 	if Process.RunTool(helper, aH + folder + "/HeldCheck.exe\"", ToolSeconds).exitCode is not 0
-		return Error("HeldCopyFailed")
+		return Error("HeldCopyFailed: " + helper)
 	let aR = "res \"" + Process.Current.executable + "\" \"" + folder + "/ResidentCheck.strict\" \""
 	let res = Process.RunTool(helper, aR + folder + "/ResidentCheck.exe\"", ToolSeconds)
 	res.exitCode is not 0 then Error("ResidentFail: " + res.Output) else CheckCompilerChange(folder, helper)
@@ -229,7 +229,7 @@ CheckCompilerTouch(folder Text, helper Text, src Text, usedBin Text, stored Numb
 	let t2 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
 	let tB = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" -1000000000", ShortSeconds)
 	if tA.exitCode is not 0 or tB.exitCode is not 0 or t2.exitCode is not 0 or File(usedBin).Modified is stored
-		return Error("ChangedCompilerReusedOldBytecode")
+		return Error("ChangedCompilerReusedOldBytecode: " + usedBin)
 	if Built(folder, "NativeChange", "") is Error
 		return Error("NativeChangeInitFailed")
 	for ("Networking/native/Hmac.c", "Networking/Hmac.strict")
