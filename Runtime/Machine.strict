@@ -196,6 +196,9 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "c", (1, 0, -1)), VmValue.OfError("a")).kind is "Strict/Error"
 	Machine(List(TypeEntry) + TypeEntry.CharacterEntry).Field(Coded, VmValue.OfText("a")).number is 97
+	Pairing.Field(InstructionEntry(InstructionType.FieldLoad, ("x", "Pair"), (1, 0, 0, 1)), Resolver.Two).number is 2
+	if entry.payload.Length > 3 then entry.payload(2) >= 0 else false
+		return MemberValue(types(entry.payload(2)), instance, entry.payload(3))
 	let name = entry.texts.Length > 1 then entry.texts.Last else instance.kind
 	let owner = name is in places then types(places(name)) else Natives(types).TypeOf(name)
 	for owner.members

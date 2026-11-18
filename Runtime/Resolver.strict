@@ -5,6 +5,8 @@ constant Searching = -3
 constant OuterSlot = -2
 constant OuterIndexSlot = -3
 constant LiteralIndex = -4
+constant Pairs = Resolver(List(TypeEntry) + Machine.Paired)
+constant Two = VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))
 constant Specials = ("#this", "value", "#result", "#flag", "#loop", "index")
 constant Named = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 constant Doubling = Resolver(List(TypeEntry) + Machine.Doubler)
@@ -47,8 +49,21 @@ Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEn
 	let changed = Changed(method, names)
 	for method.instructions
 		let resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
-		let placed = Placed(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch)
+		let rebased = LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length)
+		let placed = Fielded(Placed(rebased, method, index, scratch))
 		value.kind is InstructionType.Return then InstructionEntry(placed, payload = placed.payload + changed) else placed
+Fielded(entry InstructionEntry) InstructionEntry
+	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Pair"), (4, 3, -1, -2))).payload is (4, 3, 0, 1)
+	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("x", "Pair"), (4, 3, -1, -2))).payload is (4, 3, -1, -2)
+	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, "b", (4, 3, -1))).payload is (4, 3, -1)
+	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Other"), (4, 3, -1, -2))).payload.Last is -2
+	if entry.kind is not InstructionType.FieldLoad or entry.texts.Length < 2 or entry.payload.Length < 4
+		return entry
+	let route = Position(Natives(types).TypeOf(entry.texts.Last))
+	for route < 0 then List(MemberEntry) else types(route).members
+		if value.Name is entry.texts.First
+			return InstructionEntry(entry, payload = (entry.payload(0), entry.payload(1), route, index))
+	entry
 Changed(method MethodEntry, names Texts) Numbers
 	Doubling.Changed(MethodEntry.Logged, List(Text) + "changed_0") is (-1, 0)
 	Doubling.Changed(MethodEntry.Logged, List(Text) + ChangedInstance.Name) is (0, -1)
