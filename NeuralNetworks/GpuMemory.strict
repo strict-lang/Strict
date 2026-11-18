@@ -6,6 +6,9 @@ Held Number
 	GpuMemory.Held >= 0
 	0
 Freed(bytes Number)
+Address(numbers Numbers) Number
+	GpuMemory.Address((1, 2, 3)) is 0
+	numbers.Length * 0
 Available Number
 	GpuMemory.Available >= 0
 	0

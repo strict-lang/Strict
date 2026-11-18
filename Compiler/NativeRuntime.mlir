@@ -20650,6 +20650,30 @@
     %bytes = arith.uitofp %held : i64 to f64
     return %bytes : f64
   }
+  // `GpuMemory.Address`: the device address of a list of 32 bit numbers living on the GPU (CUDA or HIP) once the work
+  // queued for it is done, 0 for every other list: a package shows such a result without a download (a texture)
+  func.func private @strict_gpu_address(%self: f64, %list: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %single = arith.constant 32 : i64
+    %device = func.call @strict_gpu_device(%list) : (f64) -> i64
+    %resides = arith.cmpi ne, %device, %none : i64
+    cf.cond_br %resides, ^sized, ^host
+  ^sized:
+    %bits = func.call @strict_list_packed(%list) : (f64) -> i64
+    %isSingle = arith.cmpi eq, %bits, %single : i64
+    cf.cond_br %isSingle, ^current, ^host
+  ^current:
+    %made = func.call @strict_gpu_current() : () -> i1
+    cf.cond_br %made, ^drain, ^host
+  ^drain:
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    %address = arith.uitofp %device : i64 to f64
+    return %address : f64
+  ^host:
+    return %zero : f64
+  }
   // `GpuMemory.Stamped`: a stamp after the GPU work queued so far (captured launches are launched first, nothing
   // waits), its number from 0 on, -1 without a GPU; `GpuMemory.Elapsed(first, last)` is the milliseconds the GPU took
   // from stamp first to stamp last once last is done, -1 before that and -2 when it can not tell, it never waits
