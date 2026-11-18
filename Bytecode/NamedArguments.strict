@@ -13,6 +13,7 @@ constant ShineTypes = KnownTypes(Types.names, Types.members, Types.methods, (Shi
 constant Shined = NamedArguments(ValueCodegen(TypeInference(ShineTypes, CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
 constant Lights = (Scope(List(Text) + "Light", List(Text) + "1"), KnownTypes.NoMembers)
 constant Lit = NamedArguments(ValueCodegen(Shined.values, inference = TypeInference(ShineTypes, Lights)))
+constant Boxing = NamedArguments(ValueCodegen.Boxing)
 constant OwnDefaults = NamedArguments(ValueCodegen(Lit.values, inference = TypeInference(KnownTypes(ShineTypes, parameters = (Constructing.With("mask default", "Light"), KnownTypes.NoMembers)), Lights)))
 Arranged(call SyntaxNode, block CodeBlock) SyntaxNode slow
 	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
@@ -26,7 +27,7 @@ Arranged(call SyntaxNode, block CodeBlock) SyntaxNode slow
 	if isType is false or isReplacing
 		return call
 	let names = values.target.FromNames(call.text)
-	Last(call, names) < positional then call else Filled(call, names, positional)
+	Last(call, names) < positional then call else Filled(call, names, positional, block.scope)
 IsConstructor(call SyntaxNode) Boolean
 	Parts.IsConstructor(Parts.Parsed("Part")) is false
 	Parts.Arranged(Parts.Parsed("Part(Part(1), mask = 3)"), CodeBlock.Empty) to Text is "Part(Part(1), mask = 3)"
@@ -35,11 +36,11 @@ IsConstructor(call SyntaxNode) Boolean
 	Parts.IsConstructor(SyntaxParser(Tokenizer("Missing(1)").Tokens).Parse) is false
 	let isOwnMethod = values.target.Header(call.text).tokens.Length > 0
 	call.Kind is "Call" and values.inference.types.IsKnown(call.text) and isOwnMethod is false
-Filled(call SyntaxNode, names Texts, positional Number) SyntaxNode
-	Parts.Filled(Masked, ("buffer", "light", "mask"), 1) to Text is "Part(1, 0, 3)"
+Filled(call SyntaxNode, names Texts, positional Number, scope Scope) SyntaxNode
+	Parts.Filled(Masked, ("buffer", "light", "mask"), 1, CallTarget.NoScope) to Text is "Part(1, 0, 3)"
 	mutable arguments = List(Mutable(SyntaxNode))
 	for Range(0, Last(call, names) + 1)
-		arguments.Add(value < positional then call.children(value) else Argument(call, call.text, "", names(value)))
+		arguments.Add(value < positional then call.children(value) else Argument(call, call.text, "", names(value), scope))
 	SyntaxNode("Call", call.text, arguments, call.line)
 Positional(call SyntaxNode) Number
 	Parts.Last(SyntaxNode("Call", "Part"), ("light", "mask")) is 1
@@ -70,27 +71,33 @@ IsComputed(owner Text, key Text) Boolean
 	Shined.IsComputed("Part", "Shine mask")
 	let fallback = Fallback(owner, key)
 	fallback is not "" and ConstantFolding(owner, values.inference).Unwrapped(Parsed(fallback)).IsLiteral is false
-Argument(call SyntaxNode, owner Text, prefix Text, name Text) SyntaxNode
-	OwnDefaults.Argument(SyntaxNode("Call", "Part"), "Part", "", "mask") to Text is "Part.Light"
-	Parts.Argument(Masked, "Part", "", "light").text is "0"
-	Parts.Argument(Masked, "Part", "", "mask").text is "3"
-	Shined.Argument(SyntaxNode("Call", "Shine"), "Part", "Shine ", "mask").Kind is "Member"
+Argument(call SyntaxNode, owner Text, prefix Text, name Text, scope Scope) SyntaxNode
+	OwnDefaults.Argument(SyntaxNode("Call", "Part"), "Part", "", "mask", CallTarget.NoScope) to Text is "Part.Light"
+	Parts.Argument(Masked, "Part", "", "light", CallTarget.NoScope).text is "0"
+	Parts.Argument(Masked, "Part", "", "mask", CallTarget.NoScope).text is "3"
+	Shined.Argument(SyntaxNode("Call", "Shine"), "Part", "Shine ", "mask", CallTarget.NoScope).Kind is "Member"
 	for call.children
 		if value.Kind is "Reassignment" and value.children(0).text is name
 			return value.children(1)
 	let fallback = Fallback(owner, prefix + name)
-	fallback is "" then SyntaxNode("Identifier", name) else Qualified(owner, fallback)
-Defaulted(call SyntaxNode, owner Text, start Number) SyntaxNode
-	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1) to Text is "Shine(1, 0, Curve.Flat)"
-	Shined.Defaulted(SyntaxParser(Tokenizer("Shine(1)").Tokens).Parse, "Part", 0) to Text is "Shine(1, Curve.Flat)"
-	Parts.Defaulted(Masked, "Part", 0) to Text is "Part(1, mask = 3)"
-	Shined.Defaulted(Parts.Parsed("Shine(mask = 3)"), "Part", 0) to Text is "Shine(0, 3)"
+	fallback is "" then Captured(name, scope) else Qualified(owner, fallback)
+Captured(name Text, scope Scope) SyntaxNode
+	Parts.Captured("buffer", CallTarget.NoScope).Kind is "Identifier"
+	Boxing.Captured("Width", CallTarget.NoScope) to Text is "0"
+	Boxing.Captured("Width", Scope(List(Text) + "Width", List(Text) + "Number")).Kind is "Identifier"
+	let isHeld = scope.TypeOf(name) is "" and values.target.Holding(values.target.TypeName, name) is not ""
+	isHeld then SyntaxNode("Number", "0") else SyntaxNode("Identifier", name)
+Defaulted(call SyntaxNode, owner Text, start Number, scope Scope) SyntaxNode
+	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1, CallTarget.NoScope) to Text is "Shine(1, 0, Curve.Flat)"
+	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(1, Curve.Flat)"
+	Parts.Defaulted(Masked, "Part", 0, CallTarget.NoScope) to Text is "Part(1, mask = 3)"
+	Shined.Defaulted(Parts.Parsed("Shine(mask = 3)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(0, 3)"
 	let given = Positional(call) - start
 	let names = values.inference.types.ParametersOf(owner, call.text, call.children.Length - start)
 	let last = Computed(call, owner, names, given)
 	mutable children = call.children.Slice(0, Positional(call))
 	for Range(given, last + 1)
-		children = children + Argument(call, owner, call.text + " ", names(value))
+		children = children + Argument(call, owner, call.text + " ", names(value), scope)
 	last < given then call else SyntaxNode(call.Kind, call.text, children, call.line)
 Computed(call SyntaxNode, owner Text, names Texts, given Number) Number
 	Shined.Computed(SyntaxNode("Call", "Shine"), "Part", ("light", "mask"), 2) is 1

@@ -166,7 +166,7 @@ IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	let owner = Owner(node, block)
-	let filled = NamedArguments(value).Defaulted(node, owner, ArgumentStart(node))
+	let filled = NamedArguments(value).Defaulted(node, owner, ArgumentStart(node), block.scope)
 	let signature = Specialization(value).Signed(filled, owner, returnType, block)
 	let call = Elements.Grouped(target.WithErrorArguments(filled, block.scope), ArgumentStart(node), signature.Length - 3)
 	let parameters = target.ParameterTypes(node.text, owner, ConversionCodegen(value).ArgumentTypes(filled, owner, block))
