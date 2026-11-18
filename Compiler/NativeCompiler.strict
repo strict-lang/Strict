@@ -62,7 +62,7 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 		return Error("InvalidTestRequest")
 	let isCounting = request.Option is "lines"
 	let isRecursive = "--no-recursive" is not in request.Options
-	let selection = request.Selection is "*" then TestCodegen.Everything else request.Selection
+	let selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
 	let build = NativeBuild(logger, false, selection = selection, isRecursive = isRecursive)
 	build.Tested(rest(0), rest(1), isCounting, sources)
 Checked(rest Texts, sources Texts) Number

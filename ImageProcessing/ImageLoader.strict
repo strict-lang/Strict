@@ -17,6 +17,8 @@ Color(bytes Numbers, at Number) ColorValue
 Grays Numbers slow
 	ImageLoader("ImageProcessing/Digit.jpg").Grays.Length is 784
 	ImageCodec.SaveJpeg(Strips, ImageCodec.Pixels("ImageProcessing/Digit.jpg", 3) / Byte.Max, 7, 100) is not Error
+	ImageCodec.Width(Strips) is 7
+	ImageCodec.Height(Strips) is 112
 	ImageCodec.SaveJpeg(Short, ImageCodec.Pixels("ImageProcessing/Progressive.jpg", 3) / Byte.Max, 48, 90) is not Error
 	ImageLoader(Strips).Grays.Sum.IsNearlyEqual(ImageLoader("ImageProcessing/Digit.jpg").Grays.Sum, 1)
 	for ImageCodec.Pixels(path, 1)

@@ -74,7 +74,8 @@ CheckHeaps(folder Text) Boolean
 	let web = Process.RunTool(Directory.Directories("Tools/emsdk/node").First + "/node.exe", webJs, RunSeconds)
 	if web.exitCode is not 0 or "total 1924" is not in web.Output
 		return Error("WebPressureFailed: " + web.Output + web.error)
-	RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
+	let ran = RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
+	ran is Error then ran else true
 CheckUncollected(folder Text) Boolean
 	let grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
 	let u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
@@ -166,7 +167,9 @@ CheckTools(folder Text) Boolean
 	mutable code = "has logger\nLines(count Number) Texts\n\tToolOutputs(Logger).Lines(1).Length is 1\n"
 	code = code + "\tfor count\n\t\t\"/c type " + typed + "\"\nRun\n\tmutable total = 0\n"
 	code = code + "\tfor Process.RunTools(\"cmd\", Lines(128))\n\t\ttotal = total + value.Output.Length\n"
-	RunBuilt(folder, "ToolOutputs", code + "\tlogger.Log(\"total \" + total)", "", "STRICT_GPU=0", "total 384000", "")
+	code = code + "\tlogger.Log(\"total \" + total)"
+	let ran = RunBuilt(folder, "ToolOutputs", code, "", "STRICT_GPU=0", "total 384000", "")
+	ran is Error then ran else true
 RepeatedLine(line Text, count Number) Texts
 	for count
 		line

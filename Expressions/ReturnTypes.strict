@@ -31,8 +31,7 @@ constant Calls = ("Call", "Member", "MethodCall", "Identifier")
 constant Unvalued = "ReturnTypeMismatch: Drawn has no return type, its call gives no value"
 Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	Naming.Issue(Joined, Named, Lines).StartsWith("ReturnTypeMismatch: a Text is returned for Texts")
-	Naming.Issue(Splitted, Named, Lines) is ""
-	Naming.Issue(ScopedStatement(Joined.statement, Named, 2), Named, Looped) is ""
+	(Naming.Issue(Splitted, Named, Lines) + Naming.Issue(ScopedStatement(Joined.statement, Named, 2), Named, Looped)) is ""
 	constant hint = ", brackets around an operator only group, List(Text) + value is a list of one"
 	let node = scoped.statement
 	if IsTail(scoped, lines) is false or node.HasBody or node.Kind is in ("Declaration", "Reassignment", "Return")
@@ -40,7 +39,22 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	let declared = Declared(lines, scoped.line)
 	let type = inference.TypeOf(node, scoped.scope, current)
 	let isSingle = inference.types.IsPlural(declared) and inference.types.ElementType(declared) is type
-	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else ""
+	let isOpen = node.text is in ("then", "else") or "or" is in Header(lines, scoped.line).tokens
+	let other = isOpen then "" else Other(type, declared)
+	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else other
+Other(type Text, declared Text) Text
+	Naming.Other("Text", "Number") is "ReturnTypeMismatch: a Text is returned for Number"
+	Naming.Other("Count", "Numbers") is "ReturnTypeMismatch: a Count is returned for Numbers"
+	(Naming.Other("Number", "Number") + Naming.Other("Text", "None") + Naming.Other("Count", "Count")) is ""
+	(Naming.Other("Texts", "Texts") + Naming.Other("Unknown", "Number") + Naming.Other("Error", "Numbers")) is ""
+	Naming.Other("Characters", "Text") is ""
+	let types = inference.types
+	let isRecord = TypeEntry.IsBaseName(type) is false and types.MembersOf(type).names.Length > 0
+	let isUnlisted = types.IsPlural(declared) and isRecord and ListFits(types).IsList(type) is false
+	let isSpelled = types.IsPlural(type) and types.ElementType(type) is types.ElementType(declared)
+	let isBase = ArgumentTypes(inference).IsBaseMismatch(type, declared) and isSpelled is false
+	let isWrong = type is not "Error" and declared is not "None" and (isBase or isUnlisted)
+	isWrong then "ReturnTypeMismatch: a " + type + " is returned for " + declared else ""
 Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	Coupling.Split(Early, Finals, Making).EndsWith(" gives a Couple(Number, Number) or a Couple(Text, Number)")
 	Coupling.Split(Early, Scope(Finals.names, List(Text) + "Couple(Number, Number)"), Making) is ""
