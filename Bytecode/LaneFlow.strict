@@ -13,6 +13,7 @@ constant Picking = InstructionEntry(InstructionType.IndexCall, "pairs", (2, 1, -
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + Pairs, List(MethodEntry))
 constant Mixed = Copying + InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "copy")
 constant Chained = Copying + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 6, "copy"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 6, "again"))
+constant Changing = InstructionEntry.Invoke(6, ("Strict/Ticker", "Next", "Strict/Number"), List(Number), 3)
 constant ElementStore = (StructLanes.Constructed, StructLanes.Named(InstructionType.StoreRegisterToVariable, 2, "pairs(0)", 0))
 Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) Texts
 	Sample.Variables(Copying, List(Text), 4) is ("pair Pair", "copy Pair")
@@ -58,12 +59,22 @@ Tracked(entry InstructionEntry, laned Texts, variables Texts) Texts
 	Sample.Tracked(StructLanes.Constructed, Others, List(Text)) is ("3 Pair", "2 Pair")
 	Sample.Tracked(Reloaded, List(Text), ("pair Pair")) is ("5 Pair")
 	Sample.Tracked(InstructionEntry.LoadNumber(3, 1), ("3 Pair"), List(Text)).Length is 0
+	Sample.Tracked(Changing, ("7 Pair", "2 Pair", "9 Pair"), List(Text)) is ("2 Pair", "9 Pair")
 	let written = LoadReuse(List(InstructionEntry)).Written(entry)
 	if written < 0
 		return laned
-	let kept = Without(laned, written)
+	let isCall = entry.kind is InstructionType.Invoke then entry.texts(1) is not "from" else false
+	let kept = isCall then Unchanged(laned, entry) else Without(laned, written)
 	let type = Produced(entry, variables)
 	type is "" then kept else kept + (written + " " + type)
+Unchanged(laned Texts, call InstructionEntry) Texts
+	Sample.Unchanged(("6 Pair", "7 Pair", "8 Pair", "9 Pair", "5 Pair"), Changing) is ("9 Pair", "5 Pair")
+	let written = call.payload(0)
+	let last = written + LoadReuse(List(InstructionEntry)).InvokeReads(call).Length + 1
+	for laned
+		let register = value.Split(" ").First to Number
+		if register < written or register > last
+			value
 Produced(entry InstructionEntry, variables Texts) Text
 	Sample.Produced(StructLanes.Constructed, List(Text)) is "Pair"
 	Sample.Produced(Reloaded, ("pair Pair")) is "Pair"

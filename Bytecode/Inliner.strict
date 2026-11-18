@@ -1,6 +1,7 @@
 has types List(TypeEntry)
 has isSplitting Boolean = false
 constant MadeError = InstructionEntry.Invoke(0, ("Strict/Error", "from", "Strict/Error"), List(Number), -1)
+constant AnyError = InstructionEntry.LoadAnyError(0)
 constant ReadTested = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, ErrorCodegen.Tested)
 constant Renamed = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable, InstructionType.IndexCall)
 constant Arithmetic = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo, InstructionType.Power)
@@ -78,12 +79,14 @@ Reserved(callee MethodEntry, call InstructionEntry) Number
 IsWatching(instructions List(InstructionEntry)) Boolean
 	Sample.IsWatching(Calling.instructions) is false
 	Sample.IsWatching(List(InstructionEntry) + MadeError)
-	Sample.IsWatching(List(InstructionEntry) + ReadTested)
+	Sample.IsWatching(List(InstructionEntry) + ReadTested) and Sample.IsWatching(List(InstructionEntry) + AnyError)
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6), false).Name is "Squared"
 	for instructions
 		if value.kind is InstructionType.Invoke and TypeEntry.ShortName(value.texts(0)) is "Error"
 			return true
 		if value.kind is InstructionType.LoadVariableToRegister and value.texts(0) is ErrorCodegen.Tested
+			return true
+		if value.payload.Length is 2 then value.kind is AnyError.kind and value.payload(1) is AnyError.payload(1) else false
 			return true
 	false
 Inlinable(owner TypeEntry, call InstructionEntry, next InstructionEntry, isWatching = true) MethodEntry
