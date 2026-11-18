@@ -30,6 +30,11 @@ Symbol Text
 	let plain = symbols.Symbol(method.Name)
 	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else plain
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
+Variant Text
+	Counter.Variant is ""
+	MlirFunction(Counter, Whole = ("tokens", "heads")).Variant is "x_heads_tokens"
+	MlirFunction(Counter, Whole = ("heads", "tokens")).Variant is "x_heads_tokens"
+	Whole.Length is 0 then "" else "x_" + outer.Text.Combine(Whole.Sorted, "_")
 Parameters Texts
 	MlirForeign.Adder.Symbol is "Adder_Add_foreign"
 	MlirFunction(Counter, method = MethodEntry(MlirForeign.Add, Name = "to")).Symbol is "Counter_to_2_Number"

@@ -92,9 +92,9 @@ Function Texts
 	Twice.Function.First.StartsWith("  func.func private @Rows_Twice_1_device(%failed: !llvm.ptr, %lane: i64")
 	Twice.Function(1) is "    %one = arith.constant 1 : i64"
 	"    llvm.store %p1, %v_number : f64, !llvm.ptr" is in Twice.Function
+	MlirDevice(MlirDeviceMembers.WholeHead.function, 0).Function.First.IndexOf("_devicex_heads(%failed: !llvm.ptr") > 0
 	let typed = MlirDeviceCalls(function, 0, function).Parameters + MlirDeviceMembers(function).Typed(function.Float)
-	let extra = function.Whole.Length > 0 then "x" else ""
-	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix + extra
+	let symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix + function.Variant
 	let returned = MlirExact(function, 0).Returned
 	let header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + returned + " {"
 	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"

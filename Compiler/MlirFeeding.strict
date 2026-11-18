@@ -60,7 +60,8 @@ Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
 	(List(Text) + (call + " : (" + calls.Types + ") -> " + MlirExact(function, at).Returned)) + Unpacked(result)
 Symbol(callee MlirFunction) Text
 	Summing.Symbol(MlirDevice.Twice.function) is "Rows_Twice_1_device"
-	callee.Symbol + "_device" + MlirTyped(function.Float).Suffix + (callee.Whole.Length > 0 then "x" else "")
+	Singled.Symbol(MlirFunction(MlirDevice.Twice.function, Whole = ("b", "a"))) is "Rows_Twice_1_devicesx_a_b"
+	callee.Symbol + "_device" + MlirTyped(function.Float).Suffix + callee.Variant
 Called(number Text, target Text) Texts
 	Singled.Called("%d6", "%r4").Last is "    llvm.store %d6_q, %r4_q : i64, !llvm.ptr"
 	Summing.Called("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")

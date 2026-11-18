@@ -6,6 +6,7 @@ constant Checking = MlirGpu(MlirFunction(Doubling.function.types, MlirParallel.R
 constant Layering = MlirGpu(MlirFunction(List(TypeEntry) + GpuLayerSamples.Layered, GpuLayerSamples.Layered, GpuLayerSamples.Sums), 2)
 constant SlotGlobal = "  llvm.mlir.global internal @fRows_Doubled_1_gpu2(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>"
 constant Twiced = List(MlirFunction) + MlirDevice.Twice.function
+constant Headed = (MlirFunction(MlirDeviceMembers.Head, Whole = List(Text) + "heads"), MlirFunction(MlirDeviceMembers.Head, Whole = List(Text) + "position"))
 constant Indexing = "] : (!llvm.ptr) -> !llvm.ptr, f64"
 constant Marker = "// device kernels"
 constant NameGlobal = "  llvm.mlir.global internal constant @kRows_Doubled_1_gpu2(\"Rows_Doubled_1_gpu2\\00Rows_Doubled_1_gpu2s\\00\") : !llvm.array<41 x i8>"
@@ -163,6 +164,7 @@ Callees(inspected MlirFunction) List(MlirFunction)
 	found
 GuardedCallees(inspected MlirFunction, at Number) List(MlirFunction)
 	MlirGpu.GuardedCallees(Doubling.function, 2).Length is 0
+	Text.Combine(MlirGpu.Functions(Headed)).IndexOf("_devicesx_position(") > 0
 	let loop = MlirGuards(MlirFunction(inspected, Float = "f32", Guarded = at), at)
 	loop.IsUseful then Devices(loop.function, at + 1, inspected.method.LoopEndOf(at), 0) else List(MlirFunction)
 Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(MlirFunction)
@@ -185,7 +187,7 @@ Functions(callees List(MlirFunction)) Texts
 	mutable lines = List(Mutable(Text))
 	mutable symbols = List(Mutable(Text))
 	for callees
-		let key = value.Symbol + (value.Whole.Length > 0 then "x" else "")
+		let key = value.Symbol + value.Variant
 		if key is not in symbols
 			let plain = value.Whole.Length > 0 then List(Text) else MlirDevice(value, 0).Function
 			lines = lines + plain + MlirDevice(MlirFunction(value, Float = "f32"), 0).Function
