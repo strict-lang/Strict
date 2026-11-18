@@ -11,17 +11,29 @@ constant Flooring = Floored.method.instructions(1)
 constant Moves = (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister, InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
 constant Controls = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd, InstructionType.LoopEnd, InstructionType.CheckError)
 constant Values = ("Number", "Boolean")
+constant Brief = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 123))
+constant Words = MethodEntry(GpuNumberSamples.Ranged, instructions = Brief + GpuNumberSamples.Ranged.instructions.Slice(3, 5))
+constant Short = MlirGpuCheck(MlirFunction(MlirLoops.Ranging.function, method = Words), 3)
 constant Heading = MlirGpuCheck(MlirFunction(List(TypeEntry) + GpuChoiceSamples.Headed, GpuChoiceSamples.Headed, GpuChoiceSamples.Heading), 2)
 constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
 IsGpu Boolean
-	Doubling.IsGpu
-	Heading.IsGpu
-	Timing.IsGpu is false
-	MlirGpuCheck(MlirGpu.Checking.function, 2).IsGpu
-	Layering.IsGpu
-	MlirGpuCheck(MlirKernel.Doubler, 2).IsGpu
-	MlirGpuCheck(MlirDeviceRows.Picking, 2).IsGpu
-	MlirGpuCheck(MlirLoops.Ranging.function, 3).IsGpu
+	MlirGpuCheck(MlirLoops.Ranging.function, 3).IsGpu and Short.IsGpu is false
+	IsShort is false and IsKernelLoop
+IsShort Boolean
+	Short.IsShort and Doubling.IsShort is false and MlirGpuCheck(MlirLoops.Ranging.function, 3).IsShort is false
+	let opened = function.method.instructions(position)
+	let counted = opened.payload(1) is 1 then opened.payload(2) else opened.payload(0)
+	let count = MlirCounter(function, position).Constant(counted, -1)
+	count > 0 and count < MlirCost.Device
+IsKernelLoop Boolean
+	Doubling.IsKernelLoop
+	Heading.IsKernelLoop
+	Timing.IsKernelLoop is false
+	MlirGpuCheck(MlirGpu.Checking.function, 2).IsKernelLoop
+	Layering.IsKernelLoop
+	MlirGpuCheck(MlirKernel.Doubler, 2).IsKernelLoop
+	MlirGpuCheck(MlirDeviceRows.Picking, 2).IsKernelLoop
+	Short.IsKernelLoop
 	let isListed = MlirLoops(function, position).Collection is in Rows or MlirWholeKernel(function, position).IsKernel
 	if isListed is false or IsPure is false or MlirLanes(function, position).IsTouched
 		return MlirWholeKernel(function, position).IsKernel

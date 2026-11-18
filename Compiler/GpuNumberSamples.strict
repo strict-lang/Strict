@@ -20,6 +20,6 @@ constant SecondIndexed = (InstructionEntry.Named(InstructionType.LoadVariableToR
 constant SquareAdded = (InstructionEntry(InstructionType.IndexCall, "input", (9, 8, -1)), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 9), InstructionEntry.Binary(InstructionType.Multiply, (5, 9, 10)))
 constant SquareStored = (InstructionEntry.Binary(InstructionType.Add, (1, 10, 11)), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 11, "sum"), InstructionEntry.Jump(InstructionType.LoopEnd, 15))
 constant Squared = MethodEntry("Squared", InputRange, "Strict/Number", SizeSumming + FirstIndexed + FifthChecked + SecondIndexed + SquareAdded + SquareStored + GpuLayerSamples.SumReturned)
-constant Ranging = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 300), InstructionEntry.LoopBegin(0, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "value"))
+constant Ranging = (MlirLoops.Emptied, InstructionEntry.LoadNumber(0, 1), InstructionEntry.LoadNumber(1, 300000), InstructionEntry.LoopBegin(0, 1), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "value"))
 constant RangeDoubled = (InstructionEntry.Invoke(3, ("Strict/Rows", "Twice", "Strict/Number", "number"), List(Number) + 2, -1), InstructionEntry.Named(InstructionType.InvokeWriteToList, 3, "forResult"))
 constant Ranged = MethodEntry("Ranged", List(MemberEntry), "Strict/List(Number)", Ranging + RangeDoubled + InstructionEntry.Jump(InstructionType.LoopEnd, 4))
