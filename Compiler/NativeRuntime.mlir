@@ -20651,19 +20651,31 @@
     return %bytes : f64
   }
   // `GpuMemory.Address`: the device address of a list of 32 bit numbers living on the GPU (CUDA or HIP) once the work
-  // queued for it is done, 0 for every other list: a package shows such a result without a download (a texture)
+  // queued for it is done, in a web page the handle of its WebGPU buffer (WebRuntime.js copies it with strictGpuCopied),
+  // 0 for every other list: a package shows such a result without a download (a texture)
   func.func private @strict_gpu_address(%self: f64, %list: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %single = arith.constant 32 : i64
-    %device = func.call @strict_gpu_device(%list) : (f64) -> i64
-    %resides = arith.cmpi ne, %device, %none : i64
+    %eight = arith.constant 8 : i64
+    %webClass = arith.constant 255 : i64
+    %tagged = func.call @strict_gpu_tagged(%list) : (f64) -> i64
+    %resides = arith.cmpi ne, %tagged, %none : i64
     cf.cond_br %resides, ^sized, ^host
   ^sized:
     %bits = func.call @strict_list_packed(%list) : (f64) -> i64
     %isSingle = arith.cmpi eq, %bits, %single : i64
-    cf.cond_br %isSingle, ^current, ^host
+    cf.cond_br %isSingle, ^placed, ^host
+  ^placed:
+    %class = arith.andi %tagged, %webClass : i64
+    %isWeb = arith.cmpi eq, %class, %webClass : i64
+    cf.cond_br %isWeb, ^web, ^current
+  ^web:
+    %handle = arith.shrui %tagged, %eight : i64
+    %handleNumber = arith.uitofp %handle : i64 to f64
+    return %handleNumber : f64
   ^current:
+    %device = func.call @strict_gpu_device(%list) : (f64) -> i64
     %made = func.call @strict_gpu_current() : () -> i1
     cf.cond_br %made, ^drain, ^host
   ^drain:
@@ -22073,8 +22085,9 @@
     %readable = arith.ori %resides, %uploaded : i1
     return %readable : i1
   }
-  // the device address of a list computed on the GPU (CUDA or HIP), 0 for host lists and WebGPU buffers (class 255)
-  func.func private @strict_gpu_device(%list: f64) -> i64 {
+  // where a list computed on the GPU lives: its device address (CUDA or HIP) or the handle of its WebGPU buffer shifted
+  // by 8 bits with class 255 in the low byte, 0 for a host list
+  func.func private @strict_gpu_tagged(%list: f64) -> i64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %isUnset = arith.cmpf oeq, %list, %zero : f64
@@ -22087,10 +22100,18 @@
     %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
     %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
     %isPacked = arith.cmpf olt, %capacity, %zero : f64
-    cf.cond_br %isPacked, ^packed(%holder : !llvm.ptr), ^plain
-  ^packed(%packedHolder: !llvm.ptr):
-    %deviceSlot = llvm.getelementptr %packedHolder[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    cf.cond_br %isPacked, ^packed, ^plain
+  ^packed:
+    %deviceSlot = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
     %tagged = llvm.load %deviceSlot : !llvm.ptr -> i64
+    return %tagged : i64
+  ^plain:
+    return %none : i64
+  }
+  // the device address of a list computed on the GPU (CUDA or HIP), 0 for host lists and WebGPU buffers (class 255)
+  func.func private @strict_gpu_device(%list: f64) -> i64 {
+    %none = arith.constant 0 : i64
+    %tagged = func.call @strict_gpu_tagged(%list) : (f64) -> i64
     %addressMask = arith.constant -256 : i64
     %device = arith.andi %tagged, %addressMask : i64
     %webClass = arith.constant 255 : i64
@@ -22098,8 +22119,6 @@
     %isWeb = arith.cmpi eq, %class, %webClass : i64
     %native = arith.select %isWeb, %none, %device : i64
     return %native : i64
-  ^plain:
-    return %none : i64
   }
   // a graph is being captured or the stream still runs: a download waits for all of that GPU work, a small loop reading
   // a list there launches without waiting instead (DeltaChunks.Logs, 24 times in each MTP verify step of Qwen3.5)

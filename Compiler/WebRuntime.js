@@ -512,6 +512,12 @@ addToLibrary({
 	strict_webgpu_download__deps: ['$strictWebGpu', '$strictWebGpuWritten', '$strictWebGpuWidened', '$strictWebGpuEncoder',
 		'$strictWebGpuFlush', '$Asyncify', '$strictWebGpuBuffer', '$strictWebGpuDestroyed', '$strictWebGpuPlaced'],
 	strict_webgpu_download__async: true,
+	// a package shows a kept result without the download (GpuMemory.Address gives its handle, DeltaEngine Texture.Shared):
+	// the copy into its own buffer is recorded behind the kernels that compute the result
+	strict_webgpu_download__postset: "Module['strictGpuDevice'] = () => strictWebGpu.device; " +
+		"Module['strictGpuCopied'] = (handle, target, bytes) => strictWebGpuPlaced(handle).then((source) => { " +
+		"if (!source || source.size < bytes || handle in strictWebGpu.halves) return false; " +
+		"strictWebGpuEncoder().copyBufferToBuffer(source, 0, target, 0, bytes); strictWebGpuFlush(); return true; });",
 	strict_webgpu_download: (handle, target, count, bits) => Asyncify.handleSleep((wakeUp) =>
 		strictWebGpuPlaced(handle).then((source) => {
 		if (!source)
