@@ -1,5 +1,5 @@
 has function MlirFunction
-constant Kinds = ("Attention", "Products", "Hadamard", "Convolution", "Sylvester", "HeadRotated", "TokenModulated")
+constant Kinds = ("Attention", "Products", "Hadamard", "Convolution", "Sylvester", "HeadRotated", "TokenModulated", "RopeRotated", "RowModulated")
 constant Attentions = ("queries", "keys", "values", "heads", "groups", "size", "sequences", "causal", "valueOffset", "valueStride", "quantized", "routing", "exact")
 constant Productions = ("left", "right", "shape", "strides")
 constant Hadamards = ("values", "group")
@@ -7,6 +7,13 @@ constant Sylvesters = ("values", "flips", "size")
 constant Convolutions = ("values", "affine", "weights", "shape")
 constant HeadRotations = ("combined", "start", "width", "weights", "rotation", "epsilon")
 constant TokenModulations = ("input", "weights", "modulation", "part", "epsilon")
+constant RopeRotations = ("combined", "start", "width", "weights", "rotation", "half", "wide", "epsilon")
+constant RowModulations = ("input", "weights", "modulation", "starts", "part", "epsilon")
+constant Stored = (Attentions, Productions, Hadamards, Convolutions, Sylvesters, HeadRotations, TokenModulations, RopeRotations, RowModulations)
+constant Rotations = (Hadamards, Sylvesters, HeadRotations, RopeRotations)
+constant Rotated = ("Hadamard", "Sylvester", "HeadRotated", "RopeRotated")
+constant Modulations = (TokenModulations, RowModulations)
+constant Modulated = ("TokenModulated", "RowModulated")
 constant ValueCollected = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
 constant SoftmaxCalls = (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1))
 constant QueriesLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1))
@@ -45,17 +52,21 @@ Named(stored Texts) Text
 	Multiplying.Named(Convolutions) is ""
 	Rotating.Named(Hadamards) is "Hadamard" and Rotating.Named(Sylvesters) is "Sylvester"
 	Rotating.Named(Convolutions) is "" and Rotating.Named(Productions) is "" and Multiplying.Named(Hadamards) is ""
-	if stored is Hadamards and function.method.Name is "Rotated"
-		return "Hadamard"
-	if stored is Sylvesters and function.method.Name is "Rotated"
-		return "Sylvester"
-	if stored is Convolutions and function.method.Name is "Summed"
+	let name = function.method.Name
+	if name is "Rotated" or name is "Modulated"
+		return name is "Rotated" then Listed(stored, Rotations, Rotated) else Listed(stored, Modulations, Modulated)
+	if stored is Convolutions and name is "Summed"
 		return "Convolution"
-	if stored is HeadRotations and function.method.Name is "Rotated"
-		return "HeadRotated"
-	if stored is TokenModulations and function.method.Name is "Modulated"
-		return "TokenModulated"
-	stored is Productions and function.method.Name is "Multiplied" then "Products" else ""
+	stored is Productions and name is "Multiplied" then "Products" else ""
+Listed(stored Texts, members List(Texts), kinds Texts) Text
+	Rotating.Listed(RopeRotations, Rotations, Rotated) is "RopeRotated"
+	Rotating.Listed(HeadRotations, Rotations, Rotated) is "HeadRotated"
+	Rotating.Listed(RowModulations, Modulations, Modulated) is "RowModulated"
+	Rotating.Listed(Productions, Rotations, Rotated) is ""
+	for members
+		if value is stored
+			return kinds(index)
+	""
 IsSoftmax Boolean
 	Softmaxing.IsSoftmax
 	Multiplying.IsSoftmax is false
@@ -107,15 +118,8 @@ Members(kind Text) Texts
 	Attending.Members("Convolution").Last is "shape"
 	Attending.Members("Sylvester") is Sylvesters
 	Attending.Members("Attention").Last is "exact"
-	if kind is "Softmax"
-		return ("scores", "width")
-	if kind is "HeadRotated"
-		return HeadRotations
-	if kind is "TokenModulated"
-		return TokenModulations
-	if kind is in ("Convolution", "Sylvester")
-		return kind is "Convolution" then Convolutions else Sylvesters
-	kind is "Attention" then Attentions else (kind is "Products" then Productions else Hadamards)
+	Attending.Members("RopeRotated") is RopeRotations and Attending.Members("RowModulated")(3) is "starts"
+	kind is "Softmax" then ("scores", "width") else Stored(Kinds.Index(kind))
 Marker(kind Text) Text
 	Attending.Marker("Products") is "@strict_gpu_products("
 	Attending.Members("Softmax") is ("scores", "width") and Multiplying.Named(Sylvesters) is ""

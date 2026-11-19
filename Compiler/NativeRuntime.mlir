@@ -24590,6 +24590,249 @@
   ^unable:
     return %zero : f64
   }
+  // the numbers of a list as a kernel reads them: 17 (bfloat16), 32 or 64 bits are what the kernels of RopeRotated
+  // and RowModulated read, the format on the GPU of a list that resides there, else of its numbers here
+  func.func private @strict_gpu_fusable(%list: f64) -> i1 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %seventeen = arith.constant 17 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %sixtyFour = arith.constant 64 : i64
+    %isUnset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %isUnset, ^unset, ^set
+  ^unset:
+    %false = arith.constant false
+    return %false : i1
+  ^set:
+    %device = func.call @strict_gpu_device(%list) : (f64) -> i64
+    %resides = arith.cmpi ne, %device, %none : i64
+    cf.cond_br %resides, ^resident, ^host
+  ^resident:
+    %format = func.call @strict_gpu_format(%list) : (f64) -> i64
+    cf.br ^known(%format : i64)
+  ^host:
+    %hostBits = func.call @strict_gpu_bits(%list) : (f64) -> i64
+    cf.br ^known(%hostBits : i64)
+  ^known(%bits: i64):
+    %isBrain = arith.cmpi eq, %bits, %seventeen : i64
+    %isSingle = arith.cmpi eq, %bits, %thirtyTwo : i64
+    %isWide = arith.cmpi eq, %bits, %sixtyFour : i64
+    %isFloat = arith.ori %isBrain, %isSingle : i1
+    %fusable = arith.ori %isFloat, %isWide : i1
+    return %fusable : i1
+  }
+  // `RopeRotated.Rotated` as one kernel (strict_device_rope_rotated), 0.0 when the GPU can not or anything is not
+  // what the kernel reads: heads of 128 or 64 numbers, tokens of a multiple of 128 numbers, a start at a multiple
+  // of 4 inside the token, a half that is a multiple of 4 up to half a head, heads of the result as wide as the
+  // heads or twice that, two heads of rotations per token, lists of 16, 32 or 64 bits. The kernel gets the epsilon
+  // once more as the bits of its 32 bit float (a whole number, so strict_gpu_exacts hands them over as an
+  // integer), a group is a token of the result
+  llvm.mlir.global internal constant @strict_gpu_roperotated_name("strict_device_rope_rotated\00strict_device_rope_rotated\00") : !llvm.array<54 x i8>
+  llvm.mlir.global internal @strict_gpu_roperotated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_roperotated(%ptx: !llvm.ptr, %combined: f64, %start: f64, %width: f64, %weights: f64, %rotation: f64, %half: f64, %wide: f64, %epsilon: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %nine = arith.constant 9 : i64
+    %mask = arith.constant 25 : i64
+    %small = arith.constant 64 : i64
+    %big = arith.constant 128 : i64
+    %bigMask = arith.constant 127 : i64
+    %largestCount = arith.constant 2147483648 : i64
+    %packedFormat = arith.constant 1041 : i64
+    %combinedLength = func.call @strict_list_length(%combined) : (f64) -> f64
+    %combinedCount = arith.fptosi %combinedLength : f64 to i64
+    %part = arith.divsi %combinedCount, %three : i64
+    %tripled = arith.muli %part, %three : i64
+    %weightsLength = func.call @strict_list_length(%weights) : (f64) -> f64
+    %size = arith.fptosi %weightsLength : f64 to i64
+    %rotationLength = func.call @strict_list_length(%rotation) : (f64) -> f64
+    %rotationCount = arith.fptosi %rotationLength : f64 to i64
+    %tokenWidth = arith.fptosi %width : f64 to i64
+    %first = arith.fptosi %start : f64 to i64
+    %paired = arith.fptosi %half : f64 to i64
+    %spread = arith.fptosi %wide : f64 to i64
+    %isBig = arith.cmpi eq, %size, %big : i64
+    %isSmall = arith.cmpi eq, %size, %small : i64
+    %isSize = arith.ori %isBig, %isSmall : i1
+    %safeSize = arith.select %isSize, %size, %big : i64
+    %hasPart = arith.cmpi sgt, %part, %none : i64
+    %isTriple = arith.cmpi eq, %tripled, %combinedCount : i64
+    %widthRest = arith.andi %tokenWidth, %bigMask : i64
+    %wholeHeads = arith.cmpi eq, %widthRest, %none : i64
+    %hasWidth = arith.cmpi sge, %tokenWidth, %big : i64
+    %safeWidth = arith.maxsi %tokenWidth, %one : i64
+    %tokenRest = arith.remsi %part, %safeWidth : i64
+    %wholeTokens = arith.cmpi eq, %tokenRest, %none : i64
+    %startRest = arith.andi %first, %three : i64
+    %startAligned = arith.cmpi eq, %startRest, %none : i64
+    %startAfter = arith.cmpi sge, %first, %none : i64
+    %doubleWidth = arith.shli %tokenWidth, %one : i64
+    %startInside = arith.cmpi sle, %first, %doubleWidth : i64
+    %halfRest = arith.andi %paired, %three : i64
+    %halfAligned = arith.cmpi eq, %halfRest, %none : i64
+    %hasHalf = arith.cmpi sgt, %paired, %none : i64
+    %bothHalves = arith.shli %paired, %one : i64
+    %halfFits = arith.cmpi sle, %bothHalves, %size : i64
+    %doubleSize = arith.shli %size, %one : i64
+    %isPlain = arith.cmpi eq, %spread, %size : i64
+    %isPadded = arith.cmpi eq, %spread, %doubleSize : i64
+    %spreadFits = arith.ori %isPlain, %isPadded : i1
+    %rotationNumbers = arith.muli %rotationCount, %tokenWidth : i64
+    %neededNumbers = arith.muli %part, %doubleSize : i64
+    %rotationFits = arith.cmpi eq, %rotationNumbers, %neededNumbers : i64
+    %heads = arith.divsi %part, %safeSize : i64
+    %count = arith.muli %heads, %spread : i64
+    %countFits = arith.cmpi slt, %count, %largestCount : i64
+    %tokenHeads = arith.divsi %tokenWidth, %safeSize : i64
+    %outWidth = arith.muli %tokenHeads, %spread : i64
+    %wholeWidthBack = arith.sitofp %tokenWidth : i64 to f64
+    %wholeWidth = arith.cmpf oeq, %wholeWidthBack, %width : f64
+    %wholeStartBack = arith.sitofp %first : i64 to f64
+    %wholeStart = arith.cmpf oeq, %wholeStartBack, %start : f64
+    %wholeHalfBack = arith.sitofp %paired : i64 to f64
+    %wholeHalf = arith.cmpf oeq, %wholeHalfBack, %half : f64
+    %wholeWideBack = arith.sitofp %spread : i64 to f64
+    %wholeWide = arith.cmpf oeq, %wholeWideBack, %wide : f64
+    %shaped0 = arith.andi %isSize, %hasPart : i1
+    %shaped1 = arith.andi %shaped0, %countFits : i1
+    %shaped2 = arith.andi %shaped1, %isTriple : i1
+    %shaped3 = arith.andi %shaped2, %wholeHeads : i1
+    %shaped4 = arith.andi %shaped3, %hasWidth : i1
+    %shaped5 = arith.andi %shaped4, %wholeTokens : i1
+    %shaped6 = arith.andi %shaped5, %startAligned : i1
+    %shaped7 = arith.andi %shaped6, %startAfter : i1
+    %shaped8 = arith.andi %shaped7, %startInside : i1
+    %shaped9 = arith.andi %shaped8, %halfAligned : i1
+    %shaped10 = arith.andi %shaped9, %hasHalf : i1
+    %shaped11 = arith.andi %shaped10, %halfFits : i1
+    %shaped12 = arith.andi %shaped11, %spreadFits : i1
+    %shaped13 = arith.andi %shaped12, %rotationFits : i1
+    %shaped14 = arith.andi %shaped13, %wholeWidth : i1
+    %shaped15 = arith.andi %shaped14, %wholeStart : i1
+    %shaped16 = arith.andi %shaped15, %wholeHalf : i1
+    %shaped = arith.andi %shaped16, %wholeWide : i1
+    cf.cond_br %shaped, ^formats, ^unable
+  ^formats:
+    %combinedFusable = func.call @strict_gpu_fusable(%combined) : (f64) -> i1
+    %weightsFusable = func.call @strict_gpu_fusable(%weights) : (f64) -> i1
+    %rotationFusable = func.call @strict_gpu_fusable(%rotation) : (f64) -> i1
+    %fits0 = arith.andi %combinedFusable, %weightsFusable : i1
+    %fits = arith.andi %fits0, %rotationFusable : i1
+    cf.cond_br %fits, ^launch, ^unable
+  ^launch:
+    %epsilonSingle = arith.truncf %epsilon : f64 to f32
+    %epsilonWord = arith.bitcast %epsilonSingle : f32 to i32
+    %epsilonWide = arith.extui %epsilonWord : i32 to i64
+    %epsilonBits = arith.uitofp %epsilonWide : i64 to f64
+    %lanes = func.call @strict_gpu_group_lanes(%outWidth) : (i64) -> i64
+    %slots = llvm.alloca %nine x f64 : (i64) -> !llvm.ptr
+    llvm.store %combined, %slots : f64, !llvm.ptr
+    %slot1 = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %start, %slot1 : f64, !llvm.ptr
+    %slot2 = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %slot2 : f64, !llvm.ptr
+    %slot3 = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %weights, %slot3 : f64, !llvm.ptr
+    %slot4 = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %rotation, %slot4 : f64, !llvm.ptr
+    %slot5 = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %half, %slot5 : f64, !llvm.ptr
+    %slot6 = llvm.getelementptr %slots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %wide, %slot6 : f64, !llvm.ptr
+    %slot7 = llvm.getelementptr %slots[7] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %epsilon, %slot7 : f64, !llvm.ptr
+    %slot8 = llvm.getelementptr %slots[8] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %epsilonBits, %slot8 : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_roperotated_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_roperotated_slot : !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %nine, %mask, %none, %none, %lanes, %outWidth, %packedFormat, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
+  // `RowModulated.Modulated` as one kernel (strict_device_row_modulated), 0.0 when the GPU can not or anything is not
+  // what the kernel reads: tokens of a multiple of 256 numbers from 1280 to 8192 (a block per token), a start for
+  // every token (none without a modulation), a whole part from 0, lists of 16, 32 or 64 bits; the epsilon goes once
+  // more as the bits of its 32 bit float like the one of strict_gpu_roperotated
+  llvm.mlir.global internal constant @strict_gpu_rowmodulated_name("strict_device_row_modulated\00strict_device_row_modulated\00") : !llvm.array<56 x i8>
+  llvm.mlir.global internal @strict_gpu_rowmodulated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_rowmodulated(%ptx: !llvm.ptr, %input: f64, %weights: f64, %modulation: f64, %starts: f64, %part: f64, %epsilon: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %seven = arith.constant 7 : i64
+    %mask = arith.constant 15 : i64
+    %lanes = arith.constant 256 : i64
+    %narrowest = arith.constant 1280 : i64
+    %blockMask = arith.constant 255 : i64
+    %widest = arith.constant 8192 : i64
+    %packedFormat = arith.constant 1041 : i64
+    %inputLength = func.call @strict_list_length(%input) : (f64) -> f64
+    %count = arith.fptosi %inputLength : f64 to i64
+    %weightsLength = func.call @strict_list_length(%weights) : (f64) -> f64
+    %width = arith.fptosi %weightsLength : f64 to i64
+    %startsLength = func.call @strict_list_length(%starts) : (f64) -> f64
+    %startsCount = arith.fptosi %startsLength : f64 to i64
+    %rest = arith.andi %width, %blockMask : i64
+    %aligned = arith.cmpi eq, %rest, %none : i64
+    %wideEnough = arith.cmpi sge, %width, %narrowest : i64
+    %narrowEnough = arith.cmpi sle, %width, %widest : i64
+    %hasCount = arith.cmpi sgt, %count, %none : i64
+    %modulationLength = func.call @strict_list_length(%modulation) : (f64) -> f64
+    %isPlain = arith.cmpf oeq, %modulationLength, %zero : f64
+    %started = arith.muli %startsCount, %width : i64
+    %everyStarted = arith.cmpi sge, %started, %count : i64
+    %allStarted = arith.ori %everyStarted, %isPlain : i1
+    %partAfter = arith.cmpf oge, %part, %zero : f64
+    %partInteger = arith.fptosi %part : f64 to i64
+    %wholePartBack = arith.sitofp %partInteger : i64 to f64
+    %wholePart = arith.cmpf oeq, %wholePartBack, %part : f64
+    %shaped0 = arith.andi %aligned, %wideEnough : i1
+    %shaped1 = arith.andi %shaped0, %narrowEnough : i1
+    %shaped2 = arith.andi %shaped1, %hasCount : i1
+    %shaped3 = arith.andi %shaped2, %allStarted : i1
+    %shaped4 = arith.andi %shaped3, %partAfter : i1
+    %shaped = arith.andi %shaped4, %wholePart : i1
+    cf.cond_br %shaped, ^formats, ^unable
+  ^formats:
+    %inputFusable = func.call @strict_gpu_fusable(%input) : (f64) -> i1
+    %weightsFusable = func.call @strict_gpu_fusable(%weights) : (f64) -> i1
+    %modulationFormat = func.call @strict_gpu_fusable(%modulation) : (f64) -> i1
+    %modulationFusable = arith.ori %modulationFormat, %isPlain : i1
+    %startsFormat = func.call @strict_gpu_fusable(%starts) : (f64) -> i1
+    %startsFusable = arith.ori %startsFormat, %isPlain : i1
+    %fits0 = arith.andi %inputFusable, %weightsFusable : i1
+    %fits1 = arith.andi %fits0, %modulationFusable : i1
+    %fits = arith.andi %fits1, %startsFusable : i1
+    cf.cond_br %fits, ^launch, ^unable
+  ^launch:
+    %epsilonSingle = arith.truncf %epsilon : f64 to f32
+    %epsilonWord = arith.bitcast %epsilonSingle : f32 to i32
+    %epsilonWide = arith.extui %epsilonWord : i32 to i64
+    %epsilonBits = arith.uitofp %epsilonWide : i64 to f64
+    %slots = llvm.alloca %seven x f64 : (i64) -> !llvm.ptr
+    llvm.store %input, %slots : f64, !llvm.ptr
+    %slot1 = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %weights, %slot1 : f64, !llvm.ptr
+    %slot2 = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %modulation, %slot2 : f64, !llvm.ptr
+    %slot3 = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %starts, %slot3 : f64, !llvm.ptr
+    %slot4 = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %part, %slot4 : f64, !llvm.ptr
+    %slot5 = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %epsilon, %slot5 : f64, !llvm.ptr
+    %slot6 = llvm.getelementptr %slots[6] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %epsilonBits, %slot6 : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_rowmodulated_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_rowmodulated_slot : !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %seven, %mask, %none, %none, %lanes, %width, %packedFormat, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
   // `GpuMemory.Tuned`: rows of 8 bit numbers with one scale each (TensorFile.Quantized) plus the low rank update of
   // TensorFile_Tuned (downs rank x width in the rotated space of the rows, ups height x rank, a scale per rank) merged
   // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (rows not all 8 bit of one width,
