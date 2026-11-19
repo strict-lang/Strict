@@ -24507,6 +24507,89 @@
   ^unable:
     return %zero : f64
   }
+  llvm.mlir.global internal constant @strict_gpu_headrotated_name("strict_device_head_rotated\00strict_device_head_rotated\00") : !llvm.array<54 x i8>
+  llvm.mlir.global internal @strict_gpu_headrotated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_headrotated(%ptx: !llvm.ptr, %combined: f64, %start: f64, %width: f64, %weights: f64, %rotation: f64, %epsilon: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %three = arith.constant 3 : i64
+    %six = arith.constant 6 : i64
+    %mask = arith.constant 25 : i64
+    %lanes = arith.constant 32 : i64
+    %group = arith.constant 128 : i64
+    %packedFormat = arith.constant 1041 : i64
+    %combinedLength = func.call @strict_list_length(%combined) : (f64) -> f64
+    %combinedCount = arith.fptosi %combinedLength : f64 to i64
+    %count = arith.divsi %combinedCount, %three : i64
+    %weightsLength = func.call @strict_list_length(%weights) : (f64) -> f64
+    %weightsCount = arith.fptosi %weightsLength : f64 to i64
+    %isSize128 = arith.cmpi eq, %weightsCount, %group : i64
+    %hasCount = arith.cmpi sgt, %count, %none : i64
+    %fits = arith.andi %isSize128, %hasCount : i1
+    cf.cond_br %fits, ^launch, ^unable
+  ^launch:
+    %slots = llvm.alloca %six x f64 : (i64) -> !llvm.ptr
+    llvm.store %combined, %slots : f64, !llvm.ptr
+    %slot1 = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %start, %slot1 : f64, !llvm.ptr
+    %slot2 = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %width, %slot2 : f64, !llvm.ptr
+    %slot3 = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %weights, %slot3 : f64, !llvm.ptr
+    %slot4 = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %rotation, %slot4 : f64, !llvm.ptr
+    %slot5 = llvm.getelementptr %slots[5] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %epsilon, %slot5 : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_headrotated_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_headrotated_slot : !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %six, %mask, %none, %none, %lanes, %group, %packedFormat, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
+  llvm.mlir.global internal constant @strict_gpu_tokenmodulated_name("strict_device_token_modulated\00strict_device_token_modulated\00") : !llvm.array<60 x i8>
+  llvm.mlir.global internal @strict_gpu_tokenmodulated_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  func.func private @strict_gpu_tokenmodulated(%ptx: !llvm.ptr, %input: f64, %weights: f64, %modulation: f64, %part: f64, %epsilon: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %five = arith.constant 5 : i64
+    %seven = arith.constant 7 : i64
+    %lanes = arith.constant 256 : i64
+    %chunk = arith.constant 1024 : i64
+    %chunkMask = arith.constant 1023 : i64
+    %maxWidth = arith.constant 4096 : i64
+    %packedFormat = arith.constant 1041 : i64
+    %inputLength = func.call @strict_list_length(%input) : (f64) -> f64
+    %count = arith.fptosi %inputLength : f64 to i64
+    %weightsLength = func.call @strict_list_length(%weights) : (f64) -> f64
+    %width = arith.fptosi %weightsLength : f64 to i64
+    %rem = arith.andi %width, %chunkMask : i64
+    %aligned = arith.cmpi eq, %rem, %none : i64
+    %minW = arith.cmpi sge, %width, %chunk : i64
+    %maxW = arith.cmpi sle, %width, %maxWidth : i64
+    %hasCount = arith.cmpi sgt, %count, %none : i64
+    %ok0 = arith.andi %aligned, %minW : i1
+    %ok1 = arith.andi %maxW, %hasCount : i1
+    %fits = arith.andi %ok0, %ok1 : i1
+    cf.cond_br %fits, ^launch, ^unable
+  ^launch:
+    %slots = llvm.alloca %five x f64 : (i64) -> !llvm.ptr
+    llvm.store %input, %slots : f64, !llvm.ptr
+    %slot1 = llvm.getelementptr %slots[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %weights, %slot1 : f64, !llvm.ptr
+    %slot2 = llvm.getelementptr %slots[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %modulation, %slot2 : f64, !llvm.ptr
+    %slot3 = llvm.getelementptr %slots[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %part, %slot3 : f64, !llvm.ptr
+    %slot4 = llvm.getelementptr %slots[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %epsilon, %slot4 : f64, !llvm.ptr
+    %name = llvm.mlir.addressof @strict_gpu_tokenmodulated_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_tokenmodulated_slot : !llvm.ptr
+    %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %five, %seven, %none, %none, %lanes, %width, %packedFormat, %none) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    return %result : f64
+  ^unable:
+    return %zero : f64
+  }
   // `GpuMemory.Tuned`: rows of 8 bit numbers with one scale each (TensorFile.Quantized) plus the low rank update of
   // TensorFile_Tuned (downs rank x width in the rotated space of the rows, ups height x rank, a scale per rank) merged
   // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (rows not all 8 bit of one width,

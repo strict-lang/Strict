@@ -1,10 +1,12 @@
 has function MlirFunction
-constant Kinds = ("Attention", "Products", "Hadamard", "Convolution", "Sylvester")
+constant Kinds = ("Attention", "Products", "Hadamard", "Convolution", "Sylvester", "HeadRotated", "TokenModulated")
 constant Attentions = ("queries", "keys", "values", "heads", "groups", "size", "sequences", "causal", "valueOffset", "valueStride", "quantized", "routing", "exact")
 constant Productions = ("left", "right", "shape", "strides")
 constant Hadamards = ("values", "group")
 constant Sylvesters = ("values", "flips", "size")
 constant Convolutions = ("values", "affine", "weights", "shape")
+constant HeadRotations = ("combined", "start", "width", "weights", "rotation", "epsilon")
+constant TokenModulations = ("input", "weights", "modulation", "part", "epsilon")
 constant ValueCollected = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
 constant SoftmaxCalls = (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1))
 constant QueriesLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1))
@@ -49,6 +51,10 @@ Named(stored Texts) Text
 		return "Sylvester"
 	if stored is Convolutions and function.method.Name is "Summed"
 		return "Convolution"
+	if stored is HeadRotations and function.method.Name is "Rotated"
+		return "HeadRotated"
+	if stored is TokenModulations and function.method.Name is "Modulated"
+		return "TokenModulated"
 	stored is Productions and function.method.Name is "Multiplied" then "Products" else ""
 IsSoftmax Boolean
 	Softmaxing.IsSoftmax
@@ -103,6 +109,10 @@ Members(kind Text) Texts
 	Attending.Members("Attention").Last is "exact"
 	if kind is "Softmax"
 		return ("scores", "width")
+	if kind is "HeadRotated"
+		return HeadRotations
+	if kind is "TokenModulated"
+		return TokenModulations
 	if kind is in ("Convolution", "Sylvester")
 		return kind is "Convolution" then Convolutions else Sylvesters
 	kind is "Attention" then Attentions else (kind is "Products" then Productions else Hadamards)

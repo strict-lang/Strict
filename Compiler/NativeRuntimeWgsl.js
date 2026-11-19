@@ -270,36 +270,49 @@ Module['strictKernelGroups']['strict_quantized'] = (places) => {
 // (4 neighboring rows and 4 neighboring tokens of it each, read as one vec4 each per word), the codes of 32 columns of
 // both in workgroup memory at a time (word by word), dot products of 4 codes summed as whole numbers per 32 columns and
 // scaled by their row (rows of only their codes, read from a URL, have one scale each after the codes of all rows)
-// the codes of a block of 32 columns of the rows and tokens of a tile and the scales of its rows into workgroup memory,
-// read with row and token (the rows and tokens bound as the first two lists are read from them directly, not through
-// n_item for every word)
-const strictEightsStaging = (row, token) => `		for (var at = local; at < 512u; at += 256u) {
-			let row = rowStart + at / 8u;
-			let token = tokenStart + at / 8u;
-			let placed = at % 8u * 64u + at / 8u;
-			let word = block * 8u + at % 8u;
-			var codes = 0u;
-			if (row < rows && nibbles) {
-				codes = unpacked((bitcast<u32>(${row('row * stride + word / 2u')}) >> (word % 2u * 16u)) & 0xffffu);
-			} else if (row < rows) {
-				codes = bitcast<u32>(${row('row * stride + word')});
+const strictEightsCodes = (rowFn, tokenFn) => `		if (nibbles) {
+			let r = local / 4u;
+			let row = rowStart + r;
+			let wPair = local % 4u;
+			var packed = 0u;
+			if (row < rows) { packed = bitcast<u32>(${rowFn('row * stride + block * 4u + wPair')}); }
+			rowCodes[(wPair * 2u) * 16u + r / 4u][r % 4u] = unpacked(packed & 0xffffu);
+			rowCodes[(wPair * 2u + 1u) * 16u + r / 4u][r % 4u] = unpacked(packed >> 16u);
+		} else {
+			for (var at = local; at < 512u; at += 256u) {
+				let r = at / 8u;
+				let row = rowStart + r;
+				var code = 0u;
+				if (row < rows) { code = bitcast<u32>(${rowFn('row * stride + block * 8u + at % 8u')}); }
+				rowCodes[at % 8u * 16u + r / 4u][r % 4u] = code;
 			}
-			rowCodes[placed / 4u][placed % 4u] = codes;
-			tokenCodes[placed / 4u][placed % 4u] = select(0u, bitcast<u32>(${token('token * words + block * 8u + at % 8u')}),
-				token < tokens);
 		}
-		if (local < 64u) {
-			let row = rowStart + local;
-			let scaled = select(row * stride + rowWords + block, rows * stride + row, stride == rowWords);
-			rowScales[local] = select(0.0, ${row('scaled')}, row < rows);
+		for (var at = local; at < 512u; at += 256u) {
+			let t = at / 8u;
+			let token = tokenStart + t;
+			var tcode = 0u;
+			if (token < tokens) { tcode = bitcast<u32>(${tokenFn('token * words + block * 8u + at % 8u')}); }
+			tokenCodes[at % 8u * 16u + t / 4u][t % 4u] = tcode;
+		}`;
+const strictEightsInner = () => `		var firstWholes = vec4<i32>();
+		var secondWholes = vec4<i32>();
+		var thirdWholes = vec4<i32>();
+		var fourthWholes = vec4<i32>();
+		for (var word = 0u; word < 8u; word++) {
+			let tokenWords = tokenCodes[word * 16u + ownToken];
+			let rowWords = rowCodes[word * 16u + ownRow];
+			firstWholes += dotted(rowWords.x, tokenWords);
+			secondWholes += dotted(rowWords.y, tokenWords);
+			thirdWholes += dotted(rowWords.z, tokenWords);
+			fourthWholes += dotted(rowWords.w, tokenWords);
 		}`;
 Module['strictShaders']['strict_eights'] = strictKernelBindings + `
 var<workgroup> rowCodes: array<vec4<u32>, 128>;
 var<workgroup> tokenCodes: array<vec4<u32>, 128>;
 var<workgroup> rowScales: array<f32, 64>;
 fn unpacked(halves: u32) -> u32 {
-	let bits = i32(halves);
-	return pack4xI8(vec4<i32>((bits << 28u) >> 28u, (bits << 24u) >> 28u, (bits << 20u) >> 28u, (bits << 16u) >> 28u));
+	let spread = (halves & 0x000fu) | ((halves & 0x00f0u) << 4u) | ((halves & 0x0f00u) << 8u) | ((halves & 0xf000u) << 12u);
+	return spread | (((spread & 0x08080808u) >> 3u) * 0xf0u);
 }
 fn dotted(codes: u32, tokens: vec4<u32>) -> vec4<i32> {
 	return vec4<i32>(dot4I8Packed(codes, tokens.x), dot4I8Packed(codes, tokens.y), dot4I8Packed(codes, tokens.z),
@@ -315,63 +328,99 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let nibbles = places[15] == 1u;
 	let words = columns / 4u;
 	let rowWords = select(words, words / 2u, nibbles);
+	let packedScale = stride == rowWords;
 	let rowTiles = (rows + 63u) / 64u;
+	let tokenTiles = (tokens + 63u) / 64u;
 	let tile = work.x + group.x + group.y * groups.x;
-	if (tile >= rowTiles * ((tokens + 63u) / 64u)) { return; }
-	let rowStart = tile % rowTiles * 64u;
-	let tokenStart = tile / rowTiles * 64u;
+	if (tile >= rowTiles * tokenTiles) { return; }
+	let panel = 4u;
+	let strip = tile / (rowTiles * panel);
+	let tokenStartTile = strip * panel;
+	let stripWidth = min(panel, tokenTiles - tokenStartTile);
+	let within = tile % (rowTiles * panel);
+	let rowStart = within / stripWidth * 64u;
+	let tokenStart = (tokenStartTile + within % stripWidth) * 64u;
 	let ownRow = local % 16u;
 	let ownToken = local / 16u;
-	var first = vec4<f32>();
-	var second = vec4<f32>();
-	var third = vec4<f32>();
-	var fourth = vec4<f32>();
 	let isBound = (places[0] & 0xf8000000u) == 0x10000000u && (places[2] & 0xf8000000u) == 0x20000000u;
 	let rowBase = places[0] & 0x0fffffffu;
 	let tokenBase = places[2] & 0x0fffffffu;
-	for (var block = 0u; block < columns / 32u; block++) {
-		if (isBound) {
-${strictEightsStaging((at) => `lists1[rowBase + ${at}]`, (at) => `lists2[tokenBase + ${at}]`)}
-		} else {
-${strictEightsStaging((at) => `n_item(places[0], ${at})`, (at) => `n_item(places[2], ${at})`)}
+	let blocks = columns / 32u;
+	var sums: mat4x4<f32>;
+	if (packedScale) {
+		var i0 = vec4<i32>();
+		var i1 = vec4<i32>();
+		var i2 = vec4<i32>();
+		var i3 = vec4<i32>();
+		for (var block = 0u; block < blocks; block++) {
+			if (isBound) {
+${strictEightsCodes((at) => `lists1[rowBase + ${at}]`, (at) => `lists2[tokenBase + ${at}]`)}
+			} else {
+${strictEightsCodes((at) => `n_item(places[0], ${at})`, (at) => `n_item(places[2], ${at})`)}
+			}
+			workgroupBarrier();
+${strictEightsInner()}
+			i0 += firstWholes;
+			i1 += secondWholes;
+			i2 += thirdWholes;
+			i3 += fourthWholes;
+			workgroupBarrier();
+		}
+		if (local < 64u) {
+			let row = rowStart + local;
+			rowScales[local] = select(0.0, n_item(places[0], rows * stride + row), row < rows);
 		}
 		workgroupBarrier();
-		var firstWholes = vec4<i32>();
-		var secondWholes = vec4<i32>();
-		var thirdWholes = vec4<i32>();
-		var fourthWholes = vec4<i32>();
-		for (var word = 0u; word < 8u; word++) {
-			let tokenWords = tokenCodes[word * 16u + ownToken];
-			let rowWords = rowCodes[word * 16u + ownRow];
-			firstWholes += dotted(rowWords.x, tokenWords);
-			secondWholes += dotted(rowWords.y, tokenWords);
-			thirdWholes += dotted(rowWords.z, tokenWords);
-			fourthWholes += dotted(rowWords.w, tokenWords);
+		sums = mat4x4<f32>(
+			vec4<f32>(i0) * rowScales[ownRow * 4u],
+			vec4<f32>(i1) * rowScales[ownRow * 4u + 1u],
+			vec4<f32>(i2) * rowScales[ownRow * 4u + 2u],
+			vec4<f32>(i3) * rowScales[ownRow * 4u + 3u]);
+	} else {
+		var f0 = vec4<f32>();
+		var f1 = vec4<f32>();
+		var f2 = vec4<f32>();
+		var f3 = vec4<f32>();
+		for (var block = 0u; block < blocks; block++) {
+			if (isBound) {
+${strictEightsCodes((at) => `lists1[rowBase + ${at}]`, (at) => `lists2[tokenBase + ${at}]`)}
+			} else {
+${strictEightsCodes((at) => `n_item(places[0], ${at})`, (at) => `n_item(places[2], ${at})`)}
+			}
+			if (local < 64u) {
+				let row = rowStart + local;
+				rowScales[local] = select(0.0, n_item(places[0], row * stride + rowWords + block), row < rows);
+			}
+			workgroupBarrier();
+${strictEightsInner()}
+			f0 += vec4<f32>(firstWholes) * rowScales[ownRow * 4u];
+			f1 += vec4<f32>(secondWholes) * rowScales[ownRow * 4u + 1u];
+			f2 += vec4<f32>(thirdWholes) * rowScales[ownRow * 4u + 2u];
+			f3 += vec4<f32>(fourthWholes) * rowScales[ownRow * 4u + 3u];
+			workgroupBarrier();
 		}
-		first += vec4<f32>(firstWholes) * rowScales[ownRow * 4u];
-		second += vec4<f32>(secondWholes) * rowScales[ownRow * 4u + 1u];
-		third += vec4<f32>(thirdWholes) * rowScales[ownRow * 4u + 2u];
-		fourth += vec4<f32>(fourthWholes) * rowScales[ownRow * 4u + 3u];
-		workgroupBarrier();
+		sums = mat4x4<f32>(f0, f1, f2, f3);
 	}
 	let biases = places[5];
-	let sums = mat4x4<f32>(first, second, third, fourth);
 	for (var token = 0u; token < 4u; token++) {
 		let placedToken = tokenStart + ownToken * 4u + token;
 		if (placedToken >= tokens) { break; }
 		let scale = n_item(places[2], tokens * words + placedToken);
 		for (var row = 0u; row < 4u; row++) {
 			let placedRow = rowStart + ownRow * 4u + row;
-			let at = placedToken * rows + placedRow;
-			let bias = select(0.0, n_item(places[4], at % max(biases, 1u)), biases > 0u);
-			if (placedRow < rows) { output[at] = sums[row][token] * scale + bias; }
+			if (placedRow < rows) {
+				let at = placedToken * rows + placedRow;
+				var val = sums[row][token] * scale;
+				if (biases > 0u) { val += n_item(places[4], at % biases); }
+				output[at] = val;
+			}
 		}
 	}
 }`;
-// the tiles of strict_eights, about 4 billion multiplications in a submit
+// the tiles of strict_eights, about 32 billion multiplications in a submit (keeps all SMs saturated)
 Module['strictKernelGroups']['strict_eights'] = (places) => {
 	const tiles = Math.ceil(places[9] / 64) * Math.ceil(places[13] / 64);
-	return [tiles, Math.max(Math.floor(2 ** 32 / (4096 * places[7])), 1)];
+	return [tiles, Math.max(Math.floor(2 ** 35 / (4096 * places[7])), 64)];
 };
 // Attention.Merged (strict_gpu_attention_web): queries, keys, values, heads, groups, size (up to 128), sequences,
 // causal, value offset, value stride; a workgroup of 4 invocations per row of rows tokens (16, or 32 where 32 KB of
@@ -379,9 +428,51 @@ Module['strictKernelGroups']['strict_eights'] = (places) => {
 // a time (each invocation one position for 16 rows), keeps the largest score and the sum of each row (online softmax,
 // 4 invocations per row with 16 of the positions each) and adds the weighted values of 2 numbers of 16 rows per
 // invocation, no scores are stored; keys go through workgroup memory 16 dimensions at a time (coalesced, XOR swizzled)
-const strictAttention = (rows) => {
+const strictAttention = (rows, half = false) => {
 	const invocations = rows * 4, quads = rows / 4;
-	return strictKernelBindings + `
+	const sc = half ? 'f16' : 'f32', vBatch = half ? Math.max(rows / 4, 4) : rows / 2;
+	const kLoadCase = (buf) => `				for (var part = 0u; part < ${32 * rows / invocations}u; part++) {
+					let element = part * ${invocations}u + local;
+					let row = element / ${rows / 2}u;
+					let dimension = element % ${rows / 2}u * 2u;
+					let keyPosition = start + row;
+					var pair = vec2<f32>();
+					if (keyPosition < visible && chunk + dimension < size) {
+						let raw = bitcast<u32>(${buf}[kBase + ((keyPosition * sequences * keyGroups + keyGroup) * size + chunk + dimension) / 2u]);
+						pair = select(vec2<f32>(bitcast<f32>(raw << 16u), bitcast<f32>(raw & 0xffff0000u)), unpack2x16float(raw), kF16);
+					}
+					let slot = dimension * 64u + (row ^ dimension);
+					scored[slot / 4u][slot % 4u] = ${sc}(pair.x);
+					let next = (dimension + 1u) * 64u + (row ^ (dimension + 1u));
+					scored[next / 4u][next % 4u] = ${sc}(pair.y);
+				}`;
+	const vLoadCase = (buf) => `				for (var p = local; p < totalWords; p += ${invocations}u) {
+					let jp = p / 64u;
+					let cp = p % 64u;
+					var raw = 0u;
+					if (cp * 2u < size) {
+						raw = bitcast<u32>(${buf}[vBase + (valueOffset + keyGroup * size + (start + sub + jp) * valueStride) / 2u + cp]);
+					}
+					valued[p] = raw;
+				}`;
+	const listSwitch = (bindVar, loopGen) => `			switch (${bindVar}) {
+				case 1u: {
+${loopGen('lists1')}
+				}
+				case 2u: {
+${loopGen('lists2')}
+				}
+				case 3u: {
+${loopGen('lists3')}
+				}
+				case 4u: {
+${loopGen('lists4')}
+				}
+				default: {
+${loopGen('numbers')}
+				}
+			}`;
+	return (half ? 'enable f16;\n' : '') + strictKernelBindings + `
 // the numbers at and at + 1 of a list, both from one 32 bit word when it holds 16 bit halves and at is even
 fn n_pair(place: u32, at: u32) -> vec2<f32> {
 	if (place < 0x80000000u || (at & 1u) == 1u) { return vec2<f32>(n_item(place, at), n_item(place, at + 1u)); }
@@ -389,8 +480,9 @@ fn n_pair(place: u32, at: u32) -> vec2<f32> {
 	if ((place & 0x08000000u) != 0u) { return unpack2x16float(word); }
 	return vec2<f32>(bitcast<f32>(word << 16u), bitcast<f32>(word & 0xffff0000u));
 }
-var<workgroup> asked: array<vec4<f32>, ${128 * quads}>;
-var<workgroup> scored: array<vec4<f32>, ${64 * quads}>;
+var<workgroup> asked: array<vec4<${sc}>, ${128 * quads}>;
+var<workgroup> scored: array<vec4<${sc}>, ${64 * quads}>;
+var<workgroup> valued: array<u32, ${vBatch * 64}>;
 var<workgroup> largests: array<f32, ${rows}>;
 var<workgroup> rescales: array<vec4<f32>, ${quads}>;
 var<workgroup> totals: array<f32, ${rows}>;
@@ -411,16 +503,24 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let tokenBlocks = (tokens + ${rows - 1}u) / ${rows}u;
 	let block = work.x + group.x + group.y * groups.x;
 	if (block >= sequences * tokenBlocks * heads) { return; }
-	let head = block % heads;
-	let sequence = block / heads / tokenBlocks;
-	let firstToken = block / heads % tokenBlocks * ${rows}u;
+	let firstToken = block % tokenBlocks * ${rows}u;
+	let head = block / tokenBlocks % heads;
+	let sequence = block / (tokenBlocks * heads);
 	let keyGroup = sequence * keyGroups + head * keyGroups / heads;
+	let fastK = (places[2] & 0x80000000u) != 0u && ((sequences * keyGroups * size) & 1u) == 0u;
+	let kF16 = (places[2] & 0x08000000u) != 0u;
+	let kBind = (places[2] >> 28u) & 7u;
+	let kBase = places[2] & 0x0fffffffu;
+	let fastV = (places[4] & 0x80000000u) != 0u && ((valueOffset | size | valueStride) & 1u) == 0u && size <= 128u;
+	let isF16V = (places[4] & 0x08000000u) != 0u;
+	let vBind = (places[4] >> 28u) & 7u;
+	let vBase = places[4] & 0x0fffffffu;
 	for (var at = local; at < ${rows}u * size; at += ${invocations}u) {
 		let row = at / size;
 		let token = firstToken + row;
 		var query = 0.0;
 		if (token < tokens) { query = n_item(places[0], ((sequence * tokens + token) * heads + head) * size + at % size); }
-		asked[at % size * ${quads}u + row / 4u][row % 4u] = query / sqrt(f32(size));
+		asked[at % size * ${quads}u + row / 4u][row % 4u] = ${sc}(query / sqrt(f32(size)));
 	}
 	if (local < ${rows}u) {
 		largests[local] = -3.0e38;
@@ -448,56 +548,61 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		var secondScores = vec4<f32>();
 		var thirdScores = vec4<f32>();
 		var fourthScores = vec4<f32>();
-		for (var chunk = 0u; chunk < size; chunk += 16u) {
+		for (var chunk = 0u; chunk < size; chunk += ${rows}u) {
 			workgroupBarrier();
-			for (var part = 0u; part < ${512 / invocations}u; part++) {
-				let element = part * ${invocations}u + local;
-				let row = element / 8u;
-				let dimension = element % 8u * 2u;
-				let keyPosition = start + row;
-				var pair = vec2<f32>();
-				if (keyPosition < visible && chunk + dimension < size) {
-					pair = n_pair(places[2], (keyPosition * sequences * keyGroups + keyGroup) * size + chunk + dimension);
+			if (fastK) {
+${listSwitch('kBind', kLoadCase)}
+			} else {
+				for (var part = 0u; part < ${32 * rows / invocations}u; part++) {
+					let element = part * ${invocations}u + local;
+					let row = element / ${rows / 2}u;
+					let dimension = element % ${rows / 2}u * 2u;
+					let keyPosition = start + row;
+					var pair = vec2<f32>();
+					if (keyPosition < visible && chunk + dimension < size) {
+						pair = n_pair(places[2], (keyPosition * sequences * keyGroups + keyGroup) * size + chunk + dimension);
+					}
+					let slot = dimension * 64u + (row ^ dimension);
+					scored[slot / 4u][slot % 4u] = ${sc}(pair.x);
+					let next = (dimension + 1u) * 64u + (row ^ (dimension + 1u));
+					scored[next / 4u][next % 4u] = ${sc}(pair.y);
 				}
-				let slot = dimension * 64u + (row ^ dimension);
-				scored[slot / 4u][slot % 4u] = pair.x;
-				let next = (dimension + 1u) * 64u + (row ^ (dimension + 1u));
-				scored[next / 4u][next % 4u] = pair.y;
 			}
 			workgroupBarrier();
-			for (var dimension = 0u; dimension < 16u; dimension++) {
+			let dims = min(${rows}u, size - chunk);
+			for (var dimension = 0u; dimension < dims; dimension++) {
 				let slot = dimension * 64u + (own ^ dimension);
-				let key = vec4<f32>(scored[slot / 4u][slot % 4u]);
+				let key = vec4<f32>(f32(scored[slot / 4u][slot % 4u]));
 				let at = (chunk + dimension) * ${quads}u + first;
-				firstScores = fma(asked[at], key, firstScores);
-				secondScores = fma(asked[at + 1u], key, secondScores);
-				thirdScores = fma(asked[at + 2u], key, thirdScores);
-				fourthScores = fma(asked[at + 3u], key, fourthScores);
+				firstScores = fma(vec4<f32>(asked[at]), key, firstScores);
+				secondScores = fma(vec4<f32>(asked[at + 1u]), key, secondScores);
+				thirdScores = fma(vec4<f32>(asked[at + 2u]), key, thirdScores);
+				fourthScores = fma(vec4<f32>(asked[at + 3u]), key, fourthScores);
 			}
 		}
 		workgroupBarrier();
-		let hidden = vec4<f32>(-3.0e38);
+		let hidden = vec4<${sc}>(${half ? '-65000.0h' : '-3.0e38'});
 		let placedScores = own * ${quads}u + first;
 		let seen = vec4<bool>(position < visible);
-		scored[placedScores] = select(hidden, firstScores, (vec4<u32>(position) <= lasts) & seen);
-		scored[placedScores + 1u] = select(hidden, secondScores, (vec4<u32>(position) <= lasts + 4u) & seen);
-		scored[placedScores + 2u] = select(hidden, thirdScores, (vec4<u32>(position) <= lasts + 8u) & seen);
-		scored[placedScores + 3u] = select(hidden, fourthScores, (vec4<u32>(position) <= lasts + 12u) & seen);
+		scored[placedScores] = select(hidden, vec4<${sc}>(firstScores), (vec4<u32>(position) <= lasts) & seen);
+		scored[placedScores + 1u] = select(hidden, vec4<${sc}>(secondScores), (vec4<u32>(position) <= lasts + 4u) & seen);
+		scored[placedScores + 2u] = select(hidden, vec4<${sc}>(thirdScores), (vec4<u32>(position) <= lasts + 8u) & seen);
+		scored[placedScores + 3u] = select(hidden, vec4<${sc}>(fourthScores), (vec4<u32>(position) <= lasts + 12u) & seen);
 		workgroupBarrier();
 		let row = local / 4u;
 		let quad = row / 4u;
 		let lane = row % 4u;
 		let begin = local % 4u * 16u;
 		var largest = largests[row];
-		for (var at = begin; at < begin + 16u; at++) { largest = max(largest, scored[at * ${quads}u + quad][lane]); }
+		for (var at = begin; at < begin + 16u; at++) { largest = max(largest, f32(scored[at * ${quads}u + quad][lane])); }
 		maxima[local] = largest;
 		workgroupBarrier();
 		largest = max(max(maxima[row * 4u], maxima[row * 4u + 1u]), max(maxima[row * 4u + 2u], maxima[row * 4u + 3u]));
 		var total = 0.0;
 		for (var at = begin; at < begin + 16u; at++) {
-			let score = scored[at * ${quads}u + quad][lane];
-			let share = select(exp(score - largest), 0.0, score < -1.0e38);
-			scored[at * ${quads}u + quad][lane] = share;
+			let score = f32(scored[at * ${quads}u + quad][lane]);
+			let share = select(exp(score - largest), 0.0, score < ${half ? '-60000.0' : '-1.0e38'});
+			scored[at * ${quads}u + quad][lane] = ${sc}(share);
 			total += share;
 		}
 		partials[local] = total;
@@ -519,21 +624,47 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 		thirdHigh *= rescales[first + 2u];
 		fourthHigh *= rescales[first + 3u];
 		let count = min(64u, visible - start);
-		for (var at = 0u; at < count; at++) {
-			let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
-			var pair = vec2<f32>();
-			if (own * 2u < size) { pair = n_pair(places[4], valueStart + own * 2u); }
-			let low = vec4<f32>(pair.x);
-			let high = vec4<f32>(select(0.0, pair.y, own * 2u + 1u < size));
-			let weights = at * ${quads}u + first;
-			firstLow = fma(scored[weights], low, firstLow);
-			secondLow = fma(scored[weights + 1u], low, secondLow);
-			thirdLow = fma(scored[weights + 2u], low, thirdLow);
-			fourthLow = fma(scored[weights + 3u], low, fourthLow);
-			firstHigh = fma(scored[weights], high, firstHigh);
-			secondHigh = fma(scored[weights + 1u], high, secondHigh);
-			thirdHigh = fma(scored[weights + 2u], high, thirdHigh);
-			fourthHigh = fma(scored[weights + 3u], high, fourthHigh);
+		if (fastV) {
+			for (var sub = 0u; sub < count; sub += ${vBatch}u) {
+				let batch = min(${vBatch}u, count - sub);
+				let totalWords = batch * 64u;
+${listSwitch('vBind', vLoadCase)}
+				workgroupBarrier();
+				for (var at = 0u; at < batch; at++) {
+					let raw = valued[at * 64u + own];
+					let pair = select(vec2<f32>(bitcast<f32>(raw << 16u), bitcast<f32>(raw & 0xffff0000u)),
+						unpack2x16float(raw), isF16V);
+					let low = vec4<f32>(pair.x);
+					let high = vec4<f32>(select(0.0, pair.y, own * 2u + 1u < size));
+					let weights = (sub + at) * ${quads}u + first;
+					firstLow = fma(vec4<f32>(scored[weights]), low, firstLow);
+					secondLow = fma(vec4<f32>(scored[weights + 1u]), low, secondLow);
+					thirdLow = fma(vec4<f32>(scored[weights + 2u]), low, thirdLow);
+					fourthLow = fma(vec4<f32>(scored[weights + 3u]), low, fourthLow);
+					firstHigh = fma(vec4<f32>(scored[weights]), high, firstHigh);
+					secondHigh = fma(vec4<f32>(scored[weights + 1u]), high, secondHigh);
+					thirdHigh = fma(vec4<f32>(scored[weights + 2u]), high, thirdHigh);
+					fourthHigh = fma(vec4<f32>(scored[weights + 3u]), high, fourthHigh);
+				}
+				workgroupBarrier();
+			}
+		} else {
+			for (var at = 0u; at < count; at++) {
+				let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
+				var pair = vec2<f32>();
+				if (own * 2u < size) { pair = n_pair(places[4], valueStart + own * 2u); }
+				let low = vec4<f32>(pair.x);
+				let high = vec4<f32>(select(0.0, pair.y, own * 2u + 1u < size));
+				let weights = at * ${quads}u + first;
+				firstLow = fma(vec4<f32>(scored[weights]), low, firstLow);
+				secondLow = fma(vec4<f32>(scored[weights + 1u]), low, secondLow);
+				thirdLow = fma(vec4<f32>(scored[weights + 2u]), low, thirdLow);
+				fourthLow = fma(vec4<f32>(scored[weights + 3u]), low, fourthLow);
+				firstHigh = fma(vec4<f32>(scored[weights]), high, firstHigh);
+				secondHigh = fma(vec4<f32>(scored[weights + 1u]), high, secondHigh);
+				thirdHigh = fma(vec4<f32>(scored[weights + 2u]), high, thirdHigh);
+				fourthHigh = fma(vec4<f32>(scored[weights + 3u]), high, fourthHigh);
+			}
 		}
 	}
 	workgroupBarrier();
@@ -549,17 +680,286 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	}
 }`;
 };
+const strictAttention64 = () => {
+	const kLoadCase = (buf) => `				for (var part = 0u; part < 16u; part++) {
+					let element = part * 128u + local;
+					let row = element / 32u;
+					let dimension = element % 32u * 2u;
+					let keyPosition = start + row;
+					var pair = vec2<f32>();
+					if (keyPosition < visible && chunk + dimension < size) {
+						let raw = bitcast<u32>(${buf}[kBase + ((keyPosition * sequences * keyGroups + keyGroup) * size + chunk + dimension) / 2u]);
+						pair = select(vec2<f32>(bitcast<f32>(raw << 16u), bitcast<f32>(raw & 0xffff0000u)), unpack2x16float(raw), kF16);
+					}
+					let slot = dimension * 64u + (row ^ dimension);
+					scored[slot / 4u][slot % 4u] = f16(pair.x);
+					let next = (dimension + 1u) * 64u + (row ^ (dimension + 1u));
+					scored[next / 4u][next % 4u] = f16(pair.y);
+				}`;
+	const vLoadCase = (buf) => `				for (var p = local; p < totalWords; p += 128u) {
+					let jp = p / 64u;
+					let cp = p % 64u;
+					var raw = 0u;
+					if (cp * 2u < size) {
+						raw = bitcast<u32>(${buf}[vBase + (valueOffset + keyGroup * size + (start + sub + jp) * valueStride) / 2u + cp]);
+					}
+					valued[p] = raw;
+				}`;
+	const listSwitch = (bindVar, loopGen) => `			switch (${bindVar}) {
+				case 1u: {
+${loopGen('lists1')}
+				}
+				case 2u: {
+${loopGen('lists2')}
+				}
+				case 3u: {
+${loopGen('lists3')}
+				}
+				case 4u: {
+${loopGen('lists4')}
+				}
+				default: {
+${loopGen('numbers')}
+				}
+			}`;
+	return 'enable f16;\n' + strictKernelBindings + `
+fn n_pair(place: u32, at: u32) -> vec2<f32> {
+	if (place < 0x80000000u || (at & 1u) == 1u) { return vec2<f32>(n_item(place, at), n_item(place, at + 1u)); }
+	let word = bitcast<u32>(n_number(place & 0x77ffffffu, at / 2u));
+	if ((place & 0x08000000u) != 0u) { return unpack2x16float(word); }
+	return vec2<f32>(bitcast<f32>(word << 16u), bitcast<f32>(word & 0xffff0000u));
+}
+var<workgroup> asked: array<vec4<f16>, 2048>;
+var<workgroup> scored: array<vec4<f16>, 1024>;
+var<workgroup> valued: array<u32, 1024>;
+var<workgroup> largests: array<f32, 64>;
+var<workgroup> rescales: array<vec4<f32>, 16>;
+var<workgroup> totals: array<f32, 64>;
+var<workgroup> maxima: array<f32, 128>;
+var<workgroup> partials: array<f32, 128>;
+@compute @workgroup_size(128)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let heads = places[7];
+	let keyGroups = places[9];
+	let size = places[11];
+	let sequences = places[13];
+	let causal = places[15] == 1u;
+	let valueOffset = places[17];
+	let valueStride = select(places[19], sequences * keyGroups * size, places[19] == 0u);
+	let tokens = places[1] / heads / size / sequences;
+	let positions = places[3] / keyGroups / size / sequences;
+	let tokenBlocks = (tokens + 63u) / 64u;
+	let block = work.x + group.x + group.y * groups.x;
+	if (block >= sequences * tokenBlocks * heads) { return; }
+	let firstToken = block % tokenBlocks * 64u;
+	let head = block / tokenBlocks % heads;
+	let sequence = block / (tokenBlocks * heads);
+	let keyGroup = sequence * keyGroups + head * keyGroups / heads;
+	let fastK = (places[2] & 0x80000000u) != 0u && ((sequences * keyGroups * size) & 1u) == 0u;
+	let kF16 = (places[2] & 0x08000000u) != 0u;
+	let kBind = (places[2] >> 28u) & 7u;
+	let kBase = places[2] & 0x0fffffffu;
+	let fastV = (places[4] & 0x80000000u) != 0u && ((valueOffset | size | valueStride) & 1u) == 0u && size <= 128u;
+	let isF16V = (places[4] & 0x08000000u) != 0u;
+	let vBind = (places[4] >> 28u) & 7u;
+	let vBase = places[4] & 0x0fffffffu;
+	let invSqrt = 1.0 / sqrt(f32(size));
+	for (var at = local; at < 64u * size; at += 128u) {
+		let row = at / size;
+		let token = firstToken + row;
+		var query = 0.0;
+		if (token < tokens) { query = n_item(places[0], ((sequence * tokens + token) * heads + head) * size + at % size); }
+		asked[at % size * 16u + row / 4u][row % 4u] = f16(query * invSqrt);
+	}
+	if (local < 64u) {
+		largests[local] = -3.0e38;
+		totals[local] = 0.0;
+	}
+	let lastToken = min(firstToken + 63u, tokens - 1u);
+	let visible = select(positions, positions - tokens + lastToken + 1u, causal);
+	let quarter = local / 32u;
+	let own = local % 32u;
+	let first = quarter * 4u;
+	let lasts = vec4<u32>(0u, 1u, 2u, 3u) + firstToken + quarter * 16u +
+		select(positions - 1u - firstToken, positions - tokens, causal);
+	var d0l = vec4<f32>(); var d0h = vec4<f32>(); var d1l = vec4<f32>(); var d1h = vec4<f32>();
+	var d2l = vec4<f32>(); var d2h = vec4<f32>(); var d3l = vec4<f32>(); var d3h = vec4<f32>();
+	var d0b = vec4<f32>(); var d0c = vec4<f32>(); var d1b = vec4<f32>(); var d1c = vec4<f32>();
+	var d2b = vec4<f32>(); var d2c = vec4<f32>(); var d3b = vec4<f32>(); var d3c = vec4<f32>();
+	for (var start = 0u; start < visible; start += 64u) {
+		workgroupBarrier();
+		let posA = start + own;
+		let posB = posA + 32u;
+		var sA0 = vec4<f32>(); var sA1 = vec4<f32>(); var sA2 = vec4<f32>(); var sA3 = vec4<f32>();
+		var sB0 = vec4<f32>(); var sB1 = vec4<f32>(); var sB2 = vec4<f32>(); var sB3 = vec4<f32>();
+		for (var chunk = 0u; chunk < size; chunk += 64u) {
+			workgroupBarrier();
+			if (fastK) {
+${listSwitch('kBind', kLoadCase)}
+			} else {
+				for (var part = 0u; part < 16u; part++) {
+					let element = part * 128u + local;
+					let row = element / 32u;
+					let dimension = element % 32u * 2u;
+					let keyPosition = start + row;
+					var pair = vec2<f32>();
+					if (keyPosition < visible && chunk + dimension < size) {
+						pair = n_pair(places[2], (keyPosition * sequences * keyGroups + keyGroup) * size + chunk + dimension);
+					}
+					let slot = dimension * 64u + (row ^ dimension);
+					scored[slot / 4u][slot % 4u] = f16(pair.x);
+					let next = (dimension + 1u) * 64u + (row ^ (dimension + 1u));
+					scored[next / 4u][next % 4u] = f16(pair.y);
+				}
+			}
+			workgroupBarrier();
+			let dims = min(64u, size - chunk);
+			for (var dimension = 0u; dimension < dims; dimension++) {
+				let slotA = dimension * 64u + (own ^ dimension);
+				let kA = vec4<f32>(f32(scored[slotA / 4u][slotA % 4u]));
+				let slotB = dimension * 64u + ((own + 32u) ^ dimension);
+				let kB = vec4<f32>(f32(scored[slotB / 4u][slotB % 4u]));
+				let at = (chunk + dimension) * 16u + first;
+				let q0 = vec4<f32>(asked[at]);
+				let q1 = vec4<f32>(asked[at + 1u]);
+				let q2 = vec4<f32>(asked[at + 2u]);
+				let q3 = vec4<f32>(asked[at + 3u]);
+				sA0 = fma(q0, kA, sA0); sA1 = fma(q1, kA, sA1); sA2 = fma(q2, kA, sA2); sA3 = fma(q3, kA, sA3);
+				sB0 = fma(q0, kB, sB0); sB1 = fma(q1, kB, sB1); sB2 = fma(q2, kB, sB2); sB3 = fma(q3, kB, sB3);
+			}
+		}
+		workgroupBarrier();
+		let hidden = vec4<f16>(-65000.0h);
+		let seenA = vec4<bool>(posA < visible);
+		let placedA = own * 16u + first;
+		scored[placedA] = select(hidden, vec4<f16>(sA0), (vec4<u32>(posA) <= lasts) & seenA);
+		scored[placedA + 1u] = select(hidden, vec4<f16>(sA1), (vec4<u32>(posA) <= lasts + 4u) & seenA);
+		scored[placedA + 2u] = select(hidden, vec4<f16>(sA2), (vec4<u32>(posA) <= lasts + 8u) & seenA);
+		scored[placedA + 3u] = select(hidden, vec4<f16>(sA3), (vec4<u32>(posA) <= lasts + 12u) & seenA);
+		let seenB = vec4<bool>(posB < visible);
+		let placedB = (own + 32u) * 16u + first;
+		scored[placedB] = select(hidden, vec4<f16>(sB0), (vec4<u32>(posB) <= lasts) & seenB);
+		scored[placedB + 1u] = select(hidden, vec4<f16>(sB1), (vec4<u32>(posB) <= lasts + 4u) & seenB);
+		scored[placedB + 2u] = select(hidden, vec4<f16>(sB2), (vec4<u32>(posB) <= lasts + 8u) & seenB);
+		scored[placedB + 3u] = select(hidden, vec4<f16>(sB3), (vec4<u32>(posB) <= lasts + 12u) & seenB);
+		workgroupBarrier();
+		let row = local / 2u;
+		let quad = row / 4u;
+		let lane = row % 4u;
+		let begin = local % 2u * 32u;
+		var largest = largests[row];
+		for (var at = begin; at < begin + 32u; at++) { largest = max(largest, f32(scored[at * 16u + quad][lane])); }
+		maxima[local] = largest;
+		workgroupBarrier();
+		largest = max(maxima[row * 2u], maxima[row * 2u + 1u]);
+		var total = 0.0;
+		for (var at = begin; at < begin + 32u; at++) {
+			let score = f32(scored[at * 16u + quad][lane]);
+			let share = select(exp(score - largest), 0.0, score < -60000.0);
+			scored[at * 16u + quad][lane] = f16(share);
+			total += share;
+		}
+		partials[local] = total;
+		workgroupBarrier();
+		if (begin == 0u) {
+			let rescale = exp(largests[row] - largest);
+			rescales[quad][lane] = rescale;
+			totals[row] = totals[row] * rescale + partials[local] + partials[local + 1u];
+			largests[row] = largest;
+		}
+		workgroupBarrier();
+		let r0 = rescales[first]; let r1 = rescales[first + 1u];
+		let r2 = rescales[first + 2u]; let r3 = rescales[first + 3u];
+		d0l *= r0; d1l *= r1; d2l *= r2; d3l *= r3;
+		d0h *= r0; d1h *= r1; d2h *= r2; d3h *= r3;
+		d0b *= r0; d1b *= r1; d2b *= r2; d3b *= r3;
+		d0c *= r0; d1c *= r1; d2c *= r2; d3c *= r3;
+		let count = min(64u, visible - start);
+		if (fastV) {
+			for (var sub = 0u; sub < count; sub += 16u) {
+				let batch = min(16u, count - sub);
+				let totalWords = batch * 64u;
+${listSwitch('vBind', vLoadCase)}
+				workgroupBarrier();
+				for (var at = 0u; at < batch; at++) {
+					let raw0 = valued[at * 64u + own * 2u];
+					let raw1 = valued[at * 64u + own * 2u + 1u];
+					let p0 = select(vec2<f32>(bitcast<f32>(raw0 << 16u), bitcast<f32>(raw0 & 0xffff0000u)),
+						unpack2x16float(raw0), isF16V);
+					let p1 = select(vec2<f32>(bitcast<f32>(raw1 << 16u), bitcast<f32>(raw1 & 0xffff0000u)),
+						unpack2x16float(raw1), isF16V);
+					let v0 = vec4<f32>(p0.x);
+					let v1 = vec4<f32>(select(0.0, p0.y, own * 4u + 1u < size));
+					let v2 = vec4<f32>(select(0.0, p1.x, own * 4u + 2u < size));
+					let v3 = vec4<f32>(select(0.0, p1.y, own * 4u + 3u < size));
+					let weights = (sub + at) * 16u + first;
+					let w0 = vec4<f32>(scored[weights]);
+					let w1 = vec4<f32>(scored[weights + 1u]);
+					let w2 = vec4<f32>(scored[weights + 2u]);
+					let w3 = vec4<f32>(scored[weights + 3u]);
+					d0l = fma(w0, v0, d0l); d1l = fma(w1, v0, d1l); d2l = fma(w2, v0, d2l); d3l = fma(w3, v0, d3l);
+					d0h = fma(w0, v1, d0h); d1h = fma(w1, v1, d1h); d2h = fma(w2, v1, d2h); d3h = fma(w3, v1, d3h);
+					d0b = fma(w0, v2, d0b); d1b = fma(w1, v2, d1b); d2b = fma(w2, v2, d2b); d3b = fma(w3, v2, d3b);
+					d0c = fma(w0, v3, d0c); d1c = fma(w1, v3, d1c); d2c = fma(w2, v3, d2c); d3c = fma(w3, v3, d3c);
+				}
+				workgroupBarrier();
+			}
+		} else {
+			for (var at = 0u; at < count; at++) {
+				let valueStart = valueOffset + keyGroup * size + (start + at) * valueStride;
+				var p0 = vec2<f32>();
+				var p1 = vec2<f32>();
+				if (own * 4u < size) { p0 = n_pair(places[4], valueStart + own * 4u); }
+				if (own * 4u + 2u < size) { p1 = n_pair(places[4], valueStart + own * 4u + 2u); }
+				let v0 = vec4<f32>(p0.x);
+				let v1 = vec4<f32>(select(0.0, p0.y, own * 4u + 1u < size));
+				let v2 = vec4<f32>(select(0.0, p1.x, own * 4u + 2u < size));
+				let v3 = vec4<f32>(select(0.0, p1.y, own * 4u + 3u < size));
+				let weights = at * 16u + first;
+				let w0 = vec4<f32>(scored[weights]);
+				let w1 = vec4<f32>(scored[weights + 1u]);
+				let w2 = vec4<f32>(scored[weights + 2u]);
+				let w3 = vec4<f32>(scored[weights + 3u]);
+				d0l = fma(w0, v0, d0l); d1l = fma(w1, v0, d1l); d2l = fma(w2, v0, d2l); d3l = fma(w3, v0, d3l);
+				d0h = fma(w0, v1, d0h); d1h = fma(w1, v1, d1h); d2h = fma(w2, v1, d2h); d3h = fma(w3, v1, d3h);
+				d0b = fma(w0, v2, d0b); d1b = fma(w1, v2, d1b); d2b = fma(w2, v2, d2b); d3b = fma(w3, v2, d3b);
+				d0c = fma(w0, v3, d0c); d1c = fma(w1, v3, d1c); d2c = fma(w2, v3, d2c); d3c = fma(w3, v3, d3c);
+			}
+		}
+	}
+	workgroupBarrier();
+	let a0 = mat4x4<f32>(d0l, d1l, d2l, d3l);
+	let a1 = mat4x4<f32>(d0h, d1h, d2h, d3h);
+	let a2 = mat4x4<f32>(d0b, d1b, d2b, d3b);
+	let a3 = mat4x4<f32>(d0c, d1c, d2c, d3c);
+	for (var row = 0u; row < 16u; row++) {
+		let token = firstToken + quarter * 16u + row;
+		if (token >= tokens) { break; }
+		let placed = ((sequence * tokens + token) * heads + head) * size;
+		let total = totals[quarter * 16u + row];
+		let col = own * 4u;
+		if (col < size) { output[placed + col] = a0[row / 4u][row % 4u] / total; }
+		if (col + 1u < size) { output[placed + col + 1u] = a1[row / 4u][row % 4u] / total; }
+		if (col + 2u < size) { output[placed + col + 2u] = a2[row / 4u][row % 4u] / total; }
+		if (col + 3u < size) { output[placed + col + 3u] = a3[row / 4u][row % 4u] / total; }
+	}
+}`;
+};
 Module['strictShaders']['strict_attention'] = strictAttention(16);
 Module['strictShaders']['strict_attention32'] = strictAttention(32);
+Module['strictShaders']['strict_attention64_f16'] = strictAttention64();
 (Module['strictLarger'] ||= {})['strict_attention'] = 'strict_attention32';
+(Module['strictHalf'] ||= {})['strict_attention32'] = 'strict_attention64_f16';
 const strictAttentionGroups = (rows) => (places) => {
 	const tokens = places[1] / places[7] / places[11] / places[13];
 	const blocks = places[13] * Math.ceil(tokens / rows) * places[7];
 	const positions = places[3] / places[9] / places[11] / places[13];
-	return [blocks, Math.max(Math.floor(2 ** 32 / (2 * rows * positions * places[11])), 1)];
+	return [blocks, Math.max(Math.floor(2 ** 36 / (2 * rows * positions * places[11])), 1)];
 };
 Module['strictKernelGroups']['strict_attention'] = strictAttentionGroups(16);
 Module['strictKernelGroups']['strict_attention32'] = strictAttentionGroups(32);
+Module['strictKernelGroups']['strict_attention64_f16'] = strictAttentionGroups(64);
 // Batch.Sums of 32 bit rows (strict_gpu_tokens_web): sums of strict_products, biases: every sum plus its bias
 Module['strictShaders']['strict_biased'] = strictKernelBindings + `
 @compute @workgroup_size(64)
@@ -656,6 +1056,69 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	for (var at = local; at < 256u; at += 64u) { output[offset + at] = rotated[at]; }
 }`;
 Module['strictKernelGroups']['strict_hadamard'] = (places) => [places[2] / 256, places[2] / 256];
+Module['strictShaders']['strict_device_head_rotated'] = strictKernelBindings + `
+var<workgroup> headWx: array<f32, 128>;
+var<workgroup> headSq: array<f32, 128>;
+@compute @workgroup_size(128)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let headIdx = work.x + group.x + group.y * groups.x;
+	let outOffset = headIdx * 128u;
+	if (outOffset >= places[14]) { return; }
+	let width = places[5];
+	let heads = width / 128u;
+	let token = headIdx / heads;
+	let head = headIdx % heads;
+	let inOffset = token * 3u * width + places[3] + head * 128u;
+	let x = n_item(places[0], inOffset + local);
+	let wx = x * n_item(places[6], local);
+	headWx[local] = wx;
+	headSq[local] = x * x;
+	workgroupBarrier();
+	for (var half = 64u; half > 0u; half /= 2u) {
+		if (local < half) { headSq[local] += headSq[local + half]; }
+		workgroupBarrier();
+	}
+	let scale = inverseSqrt(headSq[0] / 128.0 + 1e-6);
+	let partner = headWx[(local + 64u) & 127u];
+	let rotBase = token * 256u;
+	let c = n_item(places[8], rotBase + local);
+	let s = n_item(places[8], rotBase + 128u + local);
+	output[outOffset + local] = (wx * c + partner * s) * scale;
+}`;
+Module['strictKernelGroups']['strict_device_head_rotated'] = (places) => [places[14] / 128, places[14] / 128];
+Module['strictShaders']['strict_device_token_modulated'] = strictKernelBindings + `
+var<workgroup> modPartials: array<f32, 256>;
+@compute @workgroup_size(256)
+fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>,
+	@builtin(num_workgroups) groups: vec3<u32>) {
+	let token = work.x + group.x + group.y * groups.x;
+	let width = places[3];
+	let tokenStart = token * width;
+	if (tokenStart >= places[12]) { return; }
+	var sq = 0.0;
+	for (var col = local; col < width; col += 256u) {
+		let x = n_item(places[0], tokenStart + col);
+		sq += x * x;
+	}
+	modPartials[local] = sq;
+	workgroupBarrier();
+	for (var half = 128u; half > 0u; half /= 2u) {
+		if (local < half) { modPartials[local] += modPartials[local + half]; }
+		workgroupBarrier();
+	}
+	let scale = inverseSqrt(modPartials[0] / f32(width) + 1e-6);
+	let shifts = places[7] * width;
+	let scaling = shifts + width;
+	for (var col = local; col < width; col += 256u) {
+		let x = n_item(places[0], tokenStart + col);
+		let w = n_item(places[2], col);
+		let mScale = n_item(places[4], scaling + col);
+		let mShift = n_item(places[4], shifts + col);
+		output[tokenStart + col] = x * scale * w * (1.0 + mScale) + mShift;
+	}
+}`;
+Module['strictKernelGroups']['strict_device_token_modulated'] = (places) => [places[12] / places[3], places[12] / places[3]];
 // the numbers of the list at places[0] (places[1] of them) and then of the one at places[2] as 32 bit floats (lists of
 // different formats joined on the GPU, strict_gpu_web_mixed): left, right
 Module['strictShaders']['strict_joined'] = strictKernelBindings + `

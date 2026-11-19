@@ -84,6 +84,41 @@ Prefilled(prompt Numbers, start Number, chunk = 8192) Qwen3
 		let count = (prompt.Length - first).Clamp(0, size)
 		current = current.Steps(Safetensors.Part(prompt, first, count, 1), Positions(start + first, count), 1)
 	current
+PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) native
+	Tiny.PrefilledBatch(((1, 2), (1, 2, 3))).Last.Last.IsNearlyEqual(Tiny.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
+	TinyHybrid.PrefilledBatch(((1, 2), (1, 2, 3))).First.First.IsNearlyEqual(TinyHybrid.Prefilled((1, 2), 0).hidden.First, 0.0001)
+	TinyHybrid.PrefilledBatch(((1, 2), (1, 2, 3))).Last.Last.IsNearlyEqual(TinyHybrid.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
+	if prompts.Length is 0
+		return List(Numbers)
+	if prompts.Length is 1
+		return List(Numbers) + Prefilled(prompts.First, start).hidden
+	let align = blocks.First.hybrid.layers.Length > 0 then 16 else 1
+	mutable maxLen = 0
+	for prompts
+		if value.Length > maxLen
+			maxLen = value.Length
+	let seqLen = ((maxLen + align - 1) / align).Floor * align
+	let width = norm.Length
+	let perBatch = (chunk / blocks.First.experts.used / seqLen).Floor.Clamp(1, prompts.Length)
+	mutable results = List(Mutable(Numbers))
+	for (prompts.Length / perBatch).Ceiling
+		let first = index * perBatch
+		let count = (prompts.Length - first).Clamp(0, perBatch)
+		let slice = prompts.Slice(first, count)
+		let hidden = Steps(Padded(slice, seqLen), BatchPositions(count, seqLen, start), count).hidden
+		for count
+			results.Add(hidden.Slice(index * seqLen * width, slice(index).Length * width))
+	results
+Padded(prompts List(Numbers), seqLen Number) Numbers
+	Tiny.Padded(((1, 2), (3, 4, 5)), 4) is (1, 2, 1, 1, 3, 4, 5, 3)
+	for prompts.Length * seqLen
+		let prompt = prompts((index / seqLen).Floor)
+		let at = index % seqLen
+		at < prompt.Length then prompt(at) else prompt.First
+BatchPositions(count Number, seqLen Number, start Number) Numbers
+	Tiny.BatchPositions(2, 3, 1) is (1, 2, 3, 1, 2, 3)
+	for count * seqLen
+		start + index % seqLen
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
@@ -94,8 +129,8 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 	mutable updated = List(Mutable(Qwen3Block))
 	let completion = Completion(Logger, progress, blocks.Length, Process.Elapsed)
 	for blocks
-		let prepared = value.hybrid.Prepared(current)
-		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits)
+		let prepared = value.hybrid.Prepared(current, sequences)
+		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits, sequences)
 		let output = cached.Output(prepared.entered, sequences)
 		current = index < deepstack.Length then Stacked(output, deepstack(index), rows) else output
 		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))

@@ -25,7 +25,7 @@ Rewound(before Hybrid, tokens Number) Hybrid
 	for before.layers
 		rewound.Add(value.Rewound(Safetensors.Part(inputs(index), 0, tokens * value.Width, 1)))
 	Hybrid(value, layers = rewound, inputs = List(Numbers))
-Prepared(input Numbers) Hybrid
+Prepared(input Numbers, sequences = 1) Hybrid
 	None.Prepared((1, 2)).entered is (1, 2)
 	Single.entered(0).IsNearlyEqual(0.54408, 0.00001)
 	mutable hidden = input
@@ -33,7 +33,7 @@ Prepared(input Numbers) Hybrid
 	mutable combinations = List(Mutable(Numbers))
 	for layers
 		let combined = value.Combined(hidden)
-		let cached = value.Cached(combined)
+		let cached = value.Cached(combined, sequences)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
 		combinations.Add(combined.Length > RewindableTokens * value.Width then List(Number) else combined)

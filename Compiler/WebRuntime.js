@@ -272,7 +272,11 @@ addToLibrary({
 			device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
 		const layout = device.createPipelineLayout({ bindGroupLayouts: [group] });
 		device.pushErrorScope('validation');
-		const module = device.createShaderModule({ code: Module['strictItem'] + code });
+		const half = code.startsWith('enable f16;');
+		if (half && !device.features.has('shader-f16'))
+			throw 'shader-f16 unavailable';
+		const body = half ? 'enable f16;\n' + Module['strictItem'] + code.slice(11) : Module['strictItem'] + code;
+		const module = device.createShaderModule({ code: body });
 		const pipeline = device.createComputePipelineAsync({ layout, compute: { module, entryPoint: 'main' } });
 		const error = await device.popErrorScope();
 		if (error)
@@ -288,7 +292,8 @@ addToLibrary({
 		const requiredLimits = limits && { maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
 			maxBufferSize: limits.maxBufferSize,
 			maxComputeWorkgroupStorageSize: limits.maxComputeWorkgroupStorageSize };
-		const device = adapter && await adapter.requestDevice({ requiredLimits });
+		const requiredFeatures = adapter && adapter.features.has('shader-f16') ? ['shader-f16'] : [];
+		const device = adapter && await adapter.requestDevice({ requiredFeatures, requiredLimits });
 		// any other error of WebGPU stops the program, results that were never computed must not be read
 		device?.addEventListener('uncapturederror', (event) => abort('WebGPU error: ' + event.error.message));
 		device?.lost.then((info) => abort('WebGPU device lost: ' + info.message));
@@ -401,7 +406,7 @@ addToLibrary({
 		}
 		if (!device)
 			return 0;
-		// a kernel with a variant needing 32 KB of workgroup memory (Module.strictLarger) takes it where the device has it
+		// a kernel with a variant needing 32 KB of workgroup memory (Module.strictLarger) or f16 (Module.strictHalf) takes it
 		const larger = (Module['strictLarger'] || {})[name];
 		if (larger && strictWebGpu.pipelines[larger] !== null && device.limits.maxComputeWorkgroupStorageSize >= 32768)
 			try {
@@ -410,6 +415,15 @@ addToLibrary({
 				name = larger;
 			} catch {
 				strictWebGpu.pipelines[larger] = null;
+			}
+		const half = (Module['strictHalf'] || {})[name];
+		if (half && strictWebGpu.pipelines[half] !== null && device.features.has('shader-f16'))
+			try {
+				strictWebGpu.pipelines[half] ||= await (strictWebGpu.compiling[half] ||
+					strictWebGpuPipeline(device, Module['strictShaders'][half]));
+				name = half;
+			} catch {
+				strictWebGpu.pipelines[half] = null;
 			}
 		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
 			strictWebGpuPipeline(device, Module['strictShaders'][name]));
@@ -468,7 +482,14 @@ addToLibrary({
 			if (!strictWebGpu.pipelines[larger])
 				return undefined;
 			name = larger;
-		} else if (!strictWebGpu.pipelines[key])
+		}
+		const half = (Module['strictHalf'] || {})[name];
+		if (half && strictWebGpu.pipelines[half] !== null && device.features.has('shader-f16')) {
+			if (!strictWebGpu.pipelines[half])
+				return undefined;
+			name = half;
+		}
+		if (!strictWebGpu.pipelines[name])
 			return undefined;
 		const inputs = strictWebGpuKernelInputs(count, table >>> 0, slots);
 		if (!inputs)

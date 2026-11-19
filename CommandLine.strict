@@ -30,9 +30,11 @@ Flag(name Text, default Boolean) Boolean
 	Sample.Flag("jsonOutput", false)
 	Sample.Flag("width", false) is false
 	CommandLine(List(Text) + "--json_output=false", List(Text) + "jsonOutput").Flag("jsonOutput", true) is false
+	CommandLine(("--json_output", "false"), List(Text) + "jsonOutput").Flag("jsonOutput", false) is false
 	let option = Spelled(name)
-	if option is in arguments
-		return true
+	let at = arguments.Index(option)
+	if at >= 0
+		return at + 1 >= arguments.Length or arguments(at + 1) is not "false"
 	let written = Values(option)
 	written.Length is 0 then default else written.Last is "true"
 Repeated(name Text, defaults Texts) Texts

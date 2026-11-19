@@ -12,7 +12,7 @@ IsEnabled Boolean
 	let isSource = Directory.Exists(rest(0)) or File(rest(0)).Exists and File(rest(0)).Modified is not 0
 	if isSource is false or command is "test" and TestRequest(rest).Selection is not in ("", "*")
 		return false
-	(NativeCompiler.Options(rest) - "native" - "unit" - "fast" - "windows" - "linux").Length is 0
+	(NativeCompiler.Options(rest) - "native" - "unit" - "fast" - "windows" - "linux" - "web").Length is 0
 CacheFile Text
 	NativeCache("test", ("Math", ".", "native")).CacheFile is "./Math/obj/Tests.test.nativecache"
 	NativeCache("build", ("Examples/Sum.strict", ".")).CacheFile is "./Examples/obj/Sum.nativecache"
@@ -20,8 +20,12 @@ CacheFile Text
 Key Text
 	"3\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")
 Output Text
+	NativeCache("build", ("Examples/Sum.strict", ".", "web")).Output is "./Examples/Release/Web/Sum.html"
 	let program = command is "build" and NativeBuild.IsProgram(rest(0))
-	Toolchain(Platform.Current, rest(1)).Executable(NativeBuild.Output(rest(0), program))
+	let base = NativeBuild.Output(rest(0), program)
+	if "web" is in NativeCompiler.Options(rest)
+		return Release(Logger, base).Parent + "/Release/Web/" + Path(base).FileName.text + ".html"
+	Toolchain(Platform.Current, rest(1)).Executable(base)
 Stamp(path Text) Text
 	NativeCache.Stamp("Compiler/output/missing") is "unknown"
 	NativeCache.Stamp(Process.Current.executable).Length is 16
@@ -61,7 +65,9 @@ Inputs(sources Texts) Texts
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
 	let tools = (List(Text) + (rest(1) + "/strict" + extension)) - Output - Output.Lower
 	let content = Path(source).PathOnly.text + "/Content"
-	let inputs = sources + runtimes + tools + NativeInputs(Folders(sources))
+	let webShell = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true)).Shell(NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))))
+	let webInputs = "web" is in NativeCompiler.Options(rest) then (rest(1) + "/Compiler/NativeRuntimeWgsl.js", rest(1) + "/Compiler/WebRuntime.js", webShell) else List(Text)
+	let inputs = sources + runtimes + tools + webInputs + NativeInputs(Folders(sources))
 	command is "test" then inputs else inputs + (content + "/**")
 Files Texts slow
 	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
@@ -106,6 +112,11 @@ Outputs Texts
 	let base = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
 	let release = Release(Logger, base)
 	mutable files = List(Text) + Output
+	if "web" is in NativeCompiler.Options(rest)
+		for (".wasm", ".js")
+			let sidecar = Output.Replace(".html", value)
+			if File(sidecar).Exists
+				files = files + sidecar
 	for Release.Sidecars
 		if File(base + value).Exists
 			files = files + (base + value)
@@ -114,7 +125,7 @@ Released(parent Text) Texts
 	NativeCache("build", ("Examples/Sum.strict", ".")).Released("Compiler/output/Missing").Length is 2
 	NativeCache("build", ("Examples/Sum.strict", ".", "windows")).IsEnabled
 	NativeCache("build", ("Examples/Sum.strict", ".", "linux")).IsEnabled
-	NativeCache("build", ("Examples/Sum.strict", ".", "web")).IsEnabled is false
+	NativeCache("build", ("Examples/Sum.strict", ".", "web")).IsEnabled
 	mutable files = List(Text)
 	let name = Path(Output).FileName.text
 	for (parent + "/Release", parent + "/Release/" + Platform.NameOf(Platform.Current))
