@@ -88,6 +88,7 @@ IsGitNewer(stamp Number) Boolean
 	parsed is not Error and parsed > stamp
 IsSkipped(arguments Texts) Boolean
 	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "Strict.strict"))
+	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "."))
 	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "Examples/Sum.strict")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
 	if command is in DaemonCommands or command is in InfoCommands
@@ -95,7 +96,8 @@ IsSkipped(arguments Texts) Boolean
 	if command is not "build"
 		return false
 	let second = arguments.Length > 1 then arguments(1).Replace("\\", "/").Lower else ""
-	second is in BuildOptions or second.EndsWith("strict.strict")
+	let isRoot = TypeSource.Absolute(root).Lower is Directory.Current.Replace("\\", "/").Lower
+	second is in BuildOptions or second.EndsWith("strict.strict") or second is "." and isRoot
 IsToolchainFile(path Text) Boolean
 	Installed.IsToolchainFile("C:/s/strict.exe") and Installed.IsToolchainFile("C:/s/Runtime/Frame.strict")
 	Installed.IsToolchainFile("C:/s/Strict.strict") and Installed.IsToolchainFile("C:/s/README.md")

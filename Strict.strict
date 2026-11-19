@@ -105,7 +105,7 @@ Shortened(trace Text) Text
 	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
 Ran(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
 	let folder = Directory.Current
-	let head = arguments.Length > 0 then arguments(0) else "help"
+	let head = arguments.Length > 0 then arguments(0) else ""
 	let given = head is in Informing then List(Text) + head else Projected(Mained(arguments))
 	let command = given.Length > 0 then given(0) else "help"
 	let rest = Cleaned(command, Rooted(command is in Commands then Rest(given) else given))
@@ -171,19 +171,41 @@ Rooted(arguments Texts) Texts slow
 	if arguments.Length is 0 or arguments.Length > 1 and File(arguments(1) + "/Any.strict").Exists
 		return arguments
 	(List(Text) + arguments(0) + TypeSource.Root) + Rest(arguments)
+Main(folder Text) Text slow
+	Strict.Main(".") is "Strict.strict"
+	Strict.Main("Missing") is ""
+	let isCurrent = folder is "" or folder is "."
+	let target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
+	let clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
+	let prefix = isCurrent then "" else clean + "/"
+	let named = TypeSource.Cased(prefix + Path(clean).FileName.text)
+	if File(named).Exists
+		return named
+	let files = Directory.Files(isCurrent then "." else clean, "*.strict")
+	isCurrent and File("Strict.strict").Exists then "Strict.strict" else (files.Length is 1 then files.First else "")
 Mained(arguments Texts) Texts slow
 	Strict.Mained(("build", "web")) is ("build", "Strict.strict", "web")
 	Strict.Mained(List(Text) + "build") is ("build", "Strict.strict")
+	Strict.Mained(("build", ".", "windows")) is ("build", "Strict.strict", "windows")
 	Strict.Mained(("build", "Examples/Sum.strict")) is ("build", "Examples/Sum.strict")
 	Strict.Mained(("test", "Math")) is ("test", "Math")
+	Strict.Mained(("test", "native")) is ("test", "Strict.strict", "native")
 	Strict(Logger).Projected(Strict.Mained(("build", "strict"))) is ("build", "Strict.strict")
-	if arguments.Length is 0 or arguments(0) is not "build"
-		return arguments
-	let named = TypeSource.Cased(Path(Directory.Current.Replace("\\", "/")).FileName.text)
-	let main = File(named).Exists then named else "Strict.strict"
+	let main = Main(".")
+	if arguments.Length is 0
+		return main is "" or main is "Strict.strict" then arguments else List(Text) + main
+	arguments(0) is in ("build", "test") then Resolved(arguments, main) else arguments
+Resolved(arguments Texts, main Text) Texts slow
+	Strict.Resolved(("build", "."), "Strict.strict") is ("build", "Strict.strict")
+	Strict.Resolved(("test", "."), "Strict.strict") is ("test", ".")
+	Strict.Resolved(List(Text) + "test", "Strict.strict") is ("test", "Strict.strict")
 	let given = arguments.Length > 1 then arguments(1) else ""
+	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
+		let folder = Main(given)
+		return folder is "" then arguments else (List(Text) + "build" + folder) + arguments.Slice(2, arguments.Length - 2)
 	let isSource = given is not "" and (File(TypeSource.Cased(given)).Exists or Directory.Exists(given))
-	isSource or File(main).Exists is false then arguments else List(Text) + "build" + main + Rest(arguments)
+	let target = arguments(0) is "test" and main is "" then "." else main
+	isSource or target is "" then arguments else (List(Text) + arguments(0) + target) + Rest(arguments)
 Projected(arguments Texts) Texts slow
 	Strict(Logger).Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
 	Strict(Logger).Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
@@ -232,9 +254,9 @@ Started(rest Texts, folder Text, fresh Text) Number slow
 		return built
 	if fresh is not ""
 		logger.Log("Up to date: " + fresh)
+	let target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
 	Directory.Change(folder)
-	let program = fresh is "" then tools.Executable(base) else fresh
-	Process(TypeSource.Absolute(program)).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
+	Process(target).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
