@@ -116,15 +116,19 @@ addToLibrary({
 		if (strictWebGpu.flags.has(buffer))
 			(strictWebGpu.encoder ? strictWebGpu.flagsUsed : strictWebGpu.flagPool).push(buffer);
 		else if (strictWebGpu.pooled.has(buffer) && buffer.size <= (strictWebGpu.poolLimit ||=
-			strictWebGpuMobile() ? 134217728 : 4294967296)) {
+			strictWebGpuMobile() ? 134217728 : 2147483648)) {
 			// the longest unused buffers make room: after another image size they are all of sizes no kernel asks for anymore
-			while (strictWebGpu.pooledBytes + buffer.size > strictWebGpu.poolLimit) {
-				const oldest = strictWebGpu.poolOrder.values().next().value, free = strictWebGpu.pool[oldest.size + ' ' + oldest.usage];
+			const expire = strictWebGpu.next - 8000;
+			for (const oldest of strictWebGpu.poolOrder) {
+				if (strictWebGpu.pooledBytes + buffer.size <= strictWebGpu.poolLimit && !(oldest.__tick < expire))
+					break;
+				const free = strictWebGpu.pool[oldest.size + ' ' + oldest.usage];
 				free.splice(free.indexOf(oldest), 1);
 				strictWebGpu.poolOrder.delete(oldest);
 				strictWebGpu.pooledBytes -= oldest.size;
 				strictWebGpuDropped(oldest);
 			}
+			buffer.__tick = strictWebGpu.next;
 			(strictWebGpu.pool[buffer.size + ' ' + buffer.usage] ||= []).push(buffer);
 			strictWebGpu.poolOrder.add(buffer);
 			strictWebGpu.pooledBytes += buffer.size;
@@ -272,10 +276,13 @@ addToLibrary({
 			device.createBindGroupLayout({ entries: types.map((type, binding) => storage(binding, type)) });
 		const layout = device.createPipelineLayout({ bindGroupLayouts: [group] });
 		device.pushErrorScope('validation');
-		const half = code.startsWith('enable f16;');
-		if (half && !device.features.has('shader-f16'))
+		const enabled = code.match(/^(enable\s+[\w-]+;\s*)+/);
+		const prefix = enabled ? enabled[0] : '';
+		if (prefix.includes('f16') && !device.features.has('shader-f16'))
 			throw 'shader-f16 unavailable';
-		const body = half ? 'enable f16;\n' + Module['strictItem'] + code.slice(11) : Module['strictItem'] + code;
+		if (prefix.includes('subgroups') && !device.features.has('subgroups'))
+			throw 'subgroups unavailable';
+		const body = prefix + Module['strictItem'] + code.slice(prefix.length);
 		const module = device.createShaderModule({ code: body });
 		const pipeline = device.createComputePipelineAsync({ layout, compute: { module, entryPoint: 'main' } });
 		const error = await device.popErrorScope();
@@ -292,7 +299,7 @@ addToLibrary({
 		const requiredLimits = limits && { maxStorageBufferBindingSize: limits.maxStorageBufferBindingSize,
 			maxBufferSize: limits.maxBufferSize,
 			maxComputeWorkgroupStorageSize: limits.maxComputeWorkgroupStorageSize };
-		const requiredFeatures = adapter && adapter.features.has('shader-f16') ? ['shader-f16'] : [];
+		const requiredFeatures = ['shader-f16', 'subgroups'].filter((feature) => adapter && adapter.features.has(feature));
 		const device = adapter && await adapter.requestDevice({ requiredFeatures, requiredLimits });
 		// any other error of WebGPU stops the program, results that were never computed must not be read
 		device?.addEventListener('uncapturederror', (event) => abort('WebGPU error: ' + event.error.message));
@@ -320,21 +327,50 @@ addToLibrary({
 	// records one kernel whose pipelines are already compiled. undefined when a pipeline is still missing, so the caller
 	// takes the path that can wait; no await, a step is hundreds of these and unwinding the wasm stack for each one was
 	// the whole 1.4 s
+	$strictWebGpuPackedSource: (code) => {
+		const entry = '@compute @workgroup_size(64)\nfn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {\nlet at = id.x + id.y * groups.x * 64u;\n';
+		const pos = code.indexOf(entry);
+		if (pos < 0)
+			return null;
+		const rest = code.slice(pos + entry.length);
+		const bound = /^if \(at >= (places\[\d+\])\) \{ return; \}\n/.exec(rest);
+		if (!bound)
+			return null;
+		const bodyAndEnd = rest.slice(bound[0].length);
+		const outMatch = /\noutput\[at\] = ([^;\n]+);\n\}$/.exec(bodyAndEnd);
+		if (!outMatch)
+			return null;
+		const body = bodyAndEnd.slice(0, outMatch.index);
+		if (body.includes('output['))
+			return null;
+		return code.slice(0, pos) +
+			'fn strict_eval(at: u32) -> f32 {\n' + body + '\nreturn ' + outMatch[1] + ';\n}\n' +
+			'@compute @workgroup_size(64)\nfn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {\n' +
+			'let at = id.x + id.y * groups.x * 64u;\nlet count = ' + bound[1] + ';\nif (at * 2u >= count) { return; }\n' +
+			'let second = select(0.0, strict_eval(at * 2u + 1u), at * 2u + 1u < count);\n' +
+			'output[at] = pack_bf16(strict_eval(at * 2u), second);\n}';
+	},
 	$strictWebGpuRecord__deps: ['$strictWebGpu', '$strictWebGpuEncoder', '$strictWebGpuFlush', '$strictWebGpuStaged',
 		'$strictWebGpuDestroyed', '$strictWebGpuBuffer', '$strictWebGpuStore', '$strictWebGpuPass', '$strictWebGpuFlag',
 		'$strictWebGpuLimit'],
 	$strictWebGpuRecord: (pipeline, name, count, inputs, output, bits) => {
 		const device = strictWebGpu.device;
 		const grouped = (Module['strictKernelGroups'] || {})[name], groups = Math.ceil(count / 64);
-		const [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
-		if ((splits > 1 && !strictWebGpu.pipelines['strict_splits']) ||
-			(!output && bits === 17 && !strictWebGpu.pipelines['strict_packed']))
+		let [tiles, part, splits = 1] = grouped ? grouped(inputs.places) : [groups, groups];
+		const packKey = !output && bits === 17 && (Module['strictPacked'] || {})[name];
+		const canPack = packKey && splits <= 1 && strictWebGpu.pipelines[packKey] &&
+			(!(Module['strictCanPack'] || {})[name] || Module['strictCanPack'][name](inputs.places, count));
+		if (splits > 1 && !strictWebGpu.pipelines['strict_splits'])
 			return undefined;
-		const read = 128 | 4;
+		if (!output && bits === 17 && !canPack && !strictWebGpu.pipelines['strict_packed'])
+			return undefined;
+		if (canPack && !grouped)
+			tiles = part = Math.ceil(count / 128);
+		const read = 128 | 4, resultBytes = canPack ? Math.ceil(count / 2) * 4 : count * 4;
 		const input = strictWebGpuStaged(inputs.size * 4), places = strictWebGpuStaged(inputs.places.byteLength);
 		inputs.written.forEach(([offset, numbers]) => strictWebGpuStore(input, offset * 4, numbers));
 		strictWebGpuStore(places, 0, inputs.places);
-		const results = strictWebGpuBuffer(count * 4, read), failures = strictWebGpuFlag();
+		const results = strictWebGpuBuffer(resultBytes, read), failures = strictWebGpuFlag();
 		const buffers = [{ buffer: results }, input, places, { buffer: failures }];
 		const lists = [0, 1, 2, 3].map((at) => ({ buffer: (inputs.bound || [])[at] ||
 			(strictWebGpu.empty ||= device.createBuffer({ size: 4, usage: 128 })) }));
@@ -359,10 +395,10 @@ addToLibrary({
 			}
 		};
 		const splitting = splits > 1 && strictWebGpu.pipelines['strict_splits'];
-		const packing = !output && bits === 17 && strictWebGpu.pipelines['strict_packed'];
+		const packing = !output && bits === 17 && !canPack && strictWebGpu.pipelines['strict_packed'];
 		for (const [source, offset, length] of inputs.copies || [])
 			strictWebGpuEncoder().copyBufferToBuffer(source, 0, input.buffer, input.offset + offset * 4, length * 4);
-		strictWebGpu.fresh += count * 4;
+		strictWebGpu.fresh += resultBytes;
 		if (splitting) {
 			const parts = strictWebGpuBuffer(count * splits * 4, 128);
 			strictWebGpu.fresh += count * splits * 4;
@@ -370,11 +406,11 @@ addToLibrary({
 			dispatched(splitting, groups, groups, [buffers[0], { buffer: parts }, buffers[2], buffers[3]]);
 			strictWebGpuDestroyed(parts);
 		} else
-			dispatched(pipeline, tiles, part, buffers);
+			dispatched(canPack ? strictWebGpu.pipelines[packKey] : pipeline, tiles, part, buffers);
 		if (!output) {
 			// a kept bfloat16 result is rounded like the CPU reads it and kept as halves, two in each 32 bits
-			const halved = packing && strictWebGpuBuffer(Math.ceil(count / 2) * 4, read);
-			if (halved) {
+			const halved = packing ? strictWebGpuBuffer(Math.ceil(count / 2) * 4, read) : canPack ? results : false;
+			if (packing) {
 				const pairs = Math.ceil(count / 128);
 				dispatched(packing, pairs, pairs, [{ buffer: halved }, buffers[0], buffers[2], buffers[3]]);
 				strictWebGpuDestroyed(results);
@@ -397,7 +433,7 @@ addToLibrary({
 		return { copy, results, failures, count };
 	},
 	$strictWebGpuRun__deps: ['$strictWebGpu', '$strictWebGpuPipeline', '$strictWebGpuDevice', '$strictWebGpuWritten',
-		'$strictWebGpuRecord', '$strictWebGpuLimit', '$strictWebGpuThrottled', '$strictWebGpuDestroyed'],
+		'$strictWebGpuRecord', '$strictWebGpuLimit', '$strictWebGpuThrottled', '$strictWebGpuDestroyed', '$strictWebGpuPackedSource'],
 	$strictWebGpuRun: async (name, count, inputs, output, bits) => {
 		const device = inputs && (strictWebGpu.device ||= await strictWebGpuDevice());
 		if (inputs && !device) {
@@ -425,6 +461,16 @@ addToLibrary({
 			} catch {
 				strictWebGpu.pipelines[half] = null;
 			}
+		const subgroup = (Module['strictSubgroups'] || {})[name];
+		const canSubgroup = device.features.has('subgroups') && (device.adapterInfo?.subgroupMinSize ?? 4) >= 4;
+		if (subgroup && strictWebGpu.pipelines[subgroup] !== null && canSubgroup)
+			try {
+				strictWebGpu.pipelines[subgroup] ||= await (strictWebGpu.compiling[subgroup] ||
+					strictWebGpuPipeline(device, Module['strictShaders'][subgroup]));
+				name = subgroup;
+			} catch {
+				strictWebGpu.pipelines[subgroup] = null;
+			}
 		const pipeline = strictWebGpu.pipelines[name] ||= await (strictWebGpu.compiling[name] ||
 			strictWebGpuPipeline(device, Module['strictShaders'][name]));
 		const grouped = (Module['strictKernelGroups'] || {})[name];
@@ -433,8 +479,24 @@ addToLibrary({
 			await (strictWebGpu.compiling[key] || strictWebGpuPipeline(device, Module['strictShaders'][key]));
 		if (splits > 1)
 			await compile('strict_splits');
-		if (!output && bits === 17)
-			await compile('strict_packed');
+		if (!output && bits === 17) {
+			const packedMap = (Module['strictPacked'] ||= {});
+			if (packedMap[name] === undefined) {
+				const packedCode = !grouped && strictWebGpuPackedSource(Module['strictShaders'][name]);
+				if (packedCode) {
+					Module['strictShaders'][name + '_p17'] = packedCode;
+					packedMap[name] = name + '_p17';
+				} else
+					packedMap[name] = null;
+			}
+			const packKey = packedMap[name];
+			const canPack = packKey && splits <= 1 && strictWebGpu.pipelines[packKey] !== null &&
+				(!(Module['strictCanPack'] || {})[name] || Module['strictCanPack'][name](inputs.places, count));
+			if (canPack)
+				try { await compile(packKey); } catch { strictWebGpu.pipelines[packKey] = null; }
+			if (!canPack || !strictWebGpu.pipelines[packKey])
+				await compile('strict_packed');
+		}
 		const recorded = strictWebGpuRecord(pipeline, name, count, inputs, output, bits);
 		if (recorded === undefined)
 			return 0;
@@ -489,6 +551,13 @@ addToLibrary({
 				return undefined;
 			name = half;
 		}
+		const subgroup = (Module['strictSubgroups'] || {})[name];
+		if (subgroup && strictWebGpu.pipelines[subgroup] !== null && device.features.has('subgroups') &&
+			(device.adapterInfo?.subgroupMinSize ?? 4) >= 4) {
+			if (!strictWebGpu.pipelines[subgroup])
+				return undefined;
+			name = subgroup;
+		}
 		if (!strictWebGpu.pipelines[name])
 			return undefined;
 		const inputs = strictWebGpuKernelInputs(count, table >>> 0, slots);
@@ -496,9 +565,18 @@ addToLibrary({
 			return 0;
 		const grouped = (Module['strictKernelGroups'] || {})[name];
 		const splits = grouped ? grouped(inputs.places)[2] || 1 : 1;
-		if ((splits > 1 && !strictWebGpu.pipelines['strict_splits']) ||
-			(bits === 17 && !strictWebGpu.pipelines['strict_packed']))
+		if (splits > 1 && !strictWebGpu.pipelines['strict_splits'])
 			return undefined;
+		if (bits === 17) {
+			const packedMap = Module['strictPacked'] || {};
+			if (packedMap[name] === undefined && !grouped)
+				return undefined;
+			const packKey = packedMap[name];
+			const canPack = packKey && splits <= 1 && strictWebGpu.pipelines[packKey] !== null &&
+				(!(Module['strictCanPack'] || {})[name] || Module['strictCanPack'][name](inputs.places, count));
+			if (canPack ? !strictWebGpu.pipelines[packKey] : !strictWebGpu.pipelines['strict_packed'])
+				return undefined;
+		}
 		return strictWebGpuRecord(strictWebGpu.pipelines[name], name, count, inputs, 0, bits);
 	},
 	$strictWebGpuStarted__deps: ['$strictWebGpu', '$strictWebGpuRun', '$UTF8ToString', '$Asyncify'],
@@ -994,12 +1072,22 @@ addToLibrary({
 		strictWebGpu.grown = 0;
 		strictWebFile.blocks.clear();
 	},
-	// not 0 once kept results took 1 GB (64 MB on mobile) since the last time, the collector then gives back the buffers of dead lists: young (2) on desktops, full (1) on mobile
+	// not 0 once kept results took 1 GB (64 MB on mobile) since the last time. 1 asks for a full collection, 2 for a young one.
+	// A young collection does not free a dead WebGPU list that already survived one pass (class 255, same as a dead old
+	// Flux activation on native). On a desktop that left every past 720p step resident: three 1280x720 images climbed
+	// from 6 s to 22 s while the GPU stayed above 20 GB. Weights live in filed and do not count toward that.
 	strict_webgpu_crowded__deps: ['$strictWebGpu', '$strictWebGpuMobile'],
 	strict_webgpu_crowded: () => {
 		const isCrowded = strictWebGpu.grown > (strictWebGpuMobile() ? 67108864 : 1073741824);
-		if (isCrowded)
-			strictWebGpu.grown = 0;
-		return isCrowded ? (strictWebGpuMobile() ? 1 : 2) : 0;
+		if (!isCrowded)
+			return 0;
+		strictWebGpu.grown = 0;
+		let live = 0;
+		for (const handle in strictWebGpu.buffers) {
+			const buffer = strictWebGpu.buffers[handle];
+			if (buffer && buffer.size && !strictWebGpu.filed[handle])
+				live += buffer.size;
+		}
+		return strictWebGpuMobile() || live > 2147483648 ? 1 : 2;
 	},
 });
