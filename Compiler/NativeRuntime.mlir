@@ -21067,8 +21067,320 @@
     %uniformKind = arith.constant 4 : i64
     %isRows = arith.cmpi eq, %kind, %rowsKind : i64
     %isUniform = arith.cmpi eq, %kind, %uniformKind : i64
-    %either = arith.ori %isRows, %isUniform : i1
+    %compactKind = arith.constant 12 : i64
+    %isCompact = arith.cmpi eq, %kind, %compactKind : i64
+    %full = arith.ori %isRows, %isUniform : i1
+    %either = arith.ori %full, %isCompact : i1
     return %either : i1
+  }
+  // spilled rows of 8 bit codes with one scale each (kind 4, a width in 64s) go up without the scales after the first
+  // of every row when a GEMM for whole rows reads them (strict_device_whole_run takes the stride from the header and only
+  // the scale behind the codes): a row takes its columns + 4 bytes up to the next 128 instead of 12.5 % more (rows at
+  // a stride of 16 that is no multiple of 128 made the GEMM 7 % slower, its fetches then cross cache lines), the
+  // 21.7 GB of H3 weights 19.9 GB, so fewer of them stream every step on a 24 GB card: H3 Image at 1 MP 3.3 to 2.9 s
+  // for a new prompt and 1.6 to 1.25 s for another seed, the same pixels. Such a device copy is kind 12 in the cache,
+  // the pinned copy keeps the layout of the host rows and cuMemcpy2DAsync_v2 leaves the other scales out at the same
+  // 26 GB/s. Any other kernel gets the full layout again (strict_gpu_compact_usable). STRICT_GPU_COMPACT=0 turns it off
+  llvm.mlir.global internal @strict_gpu_whole_launch(0 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_copier_slot(0 : i64) : i64
+  // per spill slot the header word of its compact device copy, in pinned memory: the asynchronous copy of a word from
+  // pageable memory waits for the stream, which made every streamed upload wait for the launches before it (H3 Image at
+  // 8 and 16 MP 5 % slower), and how often a kernel that needs every scale made the compact copy go
+  llvm.mlir.global internal @strict_gpu_compact_words(0 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_compact_refused(dense<0> : tensor<1024xi64>) : !llvm.array<1024 x i64>
+  llvm.mlir.global internal constant @strict_gpu_copier_name("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00cuMemcpy2DAsync_v2\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gpu_compact_switch("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00STRICT_GPU_COMPACT\00") : !llvm.array<35 x i8>
+  // the driver function copying rows at another pitch, null without one (AMD, Metal) or with STRICT_GPU_COMPACT=0
+  func.func private @strict_gpu_copier() -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %missing = arith.constant -1 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_copier_slot : !llvm.ptr
+    %bits = llvm.load %slot : !llvm.ptr -> i64
+    %isUnknown = arith.cmpi eq, %bits, %none : i64
+    cf.cond_br %isUnknown, ^look, ^known(%bits : i64)
+  ^look:
+    %amdSlot = llvm.mlir.addressof @strict_gpu_amd : !llvm.ptr
+    %amd = llvm.load %amdSlot : !llvm.ptr -> i64
+    %isNvidia = arith.cmpi eq, %amd, %none : i64
+    %switchLengths = llvm.mlir.addressof @strict_gpu_compact_switch : !llvm.ptr
+    %switch = llvm.getelementptr %switchLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %setting = llvm.call @getenv(%switch) : (!llvm.ptr) -> !llvm.ptr
+    %isUnset = llvm.icmp "eq" %setting, %nothing : !llvm.ptr
+    cf.cond_br %isUnset, ^library, ^setting
+  ^setting:
+    %settingFirst = llvm.load %setting : !llvm.ptr -> i8
+    %off = arith.constant 48 : i8
+    %isOff = arith.cmpi eq, %settingFirst, %off : i8
+    cf.cond_br %isOff, ^store(%missing : i64), ^library
+  ^library:
+    cf.cond_br %isNvidia, ^find, ^store(%missing : i64)
+  ^find:
+    %false = arith.constant false
+    %library = func.call @strict_gpu_library(%false) : (i1) -> !llvm.ptr
+    %hasLibrary = llvm.icmp "ne" %library, %nothing : !llvm.ptr
+    cf.cond_br %hasLibrary, ^resolve, ^store(%missing : i64)
+  ^resolve:
+    %nameLengths = llvm.mlir.addressof @strict_gpu_copier_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %function = func.call @strict_gpu_lookup(%library, %name) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %functionBits = llvm.ptrtoint %function : !llvm.ptr to i64
+    %isMissing = arith.cmpi eq, %functionBits, %none : i64
+    %resolved = arith.select %isMissing, %missing, %functionBits : i64
+    cf.br ^store(%resolved : i64)
+  ^store(%stored: i64):
+    llvm.store %stored, %slot : i64, !llvm.ptr
+    cf.br ^known(%stored : i64)
+  ^known(%known: i64):
+    %absent = arith.cmpi eq, %known, %missing : i64
+    %pointer = llvm.inttoptr %known : i64 to !llvm.ptr
+    %result = llvm.select %absent, %nothing, %pointer : i1, !llvm.ptr
+    return %result : !llvm.ptr
+  }
+  // the header bytes, the stride of the pinned rows and of compact ones and the compact bytes of spill slot, bytes 0 when
+  // its rows are not 8 bit codes with one scale each in the layout of strict_gpu_rows (a width in 64s)
+  func.func private @strict_gpu_compact_shape(%slot: !llvm.ptr) -> (i64, i64, i64, i64) {
+    %none = arith.constant 0 : i64
+    %three = arith.constant 3 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %fifteen = arith.constant 15 : i64
+    %sixteenMask = arith.constant -16 : i64
+    %sixtyThree = arith.constant 63 : i64
+    %lineSpare = arith.constant 127 : i64
+    %lineMask = arith.constant -128 : i64
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %total = llvm.load %totalSlot : !llvm.ptr -> i64
+    %columnsSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %columns = llvm.load %columnsSlot : !llvm.ptr -> i64
+    %bitsSlot = llvm.getelementptr %slot[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
+    %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %withTable = arith.addi %count, %eight : i64
+    %paddedHeader = arith.addi %withTable, %lineSpare : i64
+    %header = arith.andi %paddedHeader, %lineMask : i64
+    %scaleBytes = arith.shrui %columns, %three : i64
+    %fullBytes = arith.addi %columns, %scaleBytes : i64
+    %fullPadded = arith.addi %fullBytes, %fifteen : i64
+    %fullStride = arith.andi %fullPadded, %sixteenMask : i64
+    %compactBytes = arith.addi %columns, %four : i64
+    %compactPadded = arith.addi %compactBytes, %lineSpare : i64
+    %compactStride = arith.andi %compactPadded, %lineMask : i64
+    %fullRows = arith.muli %fullStride, %count : i64
+    %expected = arith.addi %header, %fullRows : i64
+    %compactRows = arith.muli %compactStride, %count : i64
+    %compact = arith.addi %header, %compactRows : i64
+    %isUniform = arith.cmpi eq, %kind, %four : i64
+    %isEight = arith.cmpi eq, %bits, %eight : i64
+    %rest = arith.andi %columns, %sixtyThree : i64
+    %aligned = arith.cmpi eq, %rest, %none : i64
+    %hasColumns = arith.cmpi sgt, %columns, %none : i64
+    %hasRows = arith.cmpi sgt, %count, %none : i64
+    %sameLayout = arith.cmpi eq, %expected, %total : i64
+    %format = arith.andi %isUniform, %isEight : i1
+    %shape = arith.andi %aligned, %hasColumns : i1
+    %sized = arith.andi %hasRows, %sameLayout : i1
+    %formatShape = arith.andi %format, %shape : i1
+    %fits = arith.andi %formatShape, %sized : i1
+    %bytes = arith.select %fits, %compact, %none : i64
+    return %header, %fullStride, %compactStride, %bytes : i64, i64, i64, i64
+  }
+  // the pinned header word of the spill slot at index, null when no memory could be pinned
+  func.func private @strict_gpu_compact_word(%index: i64) -> !llvm.ptr {
+    %none = arith.constant 0 : i64
+    %bytes = arith.constant 8192 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %wordsSlot = llvm.mlir.addressof @strict_gpu_compact_words : !llvm.ptr
+    %known = llvm.load %wordsSlot : !llvm.ptr -> i64
+    %isKnown = arith.cmpi ne, %known, %none : i64
+    cf.cond_br %isKnown, ^at(%known : i64), ^pin
+  ^pin:
+    %pinned = func.call @strict_gpu_pinned(%bytes) : (i64) -> i64
+    %isPinned = arith.cmpi ne, %pinned, %none : i64
+    cf.cond_br %isPinned, ^clear, ^missing
+  ^clear:
+    %block = llvm.inttoptr %pinned : i64 to !llvm.ptr
+    %zeroByte = arith.constant 0 : i32
+    %cleared = llvm.call @memset(%block, %zeroByte, %bytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    llvm.store %pinned, %wordsSlot : i64, !llvm.ptr
+    cf.br ^at(%pinned : i64)
+  ^at(%words: i64):
+    %base = llvm.inttoptr %words : i64 to !llvm.ptr
+    %word = llvm.getelementptr %base[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    return %word : !llvm.ptr
+  ^missing:
+    return %nothing : !llvm.ptr
+  }
+  func.func private @strict_gpu_spill_index(%slot: !llvm.ptr) -> i64 {
+    %six = arith.constant 6 : i64
+    %spills = llvm.mlir.addressof @strict_gpu_spills : !llvm.ptr
+    %base = llvm.ptrtoint %spills : !llvm.ptr to i64
+    %slotBits = llvm.ptrtoint %slot : !llvm.ptr to i64
+    %offset = arith.subi %slotBits, %base : i64
+    %index = arith.shrui %offset, %six : i64
+    return %index : i64
+  }
+  // the bytes of the compact device copy the rows of spill slot go up as now, 0 for the full layout: for the launch of a
+  // whole row GEMM (launching), ahead of one only when they went up compact before
+  func.func private @strict_gpu_compact_wanted(%slot: !llvm.ptr, %launching: i1) -> i64 {
+    %none = arith.constant 0 : i64
+    %three = arith.constant 3 : i64
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %header, %fullStride, %compactStride, %bytes = func.call @strict_gpu_compact_shape(%slot) : (!llvm.ptr) -> (i64, i64, i64, i64)
+    %isShaped = arith.cmpi ne, %bytes, %none : i64
+    cf.cond_br %isShaped, ^copier, ^done(%none : i64)
+  ^copier:
+    %copier = func.call @strict_gpu_copier() : () -> !llvm.ptr
+    %hasCopier = llvm.icmp "ne" %copier, %nothing : !llvm.ptr
+    cf.cond_br %hasCopier, ^allowed, ^done(%none : i64)
+  ^allowed:
+    %index = func.call @strict_gpu_spill_index(%slot) : (!llvm.ptr) -> i64
+    %refusals = llvm.mlir.addressof @strict_gpu_compact_refused : !llvm.ptr
+    %refusedSlot = llvm.getelementptr %refusals[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %refused = llvm.load %refusedSlot : !llvm.ptr -> i64
+    %isRefused = arith.cmpi sge, %refused, %three : i64
+    cf.cond_br %isRefused, ^done(%none : i64), ^word
+  ^word:
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %countShift = arith.constant 32 : i64
+    %countHigh = arith.shli %count, %countShift : i64
+    %uniformBit = arith.constant 2147483648 : i64
+    %strideAndCount = arith.ori %compactStride, %countHigh : i64
+    %word = arith.ori %strideAndCount, %uniformBit : i64
+    %wordSlot = func.call @strict_gpu_compact_word(%index) : (i64) -> !llvm.ptr
+    %hasWord = llvm.icmp "ne" %wordSlot, %nothing : !llvm.ptr
+    cf.cond_br %hasWord, ^placed, ^done(%none : i64)
+  ^placed:
+    cf.cond_br %launching, ^launch, ^ahead
+  ^launch:
+    %wholeSlot = llvm.mlir.addressof @strict_gpu_whole_launch : !llvm.ptr
+    %whole = llvm.load %wholeSlot : !llvm.ptr -> i64
+    %isWhole = arith.cmpi ne, %whole, %none : i64
+    cf.cond_br %isWhole, ^keep, ^done(%none : i64)
+  ^keep:
+    llvm.store %word, %wordSlot : i64, !llvm.ptr
+    cf.br ^done(%bytes : i64)
+  ^ahead:
+    %stored = llvm.load %wordSlot : !llvm.ptr -> i64
+    %wentCompact = arith.cmpi eq, %stored, %word : i64
+    %aheadBytes = arith.select %wentCompact, %bytes, %none : i64
+    cf.br ^done(%aheadBytes : i64)
+  ^done(%result: i64):
+    return %result : i64
+  }
+  // the pinned rows of spill slot go up to device on stream without the scales after the first of every row: the header,
+  // its first word with the compact stride, then the codes and the first scale of every row; 0 when all three were queued
+  func.func private @strict_gpu_put_compact(%device: i64, %host: !llvm.ptr, %slot: !llvm.ptr, %stream: !llvm.ptr) -> i32 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %four = arith.constant 4 : i64
+    %eight = arith.constant 8 : i64
+    %sixteen = arith.constant 16 : i64
+    %header, %fullStride, %compactStride, %bytes = func.call @strict_gpu_compact_shape(%slot) : (!llvm.ptr) -> (i64, i64, i64, i64)
+    %countSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %count = llvm.load %countSlot : !llvm.ptr -> i64
+    %columnsSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %columns = llvm.load %columnsSlot : !llvm.ptr -> i64
+    %putIndex = arith.constant 14 : i64
+    %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
+    %headed = llvm.call %put(%device, %host, %header, %stream) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    %index = func.call @strict_gpu_spill_index(%slot) : (!llvm.ptr) -> i64
+    %wordSlot = func.call @strict_gpu_compact_word(%index) : (i64) -> !llvm.ptr
+    %worded = llvm.call %put(%device, %wordSlot, %eight, %stream) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    %copy = llvm.alloca %sixteen x i64 : (i64) -> !llvm.ptr
+    cf.br ^clear(%none : i64)
+  ^clear(%field: i64):
+    %more = arith.cmpi slt, %field, %sixteen : i64
+    cf.cond_br %more, ^zero, ^fill
+  ^zero:
+    %fieldSlot = llvm.getelementptr %copy[%field] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %none, %fieldSlot : i64, !llvm.ptr
+    %following = arith.addi %field, %one : i64
+    cf.br ^clear(%following : i64)
+  ^fill:
+    %hostBits = llvm.ptrtoint %host : !llvm.ptr to i64
+    %sourceRows = arith.addi %hostBits, %header : i64
+    %targetRows = arith.addi %device, %header : i64
+    %width = arith.addi %columns, %four : i64
+    %sourceKind = llvm.getelementptr %copy[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %one, %sourceKind : i64, !llvm.ptr
+    %sourceHost = llvm.getelementptr %copy[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %sourceRows, %sourceHost : i64, !llvm.ptr
+    %sourcePitch = llvm.getelementptr %copy[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %fullStride, %sourcePitch : i64, !llvm.ptr
+    %targetKind = llvm.getelementptr %copy[9] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %two, %targetKind : i64, !llvm.ptr
+    %targetDevice = llvm.getelementptr %copy[11] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %targetRows, %targetDevice : i64, !llvm.ptr
+    %targetPitch = llvm.getelementptr %copy[13] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %compactStride, %targetPitch : i64, !llvm.ptr
+    %widthSlot = llvm.getelementptr %copy[14] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %width, %widthSlot : i64, !llvm.ptr
+    %heightSlot = llvm.getelementptr %copy[15] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %count, %heightSlot : i64, !llvm.ptr
+    %copier = func.call @strict_gpu_copier() : () -> !llvm.ptr
+    %copied = llvm.call %copier(%copy, %stream) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %early = arith.ori %headed, %worded : i32
+    %all = arith.ori %early, %copied : i32
+    return %all : i32
+  }
+  // false when the rows found in the cache are a compact copy and the launch is not a whole row GEMM: that copy goes
+  // (counted per spill, after three times its rows stay in the full layout) and the rows go up again with every scale
+  func.func private @strict_gpu_compact_usable(%rows: f64, %count: i64, %out: !llvm.ptr) -> i1 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %probes = arith.constant 16 : i64
+    %compactKind = arith.constant 12 : i64
+    %true = arith.constant true
+    %false = arith.constant false
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %wholeSlot = llvm.mlir.addressof @strict_gpu_whole_launch : !llvm.ptr
+    %whole = llvm.load %wholeSlot : !llvm.ptr -> i64
+    %isWhole = arith.cmpi ne, %whole, %none : i64
+    cf.cond_br %isWhole, ^done(%true : i1), ^next(%none : i64)
+  ^next(%probe: i64):
+    %more = arith.cmpi slt, %probe, %probes : i64
+    cf.cond_br %more, ^compare, ^done(%true : i1)
+  ^compare:
+    %listBits = arith.bitcast %rows : f64 to i64
+    %entry = func.call @strict_gpu_slot(%listBits, %probe) : (i64, i64) -> !llvm.ptr
+    %stored = llvm.load %entry : !llvm.ptr -> i64
+    %kindSlot = llvm.getelementptr %entry[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storedKind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %countSlot = llvm.getelementptr %entry[6] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storedCount = llvm.load %countSlot : !llvm.ptr -> i64
+    %sameList = arith.cmpi eq, %stored, %listBits : i64
+    %isCompact = arith.cmpi eq, %storedKind, %compactKind : i64
+    %sameCount = arith.cmpi eq, %storedCount, %count : i64
+    %compactList = arith.andi %sameList, %isCompact : i1
+    %found = arith.andi %compactList, %sameCount : i1
+    %following = arith.addi %probe, %one : i64
+    cf.cond_br %found, ^refuse, ^next(%following : i64)
+  ^refuse:
+    %spill = func.call @strict_gpu_spilled(%listBits, %count, %false) : (i64, i64, i1) -> !llvm.ptr
+    %hasSpill = llvm.icmp "ne" %spill, %nothing : !llvm.ptr
+    cf.cond_br %hasSpill, ^count, ^evict
+  ^count:
+    %index = func.call @strict_gpu_spill_index(%spill) : (!llvm.ptr) -> i64
+    %refusals = llvm.mlir.addressof @strict_gpu_compact_refused : !llvm.ptr
+    %refusedSlot = llvm.getelementptr %refusals[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1024 x i64>
+    %refused = llvm.load %refusedSlot : !llvm.ptr -> i64
+    %refusedMore = arith.addi %refused, %one : i64
+    llvm.store %refusedMore, %refusedSlot : i64, !llvm.ptr
+    cf.br ^evict
+  ^evict:
+    func.call @strict_gpu_ahead_hit(%out) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    func.call @strict_gpu_evict(%entry) : (!llvm.ptr) -> ()
+    cf.br ^done(%false : i1)
+  ^done(%usable: i1):
+    return %usable : i1
   }
   // copies the device rows of entry into pinned host memory once (header word, then header and rows), the GPU is idle
   func.func private @strict_gpu_spill(%entry: !llvm.ptr) {
@@ -21208,8 +21520,12 @@
     %isSpilled = llvm.icmp "ne" %spill, %nothing : !llvm.ptr
     cf.cond_br %isSpilled, ^measured, ^scan(%following, %best, %bestUse : i64, i64, i64)
   ^measured:
-    %spillTotalSlot = llvm.getelementptr %spill[3] : (!llvm.ptr) -> !llvm.ptr, i64
-    %spillTotal = llvm.load %spillTotalSlot : !llvm.ptr -> i64
+    %spillFullSlot = llvm.getelementptr %spill[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %spillFull = llvm.load %spillFullSlot : !llvm.ptr -> i64
+    %spillHeader, %spillStride, %spillCompactStride, %spillCompact = func.call @strict_gpu_compact_shape(%spill) : (!llvm.ptr) -> (i64, i64, i64, i64)
+    %compactKind = arith.constant 12 : i64
+    %isCompactRows = arith.cmpi eq, %kind, %compactKind : i64
+    %spillTotal = arith.select %isCompactRows, %spillCompact, %spillFull : i64
     %sameSize = arith.cmpi eq, %spillTotal, %total : i64
     %largeEnough = arith.cmpi uge, %spillTotal, %total : i64
     %sizeFits = arith.select %atLeast, %largeEnough, %sameSize : i1
@@ -21257,7 +21573,10 @@
     cf.cond_br %found, ^allocate, ^missing
   ^allocate:
     %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
-    %total = llvm.load %totalSlot : !llvm.ptr -> i64
+    %fullTotal = llvm.load %totalSlot : !llvm.ptr -> i64
+    %compactTotal = func.call @strict_gpu_compact_wanted(%slot, %true) : (!llvm.ptr, i1) -> i64
+    %isCompact = arith.cmpi ne, %compactTotal, %none : i64
+    %total = arith.select %isCompact, %compactTotal, %fullTotal : i64
     %exactSize = arith.constant false
     %handed = func.call @strict_gpu_handed(%total, %exactSize) : (i64, i1) -> i64
     %isHanded = arith.cmpi ne, %handed, %none : i64
@@ -21270,7 +21589,19 @@
     %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
     %host = llvm.inttoptr %pinned : i64 to !llvm.ptr
-    %put = func.call @strict_gpu_put_async(%device, %host, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %isCompact, ^shaped, ^plain
+  ^shaped:
+    %zero32 = arith.constant 0 : i32
+    %stream = func.call @strict_gpu_stream() : () -> !llvm.ptr
+    %shapedResult = func.call @strict_gpu_put_compact(%device, %host, %slot, %stream) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %copier = func.call @strict_gpu_copier() : () -> !llvm.ptr
+    func.call @strict_gpu_captured(%copier) : (!llvm.ptr) -> ()
+    %shapedPut = arith.cmpi eq, %shapedResult, %zero32 : i32
+    cf.br ^sent(%shapedPut : i1)
+  ^plain:
+    %plainPut = func.call @strict_gpu_put_async(%device, %host, %total) : (i64, !llvm.ptr, i64) -> i1
+    cf.br ^sent(%plainPut : i1)
+  ^sent(%put: i1):
     cf.cond_br %put, ^view, ^failed
   ^failed:
     func.call @strict_gpu_release(%device) : (i64) -> ()
@@ -21282,7 +21613,9 @@
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
     func.call @strict_gpu_view(%out, %device, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
     %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
-    %kind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %spillKind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %compactKind = arith.constant 12 : i64
+    %kind = arith.select %isCompact, %compactKind, %spillKind : i64
     func.call @strict_gpu_remember(%rows, %kind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
     func.call @strict_gpu_followed(%slot) : (!llvm.ptr) -> ()
     return %true : i1
@@ -22855,7 +23188,7 @@
   }
   // bytes of host go up on the copy stream after the launches so far, the launches after the next join of base (0 or 5
   // for the second upload) wait for them
-  func.func private @strict_gpu_put_ahead(%device: i64, %host: !llvm.ptr, %bytes: i64, %base: i64) -> i1 {
+  func.func private @strict_gpu_put_ahead(%device: i64, %host: !llvm.ptr, %bytes: i64, %base: i64, %shaped: !llvm.ptr) -> i1 {
     %zero32 = arith.constant 0 : i32
     %ahead = llvm.mlir.addressof @strict_gpu_ahead : !llvm.ptr
     %copyBits = llvm.load %ahead : !llvm.ptr -> i64
@@ -22875,9 +23208,18 @@
     %waitIndex = arith.constant 33 : i64
     %wait = func.call @strict_gpu_call(%waitIndex) : (i64) -> !llvm.ptr
     %joined = llvm.call %wait(%copy, %fork, %zero32) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i32) -> i32
+    %unshaped = llvm.mlir.zero : !llvm.ptr
+    %isPlain = llvm.icmp "eq" %shaped, %unshaped : !llvm.ptr
+    cf.cond_br %isPlain, ^plain, ^compact
+  ^compact:
+    %compactResult = func.call @strict_gpu_put_compact(%device, %host, %shaped, %copy) : (i64, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^sent(%compactResult : i32)
+  ^plain:
     %putIndex = arith.constant 14 : i64
     %put = func.call @strict_gpu_call(%putIndex) : (i64) -> !llvm.ptr
-    %result = llvm.call %put(%device, %host, %bytes, %copy) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    %plainResult = llvm.call %put(%device, %host, %bytes, %copy) : !llvm.ptr, (i64, !llvm.ptr, i64, !llvm.ptr) -> i32
+    cf.br ^sent(%plainResult : i32)
+  ^sent(%result: i32):
     %recorded = llvm.call %record(%copied, %copy) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %three = arith.constant 3 : i64
     %pendingAt = arith.addi %base, %three : i64
@@ -23001,7 +23343,13 @@
     cf.cond_br %resident, ^done, ^place
   ^place:
     %totalSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
-    %total = llvm.load %totalSlot : !llvm.ptr -> i64
+    %fullTotal = llvm.load %totalSlot : !llvm.ptr -> i64
+    %notLaunching = arith.constant false
+    %compactTotal = func.call @strict_gpu_compact_wanted(%slot, %notLaunching) : (!llvm.ptr, i1) -> i64
+    %isCompact = arith.cmpi ne, %compactTotal, %none : i64
+    %total = arith.select %isCompact, %compactTotal, %fullTotal : i64
+    %unshapedRows = llvm.mlir.zero : !llvm.ptr
+    %shapedRows = llvm.select %isCompact, %slot, %unshapedRows : i1, !llvm.ptr
     %exactSize = arith.constant false
     %handed = func.call @strict_gpu_handed(%total, %exactSize) : (i64, i1) -> i64
     %isHanded = arith.cmpi ne, %handed, %none : i64
@@ -23020,7 +23368,7 @@
     %pinnedSlot = llvm.getelementptr %slot[2] : (!llvm.ptr) -> !llvm.ptr, i64
     %pinned = llvm.load %pinnedSlot : !llvm.ptr -> i64
     %host = llvm.inttoptr %pinned : i64 to !llvm.ptr
-    %put = func.call @strict_gpu_put_ahead(%device, %host, %total, %base) : (i64, !llvm.ptr, i64, i64) -> i1
+    %put = func.call @strict_gpu_put_ahead(%device, %host, %total, %base, %shapedRows) : (i64, !llvm.ptr, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %put, ^view, ^failed
   ^failed:
     func.call @strict_gpu_ahead_join() : () -> ()
@@ -23033,7 +23381,9 @@
     %bits = llvm.load %bitsSlot : !llvm.ptr -> i64
     func.call @strict_gpu_view(%out, %device, %length, %bits) : (!llvm.ptr, i64, i64, i64) -> ()
     %kindSlot = llvm.getelementptr %slot[6] : (!llvm.ptr) -> !llvm.ptr, i64
-    %kind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %spillKind = llvm.load %kindSlot : !llvm.ptr -> i64
+    %compactKind = arith.constant 12 : i64
+    %kind = arith.select %isCompact, %compactKind, %spillKind : i64
     func.call @strict_gpu_remember(%list, %kind, %count, %out, %none) : (f64, i64, i64, !llvm.ptr, i64) -> ()
     %spillAt = arith.addi %base, %four : i64
     %aheadSlot = llvm.getelementptr %ahead[%spillAt] : (!llvm.ptr, i64) -> !llvm.ptr, i64
@@ -26449,9 +26799,13 @@
     %runLanes = arith.select %isGated, %gatedLanes, %lanes : i64
     %tokenWidthSlot = llvm.mlir.addressof @strict_gpu_quantize_width : !llvm.ptr
     llvm.store %tokenWidth, %tokenWidthSlot : i64, !llvm.ptr
+    %wholeLaunchSlot = llvm.mlir.addressof @strict_gpu_whole_launch : !llvm.ptr
+    %wholeLaunch = arith.extui %wholeChosen : i1 to i64
+    llvm.store %wholeLaunch, %wholeLaunchSlot : i64, !llvm.ptr
     %noGuards5 = arith.constant 0 : i64
     %result = func.call @strict_gpu_run(%ptx, %runName, %runSlot, %count, %zero, %none, %values, %six, %listsMask, %one, %two, %runLanes, %none, %resultPacked, %noGuards5) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     llvm.store %none, %tokenWidthSlot : i64, !llvm.ptr
+    llvm.store %none, %wholeLaunchSlot : i64, !llvm.ptr
     return %result : f64
   }
   // the tokens of strict_device_whole are quantized with one scale per token (width) when the first row has one scale,
@@ -27393,6 +27747,9 @@
     %hit = func.call @strict_gpu_cached(%rows, %two, %count, %out) : (f64, i64, i64, !llvm.ptr) -> i1
     cf.cond_br %hit, ^hit, ^spilled
   ^hit:
+    %usable = func.call @strict_gpu_compact_usable(%rows, %count, %out) : (f64, i64, !llvm.ptr) -> i1
+    cf.cond_br %usable, ^usable, ^spilled
+  ^usable:
     func.call @strict_gpu_ahead_hit(%out) : (!llvm.ptr) -> ()
     cf.br ^owned
   ^spilled:
@@ -27776,7 +28133,13 @@
     %wantedRows = arith.cmpi eq, %kind, %rowsKind : i64
     %storedUniform = arith.cmpi eq, %storedKind, %uniformKind : i64
     %uniformRows = arith.andi %wantedRows, %storedUniform : i1
-    %sameKind = arith.ori %exactKind, %uniformRows : i1
+    %compactKind = arith.constant 12 : i64
+    %storedCompact = arith.cmpi eq, %storedKind, %compactKind : i64
+    %wantedUniform = arith.cmpi eq, %kind, %uniformKind : i64
+    %wantedEither = arith.ori %wantedRows, %wantedUniform : i1
+    %compactRows = arith.andi %wantedEither, %storedCompact : i1
+    %fullKind = arith.ori %exactKind, %uniformRows : i1
+    %sameKind = arith.ori %fullKind, %compactRows : i1
     %sameCount = arith.cmpi eq, %storedCount, %count : i64
     %sameShape = arith.andi %sameKind, %sameCount : i1
     %found = arith.andi %sameList, %sameShape : i1
