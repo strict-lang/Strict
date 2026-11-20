@@ -217,6 +217,10 @@ Logarithm Number
 Bits Number
 	5.Bits is 64
 	DoubleBits
+IsBitSet(position Number) Boolean
+	5.IsBitSet(0) and 5.IsBitSet(2) and 8.IsBitSet(3)
+	5.IsBitSet(1) is false and 8.IsBitSet(0) is false and 1.IsBitSet(10) is false
+	(value / 2 ^ position).Floor % 2 is 1
 Rounded(bits Number) Number
 	0.1.Rounded(32) is 0.10000000149011612
 	0.1.Rounded(64) is 0.1

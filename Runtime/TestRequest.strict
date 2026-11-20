@@ -35,7 +35,7 @@ Part Text
 	TestRequest(List(Text) + "a.strict").Part is ""
 	for Options
 		if value.StartsWith("rounds:")
-			return value.Substring(7, value.Length - 7)
+			return value.Substring(7)
 	""
 IsFull Boolean
 	TestRequest(("Math", ".", "full")).IsFull

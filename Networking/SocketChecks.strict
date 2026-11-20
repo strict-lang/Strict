@@ -3,8 +3,7 @@ Failures Number slow
 	Socket.Send(0, List(Number)) is Error("InvalidSocket")
 	Socket.Receive(0, 1) is Error("InvalidSocket")
 	Socket.Close(0) is not Error
-	Socket.Waiting(0) is Error("InvalidSocket")
-	Socket.Port(0) is Error("InvalidSocket")
+	Socket.Waiting(0) is Error("InvalidSocket") and Socket.Port(0) is Error("InvalidSocket")
 	Socket.Listen(-1) is Error("InvalidPort") and Socket.Listen(65536) is Error("InvalidPort")
 	Socket.Connect("127.0.0.1", 70000) is Error("InvalidPort")
 	Socket.Local(-1) is Error("InvalidPort")

@@ -1,0 +1,58 @@
+has lines Texts
+constant Filed = RepeatedCalls(("Read Texts", "	Read is (\"a\")", "	File(path).Exists then File(path).ReadLines else List(Text)"))
+constant Typed = RepeatedCalls(("Read Texts", "	let empty = List(Text)", "	path is \"\" then List(Text) else empty"))
+Issues List(ValidationIssue)
+	Filed.Issues.First to Text is "SameCallTwiceMustBeLet: File(path), keep it in a let"
+	Filed.Issues.First.Line is 3 and Typed.Issues.Length is 0
+	let shape = TypeShape(lines)
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if shape.IsMethodHeader(value)
+			issues = issues + Repeated(index)
+	issues
+Repeated(header Number) List(ValidationIssue)
+	Filed.Repeated(0).Length is 1 and Typed.Repeated(0).Length is 0
+	let code = ErrorDrops(lines).Code(header)
+	let start = FileCheck.LastLine(lines, header) - code.Length + 2
+	mutable seen = Dictionary(Text, Boolean)
+	mutable issues = List(Mutable(ValidationIssue))
+	for code
+		let line = start + index
+		for Calls(Tokenizer(value).Tokens)
+			if value is in seen and seen(value)
+				issues.Add(ValidationIssue("SameCallTwiceMustBeLet", value + ", keep it in a let", line))
+			seen(value) = value is not in seen
+	issues
+Calls(tokens Texts) Texts
+	Filed.Calls(("File", "(", "path", ")", ".", "Exists")) is ("File(path)")
+	Filed.Calls(("List", "(", "Text", ")")).Length is 0 and Filed.Calls(("Go", "(", ")")).Length is 0
+	Filed.Calls(("Path", "(", "value", ")")).Length is 0 and Filed.Calls(("texts", "(", "0", ")")).Length is 0
+	Filed.Calls(("a", ".", "Round", "(", "1", ")", "+", "b", ".", "Round", "(", "1", ")")) is ("a.Round(1)", "b.Round(1)")
+	for tokens
+		let isCall = index + 1 < tokens.Length and tokens(index + 1) is "(" and IsName(value) and value(0).Upper is value(0)
+		let close = isCall then Close(tokens, index + 1) else -1
+		let inner = close > index + 2 then tokens.Slice(index + 2, close - index - 2) else List(Text)
+		let start = Start(tokens, index)
+		if inner.Length > 0 and IsTyped(inner) is false and "value" is not in inner and "index" is not in inner
+			Text.Combine(tokens.Slice(start, close - start + 1), "")
+Start(tokens Texts, at Number) Number
+	Filed.Start(("a", ".", "B"), 2) is 0 and Filed.Start(("(", ".", "B"), 2) is 2 and Filed.Start(List(Text) + "B", 0) is 0
+	at < 2 then at else tokens(at - 1) is "." and IsName(tokens(at - 2)) then at - 2 else at
+IsName(token Text) Boolean
+	Filed.IsName("File") and Filed.IsName("(") is false and Filed.IsName("\"a\"") is false
+	token.Length > 0 and token(0).Lower is not token(0).Upper
+Close(tokens Texts, open Number) Number
+	Filed.Close(("F", "(", "G", "(", "1", ")", ")"), 1) is 6 and Filed.Close(("F", "(", "a"), 1) is -1
+	mutable depth = 0
+	for Range(open, tokens.Length)
+		depth = tokens(value) is "(" then depth + 1 else tokens(value) is ")" then depth - 1 else depth
+		if depth is 0
+			return value
+	-1
+IsTyped(inner Texts) Boolean
+	Filed.IsTyped(("Text", ",", "Number")) and Filed.IsTyped(("Mutable", "(", "Text", ")"))
+	Filed.IsTyped(List(Text) + "path") is false and Filed.IsTyped(("Width", "+", "1")) is false
+	for inner
+		if value is not in ("(", ")", ",") and (IsName(value) is false or value(0).Upper is not value(0))
+			return false
+	true

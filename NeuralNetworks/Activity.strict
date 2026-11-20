@@ -1,6 +1,7 @@
 has model Gpt2
 has sums List(Numbers) = List(Numbers)
 has count = 0
+constant Rising = List(Numbers) + (1, 0, 0, 3)
 Measured(tokenizer Gpt2Tokens, texts Texts) Activity slow
 	Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab")).sums.First.Length is 96
 	Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab")).count is 3
@@ -18,15 +19,18 @@ Step(token Number, position Number) Activity slow
 	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Step(1, 0).sums.Length is 1
 	mutable state = Gpt2Block.Added(model.tokens(token), model.positions(position))
 	mutable updated = List(Mutable(Gpt2Block))
-	mutable added = List(Mutable(Numbers))
+	mutable activations = List(Mutable(Numbers))
 	for model.blocks
 		let cached = value.Cached(state)
 		let attended = cached.Attended(state)
-		let activated = cached.Activated(attended)
-		added.Add(Accumulated(sums(index), activated))
-		state = cached.Contracted(attended, activated)
+		activations.Add(cached.Activated(attended))
+		state = cached.Contracted(attended, activations.Last)
 		updated.Add(cached)
-	Activity(Gpt2(model, blocks = updated, hidden = state), added, count + 1)
+	Activity(Gpt2(model, blocks = updated, hidden = state), Accumulations(activations), count + 1)
+Accumulations(activations List(Numbers)) List(Numbers) slow
+	Activity(Gpt2.Tiny, Rising).Accumulations(List(Numbers) + (1, -2)) is List(Numbers) + (2, 4, 1, 1)
+	for activations
+		Accumulated(sums(index), value)
 Zeros List(Numbers) slow
 	Activity(Gpt2.Tiny).Zeros.First.Length is 96
 	for model.blocks

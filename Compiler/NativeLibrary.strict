@@ -29,7 +29,7 @@ Objects(files Texts, platform Number, root Text, options Text) Texts slow
 	let compiled = Compiled(missing, platform, root, options)
 	for previous
 		let built = value is "" then compiled(missing.Index(files(index))) else value
-		built.StartsWith("Built ") then built.Substring(6, built.Length - 6) else built
+		built.StartsWith("Built ") then built.Substring(6) else built
 Compiled(files Texts, platform Number, root Text, options Text) Texts slow
 	Adding.Compiled(List(Text) + "Compiler/output/No.c", Platform.Current, ".", "").First.StartsWith(NoObject)
 	if files.Length is 0

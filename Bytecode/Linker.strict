@@ -120,7 +120,7 @@ SourceName(type Text) Text
 	Sample.IsNative("Strict/Text", "Count") is false
 	Sample.SourceName("Strict/List(Number)") is "List"
 	Sample.SourceName("Strict/Process") is "Process"
-	let name = type.Substring(7, type.Length - 7)
+	let name = type.Substring(7)
 	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
 SourcePath(type Text) Text
 	Sample.IsNative("Strict/File", "ReadLines")

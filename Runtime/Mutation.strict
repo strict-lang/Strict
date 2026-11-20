@@ -196,7 +196,7 @@ Placed(text Text) Text
 	Twice.Placed("x at Z:line 2") is ""
 	Twice.Placed("x in Y at Z") is ""
 	let at = text.LastIndexOf(" at ")
-	if at < 0 or text.Substring(at, text.Length - at).IndexOf(":line ") < 0
+	if at < 0 or text.Substring(at).IndexOf(":line ") < 0
 		return ""
 	let before = text.Substring(0, at)
 	let start = before.LastIndexOf(" in ")

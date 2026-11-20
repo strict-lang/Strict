@@ -17,6 +17,7 @@ constant WholeFailure = "    %wfailed = llvm.alloca %one x !llvm.array<9 x i64> 
 constant OperatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power", "Less", "More", "AtMost", "AtLeast")
 constant Counter = MlirFunction(List(TypeEntry), TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), MethodEntry.CountingLoop)
 constant Shape = TypeEntry("Strict/Shape", (MemberEntry("width", "Strict/Number", List(InstructionEntry), false), MemberEntry.LoggerMember), List(MethodEntry))
+constant Prologue = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", "    %end = arith.constant -1.0 : f64")
 IsCounted = lineSlots.Length > 0
 Symbol Text
 	Counter.Symbol is "Counter_Run_0"
@@ -113,10 +114,10 @@ Text Text
 	let outlined = MlirParallel(value, 0).Outlined + MlirCached(value).Wrapper
 	outer.Text.Combine(List(Text) + header + Slots + MlirTensors(value).Prologue + Body + "  }" + outlined, "\n")
 Slots Texts
-	Counter.Slots.Length is 16
+	Counter.Slots.Length is 17
 	outer.Text.Combine(MlirGroups.Norming.function.Slots).IndexOf("%memo11 = llvm.alloca") > 0
 	outer.Text.Combine(MlirCalls.Shapes.Slots).IndexOf("%handed1 = llvm.alloca") > 0
-	mutable lines = ("    %one = arith.constant 1 : i64", "    %zero = arith.constant 0.0 : f64", WholeFailure)
+	mutable lines = Prologue + WholeFailure
 	lines = lines + "    %flag = llvm.alloca %one x i1 : (i64) -> !llvm.ptr" + MlirEmbedded(value).Stacks
 	for LoadReuse(method.instructions).RegisterCount
 		lines = lines + Slot("%r" + index)
@@ -143,9 +144,9 @@ Entry Texts
 	lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart + unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0")(1) is "    llvm.store %zero, %r0 : f64, !llvm.ptr"
-	Counter.Slots(4) is "    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	Counter.Slots(6) is "    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	Counter.Slots(10) is "    %loop0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Slots(5) is "    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Slots(7) is "    %v_index = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Counter.Slots(11) is "    %loop0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	"    %linecount = arith.constant 5 : i64" is in MlirLines.Lined.Slots
 	MlirLines.Lined.Body(0) is "    %line0 = arith.constant 4 : i64"
 	MlirLines.Lined.Body.Last is "    return %t2 : f64"

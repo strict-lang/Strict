@@ -190,9 +190,9 @@ RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, 
 	let bad = res.exitCode is not 0 or miss or ban is not "" and ban is in res.Output
 	bad then Error(name + " failed: " + res.Output + res.error) else res.Output
 JobCode Text
-	mutable out = List(Text)
-	out = out + "#define _CRT_SECURE_NO_WARNINGS\n#include <windows.h>\n#include <stdio.h>\n#include <stdlib.h>"
-	out = out + "int main(int c,char**v){HANDLE j=CreateJobObjectA(0,0);JOBOBJECT_EXTENDED_LIMIT_INFORMATION info={0};"
+	constant headers = "#define _CRT_SECURE_NO_WARNINGS\n#include <windows.h>\n#include <stdio.h>\n#include <stdlib.h>"
+	constant job = "int main(int c,char**v){HANDLE j=CreateJobObjectA(0,0);JOBOBJECT_EXTENDED_LIMIT_INFORMATION info={0};"
+	mutable out = List(Text) + headers + job
 	out = out + "info.BasicLimitInformation.LimitFlags=0x100;info.ProcessMemoryLimit=(size_t)atoi(v[2])<<20;"
 	out = out + "if(!SetInformationJobObject(j,9,&info,sizeof(info)))return 2;HANDLE iR,iW,oR,oW;"
 	out = out + "SECURITY_ATTRIBUTES sa={sizeof(sa),0,1};CreatePipe(&iR,&iW,&sa,0);CreatePipe(&oR,&oW,&sa,0);"

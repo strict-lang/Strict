@@ -32,7 +32,7 @@ Operand(type Text) Text
 	MetalValue("poison").Operand("i32") is "0"
 	MetalValue("addrspacecast").Operand("ptr") is "@addrspacecast"
 	if text.StartsWith("%")
-		return "v" + text.Substring(1, text.Length - 1).Replace(".", "_").Replace("-", "_")
+		return "v" + text.Substring(1).Replace(".", "_").Replace("-", "_")
 	if text is in ("true", "false", "poison", "undef", "null", "zeroinitializer")
 		return text is in ("true", "false") then text else "0"
 	text.StartsWith("0x") then Hexed(type) else Literal(type)
@@ -47,7 +47,7 @@ Hexed(type Text) Text
 	MetalValue("0xH3C00").Hexed("half") is "as_type<half>((ushort)0x3C00)"
 	MetalValue("0x3FF0000000000000").Hexed("double") is "0x3FF0000000000000ul"
 	if text.StartsWith("0xH")
-		return "as_type<half>((ushort)0x" + text.Substring(3, text.Length - 3) + ")"
+		return "as_type<half>((ushort)0x" + text.Substring(3) + ")"
 	type is "float" then "as_type<float>(" + FloatBits + "u)" else text + "ul"
 FloatBits Text
 	MetalValue("0x3FF0000000000000").FloatBits is "0x3F800000"

@@ -28,11 +28,10 @@ Blocks(basis Basis) List(Qwen3Block) slow
 	mutable deltas = List(Mutable(DeltaBlock))
 	for Layers
 		let layer = "layers." + index + "."
-		if file.Entry(layer + "self_attn.q_proj.weight") is ""
-			deltas.Add(Delta(layer, basis))
-		else
+		let isAttention = file.Entry(layer + "self_attn.q_proj.weight") is not ""
+		if isAttention
 			blocks.Add(Qwen3Block(Attending(layer, basis), hybrid = Hybrid(deltas)))
-			deltas = List(Mutable(DeltaBlock))
+		deltas = isAttention then List(Mutable(DeltaBlock)) else deltas + Delta(layer, basis)
 		completion.Report(index + 1)
 	blocks
 Layers Number

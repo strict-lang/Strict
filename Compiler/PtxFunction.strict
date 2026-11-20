@@ -46,8 +46,6 @@ Calls Texts
 Called(line Text) Text
 	Kernel.Called("\tcall.uni (retval0), A_B_1_devices, (param0);") is "A_B_1_devices"
 	Kernel.Called("\tcall.uni strict_x, (param0);") is "strict_x"
-	let start = line.IndexOf("call.uni ") + 9
-	let rest = line.Substring(start, line.Length - start)
-	let skipped = rest.StartsWith("(") then rest.IndexOf("), ") + 3 else 0
-	let target = rest.Substring(skipped, rest.Length - skipped)
+	let rest = line.Substring(line.IndexOf("call.uni ") + 9)
+	let target = rest.Substring(rest.StartsWith("(") then rest.IndexOf("), ") + 3 else 0)
 	target.Substring(0, target.IndexOf(","))

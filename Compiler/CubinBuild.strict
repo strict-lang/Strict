@@ -61,7 +61,7 @@ Images(stem Text) Text
 	mutable images = ""
 	for Architectures
 		let cubin = tools.Quoted(stem + "." + value + ".cubin")
-		images = images + " --image3=kind=elf,sm=" + value.Substring(3, value.Length - 3) + ",file=" + cubin
+		images = images + " --image3=kind=elf,sm=" + value.Substring(3) + ",file=" + cubin
 	images
 Shipped(source Text, target Text) Text
 	PtxCache("Compiler/output/Shipped").Saved(".fatbin", "stale") is not Error

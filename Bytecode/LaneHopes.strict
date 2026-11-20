@@ -62,4 +62,4 @@ Kind(store Text, known Texts) Text
 	Sample.Kind("a ?b", List(Text)) is ""
 	let source = Source(store)
 	let start = Name(store).Length + 1
-	source is "" then store.Substring(start, store.Length - start) else flow.Typed(known, source)
+	source is "" then store.Substring(start) else flow.Typed(known, source)

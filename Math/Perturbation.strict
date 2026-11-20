@@ -38,9 +38,8 @@ Rebased(offset Complex) Number
 		let point = Reached(position + 1, delta)
 		if point.SquaredLength > 4
 			return index + 1
-		let isRebased = IsRebased(point, delta, position + 1)
-		delta = Shifted(point, delta, isRebased)
-		position = isRebased then 0 else position + 1
+		position = IsRebased(point, delta, position + 1) then 0 else position + 1
+		delta = Shifted(point, delta, position is 0)
 	0
 IsRebased(point Complex, delta Complex, next Number) Boolean
 	Inside.IsRebased(Inside.orbit(1), Complex.Zero, 1) is false

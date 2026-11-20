@@ -49,8 +49,7 @@ Named(head Text) Text
 	Sample.Named(".visible .entry A_B_1_gpu2(") is "A_B_1_gpu2"
 	Sample.Named(".func  (.param .b32 r) strict_device_byte_read") is "strict_device_byte_read"
 	let declared = head.EndsWith("(") then head.Substring(0, head.Length - 1) else head
-	let start = declared.LastIndexOf(" ") + 1
-	declared.Substring(start, declared.Length - start)
+	declared.Substring(declared.LastIndexOf(" ") + 1)
 Code(part Texts) Texts
 	Sample.Code(("a", "\t// b", "", "  // c", "d  // e")) is ("a", "d")
 	for part

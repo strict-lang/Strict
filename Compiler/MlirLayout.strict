@@ -149,12 +149,12 @@ Collected(register Text, pointer Text, at Number) Texts
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(7) is "  ^d5narrow:"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(8) is "    %dn = arith.truncf %d : f64 to f32"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(10) is "    cf.br ^d5stored"
-	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(5) is "    llvm.store %d, %p : f64, !llvm.ptr"
 	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5).Last is "  ^d5stored:"
 	function.Float is "f64" then Narrowed(register, pointer, at) else Stored(register, pointer, at)
 Stored(register Text, pointer Text, at Number) Texts
 	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
+	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
 	MlirLayout(Bytings).Stored("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
 	MlirLayout(Halves).Stored("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")
 	MlirLayout(Singles).Stored("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")

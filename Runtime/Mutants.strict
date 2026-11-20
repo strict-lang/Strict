@@ -89,8 +89,7 @@ Round(types List(TypeEntry), ready List(TypeEntry), methods List(MethodEntry), b
 			let alone = Alone(ready, types.First.methods.Index(value), Mutation(value).Mutant(candidates(round)))
 			let isPassing = Passes(alone, TestCodegen.Runner + index, budgets(index))
 			if isPassing and Passes(alone, TestCodegen.Runner + methods.Length, seconds)
-				let lines = File(path).ReadLines
-				if MutationFlow(value).IsKept(candidates(round), lines, Mutation(value).Line(candidates(round)))
+				if MutationFlow(value).IsKept(candidates(round), File(path).ReadLines, Mutation(value).Line(candidates(round)))
 					survivors.Add(Survivor(value, candidates(round)))
 	survivors
 Alone(ready List(TypeEntry), position Number, mutant MethodEntry) Machine

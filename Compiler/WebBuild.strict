@@ -93,7 +93,7 @@ Mirrored(folder Text, base Text) Text
 	Missing.Mirrored("./Compiler/output/EmptyApp", "Compiler/output/missing") is ""
 	if folder is "." or HasFiles(folder + "/Content") is false
 		return ""
-	let path = "/" + (folder.StartsWith("./") then folder.Substring(2, folder.Length - 2) else folder)
+	let path = "/" + (folder.StartsWith("./") then folder.Substring(2) else folder)
 	let linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
 	File(base + ".pre.js").Write("(Module.preRun ||= []).push(() => { FS.mkdirTree(\"" + path + "\"); " + linked + " })")
 	" --pre-js \"" + base + ".pre.js\""

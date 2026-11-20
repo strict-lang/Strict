@@ -34,9 +34,6 @@ Temp(suffix Text) Text
 	MlirDeviceStatements(Doubled, 5).Emitted(4) is "    %d5 = llvm.load %r2 : !llvm.ptr -> f64"
 	MlirDeviceStatements(Doubled, 5).Emitted(5).StartsWith("    %d5p = llvm.getelementptr")
 	MlirDeviceStatements(Doubled, 5).Emitted(17) is "    cf.br ^d5skip"
-	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call)(1) is "  ^d13write:"
-	MlirDeviceStatements(MlirChecks.Testing.function, 3).Labeled is ("  ^bb3:")
-	MlirDeviceStatements(Absolute.function, 5).Labeled.Length is 0
 	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
 	"%d" + at + suffix
 Moved(entry InstructionEntry) Texts
@@ -100,6 +97,9 @@ Failed Texts
 Read(list Text, target Text) Texts
 	Reading.Read("%v_input", "%r4").Last is "  ^d6done:"
 	MlirDeviceStatements(MlirGuards.Shifted, 6).Read("%v_numbers", "%r4")(3).IndexOf("strict_device_floats") > 0
+	Reading.Emitted(11) is "  ^d6read:"
+	Reading.Emitted(12) is "    %d6d = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
+	Reading.Emitted(13) is "    %d6b = llvm.load %v_input_b : !llvm.ptr -> i64"
 	let data = MlirTyped.Pointer.Load(Temp("d"), list + "_d")
 	let bits = MlirTyped.Integer.Load(Temp("b"), list + "_b")
 	let operands = "(" + Temp("d") + ", " + Temp("b") + ", " + Temp("k") + ", " + Temp("n") + ")"
@@ -151,9 +151,6 @@ Callee MlirFunction
 	Reading.Emitted(4) is "    %d6n = llvm.load %v_input_n : !llvm.ptr -> i64"
 	Reading.Emitted(6) is "    cf.cond_br %d6o, ^d6read, ^d6fail"
 	Reading.Emitted(7) is "  ^d6fail:"
-	Reading.Emitted(11) is "  ^d6read:"
-	Reading.Emitted(12) is "    %d6d = llvm.load %v_input_d : !llvm.ptr -> !llvm.ptr"
-	Reading.Emitted(13) is "    %d6b = llvm.load %v_input_b : !llvm.ptr -> i64"
 	Reading.Emitted(16) is "    cf.br ^d6done"
 	Calling.Callee.Symbol is "Rows_Twice_1"
 	MlirCalleeGuards(function, at).WithWhole(MlirModule(function.types, "").Called(function, at).First)
@@ -182,6 +179,8 @@ Returned(register Text) Texts
 Labeled Texts
 	MlirDeviceStatements(Absolute.function, 4).Labeled is ("  ^bb4:")
 	MlirDeviceStatements(Absolute.function, 10).Labeled is ("    cf.br ^bb10", "  ^bb10:")
+	MlirDeviceStatements(MlirChecks.Testing.function, 3).Labeled is ("  ^bb3:")
+	MlirDeviceStatements(Absolute.function, 5).Labeled.Length is 0
 	if at is 0 or function.Label(at).Length is 0
 		return List(Text)
 	let previous = function.method.instructions(at - 1).kind
@@ -192,6 +191,7 @@ Collected(entry InstructionEntry) Texts
 	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).Last is "  ^d13skip:"
 	MlirDeviceStatements(Doubled, 5).Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
 	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).First is "    cf.br ^d13write"
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call)(1) is "  ^d13write:"
 	let stored = MlirLayout(function).Collected(Temp(""), Temp("p"), at)
 	let compared = "    " + Temp("w") + " = arith.cmpi eq, %lane, " + Temp("z") + " : i64"
 	let first = (MlirTyped.Integer.Constant(Temp("z"), "0"), compared)

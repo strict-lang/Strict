@@ -1,0 +1,76 @@
+has lines Texts
+constant Larger = BaseCalls(("Rest Text", "	Rest is \"b\"", "	text.Substring(start, text.Length - start)"))
+constant Rest = List(Texts) + ("$a", ".", "Substring", "(", "$b", ",", "$a", ".", "Length", "-", "$b", ")")
+constant Bit = List(Texts) + ("(", "$a", "/", "2", "^", "$b", ")", ".", "Floor", "%", "2", "is", "1")
+constant Others = (("$a", "+", "(", "$b", "-", "$a", ")", "*", "$c"), ("$a", ".", "Round", "(", "0", ")"), ("$a", "^", "0.5"), ("$a", "<", "$b", "or", "$a", ">", "$b"))
+constant Patterns = Rest + Bit + Others
+constant Templates = List(Text) + "$a.Substring($b)" + "$a.IsBitSet($b)" + ("$a.Lerp($b, $c)", "$a.Round", "$a.SquareRoot", "$a is not $b")
+constant Suggestion = "BaseMethodMustBeUsed: text . Substring ( start , text . Length - start ), use text.Substring(start)"
+constant Stronger = (".", "*", "/", "%", "^", "-", "(")
+constant Continuing = (".", "(", "+", "-", "*", "/", "%", "^")
+constant Keys = ("Substring", "Floor", ") *", "Round(0)", "^ 0.5", " or ")
+Issues List(ValidationIssue)
+	Larger.Issues.First to Text is Suggestion
+	Larger.Issues.First.Line is 3 and BaseCalls(("A", "	A is 1", "	b + c")).Issues.Length is 0
+	let shape = TypeShape(lines)
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if shape.IsMethodHeader(value)
+			issues = issues + Body(index)
+	issues
+Body(header Number) List(ValidationIssue)
+	Larger.Body(0).Length is 1
+	BaseCalls(("Lerp(other Number) Number", "	1.Lerp(3) is 2", "	value + (other - value) * 0.5")).Body(0).Length is 0
+	let code = ErrorDrops(lines).Code(header)
+	let start = FileCheck.LastLine(lines, header) - code.Length + 2
+	let own = "." + Tokenizer(lines(header)).Tokens.First + "("
+	for code
+		let suggestion = Suggested(value)
+		if suggestion is not "" and suggestion.IndexOf(own) < 0
+			ValidationIssue("BaseMethodMustBeUsed", suggestion, start + index)
+Suggested(code Text) Text
+	Larger.Suggested("let rest = text.Substring(start, text.Length - start)").EndsWith("use text.Substring(start)")
+	Larger.Suggested("(flags / 2 ^ bit).Floor % 2 is 1").EndsWith("use flags.IsBitSet(bit)")
+	Larger.Suggested("start + (end - start) * amount").EndsWith("use start.Lerp(end, amount)")
+	Larger.Suggested("size.Round(0)").EndsWith("use size.Round")
+	Larger.Suggested("2 ^ 0.5").EndsWith("use 2.SquareRoot")
+	Larger.Suggested("x < a or x > a").EndsWith("use x is not a") and Larger.Suggested("width + height") is ""
+	Larger.Suggested("y * a + (b - a) * t") is ""
+	let tokens = Tokenizer(code).Tokens
+	for Patterns
+		let pattern = value
+		let template = Templates(index)
+		for code.IndexOf(Keys(index)) < 0 then List(Text) else tokens
+			let bindings = Matched(tokens, index, pattern)
+			if bindings.Length > 0
+				return Text.Combine(tokens.Slice(index, pattern.Length), " ") + ", use " + Filled(template, bindings)
+	""
+Matched(tokens Texts, start Number, pattern Texts) Dictionary(Text, Text)
+	Larger.Matched(("a", ">", "b"), 0, ("$a", ">", "$b"))("$b") is "b"
+	Larger.Matched(("a", ">", "b"), 0, ("$a", "<", "$b")).Length is 0
+	Larger.Matched(("a", ">", "b"), 1, ("$a", ">", "$b")).Length is 0
+	if IsFree(tokens, start, pattern.Length) is false
+		return Dictionary(Text, Text)
+	mutable bindings = Dictionary(Text, Text)
+	for pattern
+		let token = tokens(start + index)
+		let isBound = value.StartsWith("$") and IsOperand(token)
+		if isBound is false and value is not token or (value is in bindings then bindings(value) else token) is not token
+			return Dictionary(Text, Text)
+		bindings(value) = token
+	bindings
+IsFree(tokens Texts, start Number, length Number) Boolean
+	Larger.IsFree(("a", "b"), 0, 2) and Larger.IsFree(("a", "b"), 1, 2) is false
+	Larger.IsFree(("*", "b"), 1, 1) is false and Larger.IsFree(("a", "b", "+"), 0, 2) is false
+	let isEnded = start + length >= tokens.Length then true else tokens(start + length) is not in Continuing
+	start + length <= tokens.Length and (start is 0 then true else tokens(start - 1) is not in Stronger) and isEnded
+IsOperand(token Text) Boolean
+	Larger.IsOperand("width") and Larger.IsOperand("2")
+	Larger.IsOperand("(") is false and Larger.IsOperand(">") is false
+	token(0).Lower is not token(0).Upper or Tokenizer.IsDigit(token(0)) or token(0) is "\""
+Filled(template Text, bindings Dictionary(Text, Text)) Text
+	Larger.Filled("($a, $b).Maximum", Dictionary(("$a", "x"), ("$b", "y"))) is "(x, y).Maximum"
+	mutable filled = template
+	for bindings
+		filled = filled.Replace(value.Key, value.Value)
+	filled

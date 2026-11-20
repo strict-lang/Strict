@@ -68,8 +68,10 @@ IsTest(line Text) Boolean
 	Copies.IsTest("2.3.IsNearlyEqual(2.3)") and Copies.IsTest("value") is false
 	Copies.IsTest("number is 2") and Copies.IsTest("number < 2") and Copies.IsTest("number > 2")
 	Copies.IsTest("number + 1") is false and Copies.IsTest("if number is 2") is false
+	Copies.IsTest("\"hello\".StartsWith(\"he\")")
 	let first = Tokenizer(line).Tokens.First
 	let isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
 	let isComparing = line.IndexOf(" is ") > 0 or line.IndexOf(" < ") > 0 or line.IndexOf(" > ") > 0
 	let start = first(0)
-	isStatement is false and (isComparing or start.Lower is not start or start is "(" or Tokenizer.IsDigit(start))
+	let isPlain = start.Lower is not start or start is in ("(", "\"") or Tokenizer.IsDigit(start)
+	isStatement is false and (isComparing or isPlain)

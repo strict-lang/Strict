@@ -36,7 +36,7 @@ Tabbed(lines Texts) Texts
 		indented.Add(Indented(value))
 	let shared = Shared(indented)
 	for indented
-		value.Length < shared then "" else value.Substring(shared, value.Length - shared)
+		value.Length < shared then "" else value.Substring(shared)
 Shared(lines Texts) Number
 	RoundTrip.Shared(("\tRun", "\t\t1", "")) is 1
 	RoundTrip.Shared(("Run", "\t1")) is 0

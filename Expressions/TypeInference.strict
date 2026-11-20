@@ -42,6 +42,7 @@ ConstantOf(typeName Text, name Text) Text
 	let index = types.Index(typeName)
 	index is -1 then "" else constants(index).TypeOf(name)
 TypeOf(node SyntaxNode, scope Scope, own Scope) Text
+	Scaling.TypeOf(SyntaxParser(Tokenizer("p.x").Tokens).Parse, Paired, NoShape) is "y"
 	NoInference.TypeOf(SyntaxNode("Number", "1"), NoShape, NoShape) is "Number"
 	NoInference.TypeOf(SyntaxNode("Type", "A"), NoShape, NoShape) is "A"
 	NoInference.TypeOf(SyntaxParser(Tokenizer("(\"a\", \"b\", \"c\")(1)").Tokens).Parse, NoShape, NoShape) is "Text"
@@ -57,14 +58,10 @@ TypeOf(node SyntaxNode, scope Scope, own Scope) Text
 ConstructedType(node SyntaxNode) Text
 	TypeInference(KnownTypes.Nested, NoShapes).CallType("f", Scope(("value"), ("G")), NoShape) is "F"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.x(1)").Tokens).Parse, Paired, NoShape) is "Unknown"
-	Scaling.TypeOf(SyntaxParser(Tokenizer("p.x").Tokens).Parse, Paired, NoShape) is "y"
 	NoInference.ConstructedType(SyntaxNode("Identifier", "Mutable", NoNode)) is "Mutable"
 	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Other", KnownTypes.CountMethods.Owned("Count")) is false
 	TypeInference(KnownTypes.Sample, (Limits(0))).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Text")) is false
 	NoInference.ConstructedType(SyntaxNode("Call", "List", NoNode)) is "List"
-	NoInference.OperatorType(SyntaxNode("Negate", "", (SyntaxNode("Number", "1"), NoNode)), NoShape, NoShape) is "Number"
-	NoInference.OperatorType(SyntaxNode("Missing", "", NoNode), NoShape, NoShape) is "Unknown"
-	NoInference.OperatorType(SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse, NoShape, NoShape) is "Numbers"
 	NoInference.ConstructedType(SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))) is "Text"
 	node.Kind is "Call" and node.text is "Mutable" then ConstructedType(node.children(0)) else node.text
 IdentifierType(name Text, scope Scope, current Scope) Text
@@ -146,6 +143,9 @@ ImplicitValueType(name Text, scope Scope) Text
 	let type = scope.TypeOf("outer") is "" then types.ResolvedType(instance, name, 1) else types.MemberType(instance, name)
 	type is "Unknown" then "" else type
 OperatorType(node SyntaxNode, scope Scope, current Scope) Text
+	NoInference.OperatorType(SyntaxNode("Negate", "", (SyntaxNode("Number", "1"), NoNode)), NoShape, NoShape) is "Number"
+	NoInference.OperatorType(SyntaxNode("Missing", "", NoNode), NoShape, NoShape) is "Unknown"
+	NoInference.OperatorType(SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse, NoShape, NoShape) is "Numbers"
 	NoInference.OperatorType(SyntaxNode("Not", ""), NoShape, NoShape) is "Boolean"
 	NoInference.OperatorType(Pairs.children(0), NoShape, NoShape) is "List(Number, Text)"
 	TypeInference(KnownTypes.Sample, (NoShape, Limits(0))).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Text"))
@@ -198,6 +198,8 @@ ConditionalType(node SyntaxNode, scope Scope, current Scope) Text
 	let thenType = TypeOf(node.children(0), scope, current)
 	thenType is in ("Error", "Unknown") then TypeOf(node.children(1), scope, current) else thenType
 Converter(source Text, type Text) Text
+	Colors.Converter("Text", "Text") is "" and Colors.Converter("Number", "Text") is ""
+	Colors.Converter("Text", "Number") is "" and Colors.Converter("Hash", "Color") is ""
 	Colors.Converter("ColorValue", "Color") is "from"
 	Colors.Converter("Color", "ColorValue") is "to"
 	Colors.Converter("Number", "Color") is "" and SelfConverting.Converter("A", "A") is ""
@@ -212,18 +214,16 @@ Converter(source Text, type Text) Text
 	types.MethodsOf(source).Has("to", type) then "to" else (isFrom then "from" else "")
 Assigned(target Text, assigned Text) Text
 	Colors.Assigned("Number", "Text") is "Text"
-	Colors.Converter("Text", "Text") is "" and Colors.Converter("Number", "Text") is ""
-	Colors.Converter("Text", "Number") is "" and Colors.Converter("Hash", "Color") is ""
+	Colors.Assigned("Color", "ColorValue") is "Color"
+	Colors.Assigned("Number", "Number") is "Number"
+	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
+	Converter(assigned, target) is "" then assigned else target
+Enumerated(typeName Text) Texts
 	TypeInference(KnownTypes.Sample, (KnownTypes.CountMethods, NoShape)).Enumerated("Count").Length is 0
 	TypeInference(KnownTypes.Sample, (NoShape)).Enumerated("Text").Length is 0
 	TypeInference(KnownTypes.Measured, (NoShape, Scope(("Length"), ("1")))).Enumerated("Length") is ("Length")
 	TypeInference(KnownTypes.Measured, NoShapes).Enumerated("Length").Length is 0
-	Colors.Assigned("Color", "ColorValue") is "Color"
-	Colors.Assigned("Number", "Number") is "Number"
-	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
 	TypeInference(KnownTypes.Sample, List(Scope)).Enumerated("Text").Length is 0
-	Converter(assigned, target) is "" then assigned else target
-Enumerated(typeName Text) Texts
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Text") is ("x", "z")
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Count").Length is 0
 	NoInference.Enumerated("Missing").Length is 0 and Counts.MemberCallType(Twicing, CountScope, NoShape) is "Count"

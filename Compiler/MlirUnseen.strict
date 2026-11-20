@@ -1,0 +1,11 @@
+has symbols Texts
+Of(called List(MlirFunction)) List(MlirFunction)
+	MlirUnseen(List(Text)).Of(MlirModule.Counters.Functions + MlirModule.Counters.Functions).Length is 1
+	MlirUnseen(("Counter_Run_0")).Of(MlirModule.Counters.Functions).Length is 0
+	mutable seen = symbols
+	mutable unseen = List(Mutable(MlirFunction))
+	for called
+		if value.Symbol is not in seen
+			unseen.Add(value)
+			seen = seen + value.Symbol
+	unseen

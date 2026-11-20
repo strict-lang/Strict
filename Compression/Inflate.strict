@@ -40,6 +40,8 @@ Stored(state Inflation) Inflation
 		output = output + bytes(start + 4 + index)
 	Inflation(output, (start + 4 + output.Length - state.output.Length) * 8)
 Coded(state Inflation, literals Huffman, distances Huffman) Inflation
+	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
+	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
 	let stream = value
 	mutable output = state.output
 	mutable position = state.position
@@ -48,13 +50,14 @@ Coded(state Inflation, literals Huffman, distances Huffman) Inflation
 		position = position + symbol.bits
 		if symbol.number is Symbol.EndOfBlock
 			return Inflation(output, position)
-		let isLiteral = symbol.number < Symbol.EndOfBlock
-		output = isLiteral then output + symbol.number else Matched(output, symbol.number, position, distances)
-		position = isLiteral then position else After(symbol.number, position, distances)
+		output = Matched(output, symbol.number, position, distances)
+		position = symbol.number < Symbol.FirstLength then position else After(symbol.number, position, distances)
 	Inflation(output, position)
 Matched(output Numbers, symbol Number, position Number, distances Huffman) Numbers
-	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
 	Inflate((0, 73)).Matched((1, 2, 3, 4, 5, 6, 7), 265, 8, FixedDistanceCodes).Sum is 82
+	Inflate((0, 73)).Matched((1, 2), 97, 8, FixedDistanceCodes) is (1, 2, 97)
+	if symbol < Symbol.EndOfBlock
+		return output + symbol
 	let length = LengthBases(symbol - Symbol.FirstLength) + Bits(position, LengthBits(symbol - Symbol.FirstLength))
 	let afterLength = position + LengthBits(symbol - Symbol.FirstLength)
 	let code = distances.Decoded(value, afterLength)
@@ -62,7 +65,6 @@ Matched(output Numbers, symbol Number, position Number, distances Huffman) Numbe
 After(symbol Number, position Number, distances Huffman) Number
 	Inflate((0, 73)).After(265, 8, FixedDistanceCodes) is 15
 	Inflate((0, 73)).After(269, 8, FixedDistanceCodes) is 18
-	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
 	let afterLength = position + LengthBits(symbol - Symbol.FirstLength)
 	let code = distances.Decoded(value, afterLength)
 	afterLength + code.bits + DistanceBits(code.number)

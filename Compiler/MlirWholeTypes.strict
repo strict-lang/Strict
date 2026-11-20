@@ -67,8 +67,7 @@ Step(combined Text) Text
 		naturals = naturals + natural
 		registers = MlirWholeValues(index).Written(registers, LoadReuse(function.method.instructions).Written(value), natural)
 		let stored = Stored(index, registers, naturals)
-		let named = stored is "" then -1 else function.VariableNames.Index(value.texts.Last)
-		variables = MlirWholeValues(index).Marked(variables, named, stored)
+		variables = MlirWholeValues(index).Marked(variables, Named(value, stored), stored)
 	registers + "|" + variables + "|" + naturals
 Stored(at Number, registers Text, naturals Text) Text
 	Divided.Stored(5, Divided.Part(0), Divided.Part(2)) is "f"
@@ -81,6 +80,10 @@ Stored(at Number, registers Text, naturals Text) Text
 	if entry.kind is InstructionType.StoreConstantToVariable
 		return MlirWholeValues(at).IsWhole(PayloadDecoder(entry).Value(0)) then "i" else "f"
 	""
+Named(entry InstructionEntry, stored Text) Number
+	Row.Named(Row.function.method.instructions(17), "") is -1
+	Divided.Named(Divided.function.method.instructions(5), "f") is 2
+	stored is "" then -1 else function.VariableNames.Index(entry.texts.Last)
 IsExact Boolean
 	Halving.IsExact
 	MlirWholeTypes(MlirArguments.Halfway.functions.First).IsExact is false

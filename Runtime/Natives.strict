@@ -109,10 +109,11 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2
 	Shapes.Searched("Substring", "abc", BcTwo).text is "ab" and Shapes.Searched("Substring", "a", BcTwo) is Cut
+	Shapes.Searched("Substring", "abc", List(VmValue) + VmValue.OfNumber(1)).text is "bc"
 	if arguments.Length is 0 or name is "Utf8"
 		return name is in ("Bytes", "Utf8") then ByteTexts(name, text, arguments) else Edited(name, text)
 	let first = arguments.First
-	let second = arguments.Length > 1 then arguments(1).number else 0
+	let second = arguments.Length > 1 then arguments(1).number else name is "Substring" then Text.End else 0
 	if name is "Substring"
 		let part = text.Substring(first.number, second)
 		return part is Error then Cut else VmValue.OfText(part)

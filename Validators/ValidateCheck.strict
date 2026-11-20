@@ -32,7 +32,8 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		let typeName = Path(value).FileName.RemoveExtension.text
 		let found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
 		let reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
-		Logged(value, found + reached + ComposedMembers(lines, typeName, inference).Issues) + Unresolved(value, inference)
+		let tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
+		Logged(value, found + reached + tested) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number slow
 	Reported(ResolveCheck(logger).Unresolved(path, inference))
 Reported(issues Texts) Number
@@ -43,7 +44,8 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
-	let shaped = names + TestChecks(lines).Issues + Writes(lines, typeName).Issues + StatusCodes(lines).Issues
+	let based = isBase then List(ValidationIssue) else BaseCalls(lines).Issues
+	let shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based
 	let extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
 	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
 Logged(path Text, found List(ValidationIssue)) Number

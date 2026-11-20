@@ -57,7 +57,7 @@ Rest(event Text) Text
 	ValueTrace.Rest("$Hit A|2") is ""
 	let parts = event.Split("|")
 	let start = parts(0).Length + parts(1).Length + 2
-	start < event.Length then event.Substring(start, event.Length - start) else ""
+	start < event.Length then event.Substring(start) else ""
 Line(place Text, summaries Texts, folder Text) Text
 	ValueTrace(Logger).Line("Sum|3", List(Text) + "Hit", "Examples").EndsWith("line 3 hit 1 times")
 	let parts = place.Split("|")
@@ -105,7 +105,7 @@ Same(code Text, named Texts, summary Text, result Text) Text
 	ValueTrace.Same("return false", List(Text), "", "false") is ": false = false"
 	let plain = Unselected(code.Replace("return ", ""))
 	let start = code.IndexOf(" = ") + 3
-	let expression = named.Length is 2 then code.Substring(start, code.Length - start) else plain
+	let expression = named.Length is 2 then code.Substring(start) else plain
 	let isSimple = Tokenizer(expression).Tokens.Length is 1
 	let shown = isSimple then result else Substituted(expression, summary) + " = " + result
 	if named.Length is 2

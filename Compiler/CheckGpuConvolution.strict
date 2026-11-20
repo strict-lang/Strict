@@ -37,11 +37,12 @@ VerifiedOutput(output Text) Boolean
 		let found = Regex(value + " ([\\d.]+) ms, difference ([\\d.]+) of ([\\d.]+)").Groups(output)
 		if found.Length < 4
 			return Error("Convolution did not report: " + value)
-		let time = found(1) to Number
-		let diff = found(2) to Number
-		let size = found(3) to Number
-		if diff > MaxRatio * (size > 1 then size else 1)
-			return Error(value + " differs from Tapped by " + diff + " of " + size)
-		if time >= MaxMs
-			return Error(value + " took " + time + " ms, not the tensor core convolution")
+		let measured = Measured(value, found(1) to Number, found(2) to Number, found(3) to Number)
+		if measured is Error
+			return measured
 	true
+Measured(name Text, time Number, difference Number, size Number) Boolean
+	CheckGpuConvolution(Logger).Measured("few", 1, 0.003, 2)
+	if difference > MaxRatio * (size > 1 then size else 1)
+		return Error(name + " differs from Tapped by " + difference + " of " + size)
+	time < MaxMs then true else Error(name + " took " + time + " ms, not the tensor core convolution")

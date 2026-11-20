@@ -147,8 +147,7 @@ OrbitGpuSrc Text
 	out = out + "\tlogger.Log(\"gpu kernels \" + (after(3) - before(3)) + \", \" + escaped(0) + \" \" + escaped(1000000)"
 	Text.Combine(out, "\n") + " + \" \" + escaped(1999999))"
 PendingSrc Text
-	mutable out = List(Text)
-	out = out + "has logger\nTable(count Number) Numbers\n\tPendingRead(Logger).Table(2) is (1, 1.125)"
+	mutable out = List(Text) + "has logger\nTable(count Number) Numbers\n\tPendingRead(Logger).Table(2) is (1, 1.125)"
 	out = out + "\tfor count\n\t\tindex / 8 + 1\nSampled(table Numbers) Bytes"
 	out = out + "\tPendingRead(Logger).Sampled((1, 2))(1) is 0\n\tfor 256"
 	out = out + "\t\tlet start = table((index * 7919) % table.Length)\n\t\tmutable sum = 0\n\t\tfor table.Length / 10"

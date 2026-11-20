@@ -22,8 +22,6 @@ Emitted Texts
 	entry.kind is InstructionType.LoopBegin then Begin("%r" + entry.payload(0), entry) else End
 Temp(suffix Text) Text
 	Beginning.Temp("k") is "%d2k"
-	Beginning.Begin("%r0", Opening)(15) is "    %d2k = llvm.load %loop2 : !llvm.ptr -> i64"
-	Beginning.Begin("%r0", Opening)(17) is "    cf.cond_br %d2m, ^d2body, ^d2exit"
 	Ranging.Started is ("    %d3z = arith.constant 0 : i64", "    llvm.store %d3z, %loop3 : i64, !llvm.ptr")
 	Beginning.Started.Length is 7 and Beginning.Started(0) is "    %d2z = arith.constant 0 : i64"
 	Beginning.Started(1) is "    %d2f = arith.cmpi eq, %lane, %d2z : i64"
@@ -38,6 +36,8 @@ Begin(register Text, entry InstructionEntry) Texts
 	Beginning.Begin("%r0", Opening).Length is 27 and Beginning.Begin("%r0", Opening)(13) is "    cf.br ^d2loop"
 	Beginning.Begin("%r0", Opening)(14) is "  ^d2loop:" and Beginning.Begin("%r0", Opening)(18) is "  ^d2body:"
 	Beginning.Begin("%r0", Opening)(16) is "    %d2m = arith.cmpi slt, %d2k, %d2c : i64"
+	Beginning.Begin("%r0", Opening)(15) is "    %d2k = llvm.load %loop2 : !llvm.ptr -> i64"
+	Beginning.Begin("%r0", Opening)(17) is "    cf.cond_br %d2m, ^d2body, ^d2exit"
 	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
 	let number = MlirExact(function, at).Position(register, Temp("c"))
 	let count = isList then List(Text) + MlirTyped.Integer.Load(Temp("c"), register + "_n") else number

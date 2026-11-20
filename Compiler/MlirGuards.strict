@@ -116,7 +116,7 @@ IsKnown(slots Texts) Boolean
 	if function.Guarded < 0 and function.Whole.Length is 0
 		return false
 	for slots
-		if value.StartsWith("%r") is false or "?" is in Origins(at, value.Substring(2, value.Length - 2) to Number)
+		if value.StartsWith("%r") is false or "?" is in Origins(at, value.Substring(2) to Number)
 			return false
 	true
 IsWhole(slot Text) Boolean
@@ -124,7 +124,7 @@ IsWhole(slot Text) Boolean
 	Reading.IsWhole("%r5") is false
 	MlirGuards(Nested, 10).IsWhole("%r6") is false
 	MlirGuards(Nested, 10).IsKnown(List(Text) + "ab6") is false
-	IsKnown(List(Text) + slot) and "/" is not in Origins(at, slot.Substring(2, slot.Length - 2) to Number)
+	IsKnown(List(Text) + slot) and "/" is not in Origins(at, slot.Substring(2) to Number)
 Parameters Texts
 	Shifts.Parameters is ("offset")
 	mutable names = List(Mutable(Text))

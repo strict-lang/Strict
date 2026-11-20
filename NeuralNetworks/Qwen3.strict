@@ -88,26 +88,19 @@ PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) nat
 	Tiny.PrefilledBatch(((1, 2), (1, 2, 3))).Last.Last.IsNearlyEqual(Tiny.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
 	TinyHybrid.PrefilledBatch(((1, 2), (1, 2, 3))).First.First.IsNearlyEqual(TinyHybrid.Prefilled((1, 2), 0).hidden.First, 0.0001)
 	TinyHybrid.PrefilledBatch(((1, 2), (1, 2, 3))).Last.Last.IsNearlyEqual(TinyHybrid.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
-	if prompts.Length is 0
-		return List(Numbers)
-	if prompts.Length is 1
-		return List(Numbers) + Prefilled(prompts.First, start).hidden
+	if prompts.Length < 2
+		return prompts.Length is 0 then List(Numbers) else List(Numbers) + Prefilled(prompts.First, start).hidden
 	let align = blocks.First.hybrid.layers.Length > 0 then 16 else 1
-	mutable maxLen = 0
-	for prompts
-		if value.Length > maxLen
-			maxLen = value.Length
-	let seqLen = ((maxLen + align - 1) / align).Floor * align
+	let seqLen = SequenceLength(prompts).Aligned(align)
 	let width = norm.Length
 	let perBatch = (chunk / blocks.First.experts.used / seqLen).Floor.Clamp(1, prompts.Length)
 	mutable results = List(Mutable(Numbers))
 	for (prompts.Length / perBatch).Ceiling
 		let first = index * perBatch
 		let count = (prompts.Length - first).Clamp(0, perBatch)
-		let slice = prompts.Slice(first, count)
-		let hidden = Steps(Padded(slice, seqLen), BatchPositions(count, seqLen, start), count).hidden
+		let hidden = Steps(Padded(prompts.Slice(first, count), seqLen), BatchPositions(count, seqLen, start), count).hidden
 		for count
-			results.Add(hidden.Slice(index * seqLen * width, slice(index).Length * width))
+			results.Add(hidden.Slice(index * seqLen * width, prompts(first + index).Length * width))
 	results
 Padded(prompts List(Numbers), seqLen Number) Numbers
 	Tiny.Padded(((1, 2), (3, 4, 5)), 4) is (1, 2, 1, 1, 3, 4, 5, 3)

@@ -37,6 +37,7 @@ constant M36 = "\n%ob = ~calloc(%sz) : (i64) -> ~p\n%b = func.constant @test_pin
 constant M37 = "\n%r = ~cparallel(%b, %ob, %c) : ((~p, i64, i64) -> f64, ~p, i64) -> f64\n%a = llvm.ptrtoint %ob : ~p to i64\n%f = ~crc_fate(%a) : (i64) -> i64\nreturn %f : i64\n}"
 constant M38 = "\nfunc.func private @test_pin_body(%o: ~p, %f: i64, %t: i64) -> f64 {\n%a = llvm.ptrtoint %o : ~p to i64\n~crc_pin(%a) : (i64) -> ()\n%z = ~a0.0 : f64\nreturn %z : f64\n}"
 constant M39 = "\nfunc.func @test_released() {\n~cgc_release() : () -> ()\nreturn\n}"
+constant SurvivedLines = "%by = arith.subi %tp, %bp : i64\n%st = ~lvolatile %k : ~p -> i64\n%pr = arith.cmpi eq, %st, %aw : i64"
 All Text
 	CheckParallelMlir.All.Length > 0
 	let raw = FirstPart + CarriedPart + SweptPart + OwnedPart + CopiesPart + CardsPart + ToolsPart + M39
@@ -50,8 +51,7 @@ FirstPart Text
 	a + b + M27 + M28 + M29 + M30 + M31 + M32 + M33 + M34 + M35 + M36 + M37 + M38
 CarriedPart Text
 	CheckParallelMlir.CarriedPart.Length > 0
-	mutable out = List(Text)
-	out = out + "func.func @test_carried(%st: ~p) -> i64 {\n~cgc_init(%st) : (~p) -> ()"
+	mutable out = List(Text) + "func.func @test_carried(%st: ~p) -> i64 {\n~cgc_init(%st) : (~p) -> ()"
 	out = out + "%sz = ~a48 : i64\n%bf = ~calloc(%sz) : (i64) -> ~p\n%sl = ~a5 : i64"
 	out = out + "%cx = llvm.alloca %sl x i64 : (i64) -> ~p\n%ba = llvm.ptrtoint %bf : ~p to i64"
 	out = out + "~s%ba, %cx : i64, ~p\n%b = func.constant @test_carried_body : (~p, i64, i64) -> f64"
@@ -63,8 +63,8 @@ CarriedPart Text
 	"\n" + Text.Combine(out, "\n") + CarriedRest
 CarriedRest Text
 	CheckParallelMlir.CarriedRest.Length > 0
-	mutable out = List(Text)
-	out = out + "%c2 = ~a2 : i64\n%c4 = ~a4 : i64\n%mb = arith.muli %mv, %c2 : i64\n%ob = arith.muli %ov, %c4 : i64"
+	constant scaled = "%c2 = ~a2 : i64\n%c4 = ~a4 : i64\n%mb = arith.muli %mv, %c2 : i64\n%ob = arith.muli %ov, %c4 : i64"
+	mutable out = List(Text) + scaled
 	out = out + "%p1 = arith.addi %a1, %mb : i64\n%p2 = arith.addi %p1, %ob : i64"
 	out = out + "%ss = ~g%cx[4] : (~p) -> ~p, i64\n%sv = ~l%ss : ~p -> i64"
 	out = out + "%c8 = ~a8 : i64\n%sb = arith.muli %sv, %c8 : i64\n%re = arith.addi %p2, %sb : i64\nreturn %re : i64\n}"
@@ -87,8 +87,7 @@ CarriedBody Text
 	"\n" + Text.Combine(out, "\n")
 SweptPart Text
 	CheckParallelMlir.SweptPart.Length > 0
-	mutable out = List(Text)
-	out = out + "func.func @test_swept(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%ks = ~a65536 : i64"
+	mutable out = List(Text) + "func.func @test_swept(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%ks = ~a65536 : i64"
 	out = out + "%k = ~calloc(%ks) : (i64) -> ~p\n%aw = ~a42 : i64\n~svolatile %aw, %k : i64, ~p"
 	out = out + "%rs = ~g%k[1] : (~p) -> ~p, i64\n%bd = func.constant @test_garbage : (~p, i64, i64) -> f64"
 	out = out + "%cn = ~a8192 : i64\n%z = ~a0 : i64\n%o = ~a1 : i64\n%rn = ~a8 : i64\n%fl = ~atrue"
@@ -100,8 +99,7 @@ SweptPart Text
 	"\n" + Text.Combine(out, "\n") + SweptEnd
 SweptEnd Text
 	CheckParallelMlir.SweptEnd.Length > 0
-	mutable out = List(Text)
-	out = out + "%by = arith.subi %tp, %bp : i64\n%st = ~lvolatile %k : ~p -> i64\n%pr = arith.cmpi eq, %st, %aw : i64"
+	mutable out = List(Text) + SurvivedLines
 	out = out + "%fs = ~g%k[7] : (~p) -> ~p, i64\n%ft = ~lvolatile %fs : ~p -> ~p"
 	out = out + "%fi = ~lvolatile %ft : ~p -> i64\n%ei = ~a320 : i64\n%sv = arith.cmpi eq, %fi, %ei : i64"
 	out = out + "%ok = arith.andi %pr, %sv : i1\n%ch = arith.select %ok, %by, %z : i64\nreturn %ch : i64\n}"
@@ -124,8 +122,7 @@ GarbageKeep Text
 	"\n" + Text.Combine(out, "\n")
 OwnedPart Text
 	CheckParallelMlir.OwnedPart.Length > 0
-	mutable out = List(Text)
-	out = out + "func.func @test_owned(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%ks = ~a65536 : i64"
+	mutable out = List(Text) + "func.func @test_owned(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%ks = ~a65536 : i64"
 	out = out + "%k = ~calloc(%ks) : (i64) -> ~p\n%rs = ~g%k[1] : (~p) -> ~p, i64"
 	out = out + "%gb = func.constant @test_garbage : (~p, i64, i64) -> f64\n%cn = ~a8192 : i64\n%z = ~a0 : i64"
 	out = out + "%o = ~a1 : i64\n%fl = ~atrue\n~svolatile %z, %rs : i64, ~p"
@@ -137,8 +134,7 @@ OwnedPart Text
 	"\n" + Text.Combine(out, "\n")
 OwnedTail Text
 	CheckParallelMlir.OwnedTail.Length > 0
-	mutable out = List(Text)
-	out = out + "%lc = ~l%lt : ~p -> i64\nreturn %lc : i64\n}"
+	mutable out = List(Text) + "%lc = ~l%lt : ~p -> i64\nreturn %lc : i64\n}"
 	out = out + "func.func private @test_ownership(%cx: ~p, %fr: i64, %to: i64) -> f64 {"
 	out = out + "%sz = ~a1024 : i64\n%o = ~a1 : i64"
 	out = out + "%no = ~a0 : i64\n%ot = ~a200 : i64\n%zr = ~a0.0 : f64\ncf.br ^it(%fr : i64)\n^it(%i: i64):"
@@ -162,8 +158,7 @@ OwnershipClaims Text
 	"\n" + Text.Combine(out, "\n")
 CopiesPart Text
 	CheckParallelMlir.CopiesPart.Length > 0
-	mutable out = List(Text)
-	out = out + "func.func @test_copies(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%yl = ~a8388608 : i64"
+	mutable out = List(Text) + "func.func @test_copies(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%yl = ~a8388608 : i64"
 	out = out + "%ls = ~mad@strict_gc_young_limit : ~p\n~s%yl, %ls : i64, ~p\n%sb = ~a16777216 : i64"
 	out = out + "%bs = ~mad@strict_gc_budget : ~p\n~s%sb, %bs : i64, ~p\n%bz = ~a33554432 : i64"
 	out = out + "%ba = ~calloc_text(%bz) : (i64) -> ~p\n%cs = ~a16777216 : i64\n%o = ~a1 : i64"
@@ -195,8 +190,7 @@ WasteMlir Text
 	Text.Combine(out, "\n")
 CardsPart Text
 	CheckParallelMlir.CardsPart.Length > 0
-	mutable out = List(Text)
-	out = out + "func.func @test_put_card(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%sz = ~a24 : i64"
+	mutable out = List(Text) + "func.func @test_put_card(%s: ~p) -> i64 {\n~cgc_init(%s) : (~p) -> ()\n%sz = ~a24 : i64"
 	out = out + "%kp = ~calloc(%sz) : (i64) -> ~p"
 	out = out + "%fl = ~atrue\n~cgc_run(%fl) : (i1) -> ()\n%ts = ~a32 : i64"
 	out = out + "%yg = ~calloc_text(%ts) : (i64) -> ~p\n%yb = ~cbits(%yg) : (~p) -> f64"

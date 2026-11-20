@@ -5,9 +5,11 @@ Run(path Text, method Text)
 		for type.methods
 			if value.Name is method and type.Name.EndsWith(Path(path).FileName.RemoveExtension.text)
 				for value.instructions
-					let decoder = PayloadDecoder(value)
-					let isCall = value.kind is InstructionType.Invoke
-					let instance = isCall then " instance " + decoder.Instance else ""
-					let arguments = isCall then " arguments " + decoder.Arguments to Text else ""
-					let line = index + " " + value.kind + " " + (value.texts to Text) + " " + (value.payload to Text)
-					logger.Log(line + instance + arguments)
+					logger.Log(Described(value, index))
+Described(entry InstructionEntry, index Number) Text
+	Dump.Described(InstructionEntry.LoadNumber(0, 1), 3).StartsWith("3 ")
+	let decoder = PayloadDecoder(entry)
+	let isCall = entry.kind is InstructionType.Invoke
+	let instance = isCall then " instance " + decoder.Instance else ""
+	let arguments = isCall then " arguments " + decoder.Arguments to Text else ""
+	index + " " + entry.kind + " " + (entry.texts to Text) + " " + (entry.payload to Text) + instance + arguments

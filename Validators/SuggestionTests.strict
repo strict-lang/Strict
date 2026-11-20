@@ -39,9 +39,7 @@ Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
 	for methods
 		if Matches(value, replacement)
 			methods(index) = MethodEntry(replacement, Name = value.Name)
-	mutable changed = types
-	changed(0) = TypeEntry(types.First, methods = methods)
-	changed
+	List(TypeEntry) + TypeEntry(types.First, methods = methods) + types.Slice(1, types.Length - 1)
 Matches(method MethodEntry, replacement MethodEntry) Boolean
 	let same = method.Name is header.tokens.First and method.returnType is replacement.returnType
 	same and method.parameters is replacement.parameters

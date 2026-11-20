@@ -2,15 +2,14 @@ has number
 Sum Number
 	EvenFibonacci(100).Sum is 44 and EvenFibonacci(8).Sum is 2
 	mutable first = 1
-	mutable second = 1
+	mutable second = 2
 	mutable total = 0
 	for Range(1, number)
-		let next = first + second
-		if next >= number
+		if second >= number
 			return total
-		total = AddIfEven(total, next)
-		first = second
-		second = next
+		total = AddIfEven(total, second)
+		second = first + second
+		first = second - first
 	total
 AddIfEven(current Number, next Number) Number
 	EvenFibonacci(100).AddIfEven(2, 4) is 6

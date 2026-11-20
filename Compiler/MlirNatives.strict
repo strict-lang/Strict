@@ -169,12 +169,17 @@ Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
 	let owner = calls.Owner(entry, type)
 	let textual = Textual(entry, Element(owner), count)
 	let arguments = textual.Length > 0 then List(Text) + calls.Temp("ct") else calls.ArgumentNames(count)
-	let operands = List(Text) + calls.Temp("m") + arguments
-	let completed = IsShort(helper, count) then operands + "%zero" else operands
+	let completed = Completed(helper, count, List(Text) + calls.Temp("m") + arguments)
 	let plain = MlirMemory(function, position).Passed(calls.Temp("r"), helper, completed, Element(owner))
 	let call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
 	let lines = calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
 	helper is "strict_floor" then MlirCounter(function, position).Floor(entry, lines) else lines
+Completed(helper Text, count Number, operands Texts) Texts
+	MlirNatives.Completed("strict_text_substring", 1, ("%m", "%a")) is ("%m", "%a", "%end")
+	MlirNatives.Completed("strict_text_index", 1, ("%m", "%a")) is ("%m", "%a", "%zero")
+	MlirNatives.Completed("strict_text_substring", 2, ("%m", "%a", "%b")) is ("%m", "%a", "%b")
+	let isEnded = helper is "strict_text_substring" and count is 1
+	IsShort(helper, count) then operands + "%zero" else isEnded then operands + "%end" else operands
 IsShort(helper Text, count Number) Boolean
 	MlirNatives.IsShort("strict_text_index", 1) and MlirNatives.IsShort("strict_process_runtool", 2)
 	MlirNatives.IsShort("strict_text_index", 2) is false and MlirNatives.IsShort("strict_process_runtool", 3) is false

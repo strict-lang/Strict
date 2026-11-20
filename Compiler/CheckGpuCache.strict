@@ -79,8 +79,8 @@ Expanded(raw Text) Text
 	let s = raw.Replace("~p", "!llvm.ptr").Replace("~c", "func.call @").Replace("~a", "arith.constant ")
 	s.Replace("~mad", "llvm.mlir.addressof ").Replace("~gep", "llvm.getelementptr").Replace("~mc", "llvm.mlir.constant")
 KindMlirText(src Text) Texts
-	mutable out = List(Text)
-	out = out + (KM01 + "\n" + KM02 + "\n" + ExtractedFn(src, "strict_gpu_cached") + "\n" + KM03 + "\n" + KM04)
+	let head = KM01 + "\n" + KM02 + "\n" + ExtractedFn(src, "strict_gpu_cached") + "\n" + KM03 + "\n" + KM04
+	mutable out = List(Text) + head
 	out = out + (KM05 + "\n" + KM06 + "\n" + KM07 + "\n" + KM08)
 	out = out + (ExtractedGlobalsAndFns(src, KindNamesA + KindNamesB, KindGlobals))
 	out = out + "func.func private @strict_gpu_lock_check() {\nreturn\n}"
@@ -91,9 +91,9 @@ KindMlirText(src Text) Texts
 	out = out + (KM25 + "\n" + KM26 + "\n" + KM27 + "\n" + KM28 + "\n" + KM29 + "\n" + KM30 + "\n" + KindTail)
 	Expanded(Text.Combine(out, "\n")).Split("\n")
 KindTail Text
-	mutable out = List(Text)
-	out = out + "func.func private @strict_gpu_remember(%l: f64, %k: i64, %c: i64, %o: ~p, %p: i64) {\nreturn\n}"
-	out = out + "llvm.func @spill_upload(%lb: i64, %c: i64) -> i64 {\n%t = ~a3 : i64"
+	constant remember = "func.func private @strict_gpu_remember(%l: f64, %k: i64, %c: i64, %o: ~p, %p: i64) {\nreturn\n}"
+	constant upload = "llvm.func @spill_upload(%lb: i64, %c: i64) -> i64 {\n%t = ~a3 : i64"
+	mutable out = List(Text) + remember + upload
 	out = out + "%o = llvm.alloca %t x i64 : (i64) -> ~p\n%r = arith.bitcast %lb : i64 to f64"
 	out = out + "%u = ~cstrict_gpu_unspilled(%r, %c, %o) : (f64, i64, ~p) -> i1\n%d = llvm.load %o : ~p -> i64"
 	out = out + "llvm.return %d : i64\n}\nllvm.func @ahead_used(%d: i64) {\n%t = ~a3 : i64"
@@ -104,9 +104,9 @@ KindTail Text
 	out = out + KindTailEnd
 	Text.Combine(out, "\n")
 KindTailEnd Text
-	mutable out = List(Text)
-	out = out + "llvm.func @calls_address() -> ~p {\n%s = ~mad@testCalls : ~p\nllvm.return %s : ~p\n}"
-	out = out + "llvm.func @handed_address() -> ~p {\n%s = ~mad@testHanded : ~p\nllvm.return %s : ~p\n}"
+	constant calls = "llvm.func @calls_address() -> ~p {\n%s = ~mad@testCalls : ~p\nllvm.return %s : ~p\n}"
+	constant handed = "llvm.func @handed_address() -> ~p {\n%s = ~mad@testHanded : ~p\nllvm.return %s : ~p\n}"
+	mutable out = List(Text) + calls + handed
 	out = out + "func.func private @strict_gpu_starved(%n: i64, %w: i1) -> i1 {\n%f = ~afalse\nreturn %f : i1\n}"
 	out = out + "llvm.func @rows_kind(%k: i64) -> i32 {\n%r = ~cstrict_gpu_is_rows(%k) : (i64) -> i1"
 	out = out + "%x = arith.extui %r : i1 to i32\nllvm.return %x : i32\n}\nllvm.func @budget_free(%dr: i64) -> i64 {"
@@ -117,12 +117,10 @@ KindTailEnd Text
 	out = out + "llvm.return\n}\n}"
 	Text.Combine(out, "\n")
 PoolMlirText(src Text) Texts
-	mutable out = List(Text)
-	out = out + "module {"
+	mutable out = List(Text) + "module {"
 	for ExtractedGlobalsAndFns(src, PoolNames + "strict_gpu_trim", PoolGlobals).Split("\n")
 		out = out + value
-	out = out + Expanded(PoolTailA + "\n" + PoolTailB)
-	out = out + "func.func private @strict_gpu_web_trim() {\nreturn\n}"
+	out = out + Expanded(PoolTailA + "\n" + PoolTailB) + "func.func private @strict_gpu_web_trim() {\nreturn\n}"
 	out = out + Expanded("func.func private @strict_clock() -> f64 {\n%z = ~a0.0 : f64\nreturn %z : f64\n}")
 	out = out + Expanded("func.func private @strict_gpu_own_collectable() -> i1 {\n%t = ~atrue\nreturn %t : i1\n}")
 	out = out + Expanded("func.func private @strict_gpu_residing_class(%c: i64) -> (i1, i1) {\n%f = ~afalse")
@@ -139,9 +137,9 @@ ExtractedGlobalsAndFns(src Text, names Texts, globals Texts) Text
 				out = out + value
 	Text.Combine(out, "\n")
 PoolTailA Text
-	mutable out = List(Text)
-	out = out + "llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64"
-	out = out + "llvm.mlir.global internal @pool_counters(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>"
+	constant youngLimit = "llvm.mlir.global internal @strict_gc_young_limit(0 : i64) : i64"
+	constant counters = "llvm.mlir.global internal @pool_counters(dense<0> : tensor<3xi64>) : !llvm.array<3 x i64>"
+	mutable out = List(Text) + youngLimit + counters
 	out = out + "func.func private @strict_gc_run_for(%f: i1, %m: i64) {"
 	out = out + "%cs = ~mad@pool_counters : ~p\n%s = ~gep %cs[2] : (~p) -> ~p, i64"
 	out = out + "%c = llvm.load %s : ~p -> i64\n%o = arith.extui %f : i1 to i64\n%n = arith.addi %c, %o : i64"
@@ -152,9 +150,9 @@ PoolTailA Text
 	out = out + "%f = llvm.load %cs : ~p -> i64\n%n = arith.addi %f, %d : i64\nllvm.store %n, %cs : i64, ~p\nreturn\n}"
 	Text.Combine(out, "\n") + "\nfunc.func private @strict_rc_reclaim() {\nreturn\n}"
 PoolTailB Text
-	mutable out = List(Text)
-	out = out + "func.func private @strict_gpu_replay() {\n%cs = ~mad@pool_counters : ~p"
-	out = out + "%s = ~gep %cs[1] : (~p) -> ~p, i64\n%w = llvm.load %s : ~p -> i64\n%o = ~a1 : i64"
+	constant replay = "func.func private @strict_gpu_replay() {\n%cs = ~mad@pool_counters : ~p"
+	constant replayed = "%s = ~gep %cs[1] : (~p) -> ~p, i64\n%w = llvm.load %s : ~p -> i64\n%o = ~a1 : i64"
+	mutable out = List(Text) + replay + replayed
 	out = out + "%n = arith.addi %w, %o : i64\nllvm.store %n, %s : i64, ~p\nreturn\n}"
 	out = out + "func.func private @strict_gpu_synchronize() {\nreturn\n}"
 	out = out + "func.func private @strict_gpu_own_collected(%s: f64, %f: i1) {\nreturn\n}"
@@ -188,9 +186,10 @@ RunDriver(folder Text) Boolean
 	let ran = Process.RunTool(folder + "/driver.exe", args, ToolSeconds)
 	ran.exitCode is not 0 then Error("GpuCacheDriverFailed (" + ran.exitCode + "): " + ran.Output + ran.error) else true
 DriverA Text
-	mutable out = List(Text)
-	out = out + "#include <windows.h>\n#include <stdint.h>\n#include <stdio.h>\n#include <string.h>\n#include <assert.h>"
-	out = out + "#define GP(m,n,t) ((t)`P(m,#n))\nint main(int argc,char**argv){"
+	constant entry = "#define GP(m,n,t) ((t)`P(m,#n))\nint main(int argc,char**argv){"
+	constant system = "#include <windows.h>\n#include <stdint.h>\n#include <stdio.h>"
+	constant checks = "#include <string.h>\n#include <assert.h>"
+	mutable out = List(Text) + (system + "\n" + checks) + entry
 	out = out + "HMODULE L=LoadLibraryA(argv[1]),P=LoadLibraryA(argv[2]);assert(L&&P);"
 	out = out + "int(*cached_kind)(`G,`G)=GP(L,cached_kind,void*);int(*rows_kind)(`G)=GP(L,rows_kind,void*);"
 	out = out + "`G*(*cache_address)(void)=GP(L,cache_address,void*);`G(*scope_choice)(`G)=GP(L,scope_choice,void*);"
@@ -201,9 +200,9 @@ DriverA Text
 	out = out + "`G*(*handed_address)(void)=GP(L,handed_address,void*);`G(*spill_upload)(`G,`G)=GP(L,spill_upload,void*);"
 	Text.Combine(out, "\n") + "\nvoid(*ahead_used)(`G)=GP(L,ahead_used,void*);"
 DriverB Text
-	mutable out = List(Text)
-	out = out + "int st[6]={4,4,2,2,3,1},rq[6]={2,4,2,4,2,1},ex[6]={1,1,1,0,0,1};"
-	out = out + "for(int i=0;i<6;i++)assert(cached_kind(st[i],rq[i])==ex[i]);int rk[4]={2,4,3,1},re[4]={1,1,0,0};"
+	constant kinds = "int st[6]={4,4,2,2,3,1},rq[6]={2,4,2,4,2,1},ex[6]={1,1,1,0,0,1};"
+	constant rows = "for(int i=0;i<6;i++)assert(cached_kind(st[i],rq[i])==ex[i]);int rk[4]={2,4,3,1},re[4]={1,1,0,0};"
+	mutable out = List(Text) + kinds + rows
 	out = out + "for(int i=0;i<4;i++)assert(rows_kind(rk[i])==re[i]);`G*cache=cache_address(),devs[3]={101,202,303};"
 	out = out + "for(int i=0;i<3;i++){cache[i*8]=i+1;cache[i*8+1]=devs[i];cache[i*8+4]=i+1;}"
 	out = out + "`G os[1]={101},is[1]={303},outer[3]={0,(`G)os,1},inner[3]={(`G)outer,(`G)is,1};"
@@ -214,9 +213,10 @@ DriverB Text
 	out = out + "budget_release(dv);assert(budget_free(9*G)==start);"
 	Text.Combine(out, "\n")
 DriverC Text
-	mutable out = List(Text)
-	out = out + "`G*spills=spills_address(),*ahead=ahead_address(),*calls=calls_address();*handed_address()=7000;"
-	out = out + "`G pinned[4]={0},f1=0x5008,f2=0x6008,rs[2]={f1,f2};ahead[0]=111;ahead[1]=222;ahead[2]=333;ahead[7]=444;"
+	constant spills = "`G*spills=spills_address(),*ahead=ahead_address(),*calls=calls_address();*handed_address()=7000;"
+	constant pinned = "`G pinned[4]={0},f1=0x5008,f2=0x6008,rs[2]={f1,f2};"
+	constant ahead = "ahead[0]=111;ahead[1]=222;ahead[2]=333;ahead[7]=444;"
+	mutable out = List(Text) + spills + (pinned + ahead)
 	out = out + "for(int i=0;i<2;i++){`G v[8]={rs[i],4,(`G)pinned,4096,4,8,2,0};memcpy(&spills[i*8],v,64);}"
 	out = out + "calls[0]=0;spill_upload(f1,4);calls[0]=0;spill_upload(f2,4);assert(spills[7]==(`G)spills+64);"
 	out = out + "calls[0]=0;`G dv2=spill_upload(f1,4);assert(calls[0]==9&&calls[1]==1&&calls[2]==999&&calls[3]==dv2);"
@@ -227,9 +227,9 @@ DriverC Text
 	out = out + "`G(*pt)(`G)=GP(P,pool_take,void*);`G(*pr)(`G,`G)=GP(P,pool_real,void*);"
 	Text.Combine(out, "\n") + "\n`G*(*ps)(void)=GP(P,pool_stats,void*);\n" + DriverEndTail
 DriverEndTail Text
-	mutable out = List(Text)
-	out = out + "`G*(*pp)(void)=GP(P,pool_spilled,void*);double(*pc)(void)=GP(P,pool_clear,void*);"
-	out = out + "`G*bl=pa(),b1=123,b2=456;bl[51]=(`G)&b1;bl[52]=1;bl[53]=1;bl[54]=(`G)&b2;bl[55]=1;bl[56]=1;"
+	constant pool = "`G*(*pp)(void)=GP(P,pool_spilled,void*);double(*pc)(void)=GP(P,pool_clear,void*);"
+	constant blocks = "`G*bl=pa(),b1=123,b2=456;bl[51]=(`G)&b1;bl[52]=1;bl[53]=1;bl[54]=(`G)&b2;bl[55]=1;bl[56]=1;"
+	mutable out = List(Text) + pool + blocks
 	out = out + "assert(pt(16)==123&&bl[52]==0&&bl[55]==1&&pr(123,16)==17&&pr(123,16)==16);"
 	out = out + "assert(pt(16)==456&&pr(456,16)==18&&pt(16)==0);`G*ct=ps();assert(ct[1]==0);"
 	out = out + "`G sm=256LL<<20,lg=512LL<<20;bl[96]=(`G)&sm;bl[97]=1;bl[98]=1;bl[108]=(`G)&lg;bl[109]=1;bl[110]=1;"

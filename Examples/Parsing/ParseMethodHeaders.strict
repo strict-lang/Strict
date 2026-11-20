@@ -1,4 +1,6 @@
 has logger
+constant Keywords = ("return ", "if ", "for ", "mutable ")
+constant Labels = ("Return", "If", "For", "Declaration")
 Run
 	logger.Log("Parsing method headers from type definitions")
 	ParseHeaders
@@ -28,14 +30,9 @@ ParseBodyExpressions
 ClassifyBodyLine(line Text) Text
 	if line.IndexOf(".") > 0
 		return "MethodCall: " + line
-	if line.StartsWith("return ")
-		return "Return: " + ParseExpressions.ExtractAfterKeyword(line, 7)
-	if line.StartsWith("if ")
-		return "If: " + ParseExpressions.ExtractAfterKeyword(line, 3)
-	if line.StartsWith("for ")
-		return "For: " + ParseExpressions.ExtractAfterKeyword(line, 4)
-	if line.StartsWith("mutable ")
-		return "Declaration: " + ParseExpressions.ExtractAfterKeyword(line, 8)
+	for Keywords
+		if line.StartsWith(value)
+			return Labels(index) + ": " + ParseExpressions.ExtractAfterKeyword(line, value.Length)
 	"Expression: " + line
 ClassifyReassignment(line Text) Text
 	line.IndexOf(" = ") > 0 then "Reassignment: " + line else "Expression: " + line

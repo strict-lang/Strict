@@ -125,5 +125,5 @@ Scoped(lines Texts) Texts
 		return lines
 	let store = lines.Last
 	let at = store.IndexOf(" : ")
-	let scoped = store.Substring(0, at) + MlirParameters.WriteScope + store.Substring(at, store.Length - at)
+	let scoped = store.Substring(0, at) + MlirParameters.WriteScope + store.Substring(at)
 	lines.Slice(0, lines.Length - 1) + scoped

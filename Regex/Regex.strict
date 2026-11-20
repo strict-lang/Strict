@@ -62,7 +62,7 @@ Replace(text Text, replacement Text) Text
 	for Spans(text)
 		replaced = replaced + text.Substring(last, value(0) - last) + Expanded(replacement, text, value)
 		last = value(1)
-	replaced + text.Substring(last, text.Length - last)
+	replaced + text.Substring(last)
 Split(text Text) Texts
 	Regex(",\\s*").Split("a, b,c") is ("a", "b", "c")
 	Regex(",").Split("a,") is ("a", "")
@@ -72,7 +72,7 @@ Split(text Text) Texts
 	for Spans(text)
 		pieces = pieces + text.Substring(last, value(0) - last)
 		last = value(1)
-	pieces + text.Substring(last, text.Length - last)
+	pieces + text.Substring(last)
 Spans(text Text) List(Numbers)
 	Decimal.Spans("1 22").Length is 2
 	Decimal.Spans("1 22")(1) is (2, 4, -1, -1)

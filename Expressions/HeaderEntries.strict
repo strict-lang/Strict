@@ -65,11 +65,10 @@ Default(position Number) Texts
 	mutable depth = 1
 	mutable tokens = List(Mutable(Text))
 	mutable isDefault = false
-	for Range(position + 1, header.ParametersEnd)
-		let token = header.tokens(value)
-		if depth < 2 and token is in (",", "with")
+	for header.tokens.Slice(position + 1, header.ParametersEnd - position - 1)
+		if depth < 2 and value is in (",", "with")
 			return tokens
-		tokens = isDefault then tokens + token else tokens
-		isDefault = isDefault or depth < 2 and token is "="
-		depth = depth + (token is "(" then 1 else (token is ")" then -1 else 0))
+		tokens = isDefault then tokens + value else tokens
+		isDefault = isDefault or depth < 2 and value is "="
+		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
 	tokens

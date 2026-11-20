@@ -95,7 +95,7 @@ Returned(at Number) ValidationIssues
 	for Range(at + 1, End(at))
 		let trimmed = lines(value).Trim
 		let isLast = value is End(at) - 1 and BodyParser.Indent(lines(value)) is 1
-		let returned = trimmed.StartsWith("return ") then trimmed.Substring(7, trimmed.Length - 7) else ""
+		let returned = trimmed.StartsWith("return ") then trimmed.Substring(7) else ""
 		issues = issues + Issued(name, Literals(isLast then trimmed else returned), value + 1)
 	issues
 Issued(name Text, literals Texts, line Number) ValidationIssues
@@ -116,7 +116,7 @@ IsInteger(text Text) Boolean
 	Stopping.IsInteger("12") and Stopping.IsInteger("-1")
 	Stopping.IsInteger("x") is false and Stopping.IsInteger("1.5") is false and Stopping.IsInteger("") is false
 	Stopping.IsInteger("-") is false
-	let digits = text.StartsWith("-") then text.Substring(1, text.Length - 1) else text
+	let digits = text.StartsWith("-") then text.Substring(1) else text
 	if digits is ""
 		return false
 	for Range(0, digits.Length)

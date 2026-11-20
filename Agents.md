@@ -396,7 +396,7 @@ No exceptions without your human partner's permission.
 ## Error Messaging Guidelines
 - Ensure error messages are precise and human-readable; avoid unclear wording like 'requested call token'.
 - Explicitly distinguish lookup context type from instance value in error messages.
-- Validation issues name their rule (`MethodLengthMustNotExceedTwelve`, ...) with the file and line.
+- Validation issues name their rule (`ProductionLinesMustNotExceedTen`, ...) with the file and line.
 - At runtime in the Strict VM or in a compiled executable errors should show the Error with clickable stacktraces going back to the .strict source code.
 
 ## Multithreading Support

@@ -30,7 +30,7 @@ Places(lines Texts) Texts
 	Profile.Places(Lines) is ("A.Run line 2", "A.Run line 2", "A.Go line 5")
 	for lines
 		if value.StartsWith("$Sample ")
-			value.Substring(8, value.Length - 8)
+			value.Substring(8)
 Methods(places Texts) Texts
 	Profile.Methods(("A.Run line 2", "B.Go line 15")) is ("A.Run", "B.Go")
 	for places

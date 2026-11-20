@@ -131,10 +131,9 @@ Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers
 	mutable calls = List(Mutable(Numbers))
 	for fresh
 		let called = Callees(value)
-		for called
-			if value.Symbol is not in symbols
-				found.Add(value)
-				symbols = symbols + value.Symbol
+		let unseen = MlirUnseen(symbols).Of(called)
+		found = found + unseen
+		symbols = symbols + MlirRecursion.Symbols(unseen)
 		calls.Add(MlirRecursion.Indexes(called, symbols))
 	found.Length is 0 then MlirRecursion(known, entries, prior + calls) else Reachable(known + found, found, prior + calls)
 Callees(function MlirFunction) List(MlirFunction)

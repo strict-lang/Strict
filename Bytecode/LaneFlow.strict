@@ -41,10 +41,8 @@ Stores(instructions List(InstructionEntry), candidates Texts) Texts
 	mutable loaded = List(Text)
 	mutable stores = List(Text)
 	for instructions
-		if value.kind is InstructionType.StoreRegisterToVariable
+		if value.kind is in Naming and value.texts.Length > 0 or value.kind is InstructionType.StoreRegisterToVariable
 			stores = stores + Stored(value, laned, loaded)
-		if value.kind is in Naming and value.texts.Length > 0
-			stores = stores + (value.texts(0) + " -")
 		loaded = Loaded(value, loaded)
 		laned = Tracked(value, laned, candidates + fixed)
 	stores
@@ -52,7 +50,9 @@ Stored(entry InstructionEntry, laned Texts, loaded Texts) Text
 	Sample.Stored(Kept, ("2 Pair"), List(Text)) is "pair Pair" and Sample.Stored(Kept, List(Text), List(Text)) is "pair -"
 	Sample.Stored(Kept, List(Text), ("2 other")) is "pair ?other"
 	Sample.Stored(ElementStore.Last, ("2 Pair"), ("2 other")) is "pairs(0) -"
-	let isFixed = entry.texts(0).IndexOf("(") > 0 or entry.texts(0).StartsWith("changed_")
+	Sample.Stored(Picking, ("2 Pair"), ("2 other")) is "pairs -"
+	let isNamed = entry.kind is not InstructionType.StoreRegisterToVariable
+	let isFixed = isNamed or entry.texts(0).IndexOf("(") > 0 or entry.texts(0).StartsWith("changed_")
 	let type = isFixed then "" else Typed(laned, entry.payload(0) to Text)
 	let source = isFixed then "" else Typed(loaded, entry.payload(0) to Text)
 	entry.texts(0) + " " + (type is not "" then type else source is "" then "-" else "?" + source)

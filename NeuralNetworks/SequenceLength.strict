@@ -1,0 +1,10 @@
+has prompts List(Numbers)
+Aligned(align Number) Number
+	SequenceLength(((1, 2), (1, 2, 3))).Aligned(1) is 3
+	SequenceLength(((1, 2), (1, 2, 3))).Aligned(16) is 16
+	SequenceLength(((1, 2, 3), (1))).Aligned(2) is 4
+	mutable longest = 0
+	for prompts
+		if value.Length > longest
+			longest = value.Length
+	((longest + align - 1) / align).Floor * align

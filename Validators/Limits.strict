@@ -2,7 +2,6 @@ has lines Texts
 has isBase Boolean
 has scale Number = 1
 constant MaxCharacters = 120
-constant MaxMethodLines = 13
 constant MaxMethods = 18
 constant MaxMembers = 15
 constant MaxConstants = 40
@@ -14,12 +13,10 @@ constant Sample = Limits(("has number", "Run", "\t\t\t\t\t\t1", "  2"), false)
 constant Long = Limits(("Run", "\t1", "\t2", "\t3", "\t4", "\t5", "\t6", "\t7", "\t8", "\t9", "\t10", "\t11", "\t12", "\t13"), false)
 constant Crowded = Limits(OnlyConstants.lines + OnlyConstants.lines + OnlyConstants.lines, false)
 constant Crowding = Limits(Text.Combine(OnlyConstants.lines, "\n").Replace("constant ", "has ").Lines, false)
-constant Twice = Limits(Long.lines, false, 2)
 constant WideHalf = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 constant Wide = " x" + WideHalf + WideHalf
 constant Indent = ValidationIssue("ExtraWhitespacesFoundAtBeginningOfLine", "indent with tabs", 5)
 constant Methods = Limits(("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S"), false)
-constant Lengthy = (ValidationIssue("MethodLengthMustNotExceedTwelve", "Run", 1), ValidationIssue("MethodLengthMustNotExceedTwelve", "Run", 17))
 Issues ValidationIssues
 	Sample.Issues.Length is 2
 	Limits(("has number", "Run", "\t1"), false).Issues.Length is 0
@@ -32,7 +29,7 @@ Issues ValidationIssues
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index) + AsciiIssues(value, index)
-	issues + MethodIssues + CountIssues
+	issues + MethodBudgets(lines, scale).Issues + CountIssues
 OrderIssues ValidationIssues
 	Limits(("Run", "\t1", "has a"), false).OrderIssues.First to Text is "MembersMustComeBeforeMethods: has a"
 	Limits(("has a", "Run", "\t1"), false).OrderIssues.Length is 0
@@ -135,39 +132,6 @@ Operand(tokens Texts, start Number) Text
 			return text
 		text = text + tokens(start + index + 1)
 	text
-MethodIssues ValidationIssues
-	Twice.MethodIssues.Length is 0 and Long.MethodIssues.First to Text is "MethodLengthMustNotExceedTwelve: Run"
-	Limits(Long.lines + ("Run", "\t1") + Long.lines, false).MethodIssues is Lengthy and Long.MethodIssues.First.Line is 1
-	Limits(OnlyConstants.lines, false).MethodIssues.Length is 0
-	Limits(Long.lines - "\t13" + "", false).MethodIssues.Length is 0
-	let shape = TypeShape(lines)
-	mutable issues = List(Mutable(ValidationIssue))
-	mutable start = -1
-	for lines.Length + 1
-		if IsTooLong(start, index)
-			issues.Add(ValidationIssue("MethodLengthMustNotExceedTwelve", lines(start), start + 1))
-		start = Started(shape, start, index)
-	issues
-IsHeader(index Number) Boolean
-	Long.IsHeader(0) and Long.IsHeader(14)
-	Long.IsHeader(3) is false
-	index is lines.Length or lines(index).StartsWith("\t") is false
-IsTooLong(start Number, index Number) Boolean
-	Long.IsTooLong(0, 14)
-	Long.IsTooLong(0, 13) is false
-	Long.IsTooLong(-1, 14) is false
-	Long.IsTooLong(1, 14) is false
-	Twice.IsTooLong(0, 14) is false
-	Limits(Long.lines + Long.lines, false).IsTooLong(0, 15) is false
-	IsHeader(index) and start >= 0 and index - start > MaxMethodLines * scale
-Started(shape TypeShape, start Number, index Number) Number
-	Long.Started(TypeShape(Long.lines), 5, 0) is 0
-	Long.Started(TypeShape(Long.lines), 5, 3) is 5
-	Long.Started(TypeShape(Long.lines), 5, 14) is 5
-	Sample.Started(TypeShape(Sample.lines), 5, 0) is 5
-	if index < lines.Length and lines(index) is ""
-		return -1
-	index < lines.Length and shape.IsMethodHeader(lines(index)) then index else start
 CountIssues ValidationIssues
 	Limits(("has a Number", "has b Number"), false).CountIssues.Length is 0 and Methods.CountIssues.Length is 1
 	Limits(OnlyConstants.lines, false).CountIssues.Length is 0 and Limits(Methods.lines, true).CountIssues.Length is 0

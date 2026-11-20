@@ -13,8 +13,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 			return frame.Ended(slots)
 		let entry = frame.method.instructions(position)
 		slots(entry.Target) = frame.Value(entry, position, slots)
-		Sampled(entry)
-		slots = Changed(entry, slots)
+		slots = Stepped(entry, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)
 	MutationCache.Exhausted(slots)
 Sampled(entry InstructionEntry)
@@ -24,8 +23,9 @@ Sampled(entry InstructionEntry)
 Place(entry InstructionEntry) Text
 	Quiet.Place(InstructionEntry(InstructionType.Return, List(Text), (1), 3)) is "$Sample Strict/Doubler.Twice line 3"
 	"$Sample " + frame.owner + "." + frame.method.Name + " line " + entry.line
-Changed(entry InstructionEntry, slots List(VmValue)) List(VmValue)
-	Quiet.Changed(InstructionEntry.Return(1), Frame.Listed) is Frame.Listed
+Stepped(entry InstructionEntry, slots List(VmValue)) List(VmValue)
+	Quiet.Stepped(InstructionEntry.Return(1), Frame.Listed) is Frame.Listed
+	Sampled(entry)
 	mutable changed = slots
 	if entry.kind is InstructionType.Invoke then slots(entry.Target).kind is "Changing" else false
 		for slots(entry.Target).items

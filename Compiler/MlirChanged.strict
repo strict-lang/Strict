@@ -71,7 +71,7 @@ IsChange(name Text) Boolean
 Offset(name Text) Number
 	Keeping.Offset(ChangedInstance.Name) is 1
 	Keeping.Offset("changed_2") is 4
-	name is ChangedInstance.Name then 1 else name.Substring(8, name.Length - 8) to Number + 2
+	name is ChangedInstance.Name then 1 else name.Substring(8) to Number + 2
 Declarations(functions List(MlirFunction)) Texts
 	Keeping.Declarations(List(MlirFunction) + Keeping.function) is (Declared)
 	Keeping.Declarations(List(MlirFunction) + Taking.function).Length is 0

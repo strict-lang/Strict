@@ -45,7 +45,7 @@ Parts(text Text) Texts
 		if depth < 1 and character is ","
 			parts.Add(text.Substring(start, index - start))
 			start = index + 2
-	parts + text.Substring(start, text.Length - start)
+	parts + text.Substring(start)
 Closing(text Text, open Number) Number
 	Blurring.Closing("f(a, (b)) + 1", 1) is 8
 	Blurring.Closing("(a", 0) is -1

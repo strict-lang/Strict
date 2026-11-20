@@ -178,4 +178,4 @@ Combined(left Text, right Text) Text
 Floored(grouping Text) Text
 	Norming.Floored("?size") is "size"
 	Norming.Floored("!") is "!"
-	grouping.StartsWith("?") then grouping.Substring(1, grouping.Length - 1) else grouping
+	grouping.StartsWith("?") then grouping.Substring(1) else grouping

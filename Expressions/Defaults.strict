@@ -61,14 +61,18 @@ ConstantScope(end Number) Scope
 	mutable names = List(Mutable(Text))
 	mutable values = List(Mutable(Text))
 	mutable next = 0
+	for Constants(end)
+		let literal = ConstantAt(value, next)
+		next = NextEnum(value, next)
+		if literal is not ""
+			names.Add(value.Substring(9, value.Length - 9).Split(" ").First)
+			values.Add(literal)
+	Scope(names, values)
+Constants(end Number) Texts
+	Defaults(("has a Number", "constant A", "constant B")).Constants(2) is ("constant A")
 	for lines.Slice(0, end)
 		if value.StartsWith("constant ")
-			let literal = ConstantAt(value, next)
-			next = NextEnum(value, next)
-			if literal is not ""
-				names.Add(value.Substring(9, value.Length - 9).Split(" ").First)
-				values.Add(literal)
-	Scope(names, values)
+			value
 ConstantAt(line Text, next Number) Text
 	Defaults(List(Text)).ConstantAt("constant A", 3) is "3"
 	Defaults(List(Text)).ConstantAt("constant A = ", 3) is ""

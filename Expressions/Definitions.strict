@@ -32,9 +32,8 @@ Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
 		let statement = Used(Substituted(Defined(value, names, computed), computed), body, index)
-		if statement.Kind is "Computed"
-			computed = computed + statement
-		else
+		computed = statement.Kind is "Computed" then computed + statement else computed
+		if statement.Kind is not "Computed"
 			statements.Add(Nested(statement, names, computed))
 		names = names + Declared(statement)
 	SyntaxNode(body.Kind, body.text, statements, body.line)

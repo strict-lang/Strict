@@ -119,7 +119,7 @@ Call(at Number) Texts
 	Unswitching(List(Text) + "\tif IsInside(1)", "").Call(0) is ("", "IsInside", "1")
 	Unswitching(List(Text) + "\tif f(1).Is(value)", "").Call(0).Length is 0
 	let line = lines(at).TrimStart
-	let text = line.StartsWith("if ") then line.Substring(3, line.Length - 3) else ""
+	let text = line.StartsWith("if ") then line.Substring(3) else ""
 	let open = text.IndexOf("(")
 	if open < 1 or Callees(lines, folder).Closing(text, open) is not text.Length - 1
 		return List(Text)

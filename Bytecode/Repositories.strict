@@ -13,9 +13,7 @@ Downloaded(type Text) Text
 		let local = SourceFiles(value).SubfolderWith(value, type)
 		if local is not "" and IsHere(value) is false
 			return Directory.Exists(target + "/" + Path(local).FileName.text) then "" else Copied(local, type)
-	if Directory.Exists(Development + "/strict-lang")
-		return ""
-	for Candidates
+	for Directory.Exists(Development + "/strict-lang") then List(Text) else Candidates
 		let folder = Fetched(value, type)
 		if folder is not ""
 			return folder

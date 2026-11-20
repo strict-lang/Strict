@@ -48,7 +48,7 @@ Candidate(slot Text) Text
 	MlirPassed(MlirFunction(Wrapped, Guarded = -1), 5).Candidate("%r2") is ""
 	if function.Guarded < 0 or slot.StartsWith("%r") is false
 		return ""
-	let register = slot.Substring(2, slot.Length - 2) to Number
+	let register = slot.Substring(2) to Number
 	let writer = MlirKinds(function).Writer(position, register)
 	let isDivided = writer > function.Guarded and function.method.instructions(writer).kind is InstructionType.Divide
 	let source = isDivided then function.method.instructions(writer).payload(2) else register
@@ -107,7 +107,7 @@ Label(temp Text) Text
 	Wraps.Label("%q") is "^q"
 	Wraps.Candidate("%r0") is ""
 	Wraps.Candidate("%r1") is ""
-	"^" + temp.Substring(1, temp.Length - 1)
+	"^" + temp.Substring(1)
 Joined(temp Text, result Text) Text
 	Wraps.Joined("%q", "%qs") is "    cf.br ^qdivided(%qs : i64)"
 	Wraps.Candidate("%v2") is ""

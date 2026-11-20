@@ -38,7 +38,7 @@ Absolute(path Text) Text
 	let slashed = path.Replace("\\", "/")
 	if slashed.IndexOf(":") is 1 or slashed.StartsWith("/")
 		return slashed
-	let inside = slashed.StartsWith("./") then slashed.Substring(2, slashed.Length - 2) else slashed
+	let inside = slashed.StartsWith("./") then slashed.Substring(2) else slashed
 	let current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
 Cased(path Text) Text

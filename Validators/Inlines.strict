@@ -59,7 +59,7 @@ Value(line Text) Text
 	Evicted.Value("\tmutable count = 1") is ""
 	let trimmed = line.Trim
 	let at = trimmed.IndexOf(" = ") + 3
-	trimmed.StartsWith("let ") then trimmed.Substring(at, trimmed.Length - at) else ""
+	trimmed.StartsWith("let ") then trimmed.Substring(at) else ""
 IsUsedLater(name Text, start Number) Boolean
 	Inlines(("Run", "\tLog(1)", "\t\ttotal")).IsUsedLater("total", 1)
 	Inlines(("Run", "\tLog(1)", "Other", "\ttotal")).IsUsedLater("total", 1) is false
@@ -128,5 +128,4 @@ Merged(at Number) Text
 	let isBranch = lines(at).StartsWith("\tif ") and returned.StartsWith("return ")
 	if (isBranch and isValue and Line(at + 3).StartsWith("\t") is false) is false
 		return ""
-	let condition = lines(at).Substring(4, lines(at).Length - 4)
-	condition + " then " + returned.Substring(7, returned.Length - 7) + " else " + last.Trim
+	lines(at).Substring(4) + " then " + returned.Substring(7) + " else " + last.Trim

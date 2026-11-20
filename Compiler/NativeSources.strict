@@ -28,7 +28,7 @@ Rooted(flags Text, folder Text, root Text) Text
 	mutable rooted = ""
 	for flags.Split(" ")
 		let isInclude = value.StartsWith("-I")
-		let path = isInclude then "-I" + project + value.Substring(2, value.Length - 2) else project + value
+		let path = isInclude then "-I" + project + value.Substring(2) else project + value
 		rooted = rooted + " " + (isInclude or IsSource(value) then path else value)
 	rooted
 Arguments(platform Number, root Text) Text
@@ -132,7 +132,7 @@ Wsl(flags Text, tools Toolchain) Text
 	mutable converted = ""
 	for flags.Split(" ")
 		let isInclude = value.StartsWith("-I")
-		let path = isInclude then value.Substring(2, value.Length - 2) else value
+		let path = isInclude then value.Substring(2) else value
 		let wsl = (isInclude then "-I" else "") + tools.Quoted(tools.WslPath(path))
 		if value is not ""
 			converted = converted + " " + (isInclude or IsSource(value) then wsl else value)

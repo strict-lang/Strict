@@ -84,14 +84,14 @@ PatchedRuntime Text
 	let e1 = raw.IndexOf("  func.func private @strict_pool_started()", s1)
 	let sub = raw.Substring(s1, e1 - s1)
 	let p1 = sub.Replace(PublishLine, PublishLine + "\n    llvm.call @test_publishing(%count) : (i64) -> ()")
-	PatchedPoolRun(raw.Substring(0, s1) + p1 + raw.Substring(e1, raw.Length - e1))
+	PatchedPoolRun(raw.Substring(0, s1) + p1 + raw.Substring(e1))
 PatchedPoolRun(runtime Text) Text
 	let s2 = runtime.IndexOf("  llvm.func @strict_pool_run(")
 	let e2 = runtime.IndexOf("  llvm.func @strict_pool_chunk_run(", s2)
 	mutable sub = runtime.Substring(s2, e2 - s2)
 	sub = sub.Replace("  ^look:\n", "  ^look:\n    llvm.call @test_claiming(%job) : (i64) -> ()\n")
 	sub = sub.Replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n")
-	runtime.Substring(0, s2) + sub + runtime.Substring(e2, runtime.Length - e2)
+	runtime.Substring(0, s2) + sub + runtime.Substring(e2)
 MlirConst(path Text, name Text) Text
 	let prefix = "constant " + name + " = "
 	mutable resolved = ""
@@ -166,9 +166,9 @@ DriverSrc Text
 	let tail = D19 + "\n" + D20 + "\n" + D21 + "\n" + D22 + "\n" + D23 + "\n" + D24 + "\n" + D25 + "\n" + DriverTail
 	head + "\n" + mid + "\n" + tail
 DriverTail Text
-	mutable out = List(Text)
-	out = out + "HANDLE t[2]={CreateThread(0,0,cf,0,0,0),CreateThread(0,0,cs,0,0,0)};"
-	out = out + "if(WaitForMultipleObjects(2,t,1,5000)!=0)return 2;DWORD e[2];GetExitCodeThread(t[0],&e[0]);"
+	constant threads = "HANDLE t[2]={CreateThread(0,0,cf,0,0,0),CreateThread(0,0,cs,0,0,0)};"
+	constant exitCodes = "if(WaitForMultipleObjects(2,t,1,5000)!=0)return 2;DWORD e[2];GetExitCodeThread(t[0],&e[0]);"
+	mutable out = List(Text) + threads + exitCodes
 	out = out + "GetExitCodeThread(t[1],&e[1]);return e[0]+e[1]!=2||atomic_load(&fc)!=1||atomic_load(&sc)!=1;}"
 	out = out + "if(c>2&&v[1][0]=='t'){test_scan_invalidation(&c);for(int i=0;i<4;i++){sl[i]=malloc(512);"
 	out = out + "snprintf(sl[i],512,\"/c ping -n 2 127.0.0.1 >nul & (echo %%STRICT_THREADS%%)> %s/slow%d.txt\",v[2],i);}"
@@ -179,9 +179,9 @@ DriverTail Text
 	out = out + ("if(c>1&&v[1][0]=='s')return test_scan_invalidation(&c)!=0;\n" + DriverMid)
 	Text.Combine(out, "\n")
 DriverMid Text
-	mutable out = List(Text)
-	out = out + "if(c>1&&v[1][0]=='r')return test_reused_counts(&c,v[1][1]=='s')!=11;"
-	out = out + "if(c>1&&v[1][0]=='w'){_putenv_s(\"STRICT_THREADS\",\"64\");pub_e=CreateEventA(0,1,1,0);int idle=0;"
+	constant reused = "if(c>1&&v[1][0]=='r')return test_reused_counts(&c,v[1][1]=='s')!=11;"
+	constant wide = "if(c>1&&v[1][0]=='w'){_putenv_s(\"STRICT_THREADS\",\"64\");pub_e=CreateEventA(0,1,1,0);int idle=0;"
+	mutable out = List(Text) + reused + wide
 	out = out + "test_parallel(body,&idle,64);LARGE_INTEGER fq,st,en;QueryPerformanceFrequency(&fq);f64 sp=0;"
 	out = out + "for(int j=0;j<1000;j++){QueryPerformanceCounter(&st);do QueryPerformanceCounter(&en);"
 	out = out + "while((en.QuadPart-st.QuadPart)*10000<3*fq.QuadPart);QueryPerformanceCounter(&st);"

@@ -14321,14 +14321,27 @@
     return %result : f64
   }
   // Substring counts characters: a text with characters of several bytes is cut at the bytes they start at
+  // a length of Text.End (-1) takes the rest of the text
   func.func private @strict_text_substring(%text: f64, %start: f64, %length: f64) -> f64 attributes {llvm.passthrough = ["alwaysinline"]} {
+    %end = arith.constant -1.0 : f64
+    %isEnd = arith.cmpf oeq, %length, %end : f64
+    cf.cond_br %isEnd, ^rest, ^cut(%length : f64)
+  ^rest:
+    %zero = arith.constant 0.0 : f64
+    %textLength = func.call @strict_text_length(%text) : (f64) -> f64
+    %negativeStart = arith.cmpf olt, %start, %zero : f64
+    %fromEnd = arith.addf %textLength, %start : f64
+    %first = arith.select %negativeStart, %fromEnd, %start : f64
+    %remaining = arith.subf %textLength, %first : f64
+    cf.br ^cut(%remaining : f64)
+  ^cut(%count: f64):
     %wide = func.call @strict_text_wide(%text) : (f64) -> i1
     cf.cond_br %wide, ^walk, ^plain
   ^plain:
-    %direct = func.call @strict_text_cut(%text, %start, %length) : (f64, f64, f64) -> f64
+    %direct = func.call @strict_text_cut(%text, %start, %count) : (f64, f64, f64) -> f64
     return %direct : f64
   ^walk:
-    %walked = func.call @strict_text_cut_wide(%text, %start, %length) : (f64, f64, f64) -> f64
+    %walked = func.call @strict_text_cut_wide(%text, %start, %count) : (f64, f64, f64) -> f64
     return %walked : f64
   }
   func.func private @strict_text_cut_wide(%text: f64, %start: f64, %length: f64) -> f64 attributes {llvm.passthrough = ["noinline"]} {

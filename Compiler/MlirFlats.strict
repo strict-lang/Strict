@@ -177,18 +177,18 @@ Kind(kind Text) Text
 IsListed(kind Text) Boolean
 	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2)).Length is 6
 	MlirFlats(Made.function, 4).Appended(Making.instructions(4), MlirLists(Made.function, 4))(1).EndsWith("t 1.0 : f64")
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(7) is "    %t1d0fl = llvm.load %s : !llvm.ptr -> f64"
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(8).IndexOf("f = func.call @strict_flat_from_list(") is 9
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(8).EndsWith("(%t1d0fl) : (f64) -> f64")
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Length is 10
-	MlirFlats(MlirPairs.Sample.function, 0).Defaulted("Pairing", MlirPairs.Twice, "%s", "d0").Length is 4
-	Sample.Defaulted("Summing", MlirPairs.Twice, "%s", "d0").Length is 7
 	Sample.IsListed("Tripling")
 	MlirFlats(MlirPairs.Sample.function, 0).IsListed("Pairing")
 	MlirFlats(MlirCouples.Sample.function, 0).IsListed("Sizing") is false
 	MlirPairs(function, 0).IsListed(kind) or Count(kind) > 0
 Defaulted(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
 	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
+	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(7) is "    %t1d0fl = llvm.load %s : !llvm.ptr -> f64"
+	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(8).IndexOf("f = func.call @strict_flat_from_list(") is 9
+	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(8).EndsWith("(%t1d0fl) : (f64) -> f64")
+	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Length is 10
+	MlirFlats(MlirPairs.Sample.function, 0).Defaulted("Pairing", MlirPairs.Twice, "%s", "d0").Length is 4
+	Sample.Defaulted("Summing", MlirPairs.Twice, "%s", "d0").Length is 7
 	if Kind(kind) is "Pair"
 		return MlirPairs(function, position).Defaulted(initial, slot, suffix)
 	let built = MlirStatements(function, position).Literal(initial, slot, suffix)

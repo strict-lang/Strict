@@ -109,13 +109,12 @@ Packed(codes Numbers) Numbers
 	mutable accumulator = 0
 	mutable count = 0
 	for (codes.Length / 2).Floor
-		accumulator = accumulator + codes(index * 2) * 2 ^ count
-		count = count + codes(index * 2 + 1)
+		accumulator = accumulator + codes(index * 2) * 2 ^ (count % 8)
+		count = count % 8 + codes(index * 2 + 1)
 		for (count / 8).Floor
 			packed.Add(accumulator % Byte.Values)
 			accumulator = (accumulator / Byte.Values).Floor
-		count = count % 8
-	count > 0 then packed + accumulator else packed
+	count % 8 > 0 then packed + accumulator else packed
 Heads Numbers slow
 	Deflate(Repeated).Heads.Length is 32768
 	for HeadCount

@@ -160,7 +160,7 @@ Whole(target Text, fallback Text) Texts
 	Single.Whole("%k", "%kj").First is "    cf.cond_br %kv, ^kwhole(%k_e : i64), ^kreduced"
 	Single.Whole("%k", "%kj").Last is "  ^kwhole(%k: i64):"
 	Single.Whole("%k", "%kj") is Wholes
-	let label = "^" + target.Substring(1, target.Length - 1)
+	let label = "^" + target.Substring(1)
 	let branch = "    cf.cond_br " + target + "v, " + label + "whole(" + target + "_e : i64), " + label + "reduced"
 	let chosen = "    " + target + "c = arith.select " + target + "a, " + target + "d, " + fallback + " : i64"
 	let joined = ("    cf.br " + label + "whole(" + target + "c : i64)", "  " + label + "whole(" + target + ": i64):")

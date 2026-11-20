@@ -132,7 +132,7 @@ CheckShares(folder Text) Boolean
 SharedCount(output Text) Number
 	mutable count = 0
 	for output.Lines
-		if value.StartsWith("threads ") and value.Substring(8, value.Length - 8) to Number >= 2
+		if value.StartsWith("threads ") and value.Substring(8) to Number >= 2
 			count = count + 1
 	count
 Ran(arguments Text) ProcessResult

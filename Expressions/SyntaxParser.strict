@@ -11,9 +11,9 @@ Parse SyntaxNode
 	SyntaxParser(Tokenizer("1 < 2 and 3 > 2 or 4 is 0").Tokens).Parse.text is "or"
 	SyntaxParser(Tokenizer("(1, 2, 3)").Tokens).Parse to Text is "(1, 2, 3)"
 	SyntaxParser(Tokenizer("list.Add(-1)").Tokens).Parse to Text is "list.Add(-1)"
-	SyntaxParser(Tokenizer("a then b else c then d else e").Tokens).Parse.children.Last.text is "else"
 	ParseRange(0, tokens.Length)
 ParseRange(start Number, end Number) SyntaxNode
+	SyntaxParser(Tokenizer("a then b else c then d else e").Tokens).Parse.children.Last.text is "else"
 	SyntaxParser("a", "+", "b").ParseRange(0, 3).Kind is "Binary"
 	SyntaxParser("a", "+", "b").ParseRange(3, 3).Kind is "Missing"
 	SyntaxParser(Tokenizer("not").Tokens).ParseRange(0, 1).Kind is "Not"

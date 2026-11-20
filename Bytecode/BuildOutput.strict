@@ -3,7 +3,7 @@ Intermediate(path Text) Text
 	BuildOutput.Intermediate("C:/s/A") is "C:/s/obj/A"
 	let normalized = FileCompiler.Normalized(path)
 	let slash = normalized.LastIndexOf("/")
-	normalized.Substring(0, slash) + "/obj" + normalized.Substring(slash, normalized.Length - slash)
+	normalized.Substring(0, slash) + "/obj" + normalized.Substring(slash)
 Delivered(base Text) Text
 	BuildOutput.Delivered("./Examples/obj/Sum") is "./Examples/Sum"
 	BuildOutput.Delivered("./obj/Strict") is "./Strict"
@@ -11,7 +11,7 @@ Delivered(base Text) Text
 	BuildOutput.Delivered("Compiler/output/Sum") is "Compiler/output/Sum"
 	let slash = base.LastIndexOf("/")
 	let isObj = base.EndsWith(".test") is false and slash >= 4 and base.Substring(slash - 4, 4) is "/obj"
-	isObj then base.Substring(0, slash - 4) + base.Substring(slash, base.Length - slash) else base
+	isObj then base.Substring(0, slash - 4) + base.Substring(slash) else base
 Released(base Text, platformName Text) Text
 	BuildOutput.Released("./Examples/obj/Sum", "Linux") is "./Examples/Release/Linux/Sum"
 	BuildOutput.Released("./Math/obj/Tests.test", "Linux") is "./Math/obj/Tests.test"
@@ -19,7 +19,7 @@ Released(base Text, platformName Text) Text
 		return base
 	let program = Delivered(base)
 	let slash = program.LastIndexOf("/")
-	program.Substring(0, slash) + "/Release/" + platformName + program.Substring(slash, program.Length - slash)
+	program.Substring(0, slash) + "/Release/" + platformName + program.Substring(slash)
 Shipped(release Text, sidecar Text) Text
 	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.ptx") is "Compiler/output/Unshipped/B.ptx"
 	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.runtime.ptx").EndsWith("/Unshipped/shared.runtime.ptx")
@@ -27,7 +27,7 @@ Shipped(release Text, sidecar Text) Text
 	let at = name.IndexOf(".runtime.")
 	if at < 0
 		return release + "/" + name
-	let ending = name.Substring(at, name.Length - at)
+	let ending = name.Substring(at)
 	let shared = release + "/shared" + ending
 	if IsKept(release, sidecar, name.Substring(0, at), ending)
 		return release + "/" + name

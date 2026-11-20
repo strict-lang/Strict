@@ -67,15 +67,19 @@ Added(folders Texts, more Texts) Texts
 	SourceFiles(".").Added(("a", "b"), ("b", "c")) is ("a", "b", "c")
 	if more.Length is 0
 		return folders
-	mutable seen = Dictionary(Text, Boolean)
-	for folders
-		seen(value) = true
+	mutable seen = Seen(folders)
 	mutable added = List(Mutable(Text))
 	for more
 		if value is not in seen
 			seen(value) = true
 			added.Add(value)
 	added.Length is 0 then folders else folders + added
+Seen(texts Texts) Dictionary(Text, Boolean)
+	"b" is in Plain.Seen(("a", "b")) and "c" is not in Plain.Seen(("a", "b"))
+	mutable seen = Dictionary(Text, Boolean)
+	for texts
+		seen(value) = true
+	seen
 Referenced(folder Text) Texts
 	SourceFiles(".").Referenced("./Missing").Length is 0
 	mutable result = List(Mutable(Text))

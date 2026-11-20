@@ -41,7 +41,7 @@ Typed(name Text) Text
 	Sample.Typed("__stack_low") is "__stack_low"
 	Sample.Typed("t") is "t"
 	let type = name.Split("_").First
-	type.Length < 2 then name else type(0).Lower is type(0) then type.Substring(1, type.Length - 1) else type
+	type.Length < 2 then name else type(0).Lower is type(0) then type.Substring(1) else type
 Owner(line Text) Number
 	Sample.Owner("  func.func @strict_new() {") < RuntimeParts
 	Sample.Owner("  llvm.func @strict_new(%a: i64) {") is Sample.Owner("  func.func @strict_new() {")
