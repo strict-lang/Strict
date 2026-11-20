@@ -18261,17 +18261,18 @@
   llvm.mlir.global internal constant @strict_gpu_runtime_older_ending("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00.runtime.older.ptx\00") : !llvm.array<35 x i8>
   llvm.mlir.global internal constant @strict_gpu_amd_ending("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00.hsaco\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal constant @strict_gpu_reading("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00rbN\00") : !llvm.array<20 x i8>
-  // a release folder keeps the kernels of its programs in libraries they share, one per Strict type (H3Block.kernels.ptx
-  // with every kernel and device function of H3Block any program there needs, PtxLibraries of the compiler): Name.ptx is
-  // then "// strict program <hash of its own kernels> needs A,B,\n" and the module header, a library
-  // "// strict library A needs C,\n", the prototypes of its functions, "// strict definitions\n" and the functions. The
+  // the kernels of a program are in libraries its folder shares with others, one per Strict type (ptx/H3Block.ptx with
+  // every kernel and device function of H3Block any program there needs, ptx/H3Block.older.ptx for GPUs before Ampere,
+  // PtxLibraries of the compiler writes them with every build): Name.ptx is then
+  // "// strict program <hash of its own kernels> needs ptx/A,ptx/B,\n" and the module header, a library
+  // "// strict library ptx/A needs ptx/C,\n", the prototypes of its functions, "// strict definitions\n" and the functions. The
   // module text is the header, the prototypes of all libraries the program reaches and then their functions (PTX is
   // text, so linking is joining it): H3Video, H3Image and MossImage shipped 46 MB of kernels, 22 MB without the copies
   llvm.mlir.global internal constant @strict_gpu_program_mark("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00// strict program \00") : !llvm.array<35 x i8>
   llvm.mlir.global internal constant @strict_gpu_needs_mark("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00 needs \00") : !llvm.array<24 x i8>
   llvm.mlir.global internal constant @strict_gpu_definitions_mark("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00// strict definitions\0A\00") : !llvm.array<39 x i8>
-  llvm.mlir.global internal constant @strict_gpu_library_ending("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00.kernels.ptx\00") : !llvm.array<29 x i8>
-  llvm.mlir.global internal constant @strict_gpu_library_older_ending("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00.kernels.older.ptx\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gpu_library_ending("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00.ptx\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gpu_library_older_ending("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00.older.ptx\00") : !llvm.array<27 x i8>
   llvm.mlir.global internal constant @strict_gpu_library_missing_text("\70\00\00\00\00\00\00\00\70\00\00\00\00\00\00\00Error: the GPU kernel library %s%s next to %s (or in obj/ there) is missing or damaged, build the program again\0A\00") : !llvm.array<129 x i8>
   func.func private @strict_gpu_is_index(%code: !llvm.ptr) -> i1 {
     %zero32 = arith.constant 0 : i32
@@ -18560,12 +18561,27 @@
   ^unusable:
     return %newer : !llvm.ptr
   ^usable:
+    %isIndexed = func.call @strict_gpu_is_index(%newer) : (!llvm.ptr) -> i1
     %olderRead = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %isOlderText = arith.constant true
     %isNewerText = arith.constant false
     %older = func.call @strict_gpu_linked(%olderRead, %isOlderText) : (!llvm.ptr, i1) -> !llvm.ptr
     %newerLinked = func.call @strict_gpu_linked(%newer, %isNewerText) : (!llvm.ptr, i1) -> !llvm.ptr
-    %runtimeOlder = func.call @strict_gpu_beside(%stem, %runtimeOlderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    // the older runtime kernels come from where the newer ones do: a program with runtime kernels of its own and none for
+    // older GPUs (one PTX for all) must not take the shared older ones of other programs
+    %ownRuntime = func.call @strict_gpu_beside(%stem, %runtimeEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %ownRuntimeFirst = llvm.load %ownRuntime : !llvm.ptr -> i8
+    %noRuntimeByte = arith.constant 0 : i8
+    %hasOwnRuntime = arith.cmpi ne, %ownRuntimeFirst, %noRuntimeByte : i8
+    llvm.call @free(%ownRuntime) : (!llvm.ptr) -> ()
+    cf.cond_br %hasOwnRuntime, ^ownOlder, ^sharedOlder
+  ^ownOlder:
+    %ownOlder = func.call @strict_gpu_beside(%stem, %runtimeOlderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    cf.br ^runtimeRead(%ownOlder : !llvm.ptr)
+  ^sharedOlder:
+    %sharedOlder = func.call @strict_gpu_beside_shared(%stem, %runtimeOlderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    cf.br ^runtimeRead(%sharedOlder : !llvm.ptr)
+  ^runtimeRead(%runtimeOlder: !llvm.ptr):
     %runtimeBuffer = func.call @strict_gpu_paired(%runtime, %runtimeOlder) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBits = llvm.ptrtoint %runtimeBuffer : !llvm.ptr to i64
     %runtimeSlot = llvm.mlir.addressof @strict_gpu_runtime_code : !llvm.ptr
@@ -18573,17 +18589,31 @@
     %buffer = func.call @strict_gpu_paired(%newerLinked, %older) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
     llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
+    %binarySlot = llvm.mlir.addressof @strict_gpu_binary : !llvm.ptr
+    %runtimeBinarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
+    cf.cond_br %isIndexed, ^libraries, ^binaries
+  ^libraries:
+    // a program linked from libraries ships no cubins, one left from an older build must not run instead of its kernels
+    %noBinary = func.call @strict_malloc(%one) : (i64) -> !llvm.ptr
+    %noRuntimeBinary = func.call @strict_malloc(%one) : (i64) -> !llvm.ptr
+    %noByte = arith.constant 0 : i8
+    llvm.store %noByte, %noBinary : i8, !llvm.ptr
+    llvm.store %noByte, %noRuntimeBinary : i8, !llvm.ptr
+    %noBinaryBits = llvm.ptrtoint %noBinary : !llvm.ptr to i64
+    %noRuntimeBinaryBits = llvm.ptrtoint %noRuntimeBinary : !llvm.ptr to i64
+    llvm.store %noBinaryBits, %binarySlot : i64, !llvm.ptr
+    llvm.store %noRuntimeBinaryBits, %runtimeBinarySlot : i64, !llvm.ptr
+    return %buffer : !llvm.ptr
+  ^binaries:
     %binaryEndingLengths = llvm.mlir.addressof @strict_gpu_binary_ending : !llvm.ptr
     %binaryEnding = llvm.getelementptr %binaryEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %binary = func.call @strict_gpu_beside(%stem, %binaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %binaryBits = llvm.ptrtoint %binary : !llvm.ptr to i64
-    %binarySlot = llvm.mlir.addressof @strict_gpu_binary : !llvm.ptr
     llvm.store %binaryBits, %binarySlot : i64, !llvm.ptr
     %runtimeBinaryEndingLengths = llvm.mlir.addressof @strict_gpu_runtime_binary_ending : !llvm.ptr
     %runtimeBinaryEnding = llvm.getelementptr %runtimeBinaryEndingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %runtimeBinary = func.call @strict_gpu_beside_shared(%stem, %runtimeBinaryEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBinaryBits = llvm.ptrtoint %runtimeBinary : !llvm.ptr to i64
-    %runtimeBinarySlot = llvm.mlir.addressof @strict_gpu_runtime_binary : !llvm.ptr
     llvm.store %runtimeBinaryBits, %runtimeBinarySlot : i64, !llvm.ptr
     return %buffer : !llvm.ptr
   }
@@ -18677,7 +18707,7 @@
     %missing = llvm.getelementptr %missingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.cond_br %isEmpty, ^failed(%missing : !llvm.ptr), ^compare
   ^compare:
-    %codeHash = func.call @strict_gpu_code_hash(%code) : (!llvm.ptr) -> i64
+    %codeHash = func.call @strict_gpu_hashed(%code, %zero) : (!llvm.ptr, i64) -> i64
     %hash = func.call @strict_gpu_hashed(%runtime, %codeHash) : (!llvm.ptr, i64) -> i64
     %prime = arith.constant 9999991 : i64
     %kept = arith.remui %hash, %prime : i64

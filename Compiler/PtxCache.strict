@@ -52,7 +52,8 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 		return previous
 	File(base + ".gpu.mlir").Write(device)
 	let built = isCached and kept is not "" then Reduced(isTiling, builder, kept) else builder.Ptx(base, isTiling, kept)
-	isCached then Remembered(key, built) else built
+	let shaped = isCached and kept is not "" then PtxLibraries.Of(base).Indexed(built) else built
+	isCached then Remembered(key, shaped) else shaped
 Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	Reducing.Built(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")
 	Reducing.Saved((".ptx", ".gpu.mlir"), ("// reused", Combining + "\n// changed")) is not Error
