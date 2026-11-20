@@ -1,0 +1,68 @@
+has release Text
+constant Marker = "// strict definitions"
+constant Sample = PtxLibraries("Compiler/output/Libraries")
+constant Both = (PtxFunction.Kernel, PtxFunction.Helper)
+Placed(base Text, ending Text, isWeb Boolean) slow
+	let sidecar = base + ending
+	let isShipped = isWeb is false and File(sidecar).Exists and File(sidecar).Length > 0
+	if isShipped and ending is ".ptx"
+		Shipped(sidecar, Path(base).FileName.text, ending)
+	else if isShipped
+		File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
+Shipped(source Text, program Text, ending Text) slow
+	let lines = File(source).ReadLines
+	let module = PtxModule(lines)
+	let functions = module.Functions
+	let names = Names(functions)
+	for names
+		Written(value, ending, functions)
+	let hash = HashCode(Text.Combine(lines, "\n")).number
+	let needs = " needs " + Text.Combine(names, ",") + (names.Length is 0 then "" else ",")
+	File(release + "/" + program + ending).Write("// strict program " + hash + needs + "\n" + module.Header)
+Names(functions List(PtxFunction)) Texts
+	Sample.Names(Both) is ("H3Block", "Strict")
+	Libraries(functions).Unique
+Libraries(functions List(PtxFunction)) Texts
+	Sample.Libraries(Both) is ("H3Block", "Strict")
+	for functions
+		value.Library
+Written(library Text, ending Text, functions List(PtxFunction)) slow
+	let path = release + "/" + library + ".kernels" + ending
+	let fresh = Of(functions, library)
+	let old = File(path).Exists then PtxModule(File(path).ReadLines).Functions else List(PtxFunction)
+	File(path).Write(Composed(library, fresh + Other(old, Titles(fresh))))
+Of(functions List(PtxFunction), library Text) List(PtxFunction)
+	Sample.Of(Both, "Strict").Length is 1 and Sample.Of(Both, "Missing").Length is 0
+	for functions
+		if value.Library is library
+			value
+Titles(functions List(PtxFunction)) Texts
+	Sample.Titles(Both).Last is "strict_device_byte_read"
+	for functions
+		value.name
+Other(old List(PtxFunction), names Texts) List(PtxFunction)
+	Sample.Other(Both, List(Text) + "strict_device_byte_read").First.name is "H3Block_Gated_5_gpu7s"
+	Sample.Other(Both, Sample.Titles(Both)).Length is 0
+	for old
+		if value.name is not in names
+			value
+Composed(library Text, functions List(PtxFunction)) Text
+	Sample.Composed("A", Both.Slice(0, 1)).StartsWith("// strict library A needs Attention,Strict,\n" + Marker)
+	Sample.Composed("B", List(PtxFunction) + PtxFunction.Helper).StartsWith("// strict library B needs \n.func ")
+	let needs = Needed(functions).Unique
+	let head = "// strict library " + library + " needs " + Text.Combine(needs, ",") + (needs.Length is 0 then "" else ",")
+	head + "\n" + Text.Combine(Prototypes(functions), "") + Marker + "\n" + Text.Combine(Bodies(functions), "")
+Needed(functions List(PtxFunction)) Texts
+	Sample.Needed(Both) is ("Attention", "Strict")
+	mutable needs = List(Text)
+	for functions
+		needs = needs + value.Needs
+	needs
+Prototypes(functions List(PtxFunction)) Texts
+	Sample.Prototypes(Both).First is "" and Sample.Prototypes(Both).Length is 2
+	for functions
+		value.Prototype
+Bodies(functions List(PtxFunction)) Texts
+	Sample.Bodies(Both).Length is 2
+	for functions
+		value.Body

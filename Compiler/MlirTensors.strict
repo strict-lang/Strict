@@ -132,6 +132,8 @@ Used(program Text) Texts
 	Attending.Used("x @strict_gpu_sylvester(y") is ("Sylvester")
 	Attending.Used("x @strict_gpu_convolution(y") is ("Products", "Convolution")
 	let convolving = program.IndexOf(Marker("Convolution")) >= 0
+	if program.IndexOf(Marker("Attention")) >= 0
+		return Kinds
 	for Kinds
 		if program.IndexOf(Marker(value)) >= 0 or convolving and value is "Products"
 			value

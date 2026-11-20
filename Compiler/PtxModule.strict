@@ -1,0 +1,44 @@
+has lines Texts
+constant Declared = (".func  (.param .b32 r) strict_device_byte_read", "(", ")", ";", ".shared .align 8 .b8 strict_device_partials[256];")
+constant Entered = ("\t// .globl\tA_B_1_gpu2", ".visible .entry A_B_1_gpu2(", ")", "{", "\t// comment", "\tret;", "}", "\t// -- End function")
+constant Defined = (".func  (.param .b32 r) strict_device_byte_read", "(", ")", "{", "\tret;", "}")
+constant Sample = PtxModule(("//", ".version 8.7", "") + Declared + Entered + Defined)
+Heads Numbers
+	Sample.Heads is (3, 9, 16)
+	for lines
+		if value.StartsWith(".visible .entry ") or value.StartsWith(".visible .func ") or value.StartsWith(".func ")
+			index
+Functions List(PtxFunction)
+	Sample.Functions.Length is 2 and Sample.Functions.First.name is "A_B_1_gpu2"
+	Sample.Functions.First.lines is (".visible .entry A_B_1_gpu2(", ")", "{", "\tret;", "}")
+	Sample.Functions.Last.name is "strict_device_byte_read"
+	let heads = Heads
+	for heads
+		let part = lines.Slice(value, End(heads, index) - value)
+		if ";" is not in part
+			PtxFunction(Named(lines(value)), Code(part))
+End(heads Numbers, at Number) Number
+	Sample.End((3, 9, 16), 0) is 9 and Sample.End((3, 9, 16), 2) is Sample.lines.Length
+	at + 1 < heads.Length then heads(at + 1) else lines.Length
+Named(head Text) Text
+	Sample.Named(".visible .entry A_B_1_gpu2(") is "A_B_1_gpu2"
+	Sample.Named(".func  (.param .b32 r) strict_device_byte_read") is "strict_device_byte_read"
+	let declared = head.EndsWith("(") then head.Substring(0, head.Length - 1) else head
+	let start = declared.LastIndexOf(" ") + 1
+	declared.Substring(start, declared.Length - start)
+Code(part Texts) Texts
+	Sample.Code(("a", "\t// b", "", "  // c", "d // e")) is ("a", "d // e")
+	for part
+		if value.TrimStart is not "" and value.TrimStart.StartsWith("//") is false
+			value
+Header Text
+	Sample.Header is "//\n.version 8.7\n.shared .align 8 .b8 strict_device_partials[256];\n"
+	Text.Combine(Kept(Heads.First), "\n") + "\n"
+Kept(first Number) Texts
+	Sample.Kept(3).Length is 3
+	for lines
+		if index < first and value is not "" and value.StartsWith("\t//") is false or IsShared(value)
+			value
+IsShared(line Text) Boolean
+	Sample.IsShared(".shared .align 8 .b8 a[256];") and Sample.IsShared(".visible .entry a(") is false
+	line.StartsWith(".shared ") or line.StartsWith(".global ") or line.StartsWith(".const ")

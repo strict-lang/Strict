@@ -18261,6 +18261,255 @@
   llvm.mlir.global internal constant @strict_gpu_runtime_older_ending("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00.runtime.older.ptx\00") : !llvm.array<35 x i8>
   llvm.mlir.global internal constant @strict_gpu_amd_ending("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00.hsaco\00") : !llvm.array<23 x i8>
   llvm.mlir.global internal constant @strict_gpu_reading("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00rbN\00") : !llvm.array<20 x i8>
+  // a release folder keeps the kernels of its programs in libraries they share, one per Strict type (H3Block.kernels.ptx
+  // with every kernel and device function of H3Block any program there needs, PtxLibraries of the compiler): Name.ptx is
+  // then "// strict program <hash of its own kernels> needs A,B,\n" and the module header, a library
+  // "// strict library A needs C,\n", the prototypes of its functions, "// strict definitions\n" and the functions. The
+  // module text is the header, the prototypes of all libraries the program reaches and then their functions (PTX is
+  // text, so linking is joining it): H3Video, H3Image and MossImage shipped 46 MB of kernels, 22 MB without the copies
+  llvm.mlir.global internal constant @strict_gpu_program_mark("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00// strict program \00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gpu_needs_mark("\07\00\00\00\00\00\00\00\07\00\00\00\00\00\00\00 needs \00") : !llvm.array<24 x i8>
+  llvm.mlir.global internal constant @strict_gpu_definitions_mark("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00// strict definitions\0A\00") : !llvm.array<39 x i8>
+  llvm.mlir.global internal constant @strict_gpu_library_ending("\0C\00\00\00\00\00\00\00\0C\00\00\00\00\00\00\00.kernels.ptx\00") : !llvm.array<29 x i8>
+  llvm.mlir.global internal constant @strict_gpu_library_older_ending("\12\00\00\00\00\00\00\00\12\00\00\00\00\00\00\00.kernels.older.ptx\00") : !llvm.array<35 x i8>
+  llvm.mlir.global internal constant @strict_gpu_library_missing_text("\70\00\00\00\00\00\00\00\70\00\00\00\00\00\00\00Error: the GPU kernel library %s%s next to %s (or in obj/ there) is missing or damaged, build the program again\0A\00") : !llvm.array<129 x i8>
+  func.func private @strict_gpu_is_index(%code: !llvm.ptr) -> i1 {
+    %zero32 = arith.constant 0 : i32
+    %markLength = arith.constant 18 : i64
+    %markLengths = llvm.mlir.addressof @strict_gpu_program_mark : !llvm.ptr
+    %mark = llvm.getelementptr %markLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %differs = llvm.call @strncmp(%code, %mark, %markLength) : (!llvm.ptr, !llvm.ptr, i64) -> i32
+    %isIndex = arith.cmpi eq, %differs, %zero32 : i32
+    return %isIndex : i1
+  }
+  // the hash of the kernels a program was built with: of its PTX, or the one its index of libraries names
+  func.func private @strict_gpu_code_hash(%code: !llvm.ptr) -> i64 {
+    %zero = arith.constant 0 : i64
+    %isIndex = func.call @strict_gpu_is_index(%code) : (!llvm.ptr) -> i1
+    cf.cond_br %isIndex, ^named, ^hashed
+  ^named:
+    %number = llvm.getelementptr %code[18] : (!llvm.ptr) -> !llvm.ptr, i8
+    %kept = llvm.call @atoll(%number) : (!llvm.ptr) -> i64
+    return %kept : i64
+  ^hashed:
+    %hash = func.call @strict_gpu_hashed(%code, %zero) : (!llvm.ptr, i64) -> i64
+    return %hash : i64
+  }
+  // a growing text: its block, used bytes and capacity
+  func.func private @strict_gpu_link_text(%capacity: i64) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %stateBytes = arith.constant 24 : i64
+    %terminator = arith.constant 0 : i8
+    %state = func.call @strict_malloc(%stateBytes) : (i64) -> !llvm.ptr
+    %block = func.call @strict_malloc(%capacity) : (i64) -> !llvm.ptr
+    llvm.store %terminator, %block : i8, !llvm.ptr
+    %blockBits = llvm.ptrtoint %block : !llvm.ptr to i64
+    llvm.store %blockBits, %state : i64, !llvm.ptr
+    %usedSlot = llvm.getelementptr %state[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %zero, %usedSlot : i64, !llvm.ptr
+    %capacitySlot = llvm.getelementptr %state[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %capacity, %capacitySlot : i64, !llvm.ptr
+    return %state : !llvm.ptr
+  }
+  func.func private @strict_gpu_link_added(%state: !llvm.ptr, %added: !llvm.ptr, %length: i64) {
+    %one = arith.constant 1 : i64
+    %terminator = arith.constant 0 : i8
+    %usedSlot = llvm.getelementptr %state[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %capacitySlot = llvm.getelementptr %state[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %bits = llvm.load %state : !llvm.ptr -> i64
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> i64
+    %after = arith.addi %used, %length : i64
+    %needed = arith.addi %after, %one : i64
+    %fits = arith.cmpi ule, %needed, %capacity : i64
+    cf.cond_br %fits, ^copy(%bits : i64), ^grow
+  ^grow:
+    %doubled = arith.shli %capacity, %one : i64
+    %bigger = arith.maxui %doubled, %needed : i64
+    %old = llvm.inttoptr %bits : i64 to !llvm.ptr
+    %block = llvm.call @realloc(%old, %bigger) : (!llvm.ptr, i64) -> !llvm.ptr
+    %blockBits = llvm.ptrtoint %block : !llvm.ptr to i64
+    llvm.store %blockBits, %state : i64, !llvm.ptr
+    llvm.store %bigger, %capacitySlot : i64, !llvm.ptr
+    cf.br ^copy(%blockBits : i64)
+  ^copy(%base: i64):
+    %buffer = llvm.inttoptr %base : i64 to !llvm.ptr
+    %target = llvm.getelementptr %buffer[%used] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copied = llvm.call @memcpy(%target, %added, %length) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %end = llvm.getelementptr %buffer[%after] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %end : i8, !llvm.ptr
+    llvm.store %after, %usedSlot : i64, !llvm.ptr
+    return
+  }
+  // the names of the needs line starting at names ("A,B,\n", every name ends with a comma) join list (",A,B,") unless
+  // they are in it
+  func.func private @strict_gpu_link_needs(%list: !llvm.ptr, %names: !llvm.ptr) {
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %comma32 = arith.constant 44 : i32
+    %comma = arith.constant 44 : i8
+    %space = arith.constant 32 : i8
+    %terminator = arith.constant 0 : i8
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    cf.br ^next(%names : !llvm.ptr)
+  ^next(%name: !llvm.ptr):
+    %first = llvm.load %name : !llvm.ptr -> i8
+    %isName = arith.cmpi ugt, %first, %space : i8
+    cf.cond_br %isName, ^token, ^done
+  ^token:
+    %end = llvm.call @strchr(%name, %comma32) : (!llvm.ptr, i32) -> !llvm.ptr
+    %hasEnd = llvm.icmp "ne" %end, %nothing : !llvm.ptr
+    cf.cond_br %hasEnd, ^key, ^done
+  ^key:
+    %nameBits = llvm.ptrtoint %name : !llvm.ptr to i64
+    %endBits = llvm.ptrtoint %end : !llvm.ptr to i64
+    %length = arith.subi %endBits, %nameBits : i64
+    %keyBytes = arith.addi %length, %three : i64
+    %key = func.call @strict_malloc(%keyBytes) : (i64) -> !llvm.ptr
+    llvm.store %comma, %key : i8, !llvm.ptr
+    %keyName = llvm.getelementptr %key[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %withComma = arith.addi %length, %one : i64
+    %copied = llvm.call @memcpy(%keyName, %name, %withComma) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %keyEnd = llvm.getelementptr %keyName[%withComma] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %keyEnd : i8, !llvm.ptr
+    %listBits = llvm.load %list : !llvm.ptr -> i64
+    %listText = llvm.inttoptr %listBits : i64 to !llvm.ptr
+    %found = llvm.call @strstr(%listText, %key) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isKnown = llvm.icmp "ne" %found, %nothing : !llvm.ptr
+    cf.cond_br %isKnown, ^skip, ^add
+  ^add:
+    func.call @strict_gpu_link_added(%list, %keyName, %withComma) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    cf.br ^skip
+  ^skip:
+    llvm.call @free(%key) : (!llvm.ptr) -> ()
+    %following = llvm.getelementptr %end[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    cf.br ^next(%following : !llvm.ptr)
+  ^done:
+    return
+  }
+  // the module text of a program whose PTX is an index of libraries (code is freed), any other code as it is
+  func.func private @strict_gpu_linked(%code: !llvm.ptr, %isOlder: i1) -> !llvm.ptr {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %seven = arith.constant 7 : i64
+    %markerLength = arith.constant 22 : i64
+    %newline32 = arith.constant 10 : i32
+    %comma32 = arith.constant 44 : i32
+    %terminator = arith.constant 0 : i8
+    %nothing = llvm.mlir.zero : !llvm.ptr
+    %isIndex = func.call @strict_gpu_is_index(%code) : (!llvm.ptr) -> i1
+    cf.cond_br %isIndex, ^index, ^plain
+  ^plain:
+    return %code : !llvm.ptr
+  ^index:
+    %needsLengths = llvm.mlir.addressof @strict_gpu_needs_mark : !llvm.ptr
+    %needsMark = llvm.getelementptr %needsLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %definitionsLengths = llvm.mlir.addressof @strict_gpu_definitions_mark : !llvm.ptr
+    %definitionsMark = llvm.getelementptr %definitionsLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %newerLengths = llvm.mlir.addressof @strict_gpu_library_ending : !llvm.ptr
+    %newerEnding = llvm.getelementptr %newerLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %olderLengths = llvm.mlir.addressof @strict_gpu_library_older_ending : !llvm.ptr
+    %olderEnding = llvm.getelementptr %olderLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %ending = llvm.select %isOlder, %olderEnding, %newerEnding : i1, !llvm.ptr
+    %listCapacity = arith.constant 4096 : i64
+    %prototypeCapacity = arith.constant 1048576 : i64
+    %functionCapacity = arith.constant 16777216 : i64
+    %list = func.call @strict_gpu_link_text(%listCapacity) : (i64) -> !llvm.ptr
+    %prototypes = func.call @strict_gpu_link_text(%prototypeCapacity) : (i64) -> !llvm.ptr
+    %functions = func.call @strict_gpu_link_text(%functionCapacity) : (i64) -> !llvm.ptr
+    %commaLengths = llvm.mlir.addressof @strict_gpu_needs_mark : !llvm.ptr
+    %lineEnd = llvm.call @strchr(%code, %newline32) : (!llvm.ptr, i32) -> !llvm.ptr
+    %needsAt = llvm.call @strstr(%code, %needsMark) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %hasLine = llvm.icmp "ne" %lineEnd, %nothing : !llvm.ptr
+    %hasNeeds = llvm.icmp "ne" %needsAt, %nothing : !llvm.ptr
+    %isWellFormed = arith.andi %hasLine, %hasNeeds : i1
+    cf.cond_br %isWellFormed, ^start, ^plain
+  ^start:
+    %commaText = llvm.alloca %one x i64 : (i64) -> !llvm.ptr
+    %commaWord = arith.constant 44 : i64
+    llvm.store %commaWord, %commaText : i64, !llvm.ptr
+    func.call @strict_gpu_link_added(%list, %commaText, %one) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %names = llvm.getelementptr %needsAt[7] : (!llvm.ptr) -> !llvm.ptr, i8
+    func.call @strict_gpu_link_needs(%list, %names) : (!llvm.ptr, !llvm.ptr) -> ()
+    %header = llvm.getelementptr %lineEnd[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    cf.br ^next(%one : i64)
+  ^next(%at: i64):
+    %listBits = llvm.load %list : !llvm.ptr -> i64
+    %listText = llvm.inttoptr %listBits : i64 to !llvm.ptr
+    %cursor = llvm.getelementptr %listText[%at] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %character = llvm.load %cursor : !llvm.ptr -> i8
+    %isEnd = arith.cmpi eq, %character, %terminator : i8
+    cf.cond_br %isEnd, ^join, ^token
+  ^token:
+    %tokenEnd = llvm.call @strchr(%cursor, %comma32) : (!llvm.ptr, i32) -> !llvm.ptr
+    %cursorBits = llvm.ptrtoint %cursor : !llvm.ptr to i64
+    %tokenEndBits = llvm.ptrtoint %tokenEnd : !llvm.ptr to i64
+    %length = arith.subi %tokenEndBits, %cursorBits : i64
+    %nameBytes = arith.addi %length, %one : i64
+    %name = func.call @strict_malloc(%nameBytes) : (i64) -> !llvm.ptr
+    %nameCopied = llvm.call @memcpy(%name, %cursor, %length) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %nameEnd = llvm.getelementptr %name[%length] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %terminator, %nameEnd : i8, !llvm.ptr
+    %library = func.call @strict_gpu_beside(%name, %ending) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %libraryLine = llvm.call @strchr(%library, %newline32) : (!llvm.ptr, i32) -> !llvm.ptr
+    %libraryNeeds = llvm.call @strstr(%library, %needsMark) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %marker = llvm.call @strstr(%library, %definitionsMark) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %hasLibraryLine = llvm.icmp "ne" %libraryLine, %nothing : !llvm.ptr
+    %hasLibraryNeeds = llvm.icmp "ne" %libraryNeeds, %nothing : !llvm.ptr
+    %hasMarker = llvm.icmp "ne" %marker, %nothing : !llvm.ptr
+    %hasHead = arith.andi %hasLibraryLine, %hasLibraryNeeds : i1
+    %isLibrary = arith.andi %hasHead, %hasMarker : i1
+    cf.cond_br %isLibrary, ^parts, ^missing
+  ^missing:
+    %missingLengths = llvm.mlir.addressof @strict_gpu_library_missing_text : !llvm.ptr
+    %missingText = llvm.getelementptr %missingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %executable = func.call @strict_gpu_executable() : () -> !llvm.ptr
+    %printed = llvm.call @printf(%missingText, %name, %ending, %executable) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %exitCode = arith.constant 1 : i32
+    llvm.call @exit(%exitCode) : (i32) -> ()
+    cf.br ^plain
+  ^parts:
+    %libraryNames = llvm.getelementptr %libraryNeeds[7] : (!llvm.ptr) -> !llvm.ptr, i8
+    func.call @strict_gpu_link_needs(%list, %libraryNames) : (!llvm.ptr, !llvm.ptr) -> ()
+    %prototypeStart = llvm.getelementptr %libraryLine[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %prototypeBits = llvm.ptrtoint %prototypeStart : !llvm.ptr to i64
+    %markerBits = llvm.ptrtoint %marker : !llvm.ptr to i64
+    %prototypeLength = arith.subi %markerBits, %prototypeBits : i64
+    func.call @strict_gpu_link_added(%prototypes, %prototypeStart, %prototypeLength) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %functionStart = llvm.getelementptr %marker[22] : (!llvm.ptr) -> !llvm.ptr, i8
+    %functionLength = llvm.call @strlen(%functionStart) : (!llvm.ptr) -> i64
+    func.call @strict_gpu_link_added(%functions, %functionStart, %functionLength) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    llvm.call @free(%library) : (!llvm.ptr) -> ()
+    llvm.call @free(%name) : (!llvm.ptr) -> ()
+    %afterToken = arith.addi %at, %length : i64
+    %following = arith.addi %afterToken, %one : i64
+    cf.br ^next(%following : i64)
+  ^join:
+    %headerLength = llvm.call @strlen(%header) : (!llvm.ptr) -> i64
+    %moduleText = func.call @strict_gpu_link_text(%functionCapacity) : (i64) -> !llvm.ptr
+    func.call @strict_gpu_link_added(%moduleText, %header, %headerLength) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %prototypeBlockBits = llvm.load %prototypes : !llvm.ptr -> i64
+    %prototypeBlock = llvm.inttoptr %prototypeBlockBits : i64 to !llvm.ptr
+    %prototypeUsedSlot = llvm.getelementptr %prototypes[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %prototypeUsed = llvm.load %prototypeUsedSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_link_added(%moduleText, %prototypeBlock, %prototypeUsed) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %functionBlockBits = llvm.load %functions : !llvm.ptr -> i64
+    %functionBlock = llvm.inttoptr %functionBlockBits : i64 to !llvm.ptr
+    %functionUsedSlot = llvm.getelementptr %functions[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %functionUsed = llvm.load %functionUsedSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_link_added(%moduleText, %functionBlock, %functionUsed) : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %moduleBits = llvm.load %moduleText : !llvm.ptr -> i64
+    %module = llvm.inttoptr %moduleBits : i64 to !llvm.ptr
+    llvm.call @free(%prototypeBlock) : (!llvm.ptr) -> ()
+    llvm.call @free(%functionBlock) : (!llvm.ptr) -> ()
+    llvm.call @free(%listText) : (!llvm.ptr) -> ()
+    llvm.call @free(%prototypes) : (!llvm.ptr) -> ()
+    llvm.call @free(%functions) : (!llvm.ptr) -> ()
+    llvm.call @free(%list) : (!llvm.ptr) -> ()
+    llvm.call @free(%moduleText) : (!llvm.ptr) -> ()
+    llvm.call @free(%code) : (!llvm.ptr) -> ()
+    return %module : !llvm.ptr
+  }
   func.func private @strict_gpu_text(%ptx: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -18311,13 +18560,17 @@
   ^unusable:
     return %newer : !llvm.ptr
   ^usable:
-    %older = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %olderRead = func.call @strict_gpu_beside(%stem, %olderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isOlderText = arith.constant true
+    %isNewerText = arith.constant false
+    %older = func.call @strict_gpu_linked(%olderRead, %isOlderText) : (!llvm.ptr, i1) -> !llvm.ptr
+    %newerLinked = func.call @strict_gpu_linked(%newer, %isNewerText) : (!llvm.ptr, i1) -> !llvm.ptr
     %runtimeOlder = func.call @strict_gpu_beside(%stem, %runtimeOlderEnding) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBuffer = func.call @strict_gpu_paired(%runtime, %runtimeOlder) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %runtimeBits = llvm.ptrtoint %runtimeBuffer : !llvm.ptr to i64
     %runtimeSlot = llvm.mlir.addressof @strict_gpu_runtime_code : !llvm.ptr
     llvm.store %runtimeBits, %runtimeSlot : i64, !llvm.ptr
-    %buffer = func.call @strict_gpu_paired(%newer, %older) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %buffer = func.call @strict_gpu_paired(%newerLinked, %older) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %bufferBits = llvm.ptrtoint %buffer : !llvm.ptr to i64
     llvm.store %bufferBits, %codeSlot : i64, !llvm.ptr
     %binaryEndingLengths = llvm.mlir.addressof @strict_gpu_binary_ending : !llvm.ptr
@@ -18424,7 +18677,7 @@
     %missing = llvm.getelementptr %missingLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     cf.cond_br %isEmpty, ^failed(%missing : !llvm.ptr), ^compare
   ^compare:
-    %codeHash = func.call @strict_gpu_hashed(%code, %zero) : (!llvm.ptr, i64) -> i64
+    %codeHash = func.call @strict_gpu_code_hash(%code) : (!llvm.ptr) -> i64
     %hash = func.call @strict_gpu_hashed(%runtime, %codeHash) : (!llvm.ptr, i64) -> i64
     %prime = arith.constant 9999991 : i64
     %kept = arith.remui %hash, %prime : i64

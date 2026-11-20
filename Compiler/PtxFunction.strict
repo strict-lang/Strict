@@ -1,0 +1,53 @@
+has name Text
+has lines Texts
+constant KernelLines = (".visible .entry H3Block_Gated_5_gpu7s(", "\t.param .u64 a", ")", "{", "\tcall.uni (retval0), Attention_Last_3_devices, (param0);", "\tcall.uni strict_device_byte_read, (param0);", "\tret;", "}")
+constant HelperLines = (".func  (.param .b32 func_retval0) strict_device_byte_read", "(", "\t.param .b64 a", ")", "{", "\tret;", "}")
+constant Kernel = PtxFunction("H3Block_Gated_5_gpu7s", KernelLines)
+constant Helper = PtxFunction("strict_device_byte_read", HelperLines)
+IsEntry Boolean
+	Kernel.IsEntry and Helper.IsEntry is false
+	lines.First.StartsWith(".visible .entry")
+Library Text
+	Kernel.Library is "H3Block" and Helper.Library is "Strict"
+	PtxFunction("List_Number__Slice_2_gpu4s", KernelLines).Library is "List_Number"
+	PtxFunction("Convrot_Butterfly_3_devicesx_at_step", HelperLines).Library is "Convrot"
+	let parts = name.Split("_")
+	let marks = Marks(parts)
+	if marks.Length is 0 or name.StartsWith("strict_")
+		return "Strict"
+	let joined = Text.Combine(parts.Slice(0, marks.First - 2), "_")
+	joined.EndsWith("_") then joined.Substring(0, joined.Length - 1) else joined
+Marks(parts Texts) Numbers
+	Kernel.Marks(("H3Block", "Gated", "5", "gpu7s")) is List(Number) + 3
+	Kernel.Marks(("strict", "device", "byte", "read")).Length is 0
+	for parts
+		if index >= 2 and (value.StartsWith("gpu") or value.StartsWith("device")) and IsCount(parts(index - 1))
+			index
+IsCount(part Text) Boolean
+	Kernel.IsCount("12") and Kernel.IsCount("gpu") is false and Kernel.IsCount("") is false
+	part.Length > 0 and "0123456789".Count(part(0)) > 0
+Prototype Text
+	Kernel.Prototype is "" and Helper.Prototype.EndsWith("\t.param .b64 a\n)\n;\n")
+	IsEntry then "" else Text.Combine(lines.Slice(0, lines.Index("{")), "\n") + "\n;\n"
+Body Text
+	Helper.Body.EndsWith("\tret;\n}\n")
+	Text.Combine(lines, "\n") + "\n"
+Needs Texts
+	Kernel.Needs is ("Attention", "Strict") and Helper.Needs.Length is 0
+	let own = Library
+	for Calls
+		if PtxFunction(value, lines).Library is not own
+			PtxFunction(value, lines).Library
+Calls Texts
+	Kernel.Calls is ("Attention_Last_3_devices", "strict_device_byte_read")
+	for lines
+		if value.IndexOf("call.uni ") >= 0
+			Called(value)
+Called(line Text) Text
+	Kernel.Called("\tcall.uni (retval0), A_B_1_devices, (param0);") is "A_B_1_devices"
+	Kernel.Called("\tcall.uni strict_x, (param0);") is "strict_x"
+	let start = line.IndexOf("call.uni ") + 9
+	let rest = line.Substring(start, line.Length - start)
+	let skipped = rest.StartsWith("(") then rest.IndexOf("), ") + 3 else 0
+	let target = rest.Substring(skipped, rest.Length - skipped)
+	target.Substring(0, target.IndexOf(","))

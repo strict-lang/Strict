@@ -27,11 +27,22 @@ Shipped(release Text, sidecar Text) Text
 	let at = name.IndexOf(".runtime.")
 	if at < 0
 		return release + "/" + name
-	let shared = release + "/shared" + name.Substring(at, name.Length - at)
-	let isShared = File(shared).Exists is false or File(shared).ReadBytes is File(sidecar).ReadBytes
-	if isShared
-		File(release + "/" + name).Delete
-	isShared then shared else release + "/" + name
+	let ending = name.Substring(at, name.Length - at)
+	let shared = release + "/shared" + ending
+	if File(shared).Exists and File(shared).ReadBytes is not File(sidecar).ReadBytes
+		Demoted(release, name.Substring(0, at), ending)
+	File(release + "/" + name).Delete
+	shared
+Demoted(release Text, program Text, ending Text) slow
+	BuildOutput.Demoted("Compiler/output/Unshipped", "B", ".runtime.ptx") is not Error
+	for Dependents(release, program, ending)
+		File(release + "/" + value + ending).Write(File(release + "/shared" + ending).ReadBytes)
+Dependents(release Text, program Text, ending Text) Texts slow
+	BuildOutput.Dependents("Compiler/output/Unshipped", "B", ".runtime.ptx").Length is 0
+	for Directory.Files(release, "*.ptx")
+		let stem = Path(value).FileName.text.Replace(".ptx", "")
+		if stem.IndexOf(".") < 0 and stem is not program and File(release + "/" + stem + ending).Exists is false
+			stem
 Newer(path Text, sources Texts) Text
 	BuildOutput.Newer("Compiler/output/missing.exe", List(Text) + "BuildOutput.strict") is ""
 	if File(path).Exists is false
