@@ -1,0 +1,31 @@
+has logger
+has root Text
+constant Fixture = "Examples/ProjectRule/"
+Checked(folder Text) Number slow
+	ProjectRules(Logger, ".").Checked(Fixture) is 0
+	if File("./Any.strict").Exists
+		return 0
+	mutable files = List(Mutable(Text))
+	for ResolveCheck.Tree(folder)
+		files = files + Directory.Files(value, "*.strict")
+	Issues("./Validators", files)
+Issues(rules Text, files Texts) Number native
+	ProjectRules(Logger, ".").Issues(Fixture + "Validators", List(Text) + (Fixture + "Crate.strict")) is 1
+	ProjectRules(Logger, ".").Issues("Examples/Missing", List(Text) + (Fixture + "Crate.strict")) is 0
+	mutable issues = 0
+	for Directory.Exists(rules) then Directory.Files(rules, "*.strict") else List(Text)
+		issues = issues + Ran(value, files)
+	issues
+Ran(rule Text, files Texts) Number native
+	ProjectRules(Logger, ".").Ran(Fixture + "Validators/GetPrefix.strict", List(Text)) is 0
+	ProjectRules(Logger, ".").Ran(Fixture + "Validators/GetPrefix.strict", List(Text) + (Fixture + "Crate.strict")) is 1
+	let types = Execute(logger).Loaded(rule, root, false)
+	if types.Length is 0
+		return Error("ProjectRuleNotCompiled: " + rule)
+	let result = ProgramRun(Execute(logger).Started(types, rule)).Result(types.First.Name, Arguments(files))
+	let isFailed = result.kind is in VmValue.ErrorKinds
+	isFailed then Error("ProjectRuleFailed: " + rule + ", " + (result to Text)) else result.number
+Arguments(files Texts) List(VmValue)
+	ProjectRules(Logger, ".").Arguments(List(Text) + "A.strict").First.text is "A.strict"
+	for files
+		VmValue.OfText(value)

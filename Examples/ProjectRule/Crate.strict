@@ -1,0 +1,4 @@
+has weight Number
+GetWeight Number
+	Crate(3).GetWeight is 3
+	weight

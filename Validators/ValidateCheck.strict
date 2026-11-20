@@ -3,6 +3,7 @@ Run(folder Text, root Text) Number
 	mutable issues = 0
 	for ResolveCheck.Tree(folder)
 		issues = issues + Checked(value, root)
+	issues = issues + ProjectRules(logger, root).Checked(folder)
 	logger.Log("Validation issues: " + issues)
 	issues + (issues is 0 then Folders(logger).Tested(folder, root) else 0)
 Checked(folder Text, root Text) Number slow

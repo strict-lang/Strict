@@ -25,11 +25,7 @@ constant Reading = (InstructionEntry.Named(InstructionType.LoadVariableToRegiste
 constant Read = MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", Reading)
 constant Defaulting = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Pair", Paired.members, (Starting, Read))).Resolved)
 Completed(typeName Text, arguments List(VmValue)) Boolean
-	let main = Natives(types).TypeOf(typeName)
-	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
-	let run = exact.instructions.Length > 0 then exact else main.Callee("Run", 1, "None", List(Text))
-	let instance = Started(main)
-	let result = Execute(run, Bound(main, instance, run, Typed(run.parameters, arguments), instance), main.Name)
+	let result = ProgramRun(value).Result(typeName, arguments)
 	let isFailed = result.kind is in VmValue.ErrorKinds
 	if isFailed
 		logger.Log(result to Text)

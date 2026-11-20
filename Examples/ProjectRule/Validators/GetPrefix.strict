@@ -1,0 +1,14 @@
+has logger
+Run(files Texts) Number
+	mutable found = List(Text)
+	for files
+		found = found + Issues(value, File(value).ReadLines)
+	for found
+		logger.Log(value)
+	found.Length
+Issues(path Text, lines Texts) Texts
+	GetPrefix(Logger).Issues("A.strict", ("GetX", "	1")) is ("A.strict:line 1: MethodNameMustNotStartWithGet: GetX")
+	GetPrefix(Logger).Issues("A.strict", ("Width Number", "	Getter")).Length is 0
+	for lines
+		if value.StartsWith("Get")
+			path + ":line " + (index + 1) + ": MethodNameMustNotStartWithGet: " + value
