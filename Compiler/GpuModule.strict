@@ -35,4 +35,5 @@ Shared Texts
 IsShared(line Text) Boolean
 	Sample.IsShared(Data) and Sample.IsShared("  }") is false and Sample.IsShared("    llvm.return") is false
 	Sample.IsShared(GpuFunction.DeviceHead) is false
-	line.StartsWith("  ") and line.StartsWith("   ") is false and line is not "  }" and line.EndsWith("{") is false
+	let isEntry = line.StartsWith("  ") and line.StartsWith("   ") is false and line.StartsWith("  ^") is false
+	isEntry and line is not "  }" and line.EndsWith("{") is false
