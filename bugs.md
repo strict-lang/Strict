@@ -1,6 +1,7 @@
 # Bugs
-`strict check` lets a second way of writing the same thing through (from the review of all DeltaEngine files, 2026-11-11, counts are DeltaEngine sites then):
 - `strict run <script>` through the resident server kept the old type of a dependency edited after the server loaded it (Validators/ErrorDrops.strict changed, the script still flagged the old way, `STRICT_SERVER=0` gave the new result, 2026-11-20).
+
+`strict check` lets a second way of writing the same thing through (from the review of all DeltaEngine files, 2026-11-11, counts are DeltaEngine sites then):
 - `ErrorCheckCannotFail` misses callees that turn every Error into a literal themselves: `current.Drawn(screen) is Error` where Drawn returns false on failure (Games/WebWars/WebWars.strict:61-72, ArenaHud.Draw, FractalPage.Published).
 - `StatusNumberMustNotBeReturned` misses `condition then 1 else 0` results and `(a then 1 else 0) + (b then 2 else 0)` bit sums (about 30), a literal after only tests (`Failures Number` ending in `0` in every *Checks type), `-1` or a huge constant for nothing found (about 10), Number results only compared with `is 1` (Window.IsDebug, WebPage.Picture).
 - Three ways to build a list: `mutable list = List(T)` + `for` + `list = list + item`, `List(Mutable(T))` + `.Add`, and the plain `for` expression (about 65 loops are pure maps or filters, `AccumulatingLoopMustBeForExpression`); `List(Number) + x` and `(x)` both build a one element list.
