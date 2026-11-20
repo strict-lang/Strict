@@ -47,7 +47,7 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	File("Compiler/output/Metal.ptx").Exists is false
 	let key = Fingerprint(device, isTiling, builder, kept)
 	let isCached = builder.tools.platform is not Platform.MacOS
-	let previous = isCached then Previous(key, isTiling) else List(Text)
+	let previous = isCached and PtxLibraries.Of(base).Has(base + ".ptx") then Previous(key, isTiling) else List(Text)
 	if previous.Length > 0
 		return previous
 	File(base + ".gpu.mlir").Write(device)

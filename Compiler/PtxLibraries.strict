@@ -36,26 +36,10 @@ Stems(names Texts) Texts
 		prefix + value + ","
 Written(library Text, ending Text, functions List(PtxFunction)) slow
 	let path = folder + "/" + prefix + library + ending
-	let fresh = Of(functions, library)
 	let old = File(path).Exists then PtxModule(File(path).ReadLines).Functions else List(PtxFunction)
-	let composed = Composed(library, fresh + Other(old, Titles(fresh)))
+	let composed = Composed(library, PtxMerge(old).Merged(PtxMerge(functions).In(library)))
 	if File(path).Exists is false or Text.Combine(File(path).ReadLines, "\n") is not composed
 		File(path).Write(composed)
-Of(functions List(PtxFunction), library Text) List(PtxFunction)
-	Sample.Of(Both, "Strict").Length is 1 and Sample.Of(Both, "Missing").Length is 0
-	for functions
-		if value.Library is library
-			value
-Titles(functions List(PtxFunction)) Texts
-	Sample.Titles(Both).Last is "strict_device_byte_read"
-	for functions
-		value.name
-Other(old List(PtxFunction), names Texts) List(PtxFunction)
-	Sample.Other(Both, List(Text) + "strict_device_byte_read").First.name is "H3Block_Gated_5_gpu7s"
-	Sample.Other(Both, Sample.Titles(Both)).Length is 0
-	for old
-		if value.name is not in names
-			value
 Composed(library Text, functions List(PtxFunction)) Text
 	Sample.Composed("A", Both.Slice(0, 1)).StartsWith("// strict library ptx/A needs ptx/Attention,ptx/Strict,\n" + Marker)
 	Sample.Composed("B", Both.Slice(1, 1)).StartsWith("// strict library ptx/B needs \n.func ")
@@ -97,6 +81,14 @@ Reached(program Text, ending Text) Texts slow
 		stems = (stems + Needs(folder + "/" + stems(at) + ending)).Unique
 		at = at + 1
 	stems
+Has(program Text) Boolean slow
+	Sample.Has("Compiler/output/missing.ptx")
+	Lost(program).Length is 0
+Lost(program Text) Texts slow
+	Sample.Lost("Compiler/output/missing.ptx").Length is 0
+	for Needs(program)
+		if File(folder + "/" + value + ".ptx").Exists is false
+			value
 Needs(path Text) Texts slow
 	Sample.Needs("Compiler/output/missing.ptx").Length is 0
 	let first = File(path).Exists then File(path).ReadLines.First else ""
