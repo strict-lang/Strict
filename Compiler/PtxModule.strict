@@ -27,7 +27,7 @@ Found List(PtxFunction)
 	for heads
 		let part = lines.Slice(value, End(heads, index) - value)
 		if ";" is not in part
-			PtxFunction(Named(lines(value)), Code(part))
+			PtxFunction(Named(lines(value)), Code(part.Slice(0, part.Index("}") + 1)))
 End(heads Numbers, at Number) Number
 	Sample.End((3, 9, 16), 0) is 9 and Sample.End((3, 9, 16), 2) is Sample.lines.Length
 	at + 1 < heads.Length then heads(at + 1) else lines.Length
@@ -43,12 +43,20 @@ Code(part Texts) Texts
 		if value.TrimStart is not "" and value.TrimStart.StartsWith("//") is false
 			value
 Header Text
-	Sample.Header is "//\n.version 8.7\n.shared .align 8 .b8 strict_device_partials[256];\n"
+	Sample.Header is "//\n.version 8.7\n"
 	Text.Combine(Kept(Heads.First).Unique, "\n") + "\n"
 Kept(first Number) Texts
-	Sample.Kept(3).Length is 3
+	Sample.Kept(3).Length is 2
 	for lines
-		if index < first and value is not "" and value.StartsWith("\t//") is false or IsShared(value)
+		if index < first and value is not "" and value.StartsWith("\t//") is false and IsShared(value) is false
+			value
+Globals Texts
+	Sample.Globals is List(Text) + ".shared .align 8 .b8 strict_device_partials[256];"
+	Shared.Unique
+Shared Texts
+	Sample.Shared.Length is 1
+	for lines
+		if IsShared(value)
 			value
 IsShared(line Text) Boolean
 	Sample.IsShared(".shared .align 8 .b8 a[256];") and Sample.IsShared(".visible .entry a(") is false
