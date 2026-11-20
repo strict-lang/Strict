@@ -20,7 +20,8 @@ Index(text Text, ending Text) Text slow
 	Directory.Create(folder + "/" + prefix.Substring(0, prefix.Length - 1))
 	for names
 		Written(value, ending, functions)
-	let needs = " needs " + Text.Combine(Stems(names), "")
+	PtxGlobals(folder + "/" + prefix + "Globals" + ending, prefix).Written(module.Globals)
+	let needs = " needs " + prefix + "Globals," + Text.Combine(Stems(names), "")
 	"// strict program " + HashCode(text).number + needs + "\n" + module.Header
 Names(functions List(PtxFunction)) Texts
 	Sample.Names(Both) is ("H3Block", "Strict")

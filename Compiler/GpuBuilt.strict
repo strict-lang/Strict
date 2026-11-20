@@ -48,7 +48,11 @@ Lowered(slots Texts, targets Texts) Text slow
 	Sample.Lowered(List(Text), List(Text) + "sm_75") is ""
 	let optimized = MlirParts.Ran("mlir-opt", Optimizing(slots), builder.tools)
 	let translated = optimized is "" then MlirParts.Ran("mlir-translate", Translating(slots), builder.tools) else optimized
-	translated is "" then MlirParts.Ran("clang", Compiling(slots, targets), builder.tools) else translated
+	translated is "" then MlirParts.Ran("clang", Compiling(Shared(slots), targets), builder.tools) else translated
+Shared(slots Texts) Texts slow
+	for slots
+		File(value + ".ll").Write(PtxCache(value).Read(".ll").Replace("define internal ", "define linkonce_odr "))
+	slots
 Optimizing(slots Texts) Texts
 	Sample.Optimizing(List(Text) + "a").First.StartsWith("\"a.mlir\" --symbol-dce")
 	for slots
@@ -75,4 +79,4 @@ Joined(types Texts, targets Texts) Texts slow
 		Text.Combine(Read(types, value), "\n")
 Read(types Texts, target Text) Texts slow
 	for types
-		PtxCache(Slot(value)).Read("." + target + ".ptx")
+		PtxCache(Slot(value)).Read("." + target + ".ptx").Replace(".weak .func ", ".func ")
