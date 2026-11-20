@@ -64,12 +64,12 @@ Inputs(sources Texts) Texts
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
 	let source = FileCompiler.Normalized(rest(0))
 	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
-	let tools = (List(Text) + (rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension)) - Output - Output.Lower
+	let tools = List(Text) + (rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension)
 	let web = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true))
 	let shell = web.Shell(NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))))
 	let extra = shell.EndsWith(".shell.html") then List(Text) + shell else List(Text)
 	let webInputs = "web" is in NativeCompiler.Options(rest) then (rest(1) + Wgsl, rest(1) + Script, shell) else extra
-	let inputs = sources + runtimes + tools + webInputs + NativeInputs(Folders(sources))
+	let inputs = sources + runtimes + (tools - Output - Output.Lower) + webInputs + NativeInputs(Folders(sources))
 	command is "test" then inputs else inputs + (Path(source).PathOnly.text + "/Content/**")
 Files Texts slow
 	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
