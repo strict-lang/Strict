@@ -50,10 +50,15 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	let previous = isCached then Previous(key, isTiling) else List(Text)
 	if previous.Length > 0
 		return previous
+	let isParted = isCached and kept is not ""
+	let built = isParted then Parted(device, isTiling, builder, kept) else Whole(device, isTiling, builder, kept)
+	isCached then Remembered(key, built) else built
+Parted(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts slow
+	let stamp = "" + HashCode(Fingerprint("", isTiling, builder, "")).number
+	PtxLibraries.Of(base).Indexed(GpuBuilt(base, builder.tools).Built(device, kept, isTiling, stamp))
+Whole(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts slow
 	File(base + ".gpu.mlir").Write(device)
-	let built = isCached and kept is not "" then Reduced(isTiling, builder, kept) else builder.Ptx(base, isTiling, kept)
-	let shaped = isCached and kept is not "" then PtxLibraries.Of(base).Indexed(built) else built
-	isCached then Remembered(key, shaped) else shaped
+	builder.Ptx(base, isTiling, kept)
 Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	Reducing.Built(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")
 	Reducing.Saved((".ptx", ".gpu.mlir"), ("// reused", Combining + "\n// changed")) is not Error

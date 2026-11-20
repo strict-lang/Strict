@@ -1,0 +1,38 @@
+has lines Texts
+constant Opening = ("// device kernels", "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
+constant Data = "  llvm.mlir.global internal @strict_device_partials(dense<0> : tensor<32xi64>) : !llvm.array<32 x i64>"
+constant Sample = GpuModule(Opening + GpuFunction.Kernel.text.Split("\n") + Data + GpuFunction.Device.text.Split("\n") + "}")
+Starts Numbers
+	Sample.Starts is (2, 7)
+	for lines
+		if (value.StartsWith("  llvm.func ") or value.StartsWith("  func.func ")) and value.EndsWith("{")
+			index
+Closes Numbers
+	Sample.Closes is (5, 9)
+	for lines
+		if value is "  }"
+			index
+Functions List(GpuFunction)
+	Sample.Functions.Length is 2 and Sample.Functions.First.name is "A_B_1_gpu2"
+	Sample.Functions.Last.text is GpuFunction.Device.text
+	let closes = Closes
+	for Starts
+		GpuFunction(Named(lines(value)), lines(value), Text.Combine(lines.Slice(value, closes(index) - value + 1), "\n"))
+Named(header Text) Text
+	Sample.Named(GpuFunction.DeviceHead) is "C_D_2_devices"
+	let start = header.IndexOf("@") + 1
+	header.Substring(start, header.IndexOf("(") - start)
+Head Texts
+	Sample.Head is Opening
+	for lines
+		if index < 2 and (value.StartsWith("//") or value.StartsWith("module"))
+			value
+Shared Texts
+	Sample.Shared is List(Text) + Data
+	for lines
+		if IsShared(value)
+			value
+IsShared(line Text) Boolean
+	Sample.IsShared(Data) and Sample.IsShared("  }") is false and Sample.IsShared("    llvm.return") is false
+	Sample.IsShared(GpuFunction.DeviceHead) is false
+	line.StartsWith("  ") and line.StartsWith("   ") is false and line is not "  }" and line.EndsWith("{") is false

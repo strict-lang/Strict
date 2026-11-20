@@ -1,0 +1,19 @@
+has name Text
+has header Text
+has text Text
+constant KernelHead = "  llvm.func @A_B_1_gpu2(%count: i64) attributes {nvvm.kernel} {"
+constant KernelBody = "\n    %r = func.call @C_D_2_devices(%count) : (i64) -> f64\n    llvm.return\n  }"
+constant Kernel = GpuFunction("A_B_1_gpu2", KernelHead, KernelHead + KernelBody)
+constant DeviceHead = "  func.func private @C_D_2_devices(%p0: i64) -> f64 {"
+constant Device = GpuFunction("C_D_2_devices", DeviceHead, DeviceHead + "\n    %r = func.call @strict_device_one() : () -> f64\n  }")
+IsKernel Boolean
+	Kernel.IsKernel and Device.IsKernel is false
+	header.IndexOf("nvvm.kernel") > 0
+Library Text
+	Kernel.Library is "A" and Device.Library is "C"
+	PtxFunction(name, List(Text)).Library
+Called Texts
+	Kernel.Called is List(Text) + "C_D_2_devices" and Device.Called is List(Text) + "strict_device_one"
+	for text.Split("call @")
+		if index > 0
+			value.Substring(0, value.IndexOf("("))

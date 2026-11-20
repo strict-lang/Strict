@@ -1,0 +1,67 @@
+has functions List(GpuFunction)
+has owned Texts
+constant Sample = GpuParts(GpuModule.Sample.Functions, List(Text) + "A_B_1_gpu2")
+Types Texts
+	Sample.Types is List(Text) + "A"
+	Kernels.Unique
+Kernels Texts
+	for functions
+		if value.IsKernel and value.name is in owned
+			value.Library
+Texts(module GpuModule, stamp Text) Texts
+	Sample.Texts(GpuModule.Sample, "s").First.StartsWith("// s\n// device kernels\nmodule")
+	Sample.Texts(GpuModule.Sample, "s").First.EndsWith(GpuFunction.Device.text + "\n}\n")
+	let common = "// " + stamp + "\n" + Text.Combine(module.Head + module.Shared + Helpers, "\n") + "\n"
+	let devices = Devices
+	for Types
+		common + Text.Combine(Members(value, devices), "\n") + "\n}\n"
+Members(type Text, devices List(GpuFunction)) Texts
+	Sample.Members("A", Sample.Devices).Length is 2
+	let own = Own(type)
+	let names = Titles(own) + Reached(own, devices)
+	for functions
+		if value.name is in names
+			value.text
+Own(type Text) List(GpuFunction)
+	Sample.Own("A").Length is 1 and Sample.Own("C").Length is 0
+	for functions
+		if value.IsKernel and value.Library is type and value.name is in owned
+			value
+Reached(own List(GpuFunction), devices List(GpuFunction)) Texts
+	Sample.Reached(Sample.Own("A"), Sample.Devices) is List(Text) + "C_D_2_devices"
+	let known = Titles(devices)
+	mutable reached = Wanted(own, known)
+	mutable at = 0
+	for as long as at < reached.Length
+		reached = (reached + Wanted(Of(devices, reached(at)), known)).Unique
+		at = at + 1
+	reached
+Wanted(callers List(GpuFunction), known Texts) Texts
+	mutable wanted = List(Text)
+	for callers
+		wanted = wanted + Known(value.Called, known)
+	wanted.Unique
+Known(names Texts, known Texts) Texts
+	Sample.Known(("a", "b"), ("b", "c")) is List(Text) + "b"
+	for names
+		if value is in known
+			value
+Of(devices List(GpuFunction), name Text) List(GpuFunction)
+	Sample.Of(Sample.Devices, "C_D_2_devices").Length is 1
+	for devices
+		if value.name is name
+			value
+Titles(named List(GpuFunction)) Texts
+	Sample.Titles(Sample.functions) is ("A_B_1_gpu2", "C_D_2_devices")
+	for named
+		value.name
+Helpers Texts
+	Sample.Helpers.Length is 0
+	for functions
+		if value.IsKernel is false and value.Library is "Strict"
+			value.text
+Devices List(GpuFunction)
+	Sample.Devices.Length is 1
+	for functions
+		if value.IsKernel is false and value.Library is not "Strict"
+			value
