@@ -12,6 +12,8 @@ constant LockNeed = 2147483648
 constant LockHeld = 1073741824
 constant StaleSeconds = 16
 constant BeatSeconds = 5
+constant NoSocket = 0
+constant NoReply = ""
 constant Start = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
 constant Sample = Coordinator(Logger)
 Place Text
@@ -122,14 +124,14 @@ Sent(line Text, isStarting = true) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
 	let socket = root is "" and isStarting then Linked else Connected
-	if socket is 0
-		return ""
+	if socket is NoSocket
+		return NoReply
 	if Resident("").Send(socket, line + "\n") is Error
 		Socket.Close(socket)
-		return ""
+		return NoReply
 	let reply = Resident("").Received(socket, "\n")
 	Socket.Close(socket)
-	reply is Error then "" else reply.Trim
+	reply is Error then NoReply else reply.Trim
 Resolved(line Text) Text
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Resolved("need") is ""
 	mutable reply = Sent(line)
@@ -138,27 +140,27 @@ Resolved(line Text) Text
 	for as long as reply.StartsWith("wait")
 		Process.Wait(1)
 		let again = Sent(line)
-		reply = again is "" then Sent(line) else again
+		reply = again is NoReply then Sent(line) else again
 	reply
 Connected Number
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
 	let port = File(Place).Exists then File(Place).ReadLines.First to Number else 0
 	if port is Error or port is 0
-		return 0
+		return NoSocket
 	let socket = Socket.Connect("127.0.0.1", port)
-	socket is Error then 0 else socket
+	socket is Error then NoSocket else socket
 Linked Number
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
 	let existing = Connected
-	if existing > 0
+	if existing is not NoSocket
 		return existing
 	let tool = Process.OperatingSystem is "Windows" then "powershell" else "sh"
 	for Range(0, Process.RunTool(tool, Command).exitCode is 0 then BeatSeconds else 0)
 		if File(Place).Exists
 			return Connected
 		Process.Wait(1)
-	0
+	NoSocket
 Reported
 	Coordinator(Logger, "Compiler/output/MissingCoordinator").Reported is not Error
 	let reply = Sent("status")
-	logger.Log(reply is "" then "No coordinator" else reply)
+	logger.Log(reply is NoReply then "No coordinator" else reply)

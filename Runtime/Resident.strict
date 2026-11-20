@@ -15,6 +15,7 @@ constant Settings = ("STRICT_THREADS", "STRICT_GPU", "STRICT_BUILD_PROFILE", "ST
 constant Sample = Resident("Compiler/output")
 constant Unaccepted = Error("NoConnection")
 constant Refused = -1
+constant Unrequested = ""
 Request(folder Text, arguments Texts, variables = "", claim = "") Text
 	Resident.Request("C:/a", ("test", "a.strict"), "1", "7") is "strict 3\nC:/a\ntest\ta.strict\n1\n7\n\n"
 	Version + "\n" + folder + "\n" + Text.Combine(arguments, "\t") + "\n" + variables + "\n" + claim + Ending
@@ -103,7 +104,7 @@ Taken(server Number, built Number) Number
 Requested(socket Number) Text
 	Forwarding.Sample.Loopback(3) is 3
 	Forwarding.Sample.Loopback(Refused) is Forwarding.Unserved
-	Send(socket, Greeting) is not Error then Received(socket, Ending) else ""
+	Send(socket, Greeting) is not Error then Received(socket, Ending) else Unrequested
 Finished(socket Number, code Number)
 	Sample.Finished(0, 1) is Error
 	if Send(socket, Exiting + code + "\n") is Error

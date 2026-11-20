@@ -20,9 +20,9 @@ IsNearlyFive Boolean
 	Found.IsNearlyEqual(5)
 Checked Number
 	ErrorHandling(5).Checked is 10
-	ErrorHandling(0).Checked is 0
+	ErrorHandling(0).Checked is Error("NotDoubled")
 	let found = Found
-	found is Error then 0 else found * 2
+	found is Error then Error("NotDoubled") else found * 2
 Described Text
 	ErrorHandling(5).Described is "5"
 	ErrorHandling(0).Described.StartsWith("Error: Missing")

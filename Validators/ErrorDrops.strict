@@ -1,0 +1,86 @@
+has lines Texts
+constant Zeroed = ErrorDrops(("Count Number", "	Count is 0", "	let found = Find(1)", "	found is Error then 0 else found"))
+constant Sentinel = ErrorDrops(("Count Number", "	Count is 0", "	let found = Find(1)", "	if found is Error", "		return -1", "	found"))
+constant Passed = ErrorDrops(("Count Number", "	Count is 0", "	let found = Find(1)", "	found is Error then found else found + 1"))
+constant Hint = ", return the Error or leave the check out, check the cause before the call, or ignore(...) a result that is not needed"
+Issues List(ValidationIssue)
+	Zeroed.Issues.First to Text is "ErrorMustNotBecomeAValue: found is Error then 0" + Hint
+	Zeroed.Issues.First.Line is 4 and Sentinel.Issues.First.Line is 5 and Passed.Issues.Length is 0
+	ErrorDrops(("Count Number", "	found is Error then 0 else 1", "	2")).Issues.Length is 0
+	let shape = TypeShape(lines)
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if shape.IsMethodHeader(value)
+			issues = issues + Body(index)
+	issues
+Body(header Number) List(ValidationIssue)
+	Zeroed.Body(0).Length is 1 and Sentinel.Body(0).Length is 1
+	let code = Code(header)
+	let start = FileCheck.LastLine(lines, header) - code.Length + 2
+	mutable issues = List(Mutable(ValidationIssue))
+	for code
+		let next = index + 1 < code.Length then code(index + 1) else ""
+		issues = issues + Dropped(Tokenizer(value).Tokens, start + index, code - value) + Returned(value, next, start + index + 1)
+	issues
+Code(header Number) Texts
+	Zeroed.Code(0) is ("let found = Find(1)", "found is Error then 0 else found")
+	let last = FileCheck.LastLine(lines, header)
+	mutable isTest = true
+	for Range(header + 1, last + 1)
+		isTest = isTest and value < last and Duplicates.IsTest(lines(value).Trim)
+		if isTest is false
+			lines(value).Trim
+Dropped(tokens Texts, line Number, others Texts) List(ValidationIssue)
+	Zeroed.Dropped(("x", "is", "Error", "then", "-", "1", "else", "x"), 3, List(Text)).First.Line is 3
+	Zeroed.Dropped(("x", "is", "not", "Error", "then", "x", "else", "\"\""), 3, List(Text)).Length is 1
+	Zeroed.Dropped(("x", "is", "Error", "then", "x", "else", "0"), 3, List(Text)).Length is 0
+	Zeroed.Dropped(("x", "is", "Error", "then", "Other", "(", ")", "else", "0"), 3, List(Text)).Length is 0
+	Zeroed.Dropped(("x", "is", "Error", "then", "1", "else", "0"), 3, List(Text) + "Log(x)").Length is 0
+	for tokens
+		let isChecked = value is "is" and index + 3 < tokens.Length and tokens(index + 1) is "Error"
+		let isNot = value is "is" and index + 4 < tokens.Length and tokens(index + 1) is "not" and tokens(index + 2) is "Error"
+		let branch = isChecked then Branch(tokens, index + 3) else isNot then Branch(tokens, Else(tokens, index + 4) + 1) else ""
+		if branch is not "" and IsLiteral(branch) and IsUnused(tokens(index - 1), others)
+			ValidationIssue("ErrorMustNotBecomeAValue", tokens(index - 1) + " is Error then " + branch + Hint, line)
+Branch(tokens Texts, after Number) Text
+	Zeroed.Branch(("a", "then", "-", "1", "else", "b"), 2) is "-1"
+	Zeroed.Branch(("a", "then", "b", ".", "C"), 2) is "b.C"
+	Zeroed.Branch(("a", "is", "b"), 1) is ""
+	if after < 1 or after >= tokens.Length or tokens(after - 1) is not "then" and tokens(after - 1) is not "else"
+		return ""
+	mutable branch = ""
+	for Range(after, Else(tokens, after))
+		branch = branch + tokens(value)
+	branch
+Else(tokens Texts, start Number) Number
+	Zeroed.Else(("a", "then", "(", "b", "else", "c", ")", "else", "d"), 2) is 7
+	Zeroed.Else(("a", "then", "b"), 2) is 3
+	mutable depth = 0
+	for Range(start, tokens.Length)
+		depth = tokens(value) is "(" then depth + 1 else tokens(value) is ")" then depth - 1 else depth
+		if depth is 0 and tokens(value) is "else"
+			return value
+	tokens.Length
+Returned(code Text, next Text, line Number) List(ValidationIssue)
+	Zeroed.Returned("if found is Error", "return 0", 4).First.Line is 4
+	Zeroed.Returned("if found is Error", "return found", 4).Length is 0
+	Zeroed.Returned("if found is 2", "return 0", 4).Length is 0
+	let returned = next.StartsWith("return ") then next.Substring(7, next.Length - 7) else ""
+	let isChecked = code.StartsWith("if ") and code.EndsWith(" is Error")
+	if isChecked is false or IsLiteral(returned) is false
+		return List(ValidationIssue)
+	List(ValidationIssue) + ValidationIssue("ErrorMustNotBecomeAValue", code.Substring(3, code.Length - 3) + " then " + returned + Hint, line)
+IsUnused(name Text, others Texts) Boolean
+	Zeroed.IsUnused("x", ("let x = A", "B(y)")) and Zeroed.IsUnused("x", List(Text) + "B(x)") is false
+	for others
+		if name is in Tokenizer(value).Tokens and value.StartsWith("let " + name + " ") is false
+			return false
+	true
+IsLiteral(text Text) Boolean
+	Zeroed.IsLiteral("0") and Zeroed.IsLiteral("-1") and Zeroed.IsLiteral("2.5") and Zeroed.IsLiteral("\"\"")
+	Zeroed.IsLiteral("value") and Zeroed.IsLiteral("true") is false and Zeroed.IsLiteral("false") is false
+	Zeroed.IsLiteral("found") is false and Zeroed.IsLiteral("") is false and Zeroed.IsLiteral("\"a\" + b") is false
+	let digits = text.StartsWith("-") then text.Substring(1, text.Length - 1) else text
+	let isNumber = digits.Length > 0 and Tokenizer.IsDigit(digits(0)) and (digits to Number) is not Error
+	let isText = text.Length > 1 and text.StartsWith("\"") and text.EndsWith("\"") and text.IndexOf("\"", 1) is text.Length - 1
+	isNumber or isText or text is "value"

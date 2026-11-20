@@ -6,6 +6,8 @@ constant Sample = Forwarding(Logger, "Compiler/output", Nowhere)
 constant Server = Resident("Compiler/output")
 constant Missing = Forwarding(Logger, "Compiler/output/Missing", Nowhere)
 constant Dropped = -3
+constant NoPort = 0
+constant NoClaim = ""
 constant Unserved = Error("NotServed")
 constant Ended = Error("RequestEnded")
 constant Output = "/server.log"
@@ -32,12 +34,12 @@ Slotted(arguments Texts, slot Number) Number
 	let answer = isFree then Answered(server, port, arguments) else Unserved
 	if answer is not Unserved
 		return answer
-	(isFree then false else port is 0 or IsDead(port)) then Started(server.slot) else Slotted(arguments, slot + 1)
+	(isFree then false else port is NoPort or IsDead(port)) then Started(server.slot) else Slotted(arguments, slot + 1)
 Port(server Resident) Number
 	Missing.Port(Resident("Compiler/output/Missing")) is 0
 	let stamp = File(server.Stamped)
 	let stamped = stamp.Exists then stamp.ReadLines.First to Number else 0
-	stamped is Error then 0 else stamped
+	stamped is Error then NoPort else stamped
 IsDead(port Number) Boolean
 	Sample.IsDead(0)
 	let socket = Socket.Connect("127.0.0.1", port)
@@ -53,9 +55,9 @@ Answered(server Resident, port Number, arguments Texts) Number
 		return Unserved
 	let claim = Claimed(server, socket)
 	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	let code = claim is not "" and Greeted(socket) then Requested(socket, request) else Unserved
+	let code = claim is not NoClaim and Greeted(socket) then Requested(socket, request) else Unserved
 	Socket.Close(socket)
-	if code is Unserved and claim is not ""
+	if code is Unserved and claim is not NoClaim
 		File(server.Freed + "." + claim).Rename(server.Freed)
 	code is Dropped then Interrupted(server, port) else code
 Requested(socket Number, request Text) Number
@@ -132,9 +134,9 @@ Claimed(server Resident, socket Number) Text
 	Sample.Claimed(Server, 0) is ""
 	let port = Socket.Port(socket)
 	if port is Error
-		return ""
+		return NoClaim
 	File(server.Freed).Rename(server.Freed + "." + port)
-	File(server.Freed + "." + port).Exists then port to Text else ""
+	File(server.Freed + "." + port).Exists then port to Text else NoClaim
 Greeted(socket Number) Boolean
 	Sample.Greeted(0) is false
 	let waited = Socket.Waiting(socket, Resident.GreetingSeconds)

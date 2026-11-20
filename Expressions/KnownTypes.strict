@@ -43,8 +43,7 @@ Index(typeName Text) Number
 	Indexed.Index("Missing") is -1
 	if positions.Length is 0
 		return names.Index(typeName)
-	let position = positions(typeName)
-	position is Error then -1 else position
+	typeName is in positions then positions(typeName) else -1
 IsPlural(typeName Text) Boolean
 	Instantiation.Boxed.ResolvedType("Box(Text, Number)", "Swap", 1) is "Box(Number, Text)"
 	Instantiation.Boxed.ResolvedType("Box(Text, Number)", "Sizes", 1) is "List(Number)"
