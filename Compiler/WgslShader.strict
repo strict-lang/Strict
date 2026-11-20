@@ -63,8 +63,8 @@ Main Texts
 	"if (at >= places[4]) { return; }" is in Scaled.Main
 	"output[at] = r3.f;" is in Scaled.Main
 	let count = "if (at >= places[" + (MlirGpuCheck(function, position).Free.Length + 1) * 2 + "]) { return; }"
-	let body = WgslFunction(function).Statements(position + 1, function.method.LoopEndOf(position))
-	(Entry + count + WgslFunction(function).Declarations + Loaded + Started + body) + "}"
+	let tail = Loaded + Started + WgslFunction(function).Statements(position + 1, function.method.LoopEndOf(position))
+	(Entry + count + WgslFunction(function).Declarations(tail) + tail) + "}"
 Loaded Texts
 	Scaled.Loaded is ("m_scale = numbers[places[0]];", "v_scale = n_of(m_scale);")
 	mutable lines = List(Text)
