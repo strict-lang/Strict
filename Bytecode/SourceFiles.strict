@@ -33,23 +33,23 @@ Indexed(paths Texts) Texts
 	for project.Length > 0 then Added(project, local) else Folders(local, 3)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Reached(known Texts, frontier Texts, reached Texts, searched = List(Text)) Texts slow
+Reached(known Texts, frontier Texts, reached Texts, searched = List(Text), folders = TypeFolders.None) Texts slow
 	"./Compression/Inflate.strict" is in Plain.Reached(Compressed, Imaging, List(Text))
 	if frontier.Length is 0
 		return reached
-	mutable mentioned = List(Mutable(Text))
+	mutable names = List(Mutable(Text))
 	for frontier
-		mentioned = Added(mentioned, Mentioned(value))
+		names = names + Mentioned(value)
+	let mentioned = names.Unique
 	let unmatched = Mentions.Unmatched(mentioned, known) - searched
-	let indexed = unmatched.Length is 0 then known else Added(known, TypeChoice(known).Unique(Nearby(unmatched)))
-	let all = Added(reached, frontier)
-	Reached(indexed, Matching(mentioned, indexed) - all, all, searched + unmatched)
+	let indexed = unmatched.Length is 0 or folders.folders.Length > 0 then folders else TypeFolders.Of(root)
+	let grown = unmatched.Length is 0 then known else Added(known, TypeChoice(known).Unique(indexed.Files(unmatched)))
+	let visited = Added(reached, frontier)
+	Reached(grown, Matching(mentioned, grown) - visited, visited, searched + unmatched, indexed)
 Matching(names Texts, files Texts) Texts
 	SourceFiles(".").Reached(Imaging, List(Text), Imaging) is Imaging
 	SourceFiles(".").Matching(("Vector2s", "Missing"), Imaging + "./Math/Vector2.strict") is ("./Math/Vector2.strict")
-	mutable wanted = Dictionary(Text, Boolean)
-	for names
-		wanted(value) = true
+	let wanted = Mentions.Named(names)
 	for files
 		let slashed = value.IndexOf("\\") >= 0 then value.Replace("\\", "/") else value
 		let slash = slashed.LastIndexOf("/")
@@ -123,41 +123,6 @@ Package(name Text) Text
 	if name is "Strict" or Directory.Exists("./" + name)
 		return name is "Strict" then "" else "./" + name
 	Directory.Exists(root + "/" + name) then root + "/" + name else ""
-Nearby(types Texts) Texts
-	SourceFiles(".").Nearby(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
-	let local = MatchedFolders(FolderIndex(List(Text) + root), types)
-	mutable parents = List(Text) + root
-	if local.Length < types.Length
-		for Directory.Directories("..")
-			let project = Path(value.Replace("\\", "/")).FileName.text
-			if project(0) is project(0).Upper and project(0) is not project(0).Lower
-				parents = parents + ("../" + project)
-	mutable files = List(Mutable(Text))
-	for parents.Length is 1 then local else MatchedFolders(FolderIndex(parents), types)
-		files = Added(files, Directory.Files(value, "*.strict"))
-	files
-FolderIndex(parents Texts) Dictionary(Text, Text)
-	"Vector2" is in Plain.FolderIndex(List(Text) + ".")
-	mutable map = Dictionary(Text, Text)
-	for parents
-		let parent = value
-		for Directory.Directories(parent)
-			let folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
-			for Directory.Files(folder, "*.strict")
-				let name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
-				if name is not in map
-					map(name) = folder
-	map
-MatchedFolders(indexed Dictionary(Text, Text), types Texts) Texts
-	Plain.MatchedFolders(Dictionary(("Vector2", "./Math")), List(Text) + "Vector2s") is ("./Math")
-	mutable matched = List(Mutable(Text))
-	for types
-		mutable name = value
-		for as long as name.EndsWith("s") and name is not in indexed
-			name = name.Substring(0, name.Length - 1)
-		if name is in indexed
-			matched = Added(matched, List(Text) + indexed(name))
-	matched
 PackageWith(type Text, projects Text) Text
 	SourceFiles("C:/Missing").PackageWith("Adder", ".") is "./Examples/NativeAdd"
 	for Directory.Directories(projects)

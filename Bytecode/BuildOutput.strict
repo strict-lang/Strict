@@ -36,8 +36,7 @@ Shipped(release Text, sidecar Text) Text
 IsKept(release Text, sidecar Text, program Text, ending Text) Boolean slow
 	BuildOutput.IsKept("Compiler/output/Unshipped", "A/obj/B.runtime.ptx", "B", ".runtime.ptx") is false
 	let shared = File(release + "/shared" + ending)
-	let isOther = shared.Exists and shared.ReadBytes is not File(sidecar).ReadBytes
-	isOther and Dependents(release, program, ending).Length > 0
+	shared.Exists and shared.ReadBytes is not File(sidecar).ReadBytes and Dependents(release, program, ending).Length > 0
 Swept(release Text, sidecar Text, ending Text) slow
 	BuildOutput.Swept("Compiler/output/Unshipped", "A/obj/B.runtime.ptx", ".runtime.ptx") is not Error
 	File(release + "/" + Path(sidecar).FileName.text).Delete

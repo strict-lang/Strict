@@ -59,7 +59,7 @@ Composed(files Texts) Texts
 	names
 Unknown(names Texts) Texts
 	Typo.Unknown(List(Text) + "Number") is ("Numbr", "Other")
-	let all = names + Constants
+	let all = Named(names + Constants)
 	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
 		if IsKnown(value, all) is false
 			value
@@ -71,7 +71,7 @@ Constants Texts
 			Tokenizer(value.Trim).Tokens(1)
 Unmatched(names Texts, files Texts) Texts
 	Mentions.Unmatched(("Vector2s", "Missing"), List(Text) + "./Math/Vector2.strict") is ("Missing")
-	let known = Names(files)
+	let known = Named(Names(files))
 	for names
 		if IsKnown(value, known) is false
 			value
@@ -81,11 +81,17 @@ Names(files Texts) Texts
 	for files
 		known.Add(Path(value.Replace("\\", "/")).FileName.RemoveExtension.text)
 	known
-IsKnown(name Text, known Texts) Boolean
-	Mentions.IsKnown("Numbers", List(Text) + "Number")
-	Mentions.IsKnown("Numbr", List(Text) + "Number") is false
-	Mentions.IsKnown("Numberss", List(Text) + "Number")
-	Mentions.IsKnown("Sizes", List(Text) + "Number") is false
+Named(names Texts) Dictionary(Text, Boolean)
+	Mentions.Named(("a", "b", "a")).Length is 2
+	mutable named = Dictionary(Text, Boolean)
+	for names
+		named(value) = true
+	named
+IsKnown(name Text, known Dictionary(Text, Boolean)) Boolean
+	Mentions.IsKnown("Numbers", Named(List(Text) + "Number"))
+	Mentions.IsKnown("Numbr", Named(List(Text) + "Number")) is false
+	Mentions.IsKnown("Numberss", Named(List(Text) + "Number"))
+	Mentions.IsKnown("Sizes", Named(List(Text) + "Number")) is false
 	name is in known then true else name.EndsWith("s") and IsKnown(name.Substring(0, name.Length - 1), known)
 Declared(shape Expressions/TypeShape) Texts
 	Mentions.Declared(TypeShape(Typo.lines)) is ("Numbr", "Numbers", "Other", "Number")

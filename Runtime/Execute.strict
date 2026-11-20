@@ -92,7 +92,6 @@ Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 	Answer(answer, inferred = joined)
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
 	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let stamped = BinarySources(files).Stamped
 	let linked = FileCompiler(logger, isQuiet, selection).Built(path, root, true, files, inference, known)
 	let types = linked.entries
 	if types.Length is 0
@@ -100,7 +99,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	let started = Process.Elapsed
 	let tested = isTested then Tested(types, path, isQuiet) else Answer(0, known, constants = cached)
 	if tested.code is 0 and selection is "" and IsEdited(path) is false
-		Stored(cache, root, files, stamped, isOwn, linked)
+		Stored(cache, root, files, linked.linker.Sourced, isOwn, linked)
 	let survived = tested.code is 0 and isTested then Mutated(types, path, root, files, inference, started) else 0
 	Answer(tested.code + survived, linked.Known(known), files = files, Types = types, constants = tested.constants)
 Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound)
