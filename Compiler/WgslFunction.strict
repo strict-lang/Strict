@@ -10,11 +10,13 @@ Lines Texts
 	Twice.Lines.First is "fn s_Rows_Twice_1(instance: num, p0: num) -> num {"
 	Twice.Lines.Last is "}"
 	"v_number = p0;" is in Twice.Lines
+	"var v_numberl: vec2<u32>;" is not in Twice.Lines
 	let header = "fn " + Name + "(instance: num" + Parameters + ") -> num {"
 	mutable entry = List(Text) + "v_value = instance;"
 	for function.method.parameters
 		entry = entry + ("v_" + value.Name + (IsList(index) then "l" else "") + " = p" + index + ";")
-	(List(Text) + header) + Declarations + entry + Members + Statements(0, function.method.instructions.Length) + "}"
+	let body = entry + Members + Statements(0, function.method.instructions.Length)
+	(List(Text) + header) + Declarations(body) + body + "}"
 Parameters Text
 	Summing.Parameters is ", p0: vec2<u32>, p1: vec2<u32>"
 	mutable text = ""
@@ -42,6 +44,17 @@ Defaults(given Number) Text
 	for Range(given, function.method.parameters.Length)
 		text = text + ", n_of(" + MlirDefaults(function).Whole(function.method.parameters(value)) + ")"
 	text
+Declarations(body Texts) Texts
+	Twice.Declarations(List(Text) + "return r2;") is List(Text) + "var r2: num;"
+	mutable words = Dictionary(Text, Boolean)
+	for Regex("[A-Za-z_][A-Za-z0-9_]*").FindAll(Text.Combine(body, "\n"))
+		if value is not in words
+			words.Add(value, true)
+	mutable kept = List(Text)
+	for Declarations
+		if (value is "var flag = false;" then "flag" else value.Substring(4, value.IndexOf(":") - 4)) is in words
+			kept = kept + value
+	kept
 Declarations Texts
 	Twice.Declarations.First is "var flag = false;"
 	"var v_numberl: vec2<u32>;" is in Twice.Declarations

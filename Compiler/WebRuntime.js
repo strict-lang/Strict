@@ -25,7 +25,7 @@ addToLibrary({
 addToLibrary({
 	$strictWebGpu: { device: null, failed: false, destroying: false, pipelines: {}, buffers: {}, failures: {}, next: 1, grown: 0, queued: 0, done: [],
 		halves: {}, uploads: {}, views: [], borrowed: {}, lent: {}, dropped: {}, sixteens: {}, compiling: {},
-		encoder: null, empty: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [] }, pool: {},
+		encoder: null, empty: null, recorded: 0, fresh: 0, unused: [], staging: { current: null, full: [], free: [], size: 65536 }, pool: {},
 		pooled: new WeakSet(), pooledBytes: 0, poolOrder: new Set(), pass: null, prelude: null, flags: new WeakSet(), flagsUsed: [], flagPool: [],
 		layout: null, lazy: {}, filed: {},
 		poolLimit: 0, queueLimit: 0 },
@@ -33,14 +33,18 @@ addToLibrary({
 	$strictWebGpuAwaited: async (promise) => {
 		if (!navigator.userAgent.includes('Firefox'))
 			return await promise;
-		let isDone = false;
+		let isDone = false, first = true;
 		const watched = Promise.resolve(promise).finally(() => isDone = true);
 		while (!isDone && strictWebGpu.device) {
 			strictWebGpu.device.queue.submit([]);
 			await new Promise((resolve) => {
-				const channel = new MessageChannel();
-				channel.port1.onmessage = resolve;
-				channel.port2.postMessage(0);
+				if (first) {
+					first = false;
+					const channel = new MessageChannel();
+					channel.port1.onmessage = resolve;
+					channel.port2.postMessage(0);
+				} else
+					setTimeout(resolve, 2);
 			});
 		}
 		return await watched;
@@ -103,7 +107,7 @@ addToLibrary({
 		strictWebGpu.encoder = null;
 		strictWebGpu.recorded = 0;
 		const used = staging.full.concat(staging.current || []), destroyed = strictWebGpu.unused;
-		const stagedBytes = strictWebGpuMobile() ? used.length * 67108864 : used.reduce((sum, staged) => sum + staged.used, 0);
+		const stagedBytes = used.reduce((sum, staged) => sum + (strictWebGpuMobile() ? staged.mirror.length : staged.used), 0);
 		const bytes = strictWebGpu.fresh + destroyed.reduce((sum, buffer) => sum + buffer.size, 0) + stagedBytes;
 		used.forEach((staged) => staged.used && device.queue.writeBuffer(staged.buffer, 0, staged.mirror, 0, staged.used));
 		device.queue.submit(strictWebGpu.prelude ? [strictWebGpu.prelude.finish(), encoder.finish()] : [encoder.finish()]);
@@ -191,6 +195,7 @@ addToLibrary({
 		strictWebGpu.empty = null;
 		strictWebGpu.staging.current = null;
 		strictWebGpu.staging.full = [];
+		strictWebGpu.staging.size = 65536;
 		strictWebGpu.flagsUsed = [];
 		strictWebGpu.unused = [];
 		strictWebGpu.buffers = {};
@@ -264,22 +269,29 @@ addToLibrary({
 	$strictWebGpuStore: (staged, offset, numbers) => staged.mirror ?
 		staged.mirror.set(new Uint8Array(numbers.buffer, numbers.byteOffset, numbers.byteLength), staged.offset + offset) :
 		strictWebGpu.device.queue.writeBuffer(staged.buffer, staged.offset + offset, numbers),
-	// bytes in a staging buffer of 64 MB (256 byte aligned for storage and uniform bindings) as a binding resource, more
-	// in a buffer of their own
+	// bytes in a staging buffer growing from 64 KB up to 64 MB (256 byte aligned for bindings), larger in its own buffer
 	$strictWebGpuStaged__deps: ['$strictWebGpu', '$strictWebGpuCreated'],
 	$strictWebGpuStaged: (bytes) => {
-		const staging = strictWebGpu.staging, size = 67108864, usage = 128 | 64 | 8;
+		const staging = strictWebGpu.staging, limit = 67108864, usage = 128 | 64 | 8;
 		const aligned = Math.ceil(Math.max(bytes, 4) / 256) * 256;
-		if (aligned > size) {
+		if (aligned > limit) {
 			const own = strictWebGpuCreated(aligned, usage);
 			strictWebGpu.unused.push(own);
 			return { buffer: own, offset: 0, size: aligned, mirror: null };
 		}
-		if (!staging.current || staging.current.used + aligned > size) {
-			if (staging.current)
+		if (!staging.current || staging.current.used + aligned > staging.current.mirror.length) {
+			const overflowed = Boolean(staging.current);
+			if (overflowed)
 				staging.full.push(staging.current);
-			staging.current = staging.free.pop() ||
-				{ buffer: strictWebGpuCreated(size, usage), mirror: new Uint8Array(size), used: 0 };
+			const reuseIndex = staging.free.findIndex((entry) => entry.mirror.length >= aligned);
+			if (reuseIndex >= 0)
+				staging.current = staging.free.splice(reuseIndex, 1)[0];
+			else {
+				if (overflowed)
+					staging.size = Math.min(limit, staging.size * 2);
+				const size = Math.min(limit, Math.max(staging.size || 65536, aligned));
+				staging.current = { buffer: strictWebGpuCreated(size, usage), mirror: new Uint8Array(size), used: 0 };
+			}
 		}
 		const offset = staging.current.used;
 		staging.current.used += aligned;
