@@ -61,14 +61,15 @@ Inputs(sources Texts) Texts
 	"./Content/**" is not in NativeCache("test", ("Math", ".", "native")).Inputs(List(Text))
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
 	let source = FileCompiler.Normalized(rest(0))
-	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
-	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	let tools = (List(Text) + (rest(1) + "/strict" + extension)) - Output - Output.Lower
-	let content = Path(source).PathOnly.text + "/Content"
-	let webShell = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true)).Shell(NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))))
-	let webInputs = "web" is in NativeCompiler.Options(rest) then (rest(1) + "/Compiler/NativeRuntimeWgsl.js", rest(1) + "/Compiler/WebRuntime.js", webShell) else List(Text)
-	let inputs = sources + runtimes + tools + webInputs + NativeInputs(Folders(sources))
-	command is "test" then inputs else inputs + (content + "/**")
+	let strictExe = rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension
+	let out = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
+	let shell = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true)).Shell(out)
+	let js = (rest(1) + "/Compiler/NativeRuntimeWgsl.js", rest(1) + "/Compiler/WebRuntime.js", shell)
+	let web = "web" is in NativeCompiler.Options(rest) then js else List(Text)
+	let extra = web.Length > 0 or shell.EndsWith(".shell.html") is false then web else List(Text) + shell
+	let base = sources + Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
+	let inputs = base + ((List(Text) + strictExe) - Output - Output.Lower) + extra + NativeInputs(Folders(sources))
+	command is "test" then inputs else inputs + (Path(source).PathOnly.text + "/Content/**")
 Files Texts slow
 	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
 	"./Examples/NativeAdd/native/Adder.c" is in Adding.Inputs(Adding.Files)

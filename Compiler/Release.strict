@@ -31,21 +31,22 @@ Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isRelea
 		return
 	if isWeb
 		return Refreshed(Parent + "/Release/Web", "", base, List(Text))
-	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing
+	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing or File(Parent + "/" + Named(base) + ".shell.html").Exists
 		NativePackaged(isCrossing)
 NativePackaged(isCrossing Boolean)
 	Content(Parent + "/Release/Content")
 	let ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
-		return Refreshed(Parent + "/Release", "", BuildOutput.Delivered(base), List(Text) + ending)
+		return Refreshed(Parent + "/Release", "", BuildOutput.Delivered(base), (ending, ".shell.html"))
 	if Platform.Current is Platform.MacOS
 		return MacOSBundle(logger, base).Released
 	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
-	Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), List(Text) + ending)
+	Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), (ending, ".shell.html"))
 	let linux = Parent + "/Release/Linux"
 	if isCrossing and Platform.Current is Platform.Windows and File(linux + "/" + Named(base)).Exists
 		Refreshed(linux, linux + "/Content", base, List(Text))
 IsDemo Boolean
+	File("Compiler/output/A.shell.html").Write("<html/>") is not Error
 	Release(Logger, TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
 	Release(Logger, "Missing/AtlasDemo").IsDemo is false
 	Release(Logger, "Games/Samples/AtlasDemo").IsDemo is false
@@ -91,6 +92,8 @@ Sidecar(release Text)
 	Release(Logger, "Missing/App").Sidecar("Missing/Release") is not Error
 	PtxCache("Compiler/output/Sided").Written(List(Text) + "// a", ".ptx")
 	Release(Logger, "Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
+	Release(Logger, "Compiler/output/obj/A").Packaged("module {\n}") is not Error
+	File("Compiler/output/Release/" + Platform.NameOf(Platform.Current) + "/A.shell.html").Exists
 	let isWeb = Path(release).FileName.text is "Web"
 	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and Placed(Icon, release + "/favicon.ico") is false
 		logger.Log("Release could not place " + release + "/favicon.ico")

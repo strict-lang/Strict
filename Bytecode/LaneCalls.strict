@@ -16,6 +16,12 @@ constant Stub = TypeEntry("Strict/Drawer", Drawer.members, List(MethodEntry) + M
 constant Paired = InstructionEntry.Invoke(5, ("Strict/Pair", "Shifted", "Strict/Number", "offset", "count"), (4, 3), -1)
 constant Swapped = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "count", "offset"), (4, 3), -1)
 constant Doubled = InstructionEntry.Invoke(5, ("Strict/Drawer", "Shifted", "Strict/Number", "offset", "offset"), (4, 3), -1)
+constant Changed = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "changed_0")
+constant BuiltFrom = InstructionEntry.Invoke(6, ("Strict/Custom", "from", "Custom", "offset", "count"), (4, 3), -1)
+constant FromSplit = MethodEntry("from", (Offset, Counted), "Strict/Custom", OffsetReal)
+constant FromChanged = MethodEntry("from", (Offset, Counted), "Strict/Custom", OffsetReal + Changed)
+constant Custom = TypeEntry("Strict/Custom", Drawer.members, List(MethodEntry) + FromSplit)
+constant Mutating = TypeEntry("Strict/Custom", Drawer.members, List(MethodEntry) + FromChanged)
 Laned(members List(MemberEntry)) Texts
 	Sample.Laned(Drawer.members) is ("offset Pair")
 	Sample.Laned(StructLanes.Pair.members).Length is 0
@@ -56,12 +62,13 @@ Split(member MemberEntry, lanes Texts) List(MemberEntry)
 Signature(call InstructionEntry) Texts
 	Sample.Signature(Shift) is ("offset Pair")
 	Sample.Signature(Made) is ("offset Pair")
-	Sample.Signature(StructLanes.Constructed).Length is 0
-	Sample.Signature(StructLanes.Calling(4)).Length is 0
+	Sample.Signature(StructLanes.Constructed).Length + Sample.Signature(StructLanes.Calling(4)).Length is 0
+	LaneCalls((StructLanes.Pair, Mutating)).Signature(BuiltFrom).Length is 0
+	LaneCalls((StructLanes.Pair, Custom)).Signature(BuiltFrom) is ("offset Pair")
 	if call.kind is not InstructionType.Invoke
 		return List(Text)
 	let type = Inliner(types).TypeOf(call.texts(0))
-	if call.texts(1) is "from"
+	if call.texts(1) is "from" and Inliner(types).Declared(type, call).instructions.Length is 0
 		return StructLanes(types).Members(type).Length > 0 then List(Text) else Laned(type.members)
 	LaneNesting(types).MethodSignature(type, call)
 Width(call InstructionEntry, position Number) Number

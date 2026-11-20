@@ -33,6 +33,10 @@ constant Owner = TypeEntry("Strict/Examples/Owner", List(MemberEntry), List(Meth
 constant NoMethod = MethodEntry("", List(MemberEntry), "None", List(InstructionEntry))
 constant Failing = MethodEntry(StructLanes.Squared, instructions = (StructLanes.Made, StructLanes.Squared.instructions(9)) + StructLanes.Squared.instructions)
 constant Failed = Inliner((StructLanes.Caller, TypeEntry(StructLanes.Pair.Name, StructLanes.Pair.members, List(MethodEntry) + Failing)), true)
+constant SizeLoad = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "Size"), InstructionEntry(InstructionType.FieldLoad, ("Width", "Size"), (1, 0, -1, -2)), InstructionEntry.Return(1))
+constant Boxed = TypeEntry("Strict/Boxed", List(MemberEntry) + LaneCalls.Sized, List(MethodEntry) + MethodEntry("W", List(MemberEntry), "Strict/Number", SizeLoad))
+constant BoxedCall = InstructionEntry.Invoke(1, ("Strict/Boxed", "W", "Strict/Number"), List(Number), 0)
+constant BoxedSplice = Inliner((StructLanes.Sized, Boxed), true).Splice(Caller, Boxed.methods.First, BoxedCall, 2)
 Inlined List(TypeEntry)
 	Calling.Name is "Run" and Caller.Name is "Strict/Caller"
 	Calling.parameters is (MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false))
@@ -153,15 +157,16 @@ Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) 
 	Sample.Splice(Caller, First, Calling.instructions(1), 2).member is "elements"
 	Splitting.Splice(StructLanes.Caller, StructLanes.Squared, StructLanes.Calling(4), 5).scratch is 21
 	let rules = InlineRules(callee, types)
-	let member = rules.IsOwn(call) then "" else rules.Wrapped(TypeOf(call.texts(0)))
-	let kept = rules.IsOwn(call) then rules.MemberNames(owner) + "value" else List(Text)
 	let type = TypeOf(call.texts(0))
 	let isLaned = isSplitting and rules.IsLaned(type, call, IsReturning(callee))
+	let member = rules.IsOwn(call) or isLaned then "" else rules.Wrapped(type)
+	let kept = rules.IsOwn(call) then rules.MemberNames(owner) + "value" else List(Text)
 	let fields = isLaned then LaneNesting(types).DirectFields(type) else List(Text)
 	InlineSplice(callee, call, base, member, kept, fields, base + LoadReuse(callee.instructions).RegisterCount)
 IsReturning(callee MethodEntry) Boolean
 	Splitting.Splice(StructLanes.Caller, StructLanes.Squared, StructLanes.Calling(4), 5).fields is ("real", "imaginary")
 	Splitting.Splice(Caller, First, StructLanes.Calling(4), 5).fields.Length is 0
+	BoxedSplice.member is "" and BoxedSplice.fields is List(Text) + "Size"
 	Sample.Splice(Caller, First, Calling.instructions(1), 2).kept.Length is 0
 	Splitting.IsReturning(StructLanes.Squared)
 	Splitting.IsReturning(First) is false

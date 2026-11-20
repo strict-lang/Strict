@@ -35,7 +35,8 @@ IsChanged(at Number, register Number) Boolean
 	let offset = register - entry.payload(0)
 	if entry.kind is not InstructionType.Invoke or offset < 1 or offset > 1 + PayloadDecoder(entry).ArgumentCount
 		return false
-	MlirChanged(function, at).IsRead(register)
+	let changed = MlirChanged(function, at)
+	(offset is 1 or offset - 2 < changed.Callee.parameters.Length) and changed.IsRead(register)
 WrittenKind(writer Number) Text
 	Graded.WrittenKind(3) is "Boolean"
 	Graded.WrittenKind(6) is "Shape"

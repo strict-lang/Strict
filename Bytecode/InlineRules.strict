@@ -18,14 +18,16 @@ constant Recursing = MethodEntry(Adding, instructions = Inliner.Again.instructio
 constant Valued = MethodEntry(Adding, instructions = List(InstructionEntry) + Placeholder.instructions.First + Adding.instructions)
 constant Reloaded = MethodEntry(Adding, instructions = List(InstructionEntry) + Adding.instructions.First + Placeholder.instructions)
 constant Twice = MethodEntry(Adding, instructions = Adding.instructions + Adding.instructions)
+constant Boxing = InlineRules(Adding, (StructLanes.Sized, Inliner.Boxed))
 Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
 	Listing.Fits(Inliner.Caller, Inliner.Listed, Inliner.Calling.instructions(1))
 	Listing.Fits(Inliner.Caller, Inliner.Caller, Inliner.Calling.instructions(1)) is false
 	Listing.Fits(Inliner.Caller, Cached, Inliner.Calling.instructions(1)) is false
+	Boxing.Fits(Inliner.Caller, Inliner.Boxed, Inliner.BoxedCall) is false
 	let isOwn = IsOwn(call)
 	let own = isOwn and type.Name is owner.Name and IsContained(MemberNames(owner))
-	let member = Wrapped(type)
-	let wrapped = isOwn is false and member is not "" and HasOwnCall is false and IsContained((member, "value"))
+	let member = isOwn or StructLanes(types).Members(type).Length > 0 then "" else Wrapped(type)
+	let wrapped = member is not "" and HasOwnCall is false and IsContained((member, "value"))
 	let isCached = type.ConstantSlot(callee) >= 0
 	(own or wrapped) and isCached is false and IsSmall and IsComputed and IsReplaceable(type) and IsReturningComputed
 IsOwn(call InstructionEntry) Boolean

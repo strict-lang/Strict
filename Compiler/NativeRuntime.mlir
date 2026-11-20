@@ -12423,16 +12423,21 @@
     %none = arith.constant 0.0 : f64
     return %none : f64
   }
-  // true when the word at slot refers to an object outside [first, end)
+  // true when the word at slot refers to an object outside [first, end) or a non-hole span (whose text lives outside)
   func.func private @strict_words_outside(%slot: !llvm.ptr, %first: i64, %end: i64) -> i1 attributes {llvm.passthrough = ["alwaysinline"]} {
     %zero = arith.constant 0 : i64
+    %hole = arith.constant 0x7FFD000000000000 : i64
     %word = llvm.load %slot : !llvm.ptr -> i64
     %target = func.call @strict_rc_target(%word) : (i64) -> i64
     %isTarget = arith.cmpi ne, %target, %zero : i64
     %before = arith.cmpi ult, %target, %first : i64
     %after = arith.cmpi uge, %target, %end : i64
     %outside = arith.ori %before, %after : i1
-    %referring = arith.andi %isTarget, %outside : i1
+    %targetOutside = arith.andi %isTarget, %outside : i1
+    %isSpan = func.call @strict_span_is(%word) : (i64) -> i1
+    %notHole = arith.cmpi ne, %word, %hole : i64
+    %realSpan = arith.andi %isSpan, %notHole : i1
+    %referring = arith.ori %targetOutside, %realSpan : i1
     return %referring : i1
   }
   // how many of the words at start are no hole and whether one of them refers to an object outside [first, end)
