@@ -67,8 +67,8 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - GPU memory: NVFP4 matrices (`TensorFile_Fours`) load as 8 bit rows (27 instead of 15.7 GB): e2m1 rows with their block scales on the GPU
 - Loading: 8 bit rows gathered straight from the mapped file (the 21 GB H3 DiT loads in 10-12 s, ComfyUI 4-7)
 - WebGPU: strict_convolution runs at ~6 TFLOPS on a 3080 (30 peak): not limited by workgroup bank conflicts, index divisions, register prefetch or the rolled inner loop (unrolled it was 6 % faster in a decode, products slower, shaders compiled longer)
-- WebGPU convolution: bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
-- WebGPU convolution: an index divided by a power of two (`size / 2`) divides in 64 bits at every read: shift
-- WebGPU convolution: each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
+- GPU kernels: bounds, reduction and tail checks remain: extend the four wide loads (`MlirBatched`) and fuse memory passes
+- GPU kernels: an index divided by a power of two (`size / 2`) divides in 64 bits at every read: shift
+- CUDA convolution: each convolution writes bfloat16 copies of its input and weights first; stages of 64 channels or 3 buffers once shared memory allows it
 - Uniform branches still in GPU loops, measure their share first (none showed up in Qwen3-Coder): `tokens_blocks` switches on the row bits per block, `products_run` runs bits chains per element, `strict_device_dots` has no bfloat16 arm, prompt attention masks every tile.
 - small number types as kernel values: values, parameters and members of types with 2-4 Number members (Complex) and lists of them read by index work (StructLanes, LaneCalls, MlirDeviceRecords), still on the CPU: a `for` over a List(Complex) (a list member with `value.Bits is 32` fails the build, index it instead), a List(Complex) result, a method returning a Complex that has a loop or an early return, the list backed types (Vector2, Vector3); a flattened list goes up again for every launch; a `to Text` reached only through text conversion is not emitted unless something calls it (why lane inlining skips `to`)
