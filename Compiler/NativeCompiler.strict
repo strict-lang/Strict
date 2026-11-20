@@ -8,6 +8,8 @@ constant Learning = ("Examples/Sum.strict", "NeuralNetworks/Batch.strict")
 constant Logged = ("", "Error: InvalidTestRequest", "Error: UnsupportedBuildOptions")
 constant Whole = "fast builds single programs, build a complete game with its Content without fast: "
 constant WebOnly = " is a Web app, build it with web"
+constant Tested = NativeCompiler(Logger)
+constant Web = "MossWeb.strict"
 Ran(arguments Texts) Number
 	let rest = arguments.Slice(1, arguments.Length - 1)
 	if Locked(rest(0)) is false
@@ -86,8 +88,7 @@ Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", ("fast", "linux"), Summing) is Alone
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text) + "fast", Learning) is "Examples/Sum.strict" + Model
 	NativeCompiler(Logger).Problem("Examples/Sum.strict", List(Text), Learning) is ""
-	NativeCompiler(Logger).Problem("MossWeb.strict", List(Text), Summing) is "MossWeb.strict" + WebOnly
-	NativeCompiler(Logger).Problem("MossWeb.strict", List(Text) + "web", Summing) is ""
+	Tested.Problem(Web, List(Text), Summing) is Web + WebOnly and Tested.Problem(Web, List(Text) + "web", Summing) is ""
 	if Path(path).FileName.text.IndexOf("Web") >= 0 and "web" is not in options
 		return path + WebOnly
 	let isFast = "fast" is in options

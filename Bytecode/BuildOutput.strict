@@ -27,11 +27,29 @@ Shipped(release Text, sidecar Text) Text
 	let at = name.IndexOf(".runtime.")
 	if at < 0
 		return release + "/" + name
-	let shared = release + "/shared" + name.Substring(at, name.Length - at)
-	let isShared = File(shared).Exists is false or File(shared).ReadBytes is File(sidecar).ReadBytes
-	if isShared
-		File(release + "/" + name).Delete
-	isShared then shared else release + "/" + name
+	let ending = name.Substring(at, name.Length - at)
+	let shared = release + "/shared" + ending
+	if IsKept(release, sidecar, name.Substring(0, at), ending)
+		return release + "/" + name
+	Swept(release, sidecar, ending)
+	shared
+IsKept(release Text, sidecar Text, program Text, ending Text) Boolean slow
+	BuildOutput.IsKept("Compiler/output/Unshipped", "A/obj/B.runtime.ptx", "B", ".runtime.ptx") is false
+	let shared = File(release + "/shared" + ending)
+	let isOther = shared.Exists and shared.ReadBytes is not File(sidecar).ReadBytes
+	isOther and Dependents(release, program, ending).Length > 0
+Swept(release Text, sidecar Text, ending Text) slow
+	BuildOutput.Swept("Compiler/output/Unshipped", "A/obj/B.runtime.ptx", ".runtime.ptx") is not Error
+	File(release + "/" + Path(sidecar).FileName.text).Delete
+	for Directory.Files(release, "*" + ending)
+		if Path(value).FileName.text is not "shared" + ending and File(value).ReadBytes is File(sidecar).ReadBytes
+			File(value).Delete
+Dependents(release Text, program Text, ending Text) Texts slow
+	BuildOutput.Dependents("Compiler/output/Unshipped", "B", ".runtime.ptx").Length is 0
+	for Directory.Files(release, "*.ptx")
+		let stem = Path(value).FileName.text.Replace(".ptx", "")
+		if stem.IndexOf(".") < 0 and stem is not program and File(release + "/" + stem + ending).Exists is false
+			stem
 Newer(path Text, sources Texts) Text
 	BuildOutput.Newer("Compiler/output/missing.exe", List(Text) + "BuildOutput.strict") is ""
 	if File(path).Exists is false

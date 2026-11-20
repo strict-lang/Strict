@@ -1,7 +1,7 @@
 has logger
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
-constant Sidecars = (".ptx", ".runtime.ptx", ".fatbin", ".runtime.fatbin", ".hsaco", ".metal")
+constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
 AndroidPackaged
 	let release = Parent + "/Release/Android"
 	Content(Parent + "/Release/Content")
@@ -98,9 +98,8 @@ Sidecar(release Text)
 	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and Placed(Icon, release + "/favicon.ico") is false
 		logger.Log("Release could not place " + release + "/favicon.ico")
 	for Sidecars
-		let sidecar = base + value
-		if isWeb is false and File(sidecar).Exists and File(sidecar).Length > 0
-			File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
+		if isWeb is false
+			PtxLibraries.Of(base).Placed(base, value, release)
 Mirrored(target Text)
 	if target is not ""
 		Synced(Parent + "/Release/Content", target)

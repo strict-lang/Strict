@@ -51,7 +51,8 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	if previous.Length > 0
 		return previous
 	File(base + ".gpu.mlir").Write(device)
-	let built = isCached and kept is not "" then Reduced(isTiling, builder, kept) else builder.Ptx(base, isTiling, kept)
+	let isSplit = isCached and kept is not ""
+	let built = isSplit then GpuBuilt(base, builder).Indexed(device, kept, isTiling) else builder.Ptx(base, isTiling, kept)
 	isCached then Remembered(key, built) else built
 Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	Reducing.Built(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")

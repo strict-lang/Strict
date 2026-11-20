@@ -2,6 +2,8 @@ has command Text
 has rest Texts
 has isRunning = false
 constant Adding = NativeCache("build", ("Examples/NativeAdd/NativeAdd.strict", "."))
+constant Wgsl = "/Compiler/NativeRuntimeWgsl.js"
+constant Script = "/Compiler/WebRuntime.js"
 IsEnabled Boolean
 	NativeCache("test", ("Math", ".", "native")).IsEnabled
 	NativeCache("test", ("Math/Vector2.strict", ".", "native")).IsEnabled
@@ -61,14 +63,13 @@ Inputs(sources Texts) Texts
 	"./Content/**" is not in NativeCache("test", ("Math", ".", "native")).Inputs(List(Text))
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
 	let source = FileCompiler.Normalized(rest(0))
-	let strictExe = rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension
-	let out = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
-	let shell = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true)).Shell(out)
-	let js = (rest(1) + "/Compiler/NativeRuntimeWgsl.js", rest(1) + "/Compiler/WebRuntime.js", shell)
-	let web = "web" is in NativeCompiler.Options(rest) then js else List(Text)
-	let extra = web.Length > 0 or shell.EndsWith(".shell.html") is false then web else List(Text) + shell
-	let base = sources + Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
-	let inputs = base + ((List(Text) + strictExe) - Output - Output.Lower) + extra + NativeInputs(Folders(sources))
+	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
+	let tools = (List(Text) + (rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension)) - Output - Output.Lower
+	let web = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true))
+	let shell = web.Shell(NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))))
+	let extra = shell.EndsWith(".shell.html") then List(Text) + shell else List(Text)
+	let webInputs = "web" is in NativeCompiler.Options(rest) then (rest(1) + Wgsl, rest(1) + Script, shell) else extra
+	let inputs = sources + runtimes + tools + webInputs + NativeInputs(Folders(sources))
 	command is "test" then inputs else inputs + (Path(source).PathOnly.text + "/Content/**")
 Files Texts slow
 	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
