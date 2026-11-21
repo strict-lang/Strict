@@ -7,21 +7,33 @@ has factors Numbers
 has half Number
 has window Number
 has hidden Numbers = List(Number)
+has bos Number = Number.NotFound
 constant Unloaded = Lfm3(List(Lfm3Block), List(Numbers), List(Number), 10000, 10000, List(Number), 1, 0)
 Loaded(path Text, bits = 8) Lfm3 slow
 	let model = Gguf(path, bits)
-	let heads = model.Value("lfm3.attention.head_count") to Number
-	let sliding = model.Value("lfm3.attention.sliding_window") to Number
-	let pairs = (model.Value("lfm3.attention.key_length") to Number) / 2
-	let bases = (model.Value("lfm3.rope.freq_base") to Number, model.Value("lfm3.rope.freq_base_swa") to Number)
+	let settings = Lfm3Block.Passing
+	let heads = settings.Setting(model, "attention.head_count", 1)
+	let sliding = settings.Setting(model, "attention.sliding_window", 0)
+	let pairs = settings.Setting(model, "embedding_length", 2) / heads / 2
+	let base = settings.Setting(model, "rope.freq_base", 10000)
+	let bases = (base, settings.Setting(model, "rope.freq_base_swa", base))
 	let rows = model.Rows("token_embd.weight")
 	let loaded = Layers(model, heads, sliding)
-	let normed = model.Values("output_norm.weight")
-	Lfm3(loaded, rows, normed, bases(0), bases(1), model.Values("rope_freqs.weight"), pairs, sliding)
+	let named = model.Shape("output_norm.weight").Length > 0 then "output_norm.weight" else "token_embd_norm.weight"
+	Lfm3(loaded, rows, model.Values(named), base, bases(1), settings.Optional(model, "rope_freqs.weight"), pairs, sliding)
+Beginning(model Gguf) Number
+	Unloaded.Beginning(Gguf("NeuralNetworks/tinyqwen3.gguf")) is Number.NotFound
+	let given = model.Value("tokenizer.ggml.add_bos_token")
+	let isAdded = given is "" then model.Value("tokenizer.ggml.pre") is "lfm2" else given is in ("true", "True", "1")
+	isAdded then model.Value("tokenizer.ggml.bos_token_id") to Number else Number.NotFound
+Prompted(tokens Numbers) Numbers
+	Lfm3(Unloaded, bos = 7).Prompted((1, 2)) is (7, 1, 2) and Unloaded.Prompted((1, 2)) is (1, 2)
+	bos >= 0 then List(Number) + bos + tokens else tokens
 Layers(model Gguf, heads Number, size Number) List(Lfm3Block) slow
-	let sliding = model.Value("lfm3.attention.sliding_window_pattern").Lines
-	for model.Value("lfm3.block_count") to Number
-		Lfm3Block.Loaded(model, "blk." + index + ".", heads, sliding(index) is in ("true", "1") then size else 0)
+	let sliding = model.Value(model.Value("general.architecture") + ".attention.sliding_window_pattern").Lines
+	for Lfm3Block.Passing.Setting(model, "block_count", 0)
+		let isSliding = index < sliding.Length then sliding(index) is in ("true", "1") else false
+		Lfm3Block.Loaded(model, "blk." + index + ".", heads, isSliding then size else 0)
 Rotations(positions Numbers, base Number, scaling Numbers) Numbers
 	Unloaded.Rotations(List(Number) + 0, 10000, List(Number)) is (1, 1, 0, 0)
 	Unloaded.Rotations(List(Number) + 1, 1, List(Number))(2).IsNearlyEqual(-0.8414709848078965)

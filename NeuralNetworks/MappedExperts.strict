@@ -10,7 +10,7 @@ Loaded(gguf Gguf, layer Text) MappedExperts slow
 Forward(input Numbers) Numbers
 	Mixture.Forward(Small)(5).IsNearlyEqual(0.0046048, 0.00005)
 	let scores = Batch(experts.router.weights, experts.router.biases).Sums(input)
-	let chosen = Routing(scores, experts.router.weights.Length).Chosen(experts.used)
+	let chosen = Routing(experts.Selected(scores), experts.router.weights.Length).Chosen(experts.used)
 	experts.Mixed(scores, chosen, Outputs(chosen, input))
 Outputs(chosen Numbers, input Numbers) Numbers
 	Mixture.Outputs((1, 0), Small * 50)(261).IsNearlyEqual(12.111, 0.05)

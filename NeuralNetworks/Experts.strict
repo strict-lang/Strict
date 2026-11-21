@@ -5,8 +5,11 @@ has used Number
 has gateUps List(Numbers) = List(Numbers)
 has downs List(Numbers) = List(Numbers)
 has basis Basis = Basis.None
+has isSigmoid Boolean = false
+has selectionBias Numbers = List(Number)
 constant Model = Gguf("NeuralNetworks/tinyqwen3moe.gguf")
 constant Tiny = Experts.Loaded(Model, "blk.0.")
+constant Sigmoids = Experts(Tiny, isSigmoid = true, selectionBias = (0, 0, 5, 0))
 constant Single = Experts.Dense(Tiny.expansions.First, Tiny.contractions.First)
 constant Probe = (0.5, -1, 1.5, 2, -0.25, 0.75, 1, -2)
 constant Gating = Tiny.Gated(Tiny.Expanded((1, 3), Probe), 4)
@@ -21,14 +24,19 @@ Loaded(model Gguf, prefix Text) Experts slow
 	let count = routed.router.weights.Length
 	let joined = Flattened(Joined(model, prefix, count))
 	let contracting = model.Rows(prefix + "ffn_down_exps.weight")
-	Experts(routed.router, Stacked(joined, count), Stacked(contracting, count), routed.used, joined, contracting)
+	let stacked = Stacked(joined, count)
+	let loaded = Experts(routed.router, stacked, Stacked(contracting, count), routed.used, joined, contracting)
+	Experts(loaded, isSigmoid = routed.isSigmoid, selectionBias = routed.selectionBias)
 Routed(model Gguf, prefix Text) Experts slow
 	Experts.Routed(Model, "blk.0.").router is Tiny.router
 	Experts.Routed(Model, "blk.0.").expansions.Length is 0
 	let architecture = model.Value("general.architecture")
 	let count = model.Value(architecture + ".expert_count") to Number
 	let routing = Layer(Gguf(model, bits = Number.SingleBits).Rows(prefix + "ffn_gate_inp.weight"), Layer.Zeros(count))
-	Experts(routing, List(Layer), List(Layer), model.Value(architecture + ".expert_used_count") to Number)
+	let name = prefix + "exp_probs_b.bias"
+	let bias = model.Shape(name).Length > 0 then Gguf(model, bits = Number.SingleBits).Values(name) else List(Number)
+	let routed = Experts(routing, List(Layer), List(Layer), model.Value(architecture + ".expert_used_count") to Number)
+	Experts(routed, isSigmoid = model.Value(architecture + ".expert_gating_func") is "2", selectionBias = bias)
 Dense(expansion Layer, contraction Layer) Experts
 	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
 	Experts(Layer.None, List(Layer) + expansion, List(Layer) + contraction, 1)
@@ -60,7 +68,7 @@ Forward(input Numbers) Numbers
 	if router.weights.Length is 0
 		return Expert(0, input)
 	let scores = Batch(router.weights, router.biases).Sums(input)
-	let chosen = Routing(scores, router.weights.Length).Chosen(used)
+	let chosen = Routing(Selected(scores), router.weights.Length).Chosen(used)
 	if chosen.Length >= Grouping.Fewest
 		return Mixed(scores, chosen, Grouped(chosen, input))
 	let size = expansions.First.weights.Length / 2
@@ -116,14 +124,23 @@ Mixed(scores Numbers, chosen Numbers, contracted Numbers) Numbers
 	let experts = scores.Length * used / chosen.Length
 	for chosen.Length / used * hidden
 		Blended(scores, chosen, contracted, (index / hidden).Floor, index % hidden, experts)
+Selected(scores Numbers) Numbers
+	Routing(Sigmoids.Selected((0, 1, 0, 2)), 4).Chosen(2) is (2, 3)
+	Tiny.Selected((0, 1)) is (0, 1)
+	if isSigmoid is false
+		return scores
+	for scores
+		1 / (1 + (-value).Exponential) + (selectionBias.Length > 0 then selectionBias(index % selectionBias.Length) else 0)
 Blended(scores Numbers, chosen Numbers, contracted Numbers, token Number, output Number, experts Number) Number
 	Tiny.Blended((0, 1, 0, 1), (1, 3), (2, 2, 4, 4), 0, 1, 4) is 3
+	Sigmoids.Blended((0, 1, 0, 2), (3, 1), (4, 4, 2, 2), 0, 0, 4).IsNearlyEqual(3.0929, 0.0001)
 	let hidden = contracted.Length / chosen.Length
 	let top = scores(token * experts + chosen(token * used))
 	mutable total = 0
 	mutable sum = 0
 	for used
-		let share = (scores(token * experts + chosen(token * used + index)) - top).Exponential
+		let score = scores(token * experts + chosen(token * used + index))
+		let share = isSigmoid then 1 / (1 + (-score).Exponential) else (score - top).Exponential
 		total = total + share
 		sum = sum + share * contracted((token * used + index) * hidden + output)
 	sum / total

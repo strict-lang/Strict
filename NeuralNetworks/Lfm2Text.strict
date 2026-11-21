@@ -1,0 +1,4 @@
+has logger
+constant Weights = "NeuralNetworks/lfm2/LFM2.5-24B-A2B-Q4_K_M.gguf"
+Run
+	Lfm3Text(logger).Answered(Weights, 4)

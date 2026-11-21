@@ -15,13 +15,15 @@ constant Feeding = Experts.Dense(Layer(((1, 0), (0, 1)), Layer.Unbiased), Layer(
 constant Passing = Lfm3Block(List(Number), List(Number), List(Number), List(Number), Feeding)
 Loaded(model Gguf, prefix Text, heads Number, size Number) Lfm3Block slow
 	let forward = Qwen3Block.FeedForward(model, prefix)
-	let norms = (model.Values(prefix + "attn_norm.weight"), model.Values(prefix + "post_attention_norm.weight"))
-	let mlp = (model.Values(prefix + "ffn_norm.weight"), model.Values(prefix + "post_ffw_norm.weight"))
+	let norms = (model.Values(prefix + "attn_norm.weight"), Optional(model, prefix + "post_attention_norm.weight"))
+	let mlp = (model.Values(prefix + "ffn_norm.weight"), Optional(model, prefix + "post_ffw_norm.weight"))
 	let block = Lfm3Block(norms(0), norms(1), mlp(0), mlp(1), forward, window = size)
 	if model.Shape(prefix + "shortconv.conv.weight").Length > 0
 		return Lfm3Block(block, convolution = ShortConvolution.Loaded(model, prefix))
 	let attending = Qwen3Block.Attending(model, prefix, heads, forward)
-	Lfm3Block(block, attention = attending, gates = Layer(model.Rows(prefix + "attn_gate.weight"), Layer.Unbiased))
+	let isGated = model.Shape(prefix + "attn_gate.weight").Length > 0
+	let gating = isGated then Layer(model.Rows(prefix + "attn_gate.weight"), Layer.Unbiased) else Layer.None
+	Lfm3Block(block, attention = attending, gates = gating)
 Forwarded(input Numbers, rotation Numbers) Lfm3Block
 	Passing.Forwarded((1, 2), List(Number)).output.Length is 2
 	let mixing = Mixing(Normed(input, attentionNorm), rotation)
@@ -37,8 +39,7 @@ Attended(normed Numbers, rotation Numbers) Lfm3Block
 	if attention.queryNorm.Length is 0
 		return Lfm3Block(value, output = normed)
 	let cached = attention.Cached(normed, rotation, 32)
-	let gating = Basis.None.Sums(gates.weights, gates.biases, normed)
-	let merged = Headed(cached.Merged(1), gating, cached.queryNorm.Length)
+	let merged = Gated(cached.Merged(1), normed, cached.queryNorm.Length)
 	let projected = Basis.None.Sums(cached.projection.weights, cached.projection.biases, merged)
 	Lfm3Block(value, attention = Trimmed(cached), output = projected)
 Trimmed(cached Qwen3Block) Qwen3Block
@@ -48,6 +49,15 @@ Trimmed(cached Qwen3Block) Qwen3Block
 		return cached
 	let keys = cached.keys.Slice(cached.keys.Length - kept, kept)
 	Qwen3Block(cached, keys = keys, values = cached.values.Slice(cached.values.Length - kept, kept))
+Setting(model Gguf, key Text, fallback Number) Number
+	Passing.Setting(Gguf("NeuralNetworks/tinyqwen3.gguf"), "rope.freq_base", 5) is 1000000
+	Passing.Setting(Gguf("NeuralNetworks/tinyqwen3.gguf"), "missing", 5) is 5
+	let given = model.Value(model.Value("general.architecture") + "." + key)
+	given is "" then fallback else given to Number
+Optional(model Gguf, name Text) Numbers
+	Passing.Optional(Gguf("NeuralNetworks/tinyqwen3.gguf"), "missing.weight").Length is 0
+	Passing.Optional(Gguf("NeuralNetworks/tinyqwen3.gguf"), "output_norm.weight").Length > 0
+	model.Shape(name).Length > 0 then model.Values(name) else List(Number)
 IsConvolution Boolean
 	Passing.IsConvolution is false
 	convolution.width > 1
@@ -60,6 +70,10 @@ Normed(input Numbers, weights Numbers) Numbers
 	for input.Length
 		let start = (index / size).Floor * size
 		input(index) * weights(index % size) * Normalization.Scale(Normalization.Squared(input, start, size), size, Epsilon)
+Gated(merged Numbers, normed Numbers, size Number) Numbers
+	Passing.Gated((1, 2), (1, 2), 1) is (1, 2)
+	Lfm3Block(Passing, gates = Layer(List(Numbers) + (0, 0), Layer.Unbiased)).Gated((1, 2), (1, 2), 2) is (0.5, 1)
+	gates.weights.Length is 0 then merged else Headed(merged, Basis.None.Sums(gates.weights, gates.biases, normed), size)
 Headed(merged Numbers, gating Numbers, size Number) Numbers
 	Passing.Headed((1, 2, 3, 4), (0, 1000), 2) is (0.5, 1, 3, 4)
 	for merged.Length

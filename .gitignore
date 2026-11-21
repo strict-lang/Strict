@@ -182,6 +182,7 @@ NeuralNetworks/distilgpt2/
 NeuralNetworks/corpus/
 NeuralNetworks/qwen3/
 NeuralNetworks/lfm3/
+NeuralNetworks/lfm2/
 *.safetensors
 !NeuralNetworks/tiny.safetensors
 !NeuralNetworks/tinygpt2.safetensors

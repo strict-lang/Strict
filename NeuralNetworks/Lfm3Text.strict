@@ -3,13 +3,16 @@ constant Weights = "NeuralNetworks/lfm3/LFM3-1.7B-Q8_0.gguf"
 constant Prompts = ("The capital of France is", "Three side lengths form a valid triangle when")
 constant Count = 32
 Run
-	let tokenizer = Gpt2Tokens.Loaded(Gguf(Weights))
+	Answered(Weights, 8)
+Answered(weights Text, bits Number)
+	let file = Gguf(weights)
+	let tokenizer = Gpt2Tokens.Loaded(file)
 	let started = Process.Elapsed
-	let model = Lfm3.Loaded(Weights)
+	let model = Lfm3(Lfm3.Loaded(weights, bits), bos = Lfm3.Unloaded.Beginning(file))
 	logger.Log("Loaded in " + (Process.Elapsed - started) + " s")
 	for Prompts
 		let before = Process.Elapsed
-		let prompt = tokenizer.Encoded(value)
+		let prompt = model.Prompted(tokenizer.Encoded(value))
 		let generated = Generated(model.Prefilled(prompt), prompt.Length)
 		let speed = ((Process.Elapsed - before) * 1000 / Count).Round
 		logger.Log(value + tokenizer.Decoded(generated) + " (" + speed + " ms per token)")
