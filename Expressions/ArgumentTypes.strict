@@ -125,22 +125,28 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	let arguments = Arguments(call, scope, current)
 	let at = Matched(arguments, types, instance, method)
 	let name = method is "from" then instance else instance + "." + method
+	let fewest = method is "from" then 0 else FileCheck(inference, "").Fewest(Owner(instance, method), method)
 	if at < 0
-		return TooMany(call, name, types) + RangeArguments.Issue(call, name, types)
+		return CountIssue(call, name, types, fewest) + RangeArguments.Issue(call, name, types)
 	"ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
-TooMany(call SyntaxNode, name Text, types Texts) Text
+CountIssue(call SyntaxNode, name Text, types Texts, fewest Number) Text
 	Logged.Compared(Made, "Wrong", "from", Counted, Counted) is "TooManyArguments: Wrong got 2 of 1"
-	Sizing.TooMany(DepthCopies(1), "Area", List(Text) + "Size") is "" and Logged.TooMany(Made, "Wrong", "") is ""
-	Couples.TooMany(Coupled, "Couple", List(Text)) is "" and Sizing.TooMany(Created, "Count", ("Size", "Number")) is ""
-	Sizing.TooMany(Spread, "Count.Spread", List(Text) + "Areas") is ""
+	Sizing.CountIssue(DepthCopies(1), "Area", List(Text) + "Size", 0) is ""
+	Logged.CountIssue(Made, "Wrong", "", 0) is ""
+	Couples.CountIssue(Coupled, "Couple", List(Text), 0) is ""
+	Sizing.CountIssue(Created, "Count", ("Size", "Number"), 0) is ""
+	Sizing.CountIssue(Spread, "Count.Spread", List(Text) + "Areas", 0) is ""
+	Sizing.CountIssue(Grown, "Count.Grow", ("Area", "Size"), 2) is "ArgumentMissing: Count.Grow got 1 of 2"
 	mutable given = 0
 	for call.children
 		if value.Kind is not "Reassignment" and (index > 0 or call.Kind is not "MethodCall")
 			given = given + 1
 	let isOpen = "" is in types or Text.Combine(inference.types.MembersOf(name).types).IndexOf("Generic") >= 0
-	if IsListed(types) or isOpen or given <= types.Length
+	if IsListed(types) or isOpen
 		return ""
-	"TooManyArguments: " + name + " got " + given + " of " + types.Length
+	if given < fewest
+		return "ArgumentMissing: " + name + " got " + given + " of " + fewest
+	given <= types.Length then "" else "TooManyArguments: " + name + " got " + given + " of " + types.Length
 Owner(instance Text, method Text) Text
 	Inheriting.Owner("Settings", "Parsed") is "Any"
 	Inheriting.Owner("Text", "Parsed") is "Text"
@@ -260,7 +266,7 @@ IsScalar(type Text) Boolean
 	Sizing.Mismatch("Xyz", "Area") is false
 	Sizing.IsBaseMismatch("Count", "Area") is false
 	Sizing.IsBaseMismatch("Text", "Area")
-	Odd.TooMany(Made, "Pair", List(Text) + "Number") is ""
+	Odd.CountIssue(Made, "Pair", List(Text) + "Number", 0) is ""
 	Sizing.Issue(SyntaxNode("MethodCall", "Area", Copies(0).children), Counted, Counted).StartsWith("Copy") is false
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).Split(" ")(2) is "copies"
 	type is in ("Boolean", "Number", "Text")
