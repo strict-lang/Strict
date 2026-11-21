@@ -106,7 +106,7 @@ Linked(entry TypeEntry, main TypeCodegen, logger Logger) ScriptCache
 	let round = fast.Linked((List(TypeEntry) + entry) + BaseRaw, signatures)
 	if round.entries.Length is 0
 		return ScriptCache(value, code = 1)
-	let nextMachine = Execute.Started(round.entries, Scripted.Path, false, true)
+	let nextMachine = outer.Execute.Started(round.entries, Scripted.Path, false, true)
 	mutable nextKnown = known
 	for round.signatures
 		nextKnown(value) = round.entries(index + 1)
