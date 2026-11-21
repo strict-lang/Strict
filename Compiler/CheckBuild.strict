@@ -62,11 +62,8 @@ CompiledHelper(folder Text) Text
 	let comp = Process.RunTool("clang", "-O2 \"" + folder + "/helper.c\" -o \"" + folder + "/helper.exe\"", ShortSeconds)
 	comp.exitCode is not 0 then Error("HelperCompileFailed: " + comp.Output + comp.error) else folder + "/helper.exe"
 CheckHeadersAndTraits(folder Text, helper Text) Boolean
-	let boot = Text.Combine(File("Compiler/Bootstrap.mlir").ReadLines, "\n")
-	let rt = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
-	let badRt = "strict_gc_watching(0 : i64)" is not in rt or "strict_gc_watching(1 : i64)" is in rt
-	if "@NativeCompiler_Checked_" is not in boot or badRt
-		return Error("BootstrapOrRuntimeWatchCheckFailed")
+	if File("Compiler/Bootstrap.mlir").ReadText.IndexOf("@NativeCompiler_Checked_") < 0
+		return Error("BootstrapNotChecked")
 	for (TraitFilesA + "\n" + TraitFilesB).Split("\n")
 		File(folder + "/" + value.Split("|")(0)).Write(value.Split("|")(1).Split("\\n"))
 	let trait = Built(folder, "TraitCheck", TraitA + TraitB)

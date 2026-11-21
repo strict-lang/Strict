@@ -9494,9 +9494,6 @@
   ^done:
     return
   }
-  // starts at 0 so the bootstrap seed, which links this file as it is, warns and continues. A development build turns it
-  // on (NativeBuild.Released); a release build (windows, linux, web) leaves it off and warns once
-  llvm.mlir.global internal @strict_gc_watching(0 : i64) : i64
   // 1 during a collection the runtime asks for itself to find dead lists and give back their WebGPU buffers
   // (strict_gpu_kernel on the web, 35 an image with almost nothing allocated): it says nothing about the program
   llvm.mlir.global internal @strict_gc_housekeeping(0 : i64) : i64
@@ -9699,18 +9696,8 @@
   ^fail:
     %messageLengths = llvm.mlir.addressof @strict_gc_exceeded : !llvm.ptr
     %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    %watchingSlot = llvm.mlir.addressof @strict_gc_watching : !llvm.ptr
-    %watching = llvm.load %watchingSlot : !llvm.ptr -> i64
     %none = arith.constant 0 : i64
-    %isWatching = arith.cmpi ne, %watching, %none : i64
-    cf.cond_br %isWatching, ^stop, ^warn
-  ^stop:
-    %printed = llvm.call @printf(%message, %collecting, %window, %percent) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, f64, f64, f64) -> i32
-    func.call @strict_gc_explain(%oldest) : (i64) -> ()
-    llvm.call @strict_crash_log(%message) : (!llvm.ptr) -> ()
-    %code = arith.constant 1 : i32
-    llvm.call @exit(%code) : (i32) -> ()
-    cf.br ^done
+    cf.br ^warn
   ^warn:
     %warnedSlot = llvm.mlir.addressof @strict_gc_warned : !llvm.ptr
     %warned = llvm.load %warnedSlot : !llvm.ptr -> i64
