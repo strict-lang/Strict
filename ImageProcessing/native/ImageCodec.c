@@ -119,10 +119,7 @@ static void Appended(void* context, void* bytes, int count)
 static void ClearFinalDeflate(unsigned char* zlib, int zlen)
 {
 	if ((zlib[2] & 6) == 2)
-	{
-		zlib[2] &= (unsigned char)~1;
 		return;
-	}
 	int pos = 2;
 	while (pos + 5 <= zlen - 4)
 	{
@@ -169,7 +166,9 @@ static void EncodedPng(Strip* strip)
 	}
 	free(line);
 	int zlen = 0;
+	stbiw__zlib_open = !strip->isLast;
 	unsigned char* zlib = stbi_zlib_compress(filt, (int)rawSize, &zlen, stbi_write_png_compression_level);
+	stbiw__zlib_open = 0;
 	free(filt);
 	if (!zlib || zlen < 6)
 	{

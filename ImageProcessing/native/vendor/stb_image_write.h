@@ -892,6 +892,8 @@ static unsigned int stbiw__zhash(unsigned char *data)
 
 #endif // STBIW_ZLIB_COMPRESS
 
+// Strict: set for a stream the caller joins with the next one, it ends with an empty stored block instead of BFINAL
+static _Thread_local int stbiw__zlib_open = 0;
 STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, int *out_len, int quality)
 {
 #ifdef STBIW_ZLIB_COMPRESS
@@ -912,7 +914,7 @@ STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, i
 
    stbiw__sbpush(out, 0x78);   // DEFLATE 32K window
    stbiw__sbpush(out, 0x5e);   // FLEVEL = 1
-   stbiw__zlib_add(1,1);  // BFINAL = 1
+   stbiw__zlib_add(stbiw__zlib_open ? 0 : 1,1);  // BFINAL
    stbiw__zlib_add(1,2);  // BTYPE = 1 -- fixed huffman
 
    for (i=0; i < stbiw__ZHASH; ++i)
@@ -973,6 +975,11 @@ STBIWDEF unsigned char * stbi_zlib_compress(unsigned char *data, int data_len, i
    for (;i < data_len; ++i)
       stbiw__zlib_huffb(data[i]);
    stbiw__zlib_huff(256); // end of block
+   if (stbiw__zlib_open) {
+      stbiw__zlib_add(0,3);
+      while (bitcount) stbiw__zlib_add(0,1);
+      stbiw__sbpush(out, 0); stbiw__sbpush(out, 0); stbiw__sbpush(out, 0xff); stbiw__sbpush(out, 0xff);
+   }
    // pad with 0 bits to byte boundary
    while (bitcount)
       stbiw__zlib_add(0,1);

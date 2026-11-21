@@ -1,11 +1,19 @@
 has path Text
 constant Corner = Image(Size(2, 2), (ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(0, 0, 0), ColorValue(1, 1, 1)))
 constant Saved = "Compiler/output/ImageSaverCorner.png"
+constant Striped = "Compiler/output/ImageSaverStriped.png"
 Save(image Image) slow
 	Directory.Create("Compiler/output") is not Error
 	ImageSaver(Saved).Save(Corner) is not Error
 	ImageLoader(Saved).Loaded.Colors is Corner.Colors
+	ImageSaver(Striped).Save(Image(Size(4, 64), ImageSaver("").Ramp(256))) is not Error
+	ImageLoader(Striped).Loaded.Colors is ImageSaver("").Ramp(256)
 	ImageCodec.SavePng(path, Flat(image), image.Width)
+Ramp(count Number) List(ColorValue)
+	ImageSaver("").Ramp(2)(1) is ColorValue(1 / Byte.Max, (Byte.Max - 1) / Byte.Max, 1 / Byte.Max)
+	for count
+		let shade = index % Byte.Values
+		ColorValue(shade / Byte.Max, (Byte.Max - shade) / Byte.Max, (index * index % Byte.Values) / Byte.Max)
 Flat(image Image) Numbers
 	ImageSaver("").Flat(Image.Blank(Size(1, 1))) is (0, 0, 0, 1)
 	ImageSaver("").Flat(Image(Size(1, 1), List(ColorValue) + ColorValue(0.2, 0.4, 0.6, 0.8))) is (0.2, 0.4, 0.6, 0.8)
