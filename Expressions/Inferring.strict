@@ -16,7 +16,8 @@ Raw TypeInference
 		methods.Add(value.MethodScope)
 		parameters.Add(Defaults(value.lines).Of(methods.Last, members.Last, value.ConstructorNames(members.Last, templates)))
 		constants.Add(value.ConstantScope)
-	TypeInference(KnownTypes(ResolveCheck.TypeNames(files), members, methods, parameters), constants)
+	let names = ResolveCheck.TypeNames(files)
+	TypeInference(KnownTypes(names, members, methods, CrossChanges(names, shapes).Settled(parameters)), constants)
 Refined(inference TypeInference) TypeInference
 	None.Refined(ResolveCheck.Counting).types.methods.Length is 0
 	Writing.Refined(Writing.Raw).types.ParameterScope("File").Count("Write") is 3

@@ -1,5 +1,8 @@
 has lines Texts
 has isReading Boolean = false
+has others Scope = KnownTypes.NoMembers
+constant Summing = ("mutable wide Counter", "Effort Number", "	wide.Effort")
+constant Known = Scope(List(Text) + "Counter.", List(Text) + "known")
 constant Ticking = Changes(("mutable count Number", "has step Number = 1", "Next Number", "\tcount = count + step", "\tcount", "Twice Number", "\tNext + Next", "Size Number", "\tstep", "Half(number Number) Number", "\tnumber / 2"))
 constant Reading = Changes(Ticking.lines, true)
 Members Texts
@@ -16,6 +19,8 @@ Members Texts
 			Tokenizer(value).Tokens(1)
 Methods Texts
 	Ticking.Methods is ("Next", "Twice")
+	Changes(Summing).Methods is ("Effort") and Changes(Summing, false, Known).Methods.Length is 0
+	Changes(Summing, false, Known.With("Counter.Effort", "changes")).Methods is ("Effort")
 	Reading.Methods is ("Next", "Twice", "Size")
 	Changes(("has count Number", "Next Number", "\tcount"), true).Methods.Length is 0
 	Changes(("has count Number = 1", "Sum(items Numbers) Number", "\tfor items", "\t\tvalue"), true).Methods.Length is 0
@@ -94,8 +99,14 @@ IsUsed(tokens Texts, at Number, members Texts, changing Texts) Boolean
 	if at > 0 and tokens(at - 1) is "."
 		return false
 	let next = at + 2 < tokens.Length then tokens(at + 2) else ""
-	let isCalled = token is in members and at + 1 < tokens.Length and tokens(at + 1) is "." and next.Lower is not next
+	let isMember = token is in members and at + 1 < tokens.Length and tokens(at + 1) is "." and next.Lower is not next
+	let isCalled = isMember then IsChangingCall(token, next) else false
 	token is in changing or isCalled or isReading and (token is in members or token is "value")
+IsChangingCall(member Text, method Text) Boolean
+	Changes(Summing).IsChangingCall("wide", "Effort")
+	Changes(Summing, false, Known).IsChangingCall("wide", "Effort") is false
+	let type = TypeShape(lines).MemberScope.TypeOf(member)
+	others.TypeOf(type + ".") is "" or others.TypeOf(type + "." + method) is "changes"
 Added(scope Scope) Scope
 	Ticking.Added(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
 	Reading.Added(KnownTypes.NoMembers).TypeOf("Size reads") is "reads"

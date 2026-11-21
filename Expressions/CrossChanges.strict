@@ -1,0 +1,54 @@
+has names Texts
+has shapes List(TypeShape)
+constant Calling = TypeShape(("mutable b B", "Go Number", "\tb.Go"))
+constant Reading = TypeShape(("mutable n Number", "Go Number", "\tn"))
+constant Counting = TypeShape(("mutable n Number", "Go Number", "\tn = n + 1", "\tn"))
+constant Counted = CrossChanges(("A", "B"), (Calling, Counting))
+constant Sample = CrossChanges(("A", "B"), (Calling, Reading))
+constant Marked = (Scope(List(Text) + "Go changes", List(Text) + "changes"), KnownTypes.NoMembers)
+constant Suffix = " changes"
+Settled(parameters List(Scope)) List(Scope)
+	Sample.Settled(Marked).First.TypeOf("Go changes") is ""
+	Counted.Settled((Marked.First, Marked.First)).First.TypeOf("Go changes") is "changes"
+	mutable settled = parameters
+	mutable marks = Marks(settled)
+	mutable previous = -1
+	for as long as marks.names.Length is not previous
+		previous = marks.names.Length
+		settled = Refreshed(settled, marks)
+		marks = Marks(settled)
+	settled
+Marks(parameters List(Scope)) Scope
+	Sample.Marks(Marked).TypeOf("A.Go") is "changes" and Sample.Marks(Marked).TypeOf("B.") is "known"
+	mutable keys = List(Mutable(Text))
+	for parameters
+		keys = keys + Keys(names(index), value)
+	Scope(keys, Kinds(keys))
+Keys(type Text, scope Scope) Texts
+	Sample.Keys("A", Marked.First) is ("A.", "A.Go")
+	(List(Text) + (type + ".")) + Changing(type, scope)
+Changing(type Text, scope Scope) Texts
+	Sample.Changing("A", Marked.First) is ("A.Go")
+	for scope.names
+		if value.EndsWith(Suffix)
+			type + "." + value.Substring(0, value.Length - Suffix.Length)
+Kinds(keys Texts) Texts
+	Sample.Kinds(("A.", "A.Go")) is ("known", "changes")
+	for keys
+		value.EndsWith(".") then "known" else "changes"
+Refreshed(parameters List(Scope), marks Scope) List(Scope)
+	Sample.Refreshed(Marked, Sample.Marks(Marked)).Last is KnownTypes.NoMembers
+	for parameters
+		Refresh(shapes(index).lines, value, marks)
+Refresh(lines Texts, scope Scope, marks Scope) Scope
+	Sample.Refresh(Reading.lines, Marked.First, Sample.Marks(Marked)).TypeOf("Go changes") is ""
+	if Changes(lines).Members.Length is 0
+		return scope
+	let changing = Changes(lines, false, marks).Methods
+	mutable kept = List(Mutable(Text))
+	mutable types = List(Mutable(Text))
+	for scope.names
+		if value.EndsWith(Suffix) is false or value.Substring(0, value.Length - Suffix.Length) is in changing
+			kept.Add(value)
+			types.Add(scope.types(index))
+	Scope(kept, types)
