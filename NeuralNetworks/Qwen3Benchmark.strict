@@ -48,6 +48,7 @@ Durations(model Qwen3, token Number, start Number, count Number, batch Number) N
 	for count
 		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
 		chosen = current.Nexts
+		GpuMemory.Finished
 		let duration = (Process.Elapsed - last) * 1000
 		last = last + duration / 1000
 		duration
