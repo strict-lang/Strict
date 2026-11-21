@@ -101,9 +101,12 @@ Calculated(entry InstructionEntry) Texts
 	Copy.Calculated(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
 	Copy.Calculated(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))) is Added
 	Copy.Calculated(InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))) is Equaled
+	Copy.Calculated(MlirKindTests.TextTest).Last.EndsWith("%flag : i1, !llvm.ptr")
 	constant left = Temp("a")
 	constant right = Temp("b")
 	let loads = (function.Load(left, "%r" + entry.payload(1)), function.Load(right, "%r" + entry.payload(2)))
+	if entry.kind is InstructionType.OfType
+		return MlirKindTests(function, position).Tested(entry)
 	if MlirEquality(function, position).Handles(entry)
 		return MlirEquality(function, position).Compared(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator

@@ -13,6 +13,8 @@ constant ProcessMethods = (Scope(List(Text) + "Elapsed", List(Text) + "Number"),
 constant ProcessTypes = KnownTypes(("Process", "Image"), KnownTypes.NoMemberPair, ProcessMethods, KnownTypes.NoMemberPair)
 constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(ProcessTypes, KnownTypes.NoMemberPair), List(Text)))
 constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
+constant Plainly = SyntaxParser(Tokenizer(ErrorShown + "tested to Text").Tokens).Parse
+constant Either = TestCodegen.Counter.Declare(Showing, "Boolean or Text")
 constant Nothing = SyntaxParser(Tokenizer(ErrorShown + "\"None\"").Tokens).Parse
 constant NearNumbers = Even.Near("Numbers", 0)
 constant NearText = NearNumbers.instructions to Text
@@ -32,9 +34,11 @@ Helpers(scope Scope) List(MethodEntry) slow
 	Even.Helpers(GotNumber.With(Nearing, "Number")).Last.Name is "$TestsNear0"
 	Even.Helpers(GotNumber).Last.Name is "$TestsTook" and Even.Helpers(GotNumber).Last.parameters is (ElapsedParameter)
 	TestReports(Even.types, true).Helpers(GotNumber).Length is 1
+	Even.Helpers(Either).First is Even.Helper("Got0", ErrorCodegen.Tested, "Boolean or Text", Plainly)
 	mutable helpers = List(Mutable(MethodEntry))
 	for Marked(scope, Showing)
-		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, value is "None" then Nothing else Shown))
+		let shown = value is "None" then Nothing else value.IndexOf(" or ") > 0 then Plainly else Shown
+		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, shown))
 	if isQuiet is false
 		helpers.Add(Helper("Took", "elapsed", "Number", Duration))
 	for Marked(scope, Nearing)

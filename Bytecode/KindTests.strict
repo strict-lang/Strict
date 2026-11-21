@@ -19,6 +19,7 @@ Alternatives(type Text) Texts
 	names.Length > 1 then names else List(Text)
 Tested(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Tested(IsB, Mixed).instructions.Last.kind is InstructionType.OfType
+	Plain.Tested(IsB, Mixed).instructions.Last.texts is ("B", "B", "Text")
 	Plain.Tested(IsB, Mixed).instructions(1) is InstructionEntry.LoadText(1, "B")
 	Plain.Tested(SyntaxNode("Binary", "is not", IsB.children), Mixed).instructions.Last.texts(1) is "not"
 	if node.text is "is not"
@@ -27,4 +28,5 @@ Tested(node SyntaxNode, block CodeBlock) CodeBlock
 	let left = values.Expression(node.children(0), block)
 	let name = values.inference.types.BaseName(node.children.Last.text)
 	let wanted = left.Load(InstructionEntry.LoadText(left.register, name))
-	wanted.Load(InstructionEntry.Binary(InstructionType.OfType, (left.Result, wanted.Result, wanted.register)))
+	let named = (List(Text) + name) + Alternatives(values.TypeOf(node.children(0), block))
+	wanted.Load(InstructionEntry(InstructionType.OfType, named, (3, left.Result, wanted.Result, wanted.register)))

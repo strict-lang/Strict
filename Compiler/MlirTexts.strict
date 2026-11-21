@@ -129,7 +129,10 @@ TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).TextBits(2, "b") is ("    %t3bx = llvm.load %r2 : !llvm.ptr -> f64")
 	MlirTexts(Joined, 5).TextBits(2, "b").Last.IndexOf("@strict_converted(%t5b, %t5bxc)") > 0
 	MlirTexts(Joined, 6).TextBits(1, "b").Length is 3
-	let kind = Printable(MlirKinds(function).KindOf(position, register))
+	let declared = MlirKinds(function).KindOf(position, register)
+	if declared.IndexOf(" or ") > 0
+		return MlirKindTests(function, position).Texted(register, suffix, declared)
+	let kind = Printable(declared)
 	if kind is "Text"
 		return List(Text) + function.Load(Temp(suffix + "x"), "%r" + register)
 	let loaded = function.Load(Temp(suffix), "%r" + register)
