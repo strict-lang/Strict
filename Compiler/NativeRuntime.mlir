@@ -17686,8 +17686,8 @@
   ^done:
     return %zero : f64
   }
-  func.func private @strict_process_result(%code: f64, %output: f64, %error: f64) -> f64 {
-    %size = arith.constant 24 : i64
+  func.func private @strict_process_result(%code: f64, %output: f64, %error: f64, %seconds: f64, %processor: f64) -> f64 {
+    %size = arith.constant 40 : i64
     %block = func.call @strict_alloc(%size) : (i64) -> !llvm.ptr
     llvm.store %code, %block : f64, !llvm.ptr
     %outputSlot = llvm.getelementptr %block[1] : (!llvm.ptr) -> !llvm.ptr, f64
@@ -17696,6 +17696,10 @@
     %errorSlot = llvm.getelementptr %block[2] : (!llvm.ptr) -> !llvm.ptr, f64
     llvm.store %error, %errorSlot : f64, !llvm.ptr
     func.call @strict_rc_written(%errorSlot) : (!llvm.ptr) -> ()
+    %secondsSlot = llvm.getelementptr %block[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %seconds, %secondsSlot : f64, !llvm.ptr
+    %processorSlot = llvm.getelementptr %block[4] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %processor, %processorSlot : f64, !llvm.ptr
     %result = func.call @strict_bits(%block) : (!llvm.ptr) -> f64
     return %result : f64
   }
@@ -17719,7 +17723,7 @@
     %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
     %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    %failure = func.call @strict_process_result(%code, %empty, %error) : (f64, f64, f64) -> f64
+    %failure = func.call @strict_process_result(%code, %empty, %error, %zero, %zero) : (f64, f64, f64, f64, f64) -> f64
     return %failure : f64
   ^present:
     // 0 (a call without its seconds, MlirNatives.DefaultedThird) is Process.ToolSeconds

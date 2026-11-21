@@ -82,6 +82,7 @@
   llvm.func @execl(!llvm.ptr, !llvm.ptr, ...) -> i32
   llvm.func @_exit(i32)
   llvm.func @waitpid(i32, !llvm.ptr, i32) -> i32
+  llvm.func @wait4(i32, !llvm.ptr, i32, !llvm.ptr) -> i32
   llvm.func @kill(i32, i32) -> i32
   llvm.func @usleep(i32) -> i32
   llvm.func @readlink(!llvm.ptr, !llvm.ptr, i64) -> i64
@@ -821,6 +822,11 @@
     %null = llvm.mlir.zero : !llvm.ptr
     %status = func.call @strict_alloc_text(%statusSize) : (i64) -> !llvm.ptr
     %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    %usageWords = arith.constant 18 : i64
+    %usage = llvm.alloca %usageWords x i64 : (i64) -> !llvm.ptr
+    %usageBytes = arith.constant 144 : i64
+    %usageCleared = llvm.call @memset(%usage, %none, %usageBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %startedAt = func.call @strict_clock() : () -> f64
     %child = llvm.call @fork() : () -> i32
     %isChild = arith.cmpi eq, %child, %none : i32
     cf.cond_br %isChild, ^child, ^parent
@@ -842,10 +848,11 @@
     %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
     %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
+    %noTime = arith.constant 0.0 : f64
+    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError, %noTime, %noTime) : (f64, f64, f64, f64, f64) -> f64
     return %startFailure : f64
   ^wait(%waited: i32):
-    %ended = llvm.call @waitpid(%child, %status, %noHang) : (i32, !llvm.ptr, i32) -> i32
+    %ended = llvm.call @wait4(%child, %status, %noHang, %usage) : (i32, !llvm.ptr, i32, !llvm.ptr) -> i32
     %hasEnded = arith.cmpi eq, %ended, %child : i32
     cf.cond_br %hasEnded, ^exited, ^check(%waited : i32)
   ^check(%elapsed: i32):
@@ -857,7 +864,7 @@
     cf.br ^wait(%later : i32)
   ^kill:
     %killed = llvm.call @kill(%child, %killSignal) : (i32, i32) -> i32
-    %reaped = llvm.call @waitpid(%child, %status, %none) : (i32, !llvm.ptr, i32) -> i32
+    %reaped = llvm.call @wait4(%child, %status, %none, %usage) : (i32, !llvm.ptr, i32, !llvm.ptr) -> i32
     %timeoutCode = arith.constant 124.0 : f64
     %timedOutTextLengths = llvm.mlir.addressof @strict_timed_out : !llvm.ptr
     %timedOutText = llvm.getelementptr %timedOutTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -883,7 +890,23 @@
     %reported = func.call @strict_removed_file(%errorPath) : (f64) -> f64
     %useOverride = arith.cmpi ne, %hasOverride, %none : i32
     %message = arith.select %useOverride, %override, %reported : f64
-    %processResult = func.call @strict_process_result(%result, %written, %message) : (f64, f64, f64) -> f64
+    %finishedAt = func.call @strict_clock() : () -> f64
+    %wallSeconds = arith.subf %finishedAt, %startedAt : f64
+    %userWhole = llvm.load %usage : !llvm.ptr -> i64
+    %userMicroSlot = llvm.getelementptr %usage[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %userMicro = llvm.load %userMicroSlot : !llvm.ptr -> i32
+    %systemWholeSlot = llvm.getelementptr %usage[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %systemWhole = llvm.load %systemWholeSlot : !llvm.ptr -> i64
+    %systemMicroSlot = llvm.getelementptr %usage[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %systemMicro = llvm.load %systemMicroSlot : !llvm.ptr -> i32
+    %wholeSeconds = arith.addi %userWhole, %systemWhole : i64
+    %microSeconds = arith.addi %userMicro, %systemMicro : i32
+    %wholeNumber = arith.sitofp %wholeSeconds : i64 to f64
+    %microNumber = arith.sitofp %microSeconds : i32 to f64
+    %perMicro = arith.constant 1.0e-6 : f64
+    %fraction = arith.mulf %microNumber, %perMicro : f64
+    %processorSeconds = arith.addf %wholeNumber, %fraction : f64
+    %processResult = func.call @strict_process_result(%result, %written, %message, %wallSeconds, %processorSeconds) : (f64, f64, f64, f64, f64) -> f64
     return %processResult : f64
   }
   llvm.func @dlopen(!llvm.ptr, i32) -> !llvm.ptr

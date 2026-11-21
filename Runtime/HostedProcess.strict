@@ -55,7 +55,7 @@ Texted Text
 		return Process.Variable(call.Arguments.First.text)
 	call.MethodName is "Built" then Process(call.Instance.Member(0).text).Built else Process.OperatingSystem
 Ran(results List(ProcessResult)) VmValue
-	HostedProcess(Running).Ran(List(ProcessResult) + ProcessResult(1, "a", "b")).items.First.items.Last.text is "b"
+	HostedProcess(Running).Ran(List(ProcessResult) + ProcessResult(1, "a", "b")).items.First.items(2).text is "b"
 	mutable values = List(Mutable(VmValue))
 	for results
 		values.Add(Resulted(value))
@@ -63,5 +63,8 @@ Ran(results List(ProcessResult)) VmValue
 Resulted(result ProcessResult) VmValue
 	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b")).items.First.number is 2
 	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b")).kind is "Strict/ProcessResult"
+	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b", 1.5, 0.5)).items.Last.number is 0.5
+	Process.RunTool("strict", "version").Seconds > 0
 	let code = VmValue.OfNumber(result.exitCode)
-	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)))
+	let timing = (VmValue.OfNumber(result.Seconds), VmValue.OfNumber(result.ProcessorSeconds))
+	VmValue("Strict/ProcessResult", 0, "", (code, VmValue.OfText(result.Output), VmValue.OfText(result.error)) + timing)

@@ -1,6 +1,8 @@
 has exitCode Number
 has Output Text
 has error Text
+has Seconds Number = 0
+has ProcessorSeconds Number = 0
 Succeeded Boolean
 	exitCode is 0
 Failed Boolean

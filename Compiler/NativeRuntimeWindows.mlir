@@ -86,6 +86,7 @@
   llvm.func @WaitForSingleObject(!llvm.ptr, i32) -> i32
   llvm.func @TerminateProcess(!llvm.ptr, i32) -> i32
   llvm.func @GetExitCodeProcess(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @GetProcessTimes(!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
   llvm.func @CloseHandle(!llvm.ptr) -> i32
   llvm.func @DeleteFileA(!llvm.ptr) -> i32
   llvm.func @GetModuleFileNameA(!llvm.ptr, !llvm.ptr, i32) -> i32
@@ -961,6 +962,7 @@
     %commandText = func.call @strict_text_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
+    %startedAt = func.call @strict_clock() : () -> f64
     %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
     %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     func.call @strict_tool_environment(%toolShare, %null) : (i64, !llvm.ptr) -> ()
@@ -980,7 +982,8 @@
     %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
     %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
+    %noTime = arith.constant 0.0 : f64
+    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError, %noTime, %noTime) : (f64, f64, f64, f64, f64) -> f64
     return %startFailure : f64
   ^running:
     %thousand = arith.constant 1000.0 : f64
@@ -1005,6 +1008,23 @@
     %exitNumber = arith.sitofp %exitCode : i32 to f64
     cf.br ^collect(%exitNumber : f64)
   ^collect(%code: f64):
+    %finishedAt = func.call @strict_clock() : () -> f64
+    %wallSeconds = arith.subf %finishedAt, %startedAt : f64
+    %timeWords = arith.constant 4 : i64
+    %times = llvm.alloca %timeWords x i64 : (i64) -> !llvm.ptr
+    %timeBytes = arith.constant 32 : i64
+    %timeZero = arith.constant 0 : i32
+    %timesCleared = llvm.call @memset(%times, %timeZero, %timeBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %exitTimeSlot = llvm.getelementptr %times[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %kernelSlot = llvm.getelementptr %times[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %userSlot = llvm.getelementptr %times[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %gotTimes = llvm.call @GetProcessTimes(%process, %times, %exitTimeSlot, %kernelSlot, %userSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %kernelTicks = llvm.load %kernelSlot : !llvm.ptr -> i64
+    %userTicks = llvm.load %userSlot : !llvm.ptr -> i64
+    %ticks = arith.addi %kernelTicks, %userTicks : i64
+    %tickNumber = arith.sitofp %ticks : i64 to f64
+    %tickSeconds = arith.constant 1.0e-7 : f64
+    %processorSeconds = arith.mulf %tickNumber, %tickSeconds : f64
     %closedProcess = llvm.call @CloseHandle(%process) : (!llvm.ptr) -> i32
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     %written = func.call @strict_removed_file(%outputPath) : (f64) -> f64
@@ -1013,7 +1033,7 @@
     %timedOutText = llvm.getelementptr %timedOutTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %timedOutMessage = func.call @strict_bits(%timedOutText) : (!llvm.ptr) -> f64
     %message = arith.select %timedOut, %timedOutMessage, %reported : f64
-    %result = func.call @strict_process_result(%code, %written, %message) : (f64, f64, f64) -> f64
+    %result = func.call @strict_process_result(%code, %written, %message, %wallSeconds, %processorSeconds) : (f64, f64, f64, f64, f64) -> f64
     return %result : f64
   }
   llvm.func @LoadLibraryA(!llvm.ptr) -> !llvm.ptr

@@ -675,7 +675,8 @@
     %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
     %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
-    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError) : (f64, f64, f64) -> f64
+    %noTime = arith.constant 0.0 : f64
+    %startFailure = func.call @strict_process_result(%startCode, %empty, %startError, %noTime, %noTime) : (f64, f64, f64, f64, f64) -> f64
     return %startFailure : f64
   }
   func.func private @strict_library_call(%path: f64, %symbol: f64, %arguments: f64) -> f64 {
