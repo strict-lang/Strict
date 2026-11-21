@@ -119,7 +119,8 @@ IsParsed(line Text) Boolean
 	isReduce = statement.Kind is "Binary" and statement.children.First.Kind is "Missing"
 	printed = Tokenizer(statement to Text).Tokens - "(" - ")"
 	expected = tokens - "(" - ")"
-	regenerated = statement.Kind is "Declaration" and statement.text.StartsWith("let ") and expected.Length > 0 and expected(0) is not "let" then printed.Slice(1, printed.Length - 1) else printed
+	isLet = statement.text.StartsWith("let ") and expected.Length > 0 and expected(0) is not "let"
+	regenerated = statement.Kind is "Declaration" and isLet then printed.Slice(1, printed.Length - 1) else printed
 	IsComplete(isReduce then statement.children.Last else statement) and regenerated is expected
 IsComplete(node SyntaxNode) Boolean
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + b * c").Tokens).Parse)

@@ -25,8 +25,7 @@ Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Tex
 IsCalled(kind Text, expanded Texts) Boolean
 	Nested.IsCalled("Inner", List(Text) + "Outer")
 	Nested.IsCalled("Inner(Number)", List(Text) + "Outer") is false
-	Nested.IsCalled("Inner", List(Text)) is false
-	Nested.IsCalled("Walker", List(Text) + "Outer") is false
+	Nested.IsCalled("Inner", List(Text)) is false and Nested.IsCalled("Walker", List(Text) + "Outer") is false
 	Nested.Fields("a", "b", "Inner", "0", List(Text))(0) is "mutable testEqual0 = true"
 	Nested.Fields("a", "b", "Inner", "0", List(Text))(1) is "let testEqual0x0 = a.x is b.x"
 	Nested.Fields("", "b", "Outer", "0", List(Text) + "Outer")(1) is "let testEqual0x0 = inner.IsNearlyEqual(b.inner)"

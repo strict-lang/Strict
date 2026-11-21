@@ -19,6 +19,5 @@ Added(block CodeBlock) CodeBlock
 	Text.Combine(Paired.Added(Pairs).instructions(1).texts) is "forValue"
 	Text.Combine(Paired.Added(Pairs).instructions(6).texts) is "forValue"
 	Paired.Added(Pairs).instructions(3).texts(1) is "+"
-	operands = (SyntaxNode("Identifier", "forResult"), SyntaxNode("Identifier", "forValue"))
-	sum = SyntaxNode("MethodCall", "+", operands)
+	sum = SyntaxNode("MethodCall", "+", (SyntaxNode("Identifier", "forResult"), SyntaxNode("Identifier", "forValue")))
 	ErrorCodegen(methods.values).Handled(sum, block.Stored("forValue")).Stored("forResult")

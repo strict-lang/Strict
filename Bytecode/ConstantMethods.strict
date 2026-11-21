@@ -96,8 +96,7 @@ Method(types TypeCodegen, name Text, line Number) MethodEntry
 	owner = types.Generator.target.TypeName
 	header = name + " " + inference.types.MethodsOf(owner).TypeOf(name)
 	body = "\t" + inference.ConstantOf(owner, name)
-	extended = TypeCodegen(types, lines = types.lines + header + body, inference = inference)
-	method = extended.Method(types.lines.Length)
+	method = TypeCodegen(types, lines = types.lines + header + body, inference = inference).Method(types.lines.Length)
 	mutable lined = List(Mutable(InstructionEntry))
 	for method.instructions
 		lined.Add(InstructionEntry(value.kind, value.texts, value.payload, line))

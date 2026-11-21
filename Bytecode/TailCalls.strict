@@ -52,8 +52,7 @@ IsTail(type TypeEntry, method MethodEntry, position Number) Boolean
 	count = 5 + call.payload(3)
 	isOwn = TypeEntry.ShortName(call.texts(0)) is TypeEntry.ShortName(type.Name) and type.ConstantSlot(method) < 0
 	isCounted = call.payload(count + 1 + call.payload(count)) is 0
-	isOwnCall = isOwn and isCounted and IsLooped(method, position) is false
-	isSame = isOwnCall and Inliner(types).Callee(type, call) is method
+	isSame = isOwn and isCounted and IsLooped(method, position) is false and Inliner(types).Callee(type, call) is method
 	isSame and Returns(method.instructions, call.payload(0), position + 1)
 IsLooped(method MethodEntry, position Number) Boolean
 	Sample.IsLooped(MethodEntry.CountingLoop, 1)

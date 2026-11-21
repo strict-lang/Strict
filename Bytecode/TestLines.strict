@@ -5,6 +5,7 @@ constant Framed = BodyParser("Run(frames = 0 with value >= 0) Number", "\tRun(1)
 constant FramedHeader = HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0) Number").Tokens)
 constant Declared = BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\t2").Block(1, 1)
 constant Consecutive = BodyParser("Run", "\tconstant a = 1", "\tconstant b = 2", "\ta is 1", "\tb is 2", "\ta").Block(1, 1)
+constant Assigned = BodyParser("Run", "\t3 is 3", "\tconstant a = 1", "\ta is 1", "\tresult = a", "\tresult").Block(1, 1)
 constant Undeclared = SyntaxNode("Body", "", (SyntaxNode("Type", "constant a"), Declared.children(1), One))
 constant Sizing = TestLines(ValueCodegen(ValueCodegen.NoTypes, MethodCodegen.NoScope, CallTarget(CallTarget.NoTypes, TypeShape("has Height Number", "has Width Number with value > 0"), "Strict/Size", List(Text))))
 constant Validating = HeaderTokens(Tokenizer("Validated Size").Tokens)
@@ -40,7 +41,7 @@ Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Plain.Tests(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\tconstant a = 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
-	Plain.Tests(BodyParser("Run", "\t3 is 3", "\tconstant a = 1", "\ta is 1", "\tresult = a", "\tresult").Block(1, 1), CodeBlock.Empty).Length is 3
+	Plain.Tests(Assigned, CodeBlock.Empty).Length is 3
 	Plain.Tests(Consecutive, CodeBlock.Empty).Length is 4
 	Plain.Tests(BodyParser("Run", "\tmutable a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Reading.Tests(BodyParser("Run", "\t1 is 1", "\tRead.attack", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
