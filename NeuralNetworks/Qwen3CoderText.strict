@@ -6,7 +6,7 @@ Run(folder Text)
 	path = folder + "/" + Weights
 	if File(path).Exists is false
 		Downloaded(path)
-	if MachineUse.Weights(logger, "Qwen3CoderText", path).Admitted
+	if MachineUse.Weights("Qwen3CoderText", path).Admitted
 		Ran(folder)
 Ran(folder Text)
 	path = folder + "/" + Weights

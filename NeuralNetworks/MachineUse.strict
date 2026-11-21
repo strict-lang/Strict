@@ -23,12 +23,12 @@ constant TooSmall = "Add --force (STRICT_FORCE=1) to run anyway, much slower bec
 constant Forcing = ", or add --force (STRICT_FORCE=1) to run anyway, very slow while they hold the memory"
 constant Nowhere = "NeuralNetworks/MissingCoordinator"
 constant Sample = MachineUse("H3Video", 25 * Gigabyte, 22 * Gigabyte)
-Models(logging Logger, name Text, model Number, encoder Number, growth Number, forced Boolean) MachineUse
-	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, false).ram is 16 * Gigabyte
-	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, true).vram is 6 * Gigabyte
+Models(name Text, model Number, encoder Number, growth Number, forced Boolean) MachineUse
+	MachineUse.Models("MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, false).ram is 16 * Gigabyte
+	MachineUse.Models("MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, true).vram is 6 * Gigabyte
 	MachineUse(name, (encoder * growth).Maximum(model), model + Gigabyte, forced)
-Weights(logging Logger, name Text, path Text) MachineUse slow
-	MachineUse.Weights(Logger, "Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
+Weights(name Text, path Text) MachineUse slow
+	MachineUse.Weights("Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
 	parts = path.Split("-00001-of-")
 	single = File(path).Exists then File(path).Length else 0
 	if parts.Length < 2

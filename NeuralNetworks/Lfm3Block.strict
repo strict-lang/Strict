@@ -28,8 +28,7 @@ Loaded(model Gguf, prefix Text, heads Number, size Number) Lfm3Block slow
 Forwarded(input Numbers, rotation Numbers, sequences = 1) Lfm3Block
 	Passing.Forwarded((1, 2), List(Number)).output.Length is 2
 	mixing = Mixing(Normed(input, attentionNorm), rotation, sequences)
-	operated = IsConvolution then mixing.convolution.output else mixing.output
-	residual = Gpt2Block.Added(input, Normed(operated, postNorm))
+	residual = Gpt2Block.Added(input, Normed(IsConvolution then mixing.convolution.output else mixing.output, postNorm))
 	Lfm3Block(mixing, output = Gpt2Block.Added(residual, Normed(Fed(Normed(residual, mlpNorm)), postMlpNorm)))
 Fed(normed Numbers) Numbers
 	Passing.Fed((1, 2)).Length is 2

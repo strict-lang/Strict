@@ -3,7 +3,7 @@ constant TopK = 40
 constant TopP = 0.95
 constant TailShare = 0.95
 Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32, temperature = 0)
-	if MachineUse.Weights(logger, "Qwen3Benchmark", path).Admitted
+	if MachineUse.Weights("Qwen3Benchmark", path).Admitted
 		Ran(path, bits, count, repeats, batch, cacheBits, temperature)
 Ran(path Text, bits Number, count Number, repeats Number, batch Number, cacheBits Number, temperature Number)
 	tokenizer = Gpt2Tokens.Loaded(Gguf(path))

@@ -7,7 +7,7 @@ Run(arguments Texts)
 	if File(Folder + Name).Exists is false
 		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + Name + "\" \"" + Address + Name + "\"").Failed
 			return Error("DownloadFailed: " + Address + Name)
-	if MachineUse.Weights(logger, "NemotronText", Folder + Name).Admitted
+	if MachineUse.Weights("NemotronText", Folder + Name).Admitted
 		Ran(arguments)
 Ran(files Texts) slow
 	started = Process.Elapsed

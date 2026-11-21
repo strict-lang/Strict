@@ -113,8 +113,7 @@ Grouped(chosen Numbers, input Numbers) Numbers slow
 	size = expansions.First.weights.Length
 	hidden = contractions.First.weights.Length
 	gathered = grouping.Gathered(input, grouping.Ordered(positions, rows))
-	expanded = Batch(gateUps, List(Number) + 0).Grouped(grouping.Bases(starts, rows, size), size, gathered)
-	gated = Gated(expanded, size / 2)
+	gated = Gated(Batch(gateUps, List(Number) + 0).Grouped(grouping.Bases(starts, rows, size), size, gathered), size / 2)
 	contracted = Batch(downs, List(Number) + 0).Grouped(grouping.Bases(starts, rows, hidden), hidden, gated)
 	grouping.Unsorted(contracted, positions, hidden)
 Mixed(scores Numbers, chosen Numbers, contracted Numbers) Numbers
