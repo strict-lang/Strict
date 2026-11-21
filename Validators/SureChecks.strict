@@ -10,6 +10,8 @@ constant Checked = SureChecks(("has random PseudoRandom", "Run", "	if random.Nex
 constant Kept = SureChecks(("Run", "	Get(1) is Error(\"Bad\")"), ("PseudoRandom.Next"))
 constant Tested = SureChecks(("has random PseudoRandom", "Run", "	random.Next is Error", "	1"), ("PseudoRandom.Next"))
 constant Unsure = SureChecks(Checked.lines, ("PseudoRandom.Get"))
+constant Drawing = SureChecks(("has renderer Renderer", "Drawn(screen Number) Boolean", "	let world = renderer.World(screen)", "	world is Error then false else true", "Run", "	if Drawn(1) is Error", "		0"), List(Text))
+constant Booleans = ("true", "false")
 constant Either = SyntaxParser(Tokenizer("random.Next is Error or done").Tokens).Parse
 constant Ordered = SyntaxParser(Tokenizer("done and random.Next is Error").Tokens).Parse
 Issues List(ValidationIssue)
@@ -18,24 +20,57 @@ Issues List(ValidationIssue)
 	Kept.Issues.Length is 0
 	Tested.Issues.Length is 0
 	Unsure.Issues.Length is 0
+	Drawing.Issues.First to Text is "ErrorCheckCannotFail: Sample.Drawn never returns Error"
 	let bodies = MethodBodies(typeName, TypeShape(lines), inference)
+	let unfailing = sure + Locals
 	mutable found = List(Mutable(ValidationIssue))
 	for bodies.Statements
 		let key = Key(value.statement, value.scope)
-		if Duplicates.IsTest(lines(value.line).Trim) is false and key is in sure
+		if Duplicates.IsTest(lines(value.line).Trim) is false and key is in unfailing
 			found = found + ValidationIssue("ErrorCheckCannotFail", key + " never returns Error", value.line + 1)
 	found
 Key(node SyntaxNode, scope Scope) Text
 	SureChecks.Key(NextCheck, Random) is "PseudoRandom.Next"
-	SureChecks.Key(PlainCall, Random) is ""
+	SureChecks.Key(PlainCall, Random) is "Sample.Get"
 	SureChecks.Key(Firsts, Scope(("numbers"), ("Numbers"))) is "List.First"
 	let side = Compared(node)
 	if side.Kind is not "Binary" or side.text is not "is" or IsReported(side.children(1)) is false
 		return ""
 	let call = side.children(0)
+	if call.Kind is "Call"
+		return typeName + "." + call.text
 	if call.Kind is not in ("Member", "MethodCall")
 		return ""
 	inference.types.BaseName(inference.TypeOf(call.children(0), scope, scope)) + "." + call.text
+Locals Texts
+	Drawing.Locals is ("Sample.Drawn") and Checked.Locals.Length is 0
+	let shape = TypeShape(lines)
+	for lines
+		if shape.IsMethodHeader(value) and IsUnfailing(index)
+			typeName + "." + Tokenizer(value).Tokens.First
+IsUnfailing(header Number) Boolean
+	Drawing.IsUnfailing(1) and Drawing.IsUnfailing(4) is false
+	SureChecks(("Drawn Boolean", "Run", "	1"), List(Text)).IsUnfailing(0) is false
+	let code = ErrorDrops(lines).Code(header)
+	if code.Length is 0
+		return false
+	let isPlain = Text.Combine(code, " ").IndexOf("Error(") < 0 and Tokenizer(lines(header)).Tokens.Last is "Boolean"
+	isPlain and IsAnswer(Tokenizer(code.Last).Tokens) and AreLets(code.Slice(0, code.Length - 1))
+AreLets(code Texts) Boolean
+	Drawing.AreLets(("let a = 1", "let b = 2")) and Drawing.AreLets(("let a = 1", "Log(a)")) is false
+	for code
+		if value.StartsWith("let ") is false
+			return false
+	true
+IsAnswer(tokens Texts) Boolean
+	Drawing.IsAnswer(("a", "is", "Error", "then", "false", "else", "true"))
+	Drawing.IsAnswer(("a", "is", "not", "Error", "then", "true", "else", "false"))
+	Drawing.IsAnswer(("a", "is", "Error", "then", "false", "else", "b")) is false
+	let offset = tokens.Length - 7
+	let negated = offset is 1 then tokens.Slice(1, 3) is ("is", "not", "Error") else false
+	let isCheck = offset is 0 then tokens.Slice(1, 2) is ("is", "Error") else negated
+	let isBranching = isCheck then tokens(3 + offset) is "then" and tokens(5 + offset) is "else" else false
+	isBranching then tokens(4 + offset) is in Booleans and tokens(6 + offset) is in Booleans else false
 Compared(node SyntaxNode) SyntaxNode
 	SureChecks.Compared(NextCheck).text is "is"
 	SureChecks.Compared(PlainCall).text is "is"
