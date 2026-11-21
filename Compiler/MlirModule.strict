@@ -96,8 +96,9 @@ Starts(mains List(MlirFunction)) List(MlirFunction)
 			MlirFunction(value, method = start)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
+	let typeIndex = TypeIndex
 	for Range(0, entries)
-		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = TypeIndex)
+		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = typeIndex)
 TypeIndex Dictionary(Text, Number)
 	Counters.TypeIndex("Counter") is 0
 	Counters.TypeIndex("Strict/Counter") is 0
