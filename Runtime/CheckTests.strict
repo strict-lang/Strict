@@ -16,7 +16,7 @@ constant PolicyTail = ("Quick Number", "	Policy.Quick is 3", "	3", "FixtureUsed 
 constant WaitLines = ("Delay Number", "	Waiting.Delay is 1", "	let started = Process.Elapsed", "	mutable count = 0", "	for as long as Process.Elapsed - started < 0.04", "		count = count + 1", "	count > 0 then 1 else 0")
 constant PassedLine = "Test passed: LazyFixture.Check is \"seven\""
 Run Number
-	folder = "Examples/TestPolicy" + 1000000.Random.Floor
+	folder = "obj/TestPolicy" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	result = Checked(folder)
@@ -110,7 +110,7 @@ CheckProbe Boolean
 	File(ProbePath).Write(ProbeLines)
 	unitRes = Ran("test " + ProbePath + " unit")
 	natRes = Ran("test " + ProbePath + " unit native")
-	badUnit = unitRes.exitCode is not 0 or "Test passed" is in unitRes.Output
+	badUnit = unitRes.exitCode is not 0 or "Test passed" is not in unitRes.Output
 	badNat = natRes.exitCode is not 0 or "Test passed" is in natRes.Output
 	passed = CheckPass(Ran("test " + ProbePath), "Test passed: PolicyProbe.Delay", "ExplicitInternalProbe")
 	res = badUnit or badNat then Error("InternalTestedAutomatically") else passed
@@ -145,7 +145,7 @@ RanEnv(arguments Text, threads Text) ProcessResult
 	win = Process.OperatingSystem is "Windows"
 	winEnv = threads is "" then "set STRICT_THREADS=& " else "set STRICT_THREADS=" + threads + "&& "
 	nixEnv = threads is "" then "env -u STRICT_THREADS " else "STRICT_THREADS=" + threads + " "
-	exe = "\"" + Process.Current.executable + "\" "
+	exe = "\"" + Process.Find("strict").executable + "\" "
 	cmd = (win then winEnv else nixEnv) + exe + arguments
 	Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 CheckPass(res ProcessResult, needle Text, tag Text) Boolean
