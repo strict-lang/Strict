@@ -24,23 +24,59 @@ LetIssues(at Number) ValidationIssues
 	Inlines(("Run", "\tlet x = 123456789012345", "\tLog(x)" + Padding)).LetIssues(1).Length is 0
 	Inlines(("Run", "\tlet x = 1 + 34567890", "\tLog(x)" + Padding)).LetIssues(1).Length is 1
 	Inlines(("Run", "\tlet x = 1 + 345678901", "\tLog(x)" + Padding)).LetIssues(1).Length is 0
+	Inlines(("Run", "\ttotal = 1", "\tLog(total)")).LetIssues(1).First to Text is "SingleUseLetMustBeInlined: total, use 1 in the next line"
+	Inlines(("Run", "\tmutable quoted = false", "\tquoted = true", "\tquoted")).LetIssues(2).Length is 0
 	if IsInlinable(at) is false
 		return List(ValidationIssue)
-	detail = Tokenizer(lines(at).Trim).Tokens(1) + ", use " + Value(lines(at)) + " in the next line"
+	detail = Declared(lines(at)) + ", use " + Value(lines(at)) + " in the next line"
 	List(ValidationIssue) + ValidationIssue("SingleUseLetMustBeInlined", detail, at + 1)
 IsInlinable(at Number) Boolean
 	Evicted.IsInlinable(1) and Ordered.IsInlinable(1) is false
 	Inlines(("Run", "\tlet total = 1", "\t\tLog(total)")).IsInlinable(1) is false
 	Inlines(("Run", "\tlet total = 1")).IsInlinable(1) is false
+	Inlines(("Run", "\tprompt = A(1)", "\tstop = 0", "\tF(prompt, prompt.Length)")).IsInlinable(1) is false
+	Inlines(("Run(count Number)", "\tcount = count + 1", "\tcount")).IsInlinable(1) is false
 	inlined = Value(lines(at))
 	if inlined is "" or BodyParser.Indent(Line(at + 1)) is not BodyParser.Indent(lines(at))
 		return false
-	name = Tokenizer(lines(at).Trim).Tokens(1)
+	name = Declared(lines(at))
+	if name is "" or Known(name, at)
+		return false
 	next = Tokenizer(Line(at + 1).Trim).Tokens
 	length = Line(at + 1).Length + inlined.Length - name.Length
 	fits = length + (inlined.Count(" ") > 0 then 2 else 0) <= Limits.MaxCharacters
 	isOnce = Uses(next, name) is 1 and IsUsedLater(name, at + 2) is false
 	fits and isOnce and IsReordered(inlined, next, name) is false and IsRebound(inlined, next, name) is false
+Declared(line Text) Text
+	Inlines(("Run", "\tlet total = 1")).Declared("\tlet total = 1") is "total"
+	Inlines(("Run", "\ttotal = 1")).Declared("\ttotal = 1") is "total"
+	Inlines(("Run", "\tmutable quoted = false")).Declared("\tmutable quoted = false") is "quoted"
+	Inlines(("Run", "\tquoted = true")).Declared("\tx.y = 2") is ""
+	tokens = Tokenizer(line.Trim).Tokens
+	if tokens.Length < 2
+		return ""
+	if tokens(0) is in ("let", "mutable", "constant", "has")
+		return tokens(1)
+	tokens(1) is "=" then tokens(0) else ""
+Known(name Text, at Number) Boolean
+	Inlines(("Run(count Number)", "\tcount = 1", "\tcount")).Known("count", 1)
+	Inlines(("has quoted", "Run", "\tquoted = true", "\tquoted")).Known("quoted", 2)
+	Inlines(("Run", "\tmutable quoted = false", "\tquoted = true")).Known("quoted", 2)
+	Inlines(("Run", "\ttotal = 1", "\tLog(total)")).Known("total", 1) is false
+	for Range(0, at).Reverse
+		if lines(value).StartsWith("\t") is false
+			return name is in HeaderTokens(Tokenizer(lines(value)).Tokens).ParameterNames or IsMember(name)
+		if Declared(lines(value)) is name
+			return true
+	IsMember(name)
+IsMember(name Text) Boolean
+	Inlines(("has quoted", "Run", "\tquoted")).IsMember("quoted")
+	Inlines(("Run", "\ttotal = 1")).IsMember("total") is false
+	for lines
+		tokens = Tokenizer(value).Tokens
+		if value.StartsWith("\t") is false and tokens.Length > 1 and tokens(0) is "has" and tokens(1) is name
+			return true
+	false
 IsRebound(inlined Text, next Texts, name Text) Boolean
 	Inlines(("Run", "\tfor 2", "\t\tlet chunk = value", "\t\tfor chunk", "\t\t\t1")).IsInlinable(2) is false
 	Evicted.IsRebound("value.numbers", ("for", "x"), "x") and Evicted.IsRebound("index + 1", ("for", "x"), "x")
