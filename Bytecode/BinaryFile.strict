@@ -24,7 +24,7 @@ Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
 		Byte(value)
 Unpacked(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
-	Packing.First.content is ByteEncoder.Empty.SevenBits((1, 0, 7, BinarySources.CompilerStamp)).bytes
+	Packing(0).content is ByteEncoder.Empty.SevenBits((1, 0, TypeEntry.FormatVersion, BinarySources.CompilerStamp)).bytes
 	ZipReader(ZipReader.Copied(bytes, 0, bytes.Length)).Entries
 Head(bytes Bytes) List(ZipEntry)
 	Probe.Head(Greeting) is Packing

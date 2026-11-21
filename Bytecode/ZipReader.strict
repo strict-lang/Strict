@@ -43,8 +43,7 @@ Read(start Number, size Number) Number
 	result
 Content(start Number, size Number) Numbers
 	ZipReader(1, 2, 3).Content(1, 2) is (2, 3)
-	for Range(start, start + size)
-		bytes(value)
+	bytes.Slice(start, size)
 Copied(file Bytes, start Number, size Number) Numbers
 	ZipReader.Copied(List(Byte) + Byte(7) + Byte(8), 1, 1) is (8)
 	for Range(start, start + size)
