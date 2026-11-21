@@ -13,6 +13,7 @@ constant NewPixel = Invocation(InstructionEntry.Invoke(1, ("Strict/Pixel", "from
 constant NewSingle = Invocation(InstructionEntry.Invoke(1, ("Strict/Single", "from", "Strict/Single", "width"), 0, -1), List(VmValue) + VmValue.OfNumber(0.1), VmValue.None)
 constant Pairs = VmValue.OfList(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(3)), VmValue.OfList(VmValue.OfNumber(2), VmValue.OfNumber(4)))
 constant BcTwo = (VmValue.OfText("bc"), VmValue.OfNumber(2))
+constant Either = MethodEntry("from", List(MemberEntry) + MemberEntry("input", "Strict/Number or Text", List(InstructionEntry), false), "Strict/Character", List(InstructionEntry))
 constant Cut = VmValue.OfError("SubstringOutOfRange")
 constant TextMethods = ("StartsWith", "EndsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Bytes", "Utf8")
 Result(call Invocation) VmValue
@@ -207,9 +208,12 @@ IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
 	Shapes.Searched("LastIndexOf", "abab", List(VmValue) + VmValue.OfText("b")).number is 3
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.Rounded, TypeEntry.Rounded.methods.First) is false
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, TypeEntry.ToNumber)
-	let parameter = TypeOf(chosen.parameters.Length is 1 then chosen.parameters.First.typeName else "")
+	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, Either) is false
+	let declared = chosen.parameters.Length is 1 then chosen.parameters.First.typeName else ""
+	let parameter = TypeOf(declared)
 	let kind = parameter.Wrapped is "" then TypeEntry.ShortName(parameter.Name) else parameter.Wrapped
-	call.IsWrapping(type) and kind is not TypeEntry.ShortName(type.Changing.First.typeName)
+	let isEither = declared.IndexOf(" or ") > 0
+	call.IsWrapping(type) and kind is not TypeEntry.ShortName(type.Changing.First.typeName) and isEither is false
 TypeOf(name Text) TypeEntry
 	Shapes.TypeOf("Strict/Shape").members.Length is 2
 	Shapes.TypeOf("Strict/Other").members.Length is 0
