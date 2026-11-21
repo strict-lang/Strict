@@ -21,7 +21,7 @@ Hashed(types List(TypeEntry)) Dictionary(Text, Number)
 	for type, method in types, type.methods
 		let key = Key(type, method)
 		let earlier = key is in hashed then hashed(key) else 0
-		hashed = hashed.set(key, (earlier + HashCode(method.instructions to Text).number % Range) % Range)
+		hashed = hashed.set(key, (earlier + HashCode(method.instructions).number % Range) % Range)
 	hashed
 Called(types List(TypeEntry)) Dictionary(Text, Text)
 	Graph.Called(Types)("A.Run") is ",B.Go"

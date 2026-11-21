@@ -4,6 +4,8 @@ has recursive Texts
 constant Separator = "\n// strict emission "
 constant Range = 1000000007
 constant Counting = EmissionCache(MlirModule.Counters, MlirModule.Counters.Functions, List(Text))
+constant SafeCounter = MlirFunction(MlirModule.Counters.Functions.First, safeCalls = Dictionary(("Counter_Run_0", 1)))
+constant Safe = EmissionCache(MlirModule.Counters, List(MlirFunction) + SafeCounter, List(Text))
 Emitted(texts List(MlirFunction)) Texts slow
 	Counting.Emitted(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
 	if module.Cached is ""
@@ -64,12 +66,14 @@ Flags(function MlirFunction) Text
 	Counting.Flags(MlirModule.Counters.Functions.First).StartsWith("Counter_Run_0|")
 	let loops = function.FastLoop + "|" + function.Group + "|" + function.Guarded
 	let slots = loops + "|" + function.Packing + "|" + function.Float
-	let calls = (function.safeCalls to Text) + "|" + (function.lineSlots to Text) + "|" + function.IsDeferred
+	let calls = (function.lineSlots to Text) + "|" + function.IsDeferred
 	function.Symbol + "|" + function.Variant + "|" + slots + "|" + calls + "|" + (function.Symbol is in recursive)
 Shared(compiler Text) Text
 	Counting.Shared("a").Length > 0
 	Counting.Shared("a") is not Counting.Shared("b")
-	let entry = compiler + "|" + module.entryName + "|" + module.entries + "|" + module.entrySymbol
+	Safe.Shared("a") is not Counting.Shared("a")
+	let safe = functions.Length > 0 then functions.First.safeCalls to Text else ""
+	let entry = compiler + "|" + safe + "|" + module.entryName + "|" + module.entries + "|" + module.entrySymbol
 	mutable sum = HashCode(entry + "|" + module.platform + "|" + (module.countedFiles to Text)).number % Range
 	for module.types
 		sum = (sum + HashCode(Layout(value)).number % Range) % Range
