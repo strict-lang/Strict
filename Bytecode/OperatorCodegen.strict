@@ -25,6 +25,8 @@ Operation(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Operation(Mismatched, CodeBlock.Empty).instructions.Length is 1
 	if node.children.Length < 2
 		return Negative(node.children(0), block)
+	if KindTests(values).IsRuntime(node, block)
+		return KindTests(values).Tested(node, block)
 	if IsComposite(node, block)
 		return Composite(node, block)
 	let left = ErrorCodegen(values).Compared(node, node.children(0), block)
@@ -87,7 +89,7 @@ Decided(node SyntaxNode, block CodeBlock) Text
 		return ""
 	let wanted = node.children.Last
 	let isType = IsTypeTest(wanted, block)
-	if isType is false and IsMismatched(node, block) is false
+	if isType is false and IsMismatched(node, block) is false or KindTests(values).IsRuntime(node, block)
 		return ""
 	((isType and Matches(values.TypeOf(node.children(0), block), wanted.text)) is (node.text is "is")) to Text
 IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
@@ -189,7 +191,8 @@ Compared(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
 	Plain.Compared(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
 	let isCompared = node.Kind is "Binary" and node.text is in ("is", "is not", "<", ">")
-	let isComparison = isCompared and Decided(node, block) is "" and IsCustom(node, block) is false
+	let isPlain = Decided(node, block) is "" and KindTests(values).IsRuntime(node, block) is false
+	let isComparison = isCompared and isPlain and IsCustom(node, block) is false
 	let operand = isComparison then node.children(0) else node
 	let errors = ErrorCodegen(values)
 	let left = errors.Compared(node, operand, block)

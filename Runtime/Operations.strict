@@ -29,8 +29,11 @@ Comparison(kind Number, left VmValue, right VmValue) Boolean
 	Comparison(InstructionType.GreaterThan, VmValue.OfNumber(1), VmValue.OfNumber(3)) is false
 	Comparison(InstructionType.NotEqual, VmValue.OfNumber(1), VmValue.OfNumber(1)) is false
 	Comparison(InstructionType.Equal, VmValue.OfNumber(1), VmValue.OfNumber(2)) is false
+	Comparison(InstructionType.OfType, VmValue.OfText("a"), VmValue.OfText("Text"))
 	if kind is InstructionType.Equal or kind is InstructionType.NotEqual
 		return IsSame(left, right) is (kind is InstructionType.Equal)
+	if kind is InstructionType.OfType
+		return KindName(left.kind) is right.text
 	Ordered(kind is InstructionType.LessThan, left, right)
 Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
 	Ordered(false, Letter, VmValue.OfNumber(10))
@@ -44,6 +47,11 @@ Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
 	let leftNumber = left.items.Length is 0 then left.number else Comparable(left).number
 	let rightNumber = right.items.Length is 0 then right.number else Comparable(right).number
 	isLess then leftNumber < rightNumber else leftNumber > rightNumber
+KindName(kind Text) Text
+	KindName("Strict/List(Number)") is "List" and KindName("Number") is "Number"
+	KindName("Strict/Examples/Pair") is "Pair"
+	Comparison(InstructionType.OfType, Letter, VmValue.OfText("Text")) is false
+	kind.Split("(").First.Split("/").Last
 IsSame(left VmValue, right VmValue) Boolean
 	IsSame(DimensionError, VmValue.OfError("")) and IsSame(VmValue.OfNumber(1), VmValue.OfNumber(1))
 	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false and IsSame(DimensionError, VmValue.OfError("x")) is false

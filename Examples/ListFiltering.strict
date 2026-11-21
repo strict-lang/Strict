@@ -1,0 +1,7 @@
+has input List(Number or Text)
+Result Numbers
+	ListFiltering((1, 2, "a", "b")).Result is (1, 2)
+	ListFiltering(("a", 3)).Result is (3)
+	for input
+		if value is Number
+			value

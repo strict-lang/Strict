@@ -196,9 +196,10 @@ Iterated(iterator SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Iterated(SyntaxNode("Number", "3"), CodeBlock.Empty).text is "3"
 	Iterating.Iterated(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "As")).text is "a"
 	Iterating.Iterated(SyntaxNode("Identifier", "r"), CodeBlock.Empty.Declare("r", "Range")).text is "r"
+	Iterating.Iterated(SyntaxNode("Identifier", "m"), CodeBlock.Empty.Declare("m", "List(Number or Text)")).text is "m"
 	let type = methods.values.TypeOf(iterator, block)
 	let types = methods.values.inference.types
-	if type is "Range" or types.IsPlural(type)
+	if type is "Range" or types.IsPlural(type) or types.ElementType(type).IndexOf(" or ") > 0
 		return iterator
 	types.MethodsOf(type).TypeOf("for").StartsWith("Iterator") then SyntaxNode("Member", "for", iterator) else iterator
 Begin(iterator SyntaxNode, block CodeBlock) CodeBlock

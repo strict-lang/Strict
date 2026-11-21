@@ -16,6 +16,7 @@ constant Equal
 constant NotEqual
 constant LessThan
 constant GreaterThan
+constant OfType
 constant BinaryOperatorsSeparator = 30
 constant Invoke
 constant Return

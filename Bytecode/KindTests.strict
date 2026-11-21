@@ -1,0 +1,30 @@
+has values ValueCodegen
+constant Plain = KindTests(ValueCodegen.Plain)
+constant Mixed = CodeBlock.Empty.Declare("x", "B or Text")
+constant IsB = SyntaxNode("Binary", "is", (SyntaxNode("Identifier", "x"), SyntaxNode("Identifier", "B")))
+IsRuntime(node SyntaxNode, block CodeBlock) Boolean
+	Plain.IsRuntime(IsB, Mixed) and Plain.IsRuntime(IsB, CodeBlock.Empty.Declare("x", "Generic"))
+	Plain.IsRuntime(IsB, CodeBlock.Empty.Declare("x", "B")) is false
+	Plain.IsRuntime(IsB, CodeBlock.Empty.Declare("x", "Number or Text")) is false
+	Plain.IsRuntime(SyntaxNode("Binary", "+", IsB.children), Mixed) is false
+	if node.text is not in ("is", "is not")
+		return false
+	if OperatorCodegen(values).IsTypeTest(node.children.Last, block) is false
+		return false
+	let type = values.TypeOf(node.children(0), block)
+	type is "Generic" or node.children.Last.text is in Alternatives(type)
+Alternatives(type Text) Texts
+	Plain.Alternatives("B or Text") is ("B", "Text") and Plain.Alternatives("B").Length is 0
+	let names = type.Split(" or ")
+	names.Length > 1 then names else List(Text)
+Tested(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Tested(IsB, Mixed).instructions.Last.kind is InstructionType.OfType
+	Plain.Tested(IsB, Mixed).instructions(1) is InstructionEntry.LoadText(1, "B")
+	Plain.Tested(SyntaxNode("Binary", "is not", IsB.children), Mixed).instructions.Last.texts(1) is "not"
+	if node.text is "is not"
+		let tested = SyntaxNode("Binary", "is", node.children)
+		return values.Expression(SyntaxNode("Not", "not", List(SyntaxNode) + tested), block)
+	let left = values.Expression(node.children(0), block)
+	let name = values.inference.types.BaseName(node.children.Last.text)
+	let wanted = left.Load(InstructionEntry.LoadText(left.register, name))
+	wanted.Load(InstructionEntry.Binary(InstructionType.OfType, (left.Result, wanted.Result, wanted.register)))

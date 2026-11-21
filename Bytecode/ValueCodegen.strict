@@ -187,8 +187,10 @@ Owner(node SyntaxNode, block CodeBlock) Text
 	Plain.Owner(SyntaxNode("Call", "Greet"), CodeBlock.Empty) is "Greeter"
 	OwnA.Owner(SyntaxNode("Call", "A"), CodeBlock.Empty) is "Greeter"
 	Plain.Owner(SyntaxNode("Member", "Length", Hi), CodeBlock.Empty) is "Text"
+	Plain.Owner(SyntaxNode("Member", "Code", NoNode), CodeBlock.Empty.Declare("x", "A or B")) is "Any"
 	if node.Kind is in ("Member", "MethodCall")
-		return TypeOf(node.children(0), block)
+		let receiver = TypeOf(node.children(0), block)
+		return receiver.IndexOf(" or ") > 0 then "Any" else receiver
 	let isOwnMethod = methods.TypeOf(node.text) is not ""
 	let instance = TypeOf(node, block)
 	if inference.types.IsKnown(node.text) and not isOwnMethod
