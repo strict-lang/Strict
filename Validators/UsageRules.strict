@@ -22,7 +22,7 @@ Sample UsageRules
 Issues ValidationIssues
 	Sample.Issues.Length is 5
 	UsageRules(Ticking.header, List(SyntaxNode), List(Text), List(Text)).Issues.Length is 0
-	UsageRules(From.header, From.statements, ("spare"), List(Text)).Issues.Length is 1
+	UsageRules(From.header, From.statements, ("spare"), List(Text)).Issues.Length is 2
 	Assigning.Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements
@@ -99,7 +99,7 @@ Passes(node SyntaxNode, name Text) Boolean
 	false
 ParameterIssues ValidationIssues
 	Sample.ParameterIssues.Length is 2 and Ticking.ParameterIssues(1).ruleName is "UnusedMethodParameterMustBeRemoved"
-	Shadowing.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName" and From.Issues.Length is 0
+	Shadowing.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName" and From.Issues.Length is 1
 	Looping.ParameterIssues.First.ruleName is "ParameterHidesMemberUseDifferentName" and Ticking.Issues.Length is 2
 	mutable issues = List(Mutable(ValidationIssue))
 	if statements.Length is 0
@@ -107,7 +107,7 @@ ParameterIssues ValidationIssues
 	for header.ParameterNames
 		if value is in memberNames or value is "value" or value is in ("index", "outer") and IsLooping
 			issues.Add(ValidationIssue("ParameterHidesMemberUseDifferentName", value, line))
-		if header.tokens(0) is not "from" and not IsUsed(value)
+		if not IsUsed(value)
 			issues.Add(ValidationIssue("UnusedMethodParameterMustBeRemoved", value, line))
 	issues + MutableParameterIssues
 MutableParameterIssues ValidationIssues
