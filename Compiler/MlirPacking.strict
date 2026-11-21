@@ -17,7 +17,7 @@ constant Halved = MlirPacking(MlirFunction((MlirFlats.Halving, MlirFlats.Summing
 constant Plain = MlirPacking(MlirLists.Listed, 2)
 constant Repacking = ("    %t0c = llvm.load %r0 : !llvm.ptr -> f64", "    %t0cl = func.call @strict_two_list(%t0c) : (f64) -> f64", "    llvm.store %t0cl, %r0 : f64, !llvm.ptr")
 constant Twice = InstructionEntry.Invoke(1, SummedCall, (3, 0), -1)
-constant Instanced = InstructionEntry.Invoke(1, SummedCall, (0), 3)
+constant Instanced = InstructionEntry.Invoke(1, SummedCall, 0, 3)
 constant FlattenedLoads = ("    %t2l = llvm.load %v_numbers : !llvm.ptr -> f64", "    %t2i = llvm.load %r1 : !llvm.ptr -> f64")
 constant ShapeBits = ("    %t2n = llvm.mlir.addressof @sShape_Run_1_2 : !llvm.ptr", "    %t2nb = func.call @strict_bits(%t2n) : (!llvm.ptr) -> f64")
 constant ListRead = ("    %t2x = func.call @strict_list_read(%t2l, %t2i, %t2nb) : (f64, f64, f64) -> f64", "    llvm.store %t2x, %r2 : f64, !llvm.ptr")

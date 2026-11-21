@@ -40,7 +40,7 @@ IsDefaulted Boolean
 				return true
 	false
 Found(members Texts, changing Texts) Texts
-	Ticking.Found(("count"), List(Text)) is ("Next") and Ticking.Found(("count"), ("Next")) is ("Next", "Twice")
+	Ticking.Found("count", List(Text)) is ("Next") and Ticking.Found("count", "Next") is ("Next", "Twice")
 	let shape = TypeShape(lines)
 	mutable method = ""
 	mutable result = List(Mutable(Text))
@@ -58,7 +58,7 @@ Tokens(at Number) Texts
 	Changes(("Sum Number", "\tvalue + 1"), true).Tokens(1) is ("value", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\t1 + 1"), true).Tokens(2) is ("1", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1"), true).Tokens(2) is ("+", "1")
-	Changes(("Next Number", "\tcount = 1", "has count Number", "\tcount = 2")).Found(("count"), List(Text)) is ("Next")
+	Changes(("Next Number", "\tcount = 1", "has count Number", "\tcount = 2")).Found("count", List(Text)) is ("Next")
 	let tokens = Tokenizer(lines(at).TrimStart).Tokens
 	isReading and IsLooped(at) then tokens - "value" else tokens
 IsLooped(at Number) Boolean
@@ -75,11 +75,11 @@ IsLooped(at Number) Boolean
 			within = depth
 	false
 IsChanging(tokens Texts, members Texts, changing Texts) Boolean
-	Ticking.IsChanging(("count", "=", "1"), ("count"), List(Text))
-	Ticking.IsChanging(("count", "+", "1"), ("count"), List(Text)) is false
-	Ticking.IsChanging(("Next", "+", "Next"), List(Text), ("Next"))
-	Ticking.IsChanging(("a", ".", "Next"), List(Text), ("Next")) is false
-	Ticking.IsChanging(("random", ".", "Get"), ("random"), List(Text))
+	Ticking.IsChanging(("count", "=", "1"), "count", List(Text))
+	Ticking.IsChanging(("count", "+", "1"), "count", List(Text)) is false
+	Ticking.IsChanging(("Next", "+", "Next"), List(Text), "Next")
+	Ticking.IsChanging(("a", ".", "Next"), List(Text), "Next") is false
+	Ticking.IsChanging(("random", ".", "Get"), "random", List(Text))
 	if tokens.Length > 0 and tokens.First is in members and "=" is in tokens
 		return true
 	for tokens
@@ -87,11 +87,11 @@ IsChanging(tokens Texts, members Texts, changing Texts) Boolean
 			return true
 	false
 IsUsed(tokens Texts, at Number, members Texts, changing Texts) Boolean
-	Ticking.IsUsed(("a", ".", "random", ".", "Get"), 2, ("random"), List(Text)) is false
+	Ticking.IsUsed(("a", ".", "random", ".", "Get"), 2, "random", List(Text)) is false
 	Reading.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text))
-	Ticking.IsUsed(("random", ".", "Get", "."), 0, ("random"), List(Text))
-	Ticking.IsUsed(("a", "random", ".", "Get"), 1, ("random"), List(Text))
-	Ticking.IsUsed(("top", ".", "candidates", "+", "1"), 0, ("top"), List(Text)) is false
+	Ticking.IsUsed(("random", ".", "Get", "."), 0, "random", List(Text))
+	Ticking.IsUsed(("a", "random", ".", "Get"), 1, "random", List(Text))
+	Ticking.IsUsed(("top", ".", "candidates", "+", "1"), 0, "top", List(Text)) is false
 	Reading.IsUsed(List(Text) + "value", 0, List(Text), List(Text))
 	Ticking.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text)) is false
 	Reading.IsUsed(List(Text) + "other", 0, List(Text) + "step", List(Text)) is false
@@ -119,9 +119,9 @@ HasChanges(scope Scope) Boolean
 	Ticking.HasChanges(Ticking.Added(KnownTypes.NoMembers))
 	Ticking.HasChanges(KnownTypes.NoMembers) is false
 	Ticking.HasChanges(Reading.Added(KnownTypes.NoMembers)) is false
-	Ticking.IsChanging(("other", "=", "count"), ("count"), List(Text)) is false
+	Ticking.IsChanging(("other", "=", "count"), "count", List(Text)) is false
 	Ticking.IsChanging(("step", "=", "1"), ("count", "step"), List(Text))
-	Ticking.IsChanging(List(Text), ("count"), List(Text)) is false
+	Ticking.IsChanging(List(Text), "count", List(Text)) is false
 	for scope.types
 		if value is "changes"
 			return true

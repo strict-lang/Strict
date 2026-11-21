@@ -33,8 +33,8 @@ Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) 
 	let kept = Scan(instructions, hoped)
 	kept.Length is hoped.Length and (kept - hoped).Length is 0 then kept else found
 Scan(instructions List(InstructionEntry), candidates Texts) Texts
-	Sample.Scan(Copying, ("pair Pair")) is ("pair Pair", "copy Pair")
-	Sample.Scan(Checked, ("pair Pair")) is ("pair Pair")
+	Sample.Scan(Copying, "pair Pair") is ("pair Pair", "copy Pair")
+	Sample.Scan(Checked, "pair Pair") is ("pair Pair")
 	Agreed(Stores(instructions, candidates))
 Stores(instructions List(InstructionEntry), candidates Texts) Texts
 	Sample.Stores(Copying, List(Text)) is ("pair Pair", "copy ?pair") and Sample.Stores(Mixed, List(Text)).Last is "copy -"
@@ -48,10 +48,10 @@ Stores(instructions List(InstructionEntry), candidates Texts) Texts
 		laned = Tracked(value, laned, candidates + fixed)
 	stores
 Stored(entry InstructionEntry, laned Texts, loaded Texts) Text
-	Sample.Stored(Kept, ("2 Pair"), List(Text)) is "pair Pair" and Sample.Stored(Kept, List(Text), List(Text)) is "pair -"
-	Sample.Stored(Kept, List(Text), ("2 other")) is "pair ?other"
-	Sample.Stored(ElementStore.Last, ("2 Pair"), ("2 other")) is "pairs(0) -"
-	Sample.Stored(Picking, ("2 Pair"), ("2 other")) is "pairs -"
+	Sample.Stored(Kept, "2 Pair", List(Text)) is "pair Pair" and Sample.Stored(Kept, List(Text), List(Text)) is "pair -"
+	Sample.Stored(Kept, List(Text), "2 other") is "pair ?other"
+	Sample.Stored(ElementStore.Last, "2 Pair", "2 other") is "pairs(0) -"
+	Sample.Stored(Picking, "2 Pair", "2 other") is "pairs -"
 	let isNamed = entry.kind is not InstructionType.StoreRegisterToVariable
 	let isFixed = isNamed or entry.texts(0).IndexOf("(") > 0 or entry.texts(0).StartsWith("changed_")
 	let type = isFixed then "" else Typed(laned, entry.payload(0) to Text)
@@ -64,8 +64,8 @@ Loaded(entry InstructionEntry, loaded Texts) Texts
 	entry.kind is InstructionType.LoadVariableToRegister then kept + (written + " " + entry.texts(0)) else kept
 Agreed(stores Texts) Texts
 	Sample.Agreed(("a Pair", "b -", "a Pair", "c Pair", "c -")) is ("a Pair")
-	LaneFlow(Sample.types, List(Text), ("pair Pair")).Scan(Copying, List(Text)) is ("pair Pair", "copy Pair")
-	Sample.Scan(Copying + InstructionEntry(InstructionType.StoreConstantToVariable, "pair", (0)), List(Text)).Length is 0
+	LaneFlow(Sample.types, List(Text), "pair Pair").Scan(Copying, List(Text)) is ("pair Pair", "copy Pair")
+	Sample.Scan(Copying + InstructionEntry(InstructionType.StoreConstantToVariable, "pair", 0), List(Text)).Length is 0
 	for stores
 		if stores.Index(value) is index and IsUniform(stores, value)
 			value
@@ -82,8 +82,8 @@ IsUniform(stores Texts, entry Text) Boolean
 	true
 Tracked(entry InstructionEntry, laned Texts, variables Texts) Texts
 	Sample.Tracked(StructLanes.Constructed, Others, List(Text)) is ("3 Pair", "2 Pair")
-	Sample.Tracked(Reloaded, List(Text), ("pair Pair")) is ("5 Pair")
-	Sample.Tracked(InstructionEntry.LoadNumber(3, 1), ("3 Pair"), List(Text)).Length is 0
+	Sample.Tracked(Reloaded, List(Text), "pair Pair") is ("5 Pair")
+	Sample.Tracked(InstructionEntry.LoadNumber(3, 1), "3 Pair", List(Text)).Length is 0
 	Sample.Tracked(Changing, ("7 Pair", "2 Pair", "9 Pair"), List(Text)) is ("2 Pair", "9 Pair")
 	let written = LoadReuse(List(InstructionEntry)).Written(entry)
 	if written < 0
@@ -102,9 +102,9 @@ Unchanged(laned Texts, call InstructionEntry) Texts
 			value
 Produced(entry InstructionEntry, variables Texts) Text
 	Sample.Produced(StructLanes.Constructed, List(Text)) is "Pair"
-	Sample.Produced(Reloaded, ("pair Pair")) is "Pair"
+	Sample.Produced(Reloaded, "pair Pair") is "Pair"
 	Sample.Produced(StructLanes.Calling(4), List(Text)) is ""
-	LaneFlow(Sample.types, ("pairs Pair")).Produced(Picking, List(Text)) is "Pair"
+	LaneFlow(Sample.types, "pairs Pair").Produced(Picking, List(Text)) is "Pair"
 	LaneFlow(LaneCalls.Sample.types).Produced(LaneCalls.Offsets, List(Text)) is "Pair"
 	LaneFlow(Sample.types, skips = LaneSkips.Drawn).Produced(LaneCalls.Offsets, List(Text)) is "Pair"
 	if IsBuilt(entry)
@@ -145,7 +145,7 @@ IsFull(type TypeEntry, passed Texts) Boolean
 	true
 Typed(entries Texts, name Text) Text
 	Sample.Typed(("pair Pair", "other Strict/Other"), "other") is "Strict/Other"
-	Sample.Typed(("pair Pair"), "pa") is ""
+	Sample.Typed("pair Pair", "pa") is ""
 	Sample.IsBuilt(InstructionEntry.Invoke(2, ("Pair", "from", "Pair", "real", "imaginary", "x"), (0, 1), -1)) is false
 	Sample.Scan(StructLanes.Calling, List(Text)).Length is 0
 	for entries

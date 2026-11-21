@@ -18,11 +18,11 @@ Sample UsageRules
 	Sample.statements.Length is 4
 	constant lines = ("Run(count, mutable list)", "\tlet aa = 5", "\tmutable bb = 0", "\tlist.Add(1)", "\tcount + bb")
 	constant runHeader = HeaderTokens(Tokenizer(lines(0)).Tokens)
-	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), ("Add"), 1)
+	UsageRules(runHeader, BodyParser(lines).Block(1, 1).Statements, ("count", "x"), "Add", 1)
 Issues ValidationIssues
 	Sample.Issues.Length is 5
 	UsageRules(Ticking.header, List(SyntaxNode), List(Text), List(Text)).Issues.Length is 0
-	UsageRules(From.header, From.statements, ("spare"), List(Text)).Issues.Length is 2
+	UsageRules(From.header, From.statements, "spare", List(Text)).Issues.Length is 2
 	Assigning.Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for statements

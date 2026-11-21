@@ -32,7 +32,7 @@ IsValid Boolean
 	SpectralFit(1.5, 0, 1).IsValid is false
 	SpectralFit(1, -1, 1).IsValid is false and SpectralFit(1, 1 / 0, 1).IsValid is false
 	SpectralFit(1, 0, -0.5).IsValid is false and SpectralFit(1, 0, 1.5).IsValid is false
-	SpectralFit(1, 0.1, 1).Weights((0), 1) is Error and SpectralFit(1, 0, 2).Weights((-1, 0), 1) is Error
+	SpectralFit(1, 0.1, 1).Weights(0, 1) is Error and SpectralFit(1, 0, 2).Weights((-1, 0), 1) is Error
 	Line.Weights((-1, 0), 1 / 0) is Error
 	let order = degree >= 0 and degree <= 4 and degree.Floor is degree
 	order and ridge >= 0 and ridge.IsFinite and blend >= 0 and blend <= 1

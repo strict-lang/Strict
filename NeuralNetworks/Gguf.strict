@@ -54,6 +54,6 @@ ExpertOutputs(prefix Text, chosen Numbers, input Numbers) Numbers
 	Mixture.ExpertOutputs("blk.0.", (1, 0), Routed)(5).IsNearlyEqual(-21.617, 0.05)
 	Mixture.ExpertOutputs("blk.0.", (1, 0), Routed)(261).IsNearlyEqual(12.111, 0.05)
 	Mixture.ExpertOutputs("blk.1.", (1, 0), Routed)(261).IsNearlyEqual(100.175, 0.05)
-	Mixture.ExpertOutputs("blk.0.", (2), Routed) is Error
+	Mixture.ExpertOutputs("blk.0.", 2, Routed) is Error
 	Mixture.ExpertOutputs("blk.0.", (1, 0, 0, 1), Tokens)(773) is Mixture.ExpertOutputs("blk.0.", (0, 1), Reversed)(261)
 	GgufFile.ExpertOutputs(path, prefix, chosen, input)

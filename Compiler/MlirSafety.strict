@@ -64,8 +64,8 @@ Spreading(flags Numbers) Numbers
 	for edges
 		flags(index) is 0 and IsCalling(value, flags) then 1 else flags(index)
 IsCalling(callees Numbers, flags Numbers) Boolean
-	Rowed.IsCalling((2), (0, 0, 1))
-	Rowed.IsCalling((1), (0, 0, 1)) is false
+	Rowed.IsCalling(2, (0, 0, 1))
+	Rowed.IsCalling(1, (0, 0, 1)) is false
 	for callees
 		if value < 0 or flags(value) is 1
 			return true

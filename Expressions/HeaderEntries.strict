@@ -29,7 +29,7 @@ WithModifiers(entries Scope) Scope
 	let marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
 	header.ReturnsMutable then marked.With(name + " mutable", "Mutable") else marked
 ParameterTypes Texts
-	HeaderEntries(HeaderTokens(Tokenizer("A(x o, y = o)").Tokens), Scope(("o"), ("N"))).ParameterTypes is ("o", "N")
+	HeaderEntries(HeaderTokens(Tokenizer("A(x o, y = o)").Tokens), Scope("o", "N")).ParameterTypes is ("o", "N")
 	Pair.Parameters.TypeOf("A") is "x,y"
 	Pair.Parameters.TypeOf("A types") is "Number,Text"
 	HeaderEntries(HeaderTokens(Tokenizer("A(x = Range(0, 2))").Tokens)).Default(2) is ("Range", "(", "0", ",", "2", ")")

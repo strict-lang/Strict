@@ -88,7 +88,7 @@ Valued(body SyntaxNode, block CodeBlock, wanted Text) CodeBlock
 		let isLast = index is body.children.Length - 1
 		let dropped = ErrorScope(values).Dropped(value, result)
 		let used = isLast and wanted is not "None" then dropped else ErrorScope(values).Used(dropped, result)
-		let rewritten = ConversionCodegen(values).Wanted(used, (isLast then wanted else ""), result)
+		let rewritten = ConversionCodegen(values).Wanted(used, isLast then wanted else "", result)
 		let statement = Statement(rewritten, result.At(block.register), HasElse(body, index))
 		result = Lined(statement, result.instructions.Length, value.line)
 	CodeBlock(result.instructions, result.register, result.nextId, block.scope)

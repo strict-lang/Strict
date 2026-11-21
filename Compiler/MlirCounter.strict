@@ -30,7 +30,7 @@ constant FastRem = MlirCounter(MlirFunction(Doubler.types, Doubler.type, MethodE
 Remainder(entry InstructionEntry, lines Texts) Texts
 	MlirStatements(Quartering.function, 5).Calculated(Remaining)(1) is "    %t5i = arith.remsi %t2ki, %t5w : i64"
 	Quartering.Remainder(Divided.First, List(Text)).Last is "    llvm.store %t5c, %r3 : f64, !llvm.ptr"
-	MlirCounter(MlirFunction(Quartering.function, FastLoop = -1), 5).Remainder(Divided.First, ("x")) is ("x")
+	MlirCounter(MlirFunction(Quartering.function, FastLoop = -1), 5).Remainder(Divided.First, "x") is ("x")
 	let fast = Divisor(entry.payload(1), entry.payload(2))
 	if fast > 0
 		return Whole(fast, "remsi", entry.payload(3), lines)
@@ -38,7 +38,7 @@ Remainder(entry InstructionEntry, lines Texts) Texts
 Floor(entry InstructionEntry, lines Texts) Texts
 	MlirNatives(Quartering.function, 7).Emitted(Floored, Number, "strict_floor")(1) is Quotient
 	Quartering.At(7).Floor(Floored, List(Text)).Last is "    llvm.store %t7c, %r5 : f64, !llvm.ptr"
-	Quartering.At(8).Floor(InstructionEntry.Invoke(5, FloorNames, List(Number), 3), ("x")) is ("x")
+	Quartering.At(8).Floor(InstructionEntry.Invoke(5, FloorNames, List(Number), 3), "x") is ("x")
 	let instance = PayloadDecoder(entry).Instance
 	let writer = LoadReuse(function.method.instructions).Writer(instance, position, function.FastLoop)
 	let divide = writer < 0 then entry else function.method.instructions(writer)
@@ -70,7 +70,7 @@ Branched(target Text) Text
 	let count = isCounted then Constant(function.method.instructions(position).payload(0), -1) else 0
 	count > 0 and count <= Unrollable then "    llvm.br " + target + Unrolled else "    cf.br " + target
 Whole(divisor Number, operation Text, register Number, lines Texts) Texts
-	Quartering.Whole(0, "remsi", 3, ("x")) is ("x")
+	Quartering.Whole(0, "remsi", 3, "x") is ("x")
 	Quartering.Whole(4, "divsi", 3, List(Text)).First is "    %t5w = arith.constant 4 : i64"
 	Quartering.Whole(4, "divsi", 3, List(Text))(2) is "    %t5c = arith.sitofp %t5i : i64 to f64"
 	if divisor is 0

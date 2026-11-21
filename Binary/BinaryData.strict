@@ -34,7 +34,7 @@ UInt16(at Number) Number
 Int8(at Number) Number
 	Sample.Int8(4) is -1
 	Sample.Int8(0) is 4
-	BinaryData((128)).Int8(0) is -128
+	BinaryData(128).Int8(0) is -128
 	bytes(at) >= HighBit then bytes(at) - Byte.Values else bytes(at)
 Float32(at Number) Number
 	Sample.Float32(8) is 1.5 and BinaryData((1, 2, 3, 64)).Float32(0) is 2 + 197121 / 4194304

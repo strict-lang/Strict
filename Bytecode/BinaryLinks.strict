@@ -69,7 +69,7 @@ Absent(own TypeEntry, names Texts) Texts
 			value
 Compilable(own TypeEntry, names Texts, declared Scope) Texts
 	User.Compilable(Homed, ("Run", "Missing", "from"), Scope(List(Text), List(Text))) is ("Missing")
-	User.Compilable(Homed, List(Text) + "from", Scope(("from"), ("A"))) is ("from")
+	User.Compilable(Homed, List(Text) + "from", Scope("from", "A")) is ("from")
 	User.Compilable(Converter, ("to", "Texted"), Scope(("to", "to"), ("A", "B"))) is ("to")
 	User.Compilable(Converter, List(Text) + "to", Scope(List(Text) + "to", List(Text) + "A")).Length is 0
 	for names
@@ -111,7 +111,7 @@ IsTested(entries List(ZipEntry)) Boolean
 Own(entries List(ZipEntry)) TypeEntry
 	BinaryLinks(BinaryFile.Probe).Own(BinaryFile.Packing) is TypeEntry.HelloLogger
 	BinaryLinks(BinaryFile.Probe).Own(List(ZipEntry)) is Unknown
-	BinaryLinks(BinaryFile.Probe).Own(Home.Unpacked(Home.Packed(Empty, List(TypeEntry), ("a")))) is Unknown
+	BinaryLinks(BinaryFile.Probe).Own(Home.Unpacked(Home.Packed(Empty, List(TypeEntry), "a"))) is Unknown
 	entries.Length > 1 and entries(1).Name.EndsWith(".bytecode") then EntryDecoder.Of(entries(1).content).Type else Unknown
 Relative(target Text) Text
 	User.Relative("./Bytecode/obj/Homed.strictbinary") is "../../Bytecode/obj/Homed"

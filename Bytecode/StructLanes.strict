@@ -57,7 +57,7 @@ IsLane(member MemberEntry) Boolean
 	StructLanes.IsLane(Real)
 	StructLanes.IsLane(MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32))
 	StructLanes.IsLane(MemberEntry("named", "Strict/Text", List(InstructionEntry), false)) is false
-	StructLanes.IsLane(MemberEntry("real", "Strict/Number", (InstructionEntry.Return(0)), false)) is false
+	StructLanes.IsLane(MemberEntry("real", "Strict/Number", InstructionEntry.Return(0), false)) is false
 	let isConstant = member.initial.Length is 1 and member.initial.First.kind is in ConstantKinds
 	member.typeName is "Strict/Number" and member.Bits is in Widths and (member.initial.Length is 0 or isConstant)
 Split List(TypeEntry)
@@ -96,9 +96,9 @@ Rewritten(type TypeEntry, method MethodEntry, skips LaneSkips) MethodEntry
 		laned = flow.Tracked(value, laned, variables)
 	MethodEntry(method.Name, method.parameters, method.declaredType, Inliner(types).Looped(result), method.Slots)
 Replaced(entry InstructionEntry, flow LaneFlow, laned Texts, variables Texts, base Number) List(InstructionEntry)
-	Sample.Replaced(Calling(3), LaneFlow.Sample, ("2 Strict/Pair"), List(Text), 8).Length is 0
-	Sample.Replaced(Calling(4), LaneFlow.Sample, ("2 Strict/Pair"), List(Text), 8).Last is Calling(4)
-	Sample.Replaced(Calling(6), LaneFlow.Sample, ("3 Pair"), List(Text), 8).First.texts is ("lanes3_real")
+	Sample.Replaced(Calling(3), LaneFlow.Sample, "2 Strict/Pair", List(Text), 8).Length is 0
+	Sample.Replaced(Calling(4), LaneFlow.Sample, "2 Strict/Pair", List(Text), 8).Last is Calling(4)
+	Sample.Replaced(Calling(6), LaneFlow.Sample, "3 Pair", List(Text), 8).First.texts is ("lanes3_real")
 	if entry.kind is InstructionType.FieldLoad and flow.Typed(laned, entry.payload(1) to Text) is not ""
 		return Forwarded(entry, base)
 	let produced = flow.Produced(entry, List(Text))
@@ -109,9 +109,9 @@ Replaced(entry InstructionEntry, flow LaneFlow, laned Texts, variables Texts, ba
 	let variable = isMoved then flow.Typed(variables, entry.texts(0)) else ""
 	variable is "" then Other(entry, flow, laned, base) else Copied(entry, variable, base)
 Other(entry InstructionEntry, flow LaneFlow, laned Texts, base Number) List(InstructionEntry)
-	Sample.Other(Calling(6), LaneFlow.Sample, ("3 Pair"), 8).First.texts is ("lanes3_real")
-	StructLanes(LaneCalls.Sample.types).Other(LaneCalls.Shift, LaneFlow.Sample, ("4 Pair"), 9).Length is 3
-	Sample.Other(Calling(4), LaneFlow.Sample, ("2 Pair"), 8).Last is Calling(4)
+	Sample.Other(Calling(6), LaneFlow.Sample, "3 Pair", 8).First.texts is ("lanes3_real")
+	StructLanes(LaneCalls.Sample.types).Other(LaneCalls.Shift, LaneFlow.Sample, "4 Pair", 9).Length is 3
+	Sample.Other(Calling(4), LaneFlow.Sample, "2 Pair", 8).Last is Calling(4)
 	let source = entry.kind is InstructionType.FieldLoad then 1 else 0
 	let laneType = entry.payload.Length > source then flow.Typed(laned, entry.payload(source) to Text) else ""
 	if laneType is not "" and entry.kind is in (InstructionType.FieldLoad, InstructionType.CheckError)
@@ -151,7 +151,7 @@ Moves(source Text, target Text, type Text, base Number, line Number) List(Instru
 		lines = lines + (loaded, Named(InstructionType.StoreRegisterToVariable, base, Lane(target, value), line))
 	lines
 Materialized(entry InstructionEntry, laned Texts, base Number) List(InstructionEntry)
-	Sample.Materialized(Calling(4), ("2 Strict/Pair"), 8).Last.payload is (2, -1, -2, 2, -4, -5, -3, 2, 8, 9, 0)
+	Sample.Materialized(Calling(4), "2 Strict/Pair", 8).Last.payload is (2, -1, -2, 2, -4, -5, -3, 2, 8, 9, 0)
 	Sample.Materialized(Calling(7), List(Text), 8).Length is 0
 	mutable lines = List(InstructionEntry)
 	for LoadReuse(List(InstructionEntry)).Reads(entry)

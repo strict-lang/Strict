@@ -155,16 +155,16 @@ Source(lines Texts, line Number) Texts
 Lines Number
 	Twice.Lines is 0
 	Lined.Lines is 3
-	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split(("Twice")).Length is 5
+	Mutation(MethodEntry(Twice.method, instructions = Twice.method.instructions + Splitting)).Split("Twice").Length is 5
 	Mutation(MethodEntry(Twice.method, instructions = Splitting + Splitting)).Position(48) is "5th "
 	mutable last = 0
 	for method.instructions
 		last = value.line > last then value.line else last
 	last
 Split(names Texts) List(InstructionEntry)
-	Splitter.Split(("Twice")).Length is 5
-	Splitter.Split(("Other")) is Splitting and Splitter.Split(("Other", "Twice")).Length is 5
-	Quoting.Split(("Twice")).Length is 7
+	Splitter.Split("Twice").Length is 5
+	Splitter.Split("Other") is Splitting and Splitter.Split(("Other", "Twice")).Length is 5
+	Quoting.Split("Twice").Length is 7
 	let last = method.instructions.Length - 2
 	mutable kept = List(Mutable(InstructionEntry)) + method.instructions.First
 	mutable isKept = false

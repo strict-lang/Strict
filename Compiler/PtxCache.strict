@@ -31,7 +31,7 @@ Read(ending Text) Text
 	Sample.Read(".ptx") is "// new"
 	Text.Combine(File(base + ending).ReadLines, "\n")
 Remembered(device Text, ptx Texts) Texts
-	PtxCache("Compiler/output/Failed").Remembered("module {\n}", ("clang failed: x")) is ("clang failed: x")
+	PtxCache("Compiler/output/Failed").Remembered("module {\n}", "clang failed: x") is ("clang failed: x")
 	File("Compiler/output/Failed.kernels.mlir").Exists is false
 	PtxCache("Compiler/output/Written").Remembered("module {\n}", ("// new", "// old")) is ("// new", "// old")
 	PtxCache("Compiler/output/Written").Read(".older.ptx") is "// old"
@@ -148,7 +148,7 @@ IsWritten(ptx Texts, ending Text) Boolean
 	File(base + ending).Exists and Read(ending) is ptx.First and isOlder
 Written(ptx Texts, ending Text) Boolean
 	Single.Written(List(Text) + "// only", ".ptx")
-	File("Compiler/output/Single.older.ptx").Exists is false and Single.IsWritten(("// only"), ".ptx")
+	File("Compiler/output/Single.older.ptx").Exists is false and Single.IsWritten("// only", ".ptx")
 	Sample.Saved(".fatbin", "binary") is not Error
 	Sample.Written(("// new", "// old"), ".ptx")
 	CubinBuild.Local.Outdated(Sample.base) is false

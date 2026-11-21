@@ -136,8 +136,8 @@ Stacked(numbers Numbers, features Numbers, rows Numbers) Numbers
 		let row = rows((index / width).Floor)
 		row < 0 then value else value + features(row * width + index % width)
 Placed(pair Number, row Number, positions Numbers, heights Numbers, widths Numbers) Number
-	(Tiny.Placed(1, 0, (5), (6), (7)), Tiny.Placed(2, 0, (5), (6), (7)), Tiny.Placed(3, 0, (5), (6), (7))) is (6, 7, 5)
-	(Tiny.Placed(1, 0, (5), List(Number), List(Number)), Tiny.Placed(61, 0, (5), (6), (7))) is (5, 5)
+	(Tiny.Placed(1, 0, 5, 6, 7), Tiny.Placed(2, 0, 5, 6, 7), Tiny.Placed(3, 0, 5, 6, 7)) is (6, 7, 5)
+	(Tiny.Placed(1, 0, 5, List(Number), List(Number)), Tiny.Placed(61, 0, 5, 6, 7)) is (5, 5)
 	let axis = heights.Length is 0 or pair >= Interleaved then 0 else pair % 3
 	axis is 0 then positions(row) else (axis is 1 then heights(row) else widths(row))
 Scored Numbers

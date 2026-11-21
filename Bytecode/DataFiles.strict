@@ -5,7 +5,7 @@ Canonical(path Text) Text
 	Process.OperatingSystem is "Windows" then normalized.Lower else normalized
 Excluded(path Text) Boolean
 	DataFiles(("./Tools/", "./generated/")).Excluded("Tools")
-	DataFiles(("./Tools/")).Excluded("Toolset") is false
+	DataFiles("./Tools/").Excluded("Toolset") is false
 	DataFiles.Excluded("folder/.git/objects")
 	let normalized = Canonical(path) + "/"
 	if normalized.IndexOf("/.git/") >= 0

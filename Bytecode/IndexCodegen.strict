@@ -48,7 +48,7 @@ IsConstantList(node SyntaxNode) Boolean
 	Plain.IsIndexing(SyntaxNode("Member", "value", (NoNode, One)), CodeBlock.Empty) is false
 	Plain.IsIndexing(SyntaxNode("MethodCall", "other", (NoNode, One)), CodeBlock.Empty) is false
 	Plain.IsIndexing(SyntaxNode("Index", "", (ValueCodegen.Ones, One)), CodeBlock.Empty)
-	Plain.IsIndexing(SyntaxNode("MethodCall", "value", (NoNode)), CodeBlock.Empty) is false
+	Plain.IsIndexing(SyntaxNode("MethodCall", "value", NoNode), CodeBlock.Empty) is false
 	Plain.IsIndexing(SyntaxNode("MethodCall", "value", (NoNode, One, One, One)), CodeBlock.Empty) is false
 	Positioning.values is ValueCodegen(Indexing.Inferring, MethodCodegen.NoScope, CallTarget.Plain)
 	MemberA.values.target is CallTarget(CallTarget.NoTypes, TypeShape("has A Text"), "Strict/C", List(Text))

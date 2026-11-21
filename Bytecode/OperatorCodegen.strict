@@ -4,9 +4,9 @@ constant Plain = OperatorCodegen(ValueCodegen.Plain)
 constant Testing = OperatorCodegen(ValueCodegen.Plain, true)
 constant One = SyntaxNode("Number", "1")
 constant NoNode = SyntaxNode("Identifier", "x")
-constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Character"), (KnownTypes.NoMembers), (Scope(("+"), ("Text"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
-constant Texts = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes(("Text"), (KnownTypes.NoMembers), (Scope(("+", "<"), ("Text", "Boolean"))), (KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
-constant HashTypes = KnownTypes(("Hash"), (Scope(("number"), ("Number"))), (KnownTypes.NoMembers), (Scope(("from", "from types"), ("generic", "Generic"))))
+constant Characters = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes("Character", KnownTypes.NoMembers, Scope("+", "Text"), KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant Texts = OperatorCodegen(ValueCodegen(TypeInference(KnownTypes("Text", KnownTypes.NoMembers, Scope(("+", "<"), ("Text", "Boolean")), KnownTypes.NoMembers), CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
+constant HashTypes = KnownTypes("Hash", Scope("number", "Number"), KnownTypes.NoMembers, Scope(("from", "from types"), ("generic", "Generic")))
 constant Hashes = OperatorCodegen(ValueCodegen(TypeInference(HashTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
 constant InOnes = SyntaxNode("Binary", "is in", (One, ValueCodegen.Ones))
 constant NotInOnes = SyntaxNode("Binary", "is not in", InOnes.children)
@@ -179,7 +179,7 @@ Contains(node SyntaxNode, block CodeBlock) CodeBlock
 	let stored = isErrors then ErrorCodegen(values).Kept(node.children(0), name, block) else block
 	let element = isErrors then SyntaxNode("Identifier", name) else node.children(0)
 	let call = SyntaxNode("MethodCall", "in", (collection, element))
-	values.InstanceCall((node.text is "is in" then call else SyntaxNode("Not", "", List(SyntaxNode) + call)), stored)
+	values.InstanceCall(node.text is "is in" then call else SyntaxNode("Not", "", List(SyntaxNode) + call), stored)
 Condition(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(SyntaxNode("Binary", "<", (One, One)), CodeBlock.Empty).instructions(2).kind is InstructionType.LessThan
 	Plain.Compared(SyntaxNode("Binary", ">", (One, One)), CodeBlock.Empty).instructions.Length is 3

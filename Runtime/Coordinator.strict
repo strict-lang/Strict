@@ -58,8 +58,8 @@ Replied(socket Number) Boolean
 		logger.Log("The client left before the result was sent")
 	busyJob is not "" or Process.Elapsed - seenAt < StaleSeconds
 Chosen(words Texts) Text
-	Sample.Chosen(("status")) is "busy\t\t"
-	Coordinator(Logger, busyLabel = "H3Image").Chosen(("status")) is "busy\t\t"
+	Sample.Chosen("status") is "busy\t\t"
+	Coordinator(Logger, busyLabel = "H3Image").Chosen("status") is "busy\t\t"
 	if words.Length > 0 and words(0) is "holding"
 		return Held(words)
 	if words.Length > 0 and (words(0) is "done" or JobCancel.Matches(words, busyJob))

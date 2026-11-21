@@ -105,8 +105,8 @@ Called(tokens Texts) Texts
 	"Parsed" is not in Looping.Called(("Other", ".", "Parsed", "Make"))
 	"Blood" is in Looping.Called(("Splash", ".", "Blood"))
 	"Blood" is in Looping.Called(("Blood", "."))
-	Chained.Using("Xx", ("A"), List(Text)) is "A" and Chained.Using("X", ("D"), List(Text)) is ""
-	Recursions(("has number", "\tnumber"), "R").Using("number", ("has"), List(Text)) is ""
+	Chained.Using("Xx", "A", List(Text)) is "A" and Chained.Using("X", "D", List(Text)) is ""
+	Recursions(("has number", "\tnumber"), "R").Using("number", "has", List(Text)) is ""
 	for tokens
 		if IsOwn(tokens, index)
 			value

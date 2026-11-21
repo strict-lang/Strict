@@ -6,7 +6,7 @@ LinkedType(type Text, methods Texts, compiled TypeEntry) TypeEntry slow
 	Sample.LinkedType("Strict/Logger", List(Text), Sample.Compiling("Strict/Logger", List(Text))).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text), Sample.Compiling("Strict/Bytecode/Crc", List(Text))).Name is "Crc"
 	Housed.Homed("Strict/Logger", List(Text) + "Missing").methods.Length is 0
-	Housed.Homed("Strict/Bytecode/Logged", ("Run")).Name is "Logged"
+	Housed.Homed("Strict/Bytecode/Logged", "Run").Name is "Logged"
 	let homed = Assembled(type, methods, compiled)
 	if Linker.IsChecking is false
 		return homed
@@ -45,7 +45,7 @@ Assembled(type Text, methods Texts, compiled TypeEntry) TypeEntry
 	let members = own.Name is "" then compiled.members else own.members
 	TypeEntry(linker.main.Local(type), members, BinaryLinks.User.Picked(whole, methods))
 Homed(type Text, methods Texts) TypeEntry slow
-	Housed.Homed("Strict/Logger", ("Run")).Name is "Strict/Logger"
+	Housed.Homed("Strict/Logger", "Run").Name is "Strict/Logger"
 	Sample.Homed("Strict/Logger", ("Log", "Reset")).methods.First.Name is "Log"
 	Assembled(type, methods, Compiling(type, methods))
 Compiled(type Text, methods Texts) TypeEntry slow

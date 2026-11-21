@@ -59,5 +59,5 @@ Indexed Scope
 		named(value) = index
 	Scope(names, types, named, names.Length, owner)
 Owned(typeName Text) Scope
-	Scope(("a"), ("A")).Owned("T").Indexed.With("b", "B").owner is "T"
+	Scope("a", "A").Owned("T").Indexed.With("b", "B").owner is "T"
 	Scope(names, types, positions, indexed, typeName)

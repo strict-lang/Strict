@@ -7,7 +7,7 @@ constant Placeholder = MethodEntry("Cos", List(MemberEntry), "Strict/Number", (I
 constant Cached = TypeEntry("Strict/List(Number)", (Inliner.Elements, MemberEntry("X", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry) + Inliner.First)
 constant Converting = MethodEntry("to", List(MemberEntry), "Strict/Text", StructLanes.Squared.instructions)
 constant Constant = MethodEntry("Built", List(MemberEntry), "Strict/Text", (InstructionEntry.LoadText(0, ""), InstructionEntry.Return(0)))
-constant Unreturned = MethodEntry("", List(MemberEntry), "", (InstructionEntry.LoadNumber(0, 1)))
+constant Unreturned = MethodEntry("", List(MemberEntry), "", InstructionEntry.LoadNumber(0, 1))
 constant Early = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Return(0), InstructionEntry.Return(0)))
 constant Storing = MethodEntry("", List(MemberEntry), "", (InstructionEntry.Named(Inliner.Store, 0, "a"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "a"), InstructionEntry.Return(0)))
 constant Eight = Inliner.Summing.Slice(0, 3) + Inliner.Summing.Slice(0, 3) + Inliner.Summing.Slice(2, 2)
@@ -43,7 +43,7 @@ IsOwn(call InstructionEntry) Boolean
 	call.payload(6 + call.payload(3) + call.payload(5 + call.payload(3))) is not 1
 Wrapped(type TypeEntry) Text
 	Listing.Wrapped(Cached) is "elements"
-	Listing.Wrapped(TypeEntry("Strict/A", (Inliner.Elements), List(MethodEntry))) is "elements"
+	Listing.Wrapped(TypeEntry("Strict/A", Inliner.Elements, List(MethodEntry))) is "elements"
 	Listing.Wrapped(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "elements"
 	Listing.Wrapped(Inliner.Listed) is "elements"
 	Listing.Wrapped(Inliner.Caller) is ""

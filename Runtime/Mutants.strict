@@ -9,7 +9,7 @@ constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Unbudgeted = (Budgeted.First, InstructionEntry.Invoke(2, ("A", "Started", "N", "x"), (0, 1), -1))
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
-constant Started13 = Resolver(Sample.Replaced(Doubled, (Twice), (Mutation.Twice.Mutant(13)))).Resolved.First.methods.First
+constant Started13 = Resolver(Sample.Replaced(Doubled, Twice, Mutation.Twice.Mutant(13))).Resolved.First.methods.First
 constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
 constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
 constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
@@ -143,7 +143,7 @@ IsInput(type Text) Boolean
 			return true
 	false
 Replaced(types List(TypeEntry), methods List(MethodEntry), replacements List(MethodEntry)) List(TypeEntry)
-	Sample.Replaced(Doubled, (Twice), (Mutation.Twice.Mutant(13))).First.methods.First is Mutation.Twice.Mutant(13)
+	Sample.Replaced(Doubled, Twice, Mutation.Twice.Mutant(13)).First.methods.First is Mutation.Twice.Mutant(13)
 	mutable changed = types
 	mutable replaced = List(Mutable(MethodEntry))
 	for types.First.methods

@@ -12,7 +12,7 @@ Random(sizes Numbers, hidden = Activation.Sigmoid) Network
 Layers(sizes Numbers, hidden Activation) List(Layer)
 	Single.Layers((2, 1), Activation.Tanh).First.activation is Activation.Sigmoid
 	for Range(1, sizes.Length)
-		Layer.Random(sizes(index - 1), sizes(index), (index < sizes.Length - 1 then hidden else Activation.Sigmoid))
+		Layer.Random(sizes(index - 1), sizes(index), index < sizes.Length - 1 then hidden else Activation.Sigmoid)
 Predict(input Numbers) Numbers
 	Single.Predict((1, 1)) is List(Number) + 0.7310585786300049
 	Classifier.Predict((1, 1)) is (0.5, 0.5)

@@ -86,7 +86,7 @@ Fresh(type TypeEntry, target Text, prefix Text, creating Texts) Texts
 	lines + memory.Bits(Temp(prefix + "op"), prefix + "o") + function.Store(Temp(prefix + "of"), target)
 Initialized(owner TypeEntry, member MemberEntry, slot Text, prefix Text, creating Texts) Texts
 	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", List(Text)).Length < 5
-	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", ("Strict/Shape")).Last is Written
+	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members.First, "%s", "0", "Strict/Shape").Last is Written
 	let memberType = function.TypeOf(member.typeName)
 	let isNested = MlirLayout(function).IsStruct(member.typeName) and memberType.members.Length > 0
 	let isFresh = isNested and member.initial.Length is 0 and memberType.Name is not in creating
@@ -179,7 +179,7 @@ Constants Texts
 	MlirInstances(Shapes, 0).Fresh(Shapes.type, "%s", "", List(Text))(2).IndexOf("%t0s0 = llvm.getelementptr %t0op") is 4
 	MlirInstances(MlirLayout.Wrapping.function, 0).Fresh(MlirLayout.Degrees, "%s", "", List(Text))(0).IndexOf("%t0dc") is 4
 	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members(0), "%s", "0", List(Text))(1).IndexOf("%t00_0dc") is 4
-	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members(0), "%s", "0", ("Strict/Shape"))(0).IndexOf("%t00dc") is 4
+	MlirInstances(Nesting, 0).Initialized(Outer, Outer.members(0), "%s", "0", "Strict/Shape")(0).IndexOf("%t00dc") is 4
 	MlirInstances(Shapes, 0).Constants.Length is 0
 	mutable lines = List(Mutable(Text))
 	for ReferencedConstants

@@ -11,7 +11,7 @@ constant Lifted = Layer.Zeros(63) + 1
 constant FarDowns = Layer.Zeros(32768) + Second
 constant FarUps = Layer.Zeros(512) + 1 + Layer.Zeros(1539)
 constant FarScales = Layer.Zeros(512) + 0.5
-constant Lifting = Safetensors.Nibbles.Tuned("b", Safetensors.Lifted, (1, 0, 0, 0), (1))
+constant Lifting = Safetensors.Nibbles.Tuned("b", Safetensors.Lifted, (1, 0, 0, 0), 1)
 constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]}"
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
 constant Exact = Safetensors.Bytes.Quantized("a")
@@ -22,7 +22,7 @@ Entry(name Text) Text slow
 	Safetensors("NeuralNetworks/tiny.safetensors", 32, "a").Entry("") is Tiny.Entry("a")
 	Nibbles.Entry("a.weight") is "\"dtype\":\"I4\",\"shape\":[4,64],\"data_offsets\":[0,128]"
 	Nibbles.Quantized("a") is Nibbles.Quantized("b")
-	Nibbles.Tuned("a", Lifted, (1, 0, 0, 0), (1))(0)(63).IsNearlyEqual(Lifting(0)(63), 0.05)
+	Nibbles.Tuned("a", Lifted, (1, 0, 0, 0), 1)(0)(63).IsNearlyEqual(Lifting(0)(63), 0.05)
 	TensorFile.Entry(path, prefix + name)
 Bracketed(entry Text, key Text) Numbers
 	Tiny.Bracketed(Tiny.Entry("a"), "shape") is (2, 3)
@@ -82,8 +82,8 @@ Folded(name Text, rowFactors Text, tokenBits = 8) List(Numbers)
 Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
 	Bytes.Hosted("a") is Bytes.Quantized("a")
 	Bytes.Hosted("a", List(Number), 3)(3) is Bytes.Quantized("a")(3)
-	Bytes.Hosted("a", (2))(2) is Bytes.Quantized("a")(2)
-	Bytes.Hosted("a", (2))(1).Length is 0
+	Bytes.Hosted("a", 2)(2) is Bytes.Quantized("a")(2)
+	Bytes.Hosted("a", 2)(1).Length is 0
 	let weight = Entry(name + ".weight")
 	let scales = Entry(name + ".weight_scale")
 	let size = picked.Length is 0 then part else 1

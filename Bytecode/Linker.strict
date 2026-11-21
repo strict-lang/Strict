@@ -71,16 +71,16 @@ IsLinkable(type Text) Boolean
 	let source = File(SourcePath(type))
 	source.Exists and (type.IndexOf("(") is -1 or TypeShape(source.ReadLines).IsTrait is false)
 Signatures(types Texts, targets Texts) Texts
-	Sample.Signatures(("Strict/B"), ("Strict/B.Go")) is ("Strict/B:Go")
-	Sample.Signatures(("Strict/B"), ("Strict/B.Go", "Strict/B.Add")) is ("Strict/B:Add;Go")
-	Sample.Signatures(("Strict/B"), ("Strict/B.Go", "Strict/B.F(A, B)")) is ("Strict/B:F(A, B);Go")
+	Sample.Signatures("Strict/B", "Strict/B.Go") is ("Strict/B:Go")
+	Sample.Signatures("Strict/B", ("Strict/B.Go", "Strict/B.Add")) is ("Strict/B:Add;Go")
+	Sample.Signatures("Strict/B", ("Strict/B.Go", "Strict/B.F(A, B)")) is ("Strict/B:F(A, B);Go")
 	for types
 		value + ":" + Text.Combine(UsedMethods(targets, value).Sorted, ";")
 BaseTypes(used Texts, targets Texts) Texts
-	Sample.BaseTypes(List(Text), ("Strict/Bytecode/FileCompiler.Go")) is List(Text)
-	Sample.UsedMethods(("Strict/C.Go"), "Strict/B") is List(Text)
-	Sample.BaseTypes(List(Text), ("Strict/B.Go")) is ("Strict/B")
-	Sample.BaseTypes(List(Text) + "Strict/C", ("Strict/B.Go")) is ("Strict/B", "Strict/C")
+	Sample.BaseTypes(List(Text), "Strict/Bytecode/FileCompiler.Go") is List(Text)
+	Sample.UsedMethods("Strict/C.Go", "Strict/B") is List(Text)
+	Sample.BaseTypes(List(Text), "Strict/B.Go") is ("Strict/B")
+	Sample.BaseTypes(List(Text) + "Strict/C", "Strict/B.Go") is ("Strict/B", "Strict/C")
 	mutable types = List(Mutable(Text))
 	for targets
 		types.Add(value.Substring(0, value.LastIndexOf(".")))
@@ -88,8 +88,8 @@ BaseTypes(used Texts, targets Texts) Texts
 		if value is not main.fullName
 			value
 UsedMethods(targets Texts, type Text) Texts
-	Sample.UsedMethods(("Strict/B.Go"), "Strict/B") is ("Go")
-	Sample.UsedMethods(("Strict/Range.Count"), "Strict/Range") is ("Count")
+	Sample.UsedMethods("Strict/B.Go", "Strict/B") is ("Go")
+	Sample.UsedMethods("Strict/Range.Count", "Strict/Range") is ("Count")
 	Sample.UsedMethods(("Strict/B.Go", "Strict/C.Go", "Strict/B.to Text"), "Strict/B") is ("Go", "to Text")
 	Sample.UsedMethods(("Strict/Number.to Text", "Strict/Number.Floor"), "Strict/Number") is ("Floor")
 	Sample.UsedMethods(("Strict/B.Go", "Strict/B.Go"), "Strict/B") is ("Go")

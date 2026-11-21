@@ -3,7 +3,7 @@ constant Operators = ("+", "-", "*", "/", "%", "^")
 constant Numbered = Scope(("low", "elements"), ("Number", "Numbers"))
 constant Counts = KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope(("Limit", "Increment"), ("Number", "Count")), List(Scope) + KnownTypes.NoMembers)
 constant Limited = SureCalls(TypeInference(Counts, List(Scope) + Scope(List(Text) + "Limit", List(Text) + "3")))
-constant Fielded = SureCalls(TypeInference(KnownTypes(List(Text) + "Count", List(Scope) + Scope(("low"), ("Number")), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers))
+constant Fielded = SureCalls(TypeInference(KnownTypes(List(Text) + "Count", List(Scope) + Scope("low", "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers))
 constant Ranged = SyntaxParser(Tokenizer("Range(0, 1)").Tokens).Parse
 constant Remainder = FileCheck.Parsed("low % Limit")
 Calls(type Text, node SyntaxNode, scope Scope) Texts
@@ -41,7 +41,7 @@ IsSafeDivision(type Text, node SyntaxNode) Boolean
 	divisor.Kind is "Number" then divisor.text is not "0" else inference.ConstantOf(owner, divisor.text) is not ""
 IsOwn(type Text, node SyntaxNode, scope Scope) Boolean
 	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Numbered)
-	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Scope(("Increment"), ("Number"))) is false
+	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Scope("Increment", "Number")) is false
 	Limited.IsOwn("Count", SyntaxNode("Text", "Increment"), Numbered) is false
 	node.Kind is in ("Identifier", "Call") and scope.TypeOf(node.text) is "" and IsMethod(type, node.text)
 IsMethod(type Text, name Text) Boolean

@@ -51,7 +51,7 @@ Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	let aggregation = Aggregation(body, returnType)
 	let wanted = block.scope.TypeOf(CodeBlock.ErrorMarker) is "from" then "" else returnType
 	if aggregation is in ("", "any")
-		return methods.Valued((aggregation is "any" then AnyTrue(body) else body), block, wanted)
+		return methods.Valued(aggregation is "any" then AnyTrue(body) else body, block, wanted)
 	let started = Initialized(body, block, returnType, aggregation)
 	if body.children.Last.Kind is not "For"
 		return Finished(methods.Body(BranchValues(aggregation).Rewritten(body), started), block.register)
@@ -158,7 +158,7 @@ Declared(node SyntaxNode, block CodeBlock) CodeBlock
 	Iterating.Declared(IndexA, CodeBlock.Empty.Declare("a", "A")).instructions(1).texts(1) is "Length"
 	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).instructions(0).texts is ("value")
 	OnText.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("value") is "Character"
-	let iterator = Iterated((node.HasValue then node.children(0) else SyntaxNode("Identifier", "value")), block)
+	let iterator = Iterated(node.HasValue then node.children(0) else SyntaxNode("Identifier", "value"), block)
 	let isRange = iterator.Kind is "Call" and iterator.text is "Range"
 	let bodies = MethodBodies(methods.values.target.TypeName, methods.values.target.shape, methods.values.inference)
 	let iterated = node.HasValue then methods.values.TypeOf(iterator, block) else bodies.IteratedType
@@ -210,9 +210,9 @@ Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 	let isRange = iterator.Kind is "Call" and iterator.text is "Range"
 	if isRange is false and methods.values.TypeOf(iterator, block) is "Range"
 		return RangeFields(iterator, block)
-	let start = methods.values.Expression((isRange then iterator.children(0) else iterator), block)
+	let start = methods.values.Expression(isRange then iterator.children(0) else iterator, block)
 	let end = isRange then methods.values.Expression(iterator.children(1), start) else start
-	end.Add(InstructionEntry.LoopBegin(start.Result, (isRange then end.Result else -1)))
+	end.Add(InstructionEntry.LoopBegin(start.Result, isRange then end.Result else -1))
 RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
 	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(1).texts is ("Start", "Range")
 	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(2).texts is ("ExclusiveEnd", "Range")

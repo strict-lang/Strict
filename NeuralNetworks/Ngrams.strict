@@ -12,7 +12,7 @@ constant Table = "per_layer_token_embd.weight"
 Loaded(model Gguf) Ngrams
 	Ngrams.Loaded(HyperStreams.Flash).vocabularies is (11, 13, 17, 19)
 	Ngrams.Loaded(HyperStreams.Flash).eos is 30
-	HyperStreams.Flash.Picked(Table, Ngrams.Loaded(HyperStreams.Flash).Rows((1), 0))(0).IsNearlyEqual(0.008946, 0.000001)
+	HyperStreams.Flash.Picked(Table, Ngrams.Loaded(HyperStreams.Flash).Rows(1, 0))(0).IsNearlyEqual(0.008946, 0.000001)
 	let architecture = model.Value("general.architecture")
 	let sizes = Numbers(model.Value(architecture + ".ple.head_vocab_sizes"))
 	let factors = Numbers(model.Value(architecture + ".ple.layer_multipliers"))

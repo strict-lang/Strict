@@ -53,7 +53,7 @@ Hoisted(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 	Clean.Issues.Length is 0 and LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0
 	LoopBody(Guarding.loop, List(Text), false).Issues.Length is 0
 	Hoisting.Hoisted(StatementParser(Tokenizer("1000 / 8").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
-	Hoisting.Hoisted(SyntaxNode("Call", "*", (SyntaxNode("Identifier", "steps"))), 1, LoopNames.Steps).Length is 0
+	Hoisting.Hoisted(SyntaxNode("Call", "*", SyntaxNode("Identifier", "steps")), 1, LoopNames.Steps).Length is 0
 	let isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
 	let isNumeric = (node to Text).IndexOf("\"") < 0 and IsCostly(node)
 	let isHoisted = isShort and isArithmetic and isNumeric and names.IsInvariant(node) and LoopNames.HasName(node)
@@ -63,7 +63,7 @@ Conditional(condition SyntaxNode, branches SyntaxNodes, at Number, names LoopNam
 	Hoisting.Conditional(SyntaxNode("Identifier", "steps"), List(SyntaxNode), 1, LoopNames.Steps).Length is 0
 	Guarding.Issues(0).target is "range is 0" + GuardHint and Edged.Issues.Length is 1 and Clean.Issues.Length is 0
 	LoopBody(SyntaxNode("For", "for as long as", Guarding.loop.children), List(Text)).Issues.Length is 0
-	Hoisting.Conditional(SyntaxNode("Number", "0"), (SyntaxNode("Number", "0")), 1, LoopNames.Steps).Length is 0
+	Hoisting.Conditional(SyntaxNode("Number", "0"), SyntaxNode("Number", "0"), 1, LoopNames.Steps).Length is 0
 	if isNested is false
 		return List(ValidationIssue)
 	let edge = Edge(condition)

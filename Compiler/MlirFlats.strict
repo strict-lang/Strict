@@ -86,7 +86,7 @@ IsAccessor(step InstructionEntry, register Number) Boolean
 	let isText = step.texts(1) is "Code" or step.texts(1) is "to" and step.texts(2).EndsWith("Text")
 	instance is register and (step.texts(1) is in Accessors or isText)
 Helper(entry InstructionEntry, owner Text, name Text) Text
-	Sample.IsConsumed((InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x")), -1, 0) is false
+	Sample.IsConsumed(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "x"), -1, 0) is false
 	Sample.Helper(Construction, "Tripling", "Z") is ""
 	Sample.Helper(Reading, "Tripling", "Sum") is ""
 	Sample.Helper(Reading, "Tripling", "Z") is "strict_flat_z"

@@ -130,7 +130,7 @@ Compared(call SyntaxNode, instance Text, method Text, scope Scope, current Scope
 	"ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
 TooMany(call SyntaxNode, name Text, types Texts) Text
 	Logged.Compared(Made, "Wrong", "from", Counted, Counted) is "TooManyArguments: Wrong got 2 of 1"
-	Sizing.TooMany(DepthCopies(1), "Area", List(Text) + "Size") is "" and Logged.TooMany(Made, "Wrong", ("")) is ""
+	Sizing.TooMany(DepthCopies(1), "Area", List(Text) + "Size") is "" and Logged.TooMany(Made, "Wrong", "") is ""
 	Couples.TooMany(Coupled, "Couple", List(Text)) is "" and Sizing.TooMany(Created, "Count", ("Size", "Number")) is ""
 	Sizing.TooMany(Spread, "Count.Spread", List(Text) + "Areas") is ""
 	mutable given = 0
@@ -148,7 +148,7 @@ Owner(instance Text, method Text) Text
 	Inheriting.Owner("Settings", "to") is "Settings"
 	Inheriting.Compared(Parsing, "Settings", "Parsed", Counted, Counted).EndsWith(".Parsed got a Number for a Texts")
 	Sizing.Owner("Count", "Grow") is "Count"
-	Sizing.ConstantAccess(SyntaxNode("Member", "Limit", (SyntaxNode("Type", "Count"))), CountNamed, Counted) is ""
+	Sizing.ConstantAccess(SyntaxNode("Member", "Limit", SyntaxNode("Type", "Count")), CountNamed, Counted) is ""
 	Sizing.ConstantAccess(TypeLimited, CountNamed, Counted).StartsWith("ConstantNeedsTypeName")
 	let types = inference.types
 	let isOwn = types.ParameterScope(instance).Count(method) > 0 or types.MethodsOf(instance).TypeOf(method) is not ""
@@ -189,7 +189,7 @@ Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
 	Odd.Mismatch("Character", "Word") is false and Odd.Mismatch("Empty", "Number") is false
 	Odd.IsBaseMismatch("Text", "Character") is false and Odd.IsBaseMismatch("Text", "Word") is false
-	for Range((call.Kind is "MethodCall" then 1 else 0), call.children.Length)
+	for Range(call.Kind is "MethodCall" then 1 else 0, call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
 Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(("Area", "Count"), List(Text) + "Area") is -1
@@ -198,7 +198,7 @@ Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(("Text", "Text"), ("Sizes", "Text")) is 0
 	Sizing.Mismatched(("Text", "Text"), ("Texts", "Text")) is -1
 	Listing.Mismatch("Count", "Counts") is false and Listing.IsBaseMismatch("Text", "Texts") is false
-	Scaling.Issue(SyntaxNode("MethodCall", "Scaled", (Overloads.Rescaled.children(0))), Scalers, Scalers) is ""
+	Scaling.Issue(SyntaxNode("MethodCall", "Scaled", Overloads.Rescaled.children(0)), Scalers, Scalers) is ""
 	for arguments
 		if index < types.Length and (Mismatch(value, types(index)) or IsWrongElement(value, types(index)))
 			return index

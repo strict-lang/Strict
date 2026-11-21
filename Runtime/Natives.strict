@@ -93,10 +93,10 @@ Logical(name Text, left VmValue, call Invocation) VmValue
 	VmValue.OfBoolean(name is "and" then isLeft and isRight else isLeft or isRight)
 Bitwise(name Text, left Number, right Number) Number
 	Shapes.Logical("not", VmValue.FalseValue, NewShape) is VmValue.TrueValue
-	Shapes.Logical("and", VmValue.TrueValue, Invocation(NewShape.entry, (VmValue.TrueValue), Pairs)).IsTrue
-	Shapes.Logical("or", VmValue.FalseValue, Invocation(NewShape.entry, (VmValue.TrueValue), Pairs)).IsTrue
+	Shapes.Logical("and", VmValue.TrueValue, Invocation(NewShape.entry, VmValue.TrueValue, Pairs)).IsTrue
+	Shapes.Logical("or", VmValue.FalseValue, Invocation(NewShape.entry, VmValue.TrueValue, Pairs)).IsTrue
 	Shapes.Logical("or", VmValue.TrueValue, NewShape).IsTrue and Shapes.Logical("xor", VmValue.TrueValue, NewShape).IsTrue
-	Shapes.Logical("xor", VmValue.TrueValue, Invocation(NewShape.entry, (VmValue.TrueValue), Pairs)) is VmValue.FalseValue
+	Shapes.Logical("xor", VmValue.TrueValue, Invocation(NewShape.entry, VmValue.TrueValue, Pairs)) is VmValue.FalseValue
 	Shapes.Logical("or", VmValue.OfNumber(8), Invocation(HostedMath.Logging.entry, NewShape.Arguments, Pairs)).number is 11
 	Shapes.Bitwise("xor", 12, 10) is 6
 	Shapes.Bitwise("and", 12, 10) is 8

@@ -7,11 +7,11 @@ constant NoMembers = Scope(List(Text), List(Text))
 constant NoMemberPair = (NoMembers, NoMembers)
 constant CountMembers = Scope(("number", "unused"), ("Number", "Unused"))
 constant CountMethods = Scope(("Increment", "Twice"), ("Count", "Count"))
-constant Lengths = (Scope(("Length"), ("Length")), NoMembers)
-constant Measured = KnownTypes(("F", "Length"), Lengths, (NoMembers, Scope(("Length"), ("Number"))), (NoMembers, NoMembers))
-constant Sizes = (Scope(("Size"), ("Number")), Scope(("Size"), ("Number")))
-constant Shadowed = KnownTypes(("G", "F"), (Scope(("f"), ("F")), NoMembers), Sizes, (NoMembers, NoMembers))
-constant Nested = KnownTypes(("G", "F", "Length"), (Scope(("f"), ("F")), Lengths(0), NoMembers), (NoMembers, NoMembers, Scope(("Length"), ("Number"))), (NoMembers, NoMembers, NoMembers))
+constant Lengths = (Scope("Length", "Length"), NoMembers)
+constant Measured = KnownTypes(("F", "Length"), Lengths, (NoMembers, Scope("Length", "Number")), (NoMembers, NoMembers))
+constant Sizes = (Scope("Size", "Number"), Scope("Size", "Number"))
+constant Shadowed = KnownTypes(("G", "F"), (Scope("f", "F"), NoMembers), Sizes, (NoMembers, NoMembers))
+constant Nested = KnownTypes(("G", "F", "Length"), (Scope("f", "F"), Lengths(0), NoMembers), (NoMembers, NoMembers, Scope("Length", "Number")), (NoMembers, NoMembers, NoMembers))
 constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
 constant Sample = KnownTypes(("Count", "Text"), (CountMembers, NoMembers), (CountMethods, NoMembers), SampleParameters)
@@ -21,8 +21,8 @@ constant OptionMembers = (Scope(List(Text) + "count", List(Text) + "Number"), Sc
 constant TextParameters = Scope(("from", "Combine separator default"), ("characters", "\", \""))
 constant OptionParameters = (Scope(("count default", "from"), ("1", "count")), TextParameters, Scope(("Parsed", "Parsed types"), ("arguments", "Texts")))
 constant Options = KnownTypes(("Settings", "Text", "Any"), OptionMembers, (Scope(List(Text) + "to", List(Text) + "Text"), NoMembers, AnyMethods), OptionParameters)
-constant Layers = (Scope(("h"), ("H")), Scope(("p", "q"), ("P", "Q")), Scope(("r"), ("R")), NoMembers, NoMembers)
-constant Layered = KnownTypes(("A", "H", "P", "Q", "R"), Layers, (NoMembers, NoMembers, NoMembers, Scope(("Weight"), ("Number")), Scope(("Weight"), ("Text"))), (NoMembers, NoMembers, NoMembers, NoMembers, NoMembers))
+constant Layers = (Scope("h", "H"), Scope(("p", "q"), ("P", "Q")), Scope("r", "R"), NoMembers, NoMembers)
+constant Layered = KnownTypes(("A", "H", "P", "Q", "R"), Layers, (NoMembers, NoMembers, NoMembers, Scope("Weight", "Number"), Scope("Weight", "Text")), (NoMembers, NoMembers, NoMembers, NoMembers, NoMembers))
 constant Indexed = KnownTypes(Sample.names, Sample.members, Sample.methods, Sample.parameters, Dictionary(("Count", 0), ("Text", 1)))
 IsKnown(typeName Text) Boolean
 	Sample.ResolvedType("Text", "Missing", 1) is "Unknown"
@@ -51,7 +51,7 @@ IsPlural(typeName Text) Boolean
 	Instantiation.Boxed.ResolvedType("Box(Text, Number)", "Abs", 1) is "Number"
 	Sample.IsPlural("s") is false
 	Sample.IsPlural("Count") is false
-	KnownTypes(("Bus"), (NoMembers), (NoMembers), (NoMembers)).IsPlural("Bus") is false
+	KnownTypes("Bus", NoMembers, NoMembers, NoMembers).IsPlural("Bus") is false
 	Sample.IsPlural("Counts")
 	Sample.IsPlural("Text") is false
 	Sample.IsPlural("Xyz") is false
@@ -70,20 +70,20 @@ BaseName(typeName Text) Text
 	typeName.EndsWith("s") then (IsPlural(typeName) then "List" else typeName) else typeName
 MembersOf(typeName Text) Scope
 	Instantiation.Boxed.ResolvedType("Meter", "to", 1) is "Text"
-	KnownTypes(("M"), Lengths, (Scope(("get", "x"), ("Number", "Generic"))), Lengths).ResolvedType("M", "x", 1) is "Number"
-	KnownTypes(("List"), Lengths, (Scope(("y"), ("List"))), Lengths).ResolvedType("List(Text)", "y", 1) is "List(Text)"
-	KnownTypes(("A"), (CountMembers), (CountMethods), (CountParameters)).MembersOf("B").names.Length is 0
-	KnownTypes(("A"), (CountMembers), (CountMethods), (CountParameters)).MethodsOf("B").names.Length is 0
-	KnownTypes(("A"), (CountMembers), (CountMethods), (CountParameters)).ParameterScope("B").names.Length is 0
+	KnownTypes("M", Lengths, Scope(("get", "x"), ("Number", "Generic")), Lengths).ResolvedType("M", "x", 1) is "Number"
+	KnownTypes("List", Lengths, Scope("y", "List"), Lengths).ResolvedType("List(Text)", "y", 1) is "List(Text)"
+	KnownTypes("A", CountMembers, CountMethods, CountParameters).MembersOf("B").names.Length is 0
+	KnownTypes("A", CountMembers, CountMethods, CountParameters).MethodsOf("B").names.Length is 0
+	KnownTypes("A", CountMembers, CountMethods, CountParameters).ParameterScope("B").names.Length is 0
 	Measured.ValueOf("F") is "Length"
 	Sample.MembersOf("Count").TypeOf("number") is "Number"
 	let index = Index(BaseName(typeName))
 	index is -1 then NoMembers else members(index)
 MethodsOf(typeName Text) Scope
-	KnownTypes(("Map"), (NoMembers), (Scope(("get"), ("Number"))), (NoMembers)).ElementType("Map") is "Number"
-	KnownTypes(("List"), Lengths, (Scope(("x", "y"), ("Generic", "List"))), Lengths).MemberMethodType("Ts", "x", 1) is "T"
-	KnownTypes(("List"), Lengths, (Scope(("x", "y"), ("Generic", "List"))), Lengths).MemberMethodType("Ts", "y", 1) is "Ts"
-	KnownTypes(("List"), Lengths, (Scope(("x", "y"), ("Generic", "List"))), Lengths).MemberMethodType("T", "y", 1) is ""
+	KnownTypes("Map", NoMembers, Scope("get", "Number"), NoMembers).ElementType("Map") is "Number"
+	KnownTypes("List", Lengths, Scope(("x", "y"), ("Generic", "List")), Lengths).MemberMethodType("Ts", "x", 1) is "T"
+	KnownTypes("List", Lengths, Scope(("x", "y"), ("Generic", "List")), Lengths).MemberMethodType("Ts", "y", 1) is "Ts"
+	KnownTypes("List", Lengths, Scope(("x", "y"), ("Generic", "List")), Lengths).MemberMethodType("T", "y", 1) is ""
 	Sample.MethodsOf("Count").TypeOf("Increment") is "Count"
 	Sample.MethodsOf("Count(Number)").TypeOf("Increment") is "Count"
 	let index = Index(BaseName(typeName))
@@ -101,9 +101,9 @@ ParametersOf(typeName Text, method Text, arguments Number) Texts
 			return ParameterNames(scope.types(index))
 	ParameterNames(scope.TypeOf(method))
 ParameterScope(typeName Text) Scope
-	KnownTypes(("T"), Lengths, Lengths, (Scope(("A", "A"), ("x", "x,y,z")))).ParametersOf("T", "A", 2) is ("x", "y", "z")
+	KnownTypes("T", Lengths, Lengths, Scope(("A", "A"), ("x", "x,y,z"))).ParametersOf("T", "A", 2) is ("x", "y", "z")
 	Sample.MemberType("List(Text, Number)", "Length") is "Unknown"
-	KnownTypes(("T"), Lengths, Lengths, (Scope(("B", "A", "A"), ("z,y", "x,y", "")))).ParametersOf("T", "A", 1)(0) is "x"
+	KnownTypes("T", Lengths, Lengths, Scope(("B", "A", "A"), ("z,y", "x,y", ""))).ParametersOf("T", "A", 1)(0) is "x"
 	Sample.ParameterScope("Count").TypeOf("Twice types") is "Number"
 	let position = Index(BaseName(typeName))
 	position is -1 then NoMembers else parameters(position)
@@ -114,9 +114,9 @@ ParameterNames(joined Text) Texts
 		return joined is "" then List(Text) else joined.Split(",")
 	Instantiation(value).Arguments("P(" + joined + ")")
 ShapeScope(typeName Text) Scope
-	KnownTypes(("Any"), (NoMembers), (Scope(("to"), ("Text"))), (NoMembers)).MemberMethodType("Foo", "to", 1) is ""
-	KnownTypes(("Any"), (NoMembers), (Scope(("to"), ("Text"))), (NoMembers)).DeclaredType("Foo", "to", 1) is "Text"
-	KnownTypes(("Any"), (NoMembers), (Scope(("to"), ("Text"))), (NoMembers)).DeclaredType("Foo", "to", 0) is ""
+	KnownTypes("Any", NoMembers, Scope("to", "Text"), NoMembers).MemberMethodType("Foo", "to", 1) is ""
+	KnownTypes("Any", NoMembers, Scope("to", "Text"), NoMembers).DeclaredType("Foo", "to", 1) is "Text"
+	KnownTypes("Any", NoMembers, Scope("to", "Text"), NoMembers).DeclaredType("Foo", "to", 0) is ""
 	Nested.DeclaredType("G", "Length", 1) is ""
 	Measured.DeclaredType("F", "Length", 0) is ""
 	Sample.ShapeScope("Count").TypeOf("Increment") is "Count"

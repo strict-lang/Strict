@@ -35,7 +35,7 @@ Declare(name Text, type Text) CodeBlock
 	CodeBlock(instructions, register, nextId, scope.With(name, type))
 Sharing(name Text, shares Boolean) CodeBlock
 	CodeBlock.Empty.Sharing("a", true).Owns("a") is false
-	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, (shares then "shared" else "owned")))
+	CodeBlock(instructions, register, nextId, scope.With(name + SharedMarker, shares then "shared" else "owned"))
 Owns(name Text) Boolean
 	CodeBlock.Empty.Sharing("a", false).Owns("a")
 	CodeBlock.Empty.Sharing("a", true).Owns("a.b") is false
@@ -59,7 +59,7 @@ Stored(name Text) CodeBlock
 	let isShared = list is not "" and Owns(list) is false
 	if isShared and list.IndexOf(".") > 0
 		return Add(InstructionEntry(InstructionType.CopyList, list, -1)).Sharing(list, false).Stored(name)
-	Add(InstructionEntry(InstructionType.StoreRegisterToVariable, name, (isShared then (Result, -1, 1) else (Result, -1))))
+	Add(InstructionEntry(InstructionType.StoreRegisterToVariable, name, isShared then (Result, -1, 1) else (Result, -1)))
 Skipping(name Text, jump Number) CodeBlock
 	CodeBlock.Empty.Load(InstructionEntry.LoadBoolean(0, true)).Skipping("a", InstructionType.JumpToIdIfFalse).nextId is 1
 	let stored = Stored(name)

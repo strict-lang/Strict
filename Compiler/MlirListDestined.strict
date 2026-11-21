@@ -113,7 +113,7 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Remade.Element(Remaking.instructions(4), Remaking.instructions(6), List(Text) + "call")(3).EndsWith(Destining)
 	Remade.Element(Remaking.instructions(4), Remaking.instructions(5), List(Text) + "call") is ("call")
 	Remade.Element(Remaking.instructions(4), Remaking.instructions(6), List(Text) + "call") is Destinations
-	MlirListDestined(Remade.function, 3).Element(Remaking.instructions(4), Remaking.instructions(6), ("call")) is ("call")
+	MlirListDestined(Remade.function, 3).Element(Remaking.instructions(4), Remaking.instructions(6), "call") is ("call")
 	if Text.Combine(next.texts) is not "forResult" or IsElement(entry) is false
 		return compiled
 	let temp = "%t" + position + "e"

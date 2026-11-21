@@ -1,6 +1,6 @@
 has function MlirFunction
-constant Degrees = TypeEntry("Strict/Degrees", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
-constant Angle = TypeEntry("Strict/Angle", (MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false)), List(MethodEntry))
+constant Degrees = TypeEntry("Strict/Degrees", MemberEntry("number", "Strict/Number", List(InstructionEntry), false), List(MethodEntry))
+constant Angle = TypeEntry("Strict/Angle", MemberEntry("degrees", "Strict/Degrees", List(InstructionEntry), false), List(MethodEntry))
 constant Byting = TypeEntry("Strict/Byte", (MemberEntry("number", "Strict/Number", List(InstructionEntry), false, 8), MemberEntry("Max", "Strict/Number", List(InstructionEntry), true)), List(MethodEntry))
 constant Red = MemberEntry("red", "Strict/Byte", List(InstructionEntry), false)
 constant Storing = " : (!llvm.ptr, i64, f32, i64) -> ()"

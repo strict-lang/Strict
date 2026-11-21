@@ -19,19 +19,19 @@ constant OtherLoop = ScopedStatement(StatementParser(Tokenizer("for other").Toke
 constant TextLoop = ScopedStatement(StatementParser(Tokenizer("for \"ab\"").Tokens).ParseStatement, Flagged, 0)
 constant CountLoop = ScopedStatement(StatementParser(Tokenizer("for count").Tokens).ParseStatement, Counted, 0)
 constant Increment = ScopedStatement(SyntaxParser(Tokenizer("count.Increment").Tokens).Parse, Counted.With(" dropped", "dropped"), 0)
-constant Numbered = ScopedStatement(SyntaxParser(Tokenizer("number").Tokens).Parse, Scope(("value"), ("Count")), 0)
-constant Enumerating = FileCheck(TypeInference(KnownTypes(("A", "B"), KnownTypes.NoMemberPair, NoScopes, NoScopes), NoScopes), ("A"))
+constant Numbered = ScopedStatement(SyntaxParser(Tokenizer("number").Tokens).Parse, Scope("value", "Count"), 0)
+constant Enumerating = FileCheck(TypeInference(KnownTypes(("A", "B"), KnownTypes.NoMemberPair, NoScopes, NoScopes), NoScopes), "A")
 constant ForMethod = Scope(List(Text) + "for", List(Text) + "Numbers")
 constant Loops = KnownTypes(("Count", "Text"), KnownTypes.NoMemberPair, (ForMethod, KnownTypes.NoMembers), KnownTypes.NoMemberPair)
-constant Looping = FileCheck(TypeInference(Loops, KnownTypes.NoMemberPair), ("Count"))
+constant Looping = FileCheck(TypeInference(Loops, KnownTypes.NoMemberPair), "Count")
 constant HiddenBody = SyntaxNode("For", "", List(SyntaxNode) + SyntaxNode("Body", "", List(SyntaxNode) + MissingCall.statement))
 constant Requirements = Scope(("Twice required", "Twice required", "Twice required"), ("2", "1", "3"))
 constant SelfCounted = Counted.With("self type", "Count")
 constant Owning = Counted.With("Count", "Count")
 constant Lists = KnownTypes(("List", "Generic"), KnownTypes.NoMemberPair, KnownTypes.NoMemberPair, KnownTypes.NoMemberPair)
-constant Listing = FileCheck(TypeInference(Lists, NoScopes), ("A"))
+constant Listing = FileCheck(TypeInference(Lists, NoScopes), "A")
 constant Boxes = KnownTypes(List(Text) + "Box", List(Scope) + Scope(List(Text) + "first", List(Text) + "Generic"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers)
-constant Boxing = FileCheck(TypeInference(Boxes, NoScopes), ("A"))
+constant Boxing = FileCheck(TypeInference(Boxes, NoScopes), "A")
 constant TextMissing = SyntaxNode("Member", "Missing", List(SyntaxNode) + SyntaxNode("Text", "Count"))
 constant RequiredThrice = KnownTypes(RequiredTwice.names, RequiredTwice.members, RequiredTwice.methods, List(Scope) + Requirements)
 Unknown(scoped ScopedStatement, current Scope) Text
@@ -111,7 +111,7 @@ CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 Fewest(instance Text, name Text) Number
 	Requiring.Fewest("Count", "Twice") is 1
 	Counting.Fewest("Count", "Twice") is 0
-	FileCheck(TypeInference(RequiredThrice, NoScopes), ("Count")).Fewest("Count", "Twice") is 1
+	FileCheck(TypeInference(RequiredThrice, NoScopes), "Count").Fewest("Count", "Twice") is 1
 	let scope = inference.types.ParameterScope(instance)
 	mutable fewest = -1
 	for scope.names
@@ -150,8 +150,8 @@ IsMissing(instance Text, name Text) Boolean
 	Counting.IsMissing("Count", "Missing")
 	Counting.IsMissing("Count", "Twice") is false
 	Counting.IsMissing("Generic", "number") is false
-	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Text", "Parsed")
-	FileCheck(TypeInference(KnownTypes.Options, NoScopes), ("Text")).IsMissing("Settings", "Parsed") is false
+	FileCheck(TypeInference(KnownTypes.Options, NoScopes), "Text").IsMissing("Text", "Parsed")
+	FileCheck(TypeInference(KnownTypes.Options, NoScopes), "Text").IsMissing("Settings", "Parsed") is false
 	Listing.IsMissing("Generic", "number") is false and Listing.IsMissing("List(Text, Number)", "Key") is false
 	Boxing.IsMissing("Box", "first") is false
 	let types = inference.types

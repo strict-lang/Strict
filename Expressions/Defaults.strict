@@ -4,11 +4,11 @@ constant Custom = Scope(List(Text) + "from", List(Text) + "c")
 constant Pairs = Scope(List(Text) + "from", List(Text) + "x,y")
 constant Kept = (Defaults(List(Text)).Constructors(Pairs, ("a", "b"), Paired), Defaults(List(Text)).Constructors(Custom, List(Text), Paired), Defaults(List(Text) + "has b Number = 0").Added(KnownTypes.NoMembers))
 constant Joint = Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeAt("from", 0)
-constant Zero = Scope(("b default"), ("0"))
+constant Zero = Scope("b default", "0")
 constant Sampled = Defaults(("has x Number", "Add(a Number) Number", "\ta"))
 constant Fresh = Defaults(List(Text)).Constructors(KnownTypes.NoMembers, ("a", "b"), Paired).names.Length
 constant Adding = Defaults(("A(x Number) N", "\tx"))
-constant Named = Scope(("A"), ("N"))
+constant Named = Scope("A", "N")
 constant Widths = Defaults(List(Text) + "has width Number with value > 0")
 constant Empty = Defaults(List(Text))
 Added(scope Scope) Scope
@@ -37,8 +37,8 @@ Constructors(scope Scope, names Texts, members Scope) Scope
 		types.Add(members.TypeOf(value))
 	Scope(("from", "from types"), (Text.Combine(names, ","), Text.Combine(types, ","))).WithAll(scope.names, scope.types)
 Parameters(methods Scope, isContract Boolean) Scope
-	Defaults(("A(x Number) N", "\tx")).Parameters(Scope(("A"), ("N")), false).TypeOf("A types") is "Number"
-	"\t types" is not in Defaults(("A(x Number) N", "\tx")).Parameters(Scope(("A"), ("N")), false).names
+	Defaults(("A(x Number) N", "\tx")).Parameters(Scope("A", "N"), false).TypeOf("A types") is "Number"
+	"\t types" is not in Defaults(("A(x Number) N", "\tx")).Parameters(Scope("A", "N"), false).names
 	mutable scope = isContract then Scope(List(Text) + " trait", List(Text) + "true") else Scope(List(Text), List(Text))
 	let shape = TypeShape(lines)
 	for lines
@@ -48,8 +48,8 @@ Parameters(methods Scope, isContract Boolean) Scope
 	let added = Changes(lines).Added(Changes(lines, true).Added(Steps(List(Text)).Members(lines)))
 	scope.WithAll(added.names, added.types)
 Of(methods Scope, members Scope, names Texts) Scope
-	Sampled.Of(Scope(("Add"), ("Number")), Scope(("x"), ("Number")), ("x")).TypeOf("from") is "x"
-	" constrained" is not in Sampled.Of(Scope(("Add"), ("Number")), Scope(("x"), ("Number")), ("x")).names
+	Sampled.Of(Scope("Add", "Number"), Scope("x", "Number"), "x").TypeOf("from") is "x"
+	" constrained" is not in Sampled.Of(Scope("Add", "Number"), Scope("x", "Number"), "x").names
 	Widths.Of(KnownTypes.NoMembers, KnownTypes.NoMembers, List(Text)).TypeOf(" constrained") is "true"
 	Adding.Parameters(Named, true).TypeOf(" trait") is "true" and Adding.Parameters(Named, false).TypeOf(" trait") is ""
 	Defaults(("A(x Number) N", "\tA(1) is 1", "\tx")).Parameters(Named, false).TypeOf("A types") is "Number"

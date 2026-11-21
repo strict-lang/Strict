@@ -4,16 +4,16 @@ has typeName Text = ""
 constant ReservedNames = ("value", "iterator", "elements", "generic")
 constant Hint = ", capitalize it when other types use it"
 constant Replacing = TypeValidator(TypeShape("has a Number", "has b Number", "Changed(x Number) C", "\tC(1, 2).Changed(3).a is 3", "\tC(value, a = x)"), ("Add", "Remove"), "C")
-constant Computed = TypeValidator(TypeShape("has a Number", "has number = 17 + 4", "Run", "\tnumber"), ("Add"))
+constant Computed = TypeValidator(TypeShape("has a Number", "has number = 17 + 4", "Run", "\tnumber"), "Add")
 Sample TypeValidator
 	Sample.mutations.Length is 2
 	TypeValidator(TypeShape("has unused Number", "has logger", "Run", "\tlogger.Log(1)"), ("Add", "Remove"))
 Validate ValidationIssues
 	Sample.Validate.Length is 1
-	TypeValidator(TypeShape("Run", "\tlet unused = 5", "\t3"), ("Add")).Validate.Length is 2
-	TypeValidator(TypeShape("Run", "\tlet first = 5", "\tlet unused = 5", "\tfirst"), ("Add")).Validate.Length is 3
+	TypeValidator(TypeShape("Run", "\tlet unused = 5", "\t3"), "Add").Validate.Length is 2
+	TypeValidator(TypeShape("Run", "\tlet first = 5", "\tlet unused = 5", "\tfirst"), "Add").Validate.Length is 3
 	Computed.Validate.Length is 2
-	TypeValidator(TypeShape("Run(spare Number)", "\t3"), ("Add")).Validate.First.Line is 1
+	TypeValidator(TypeShape("Run(spare Number)", "\t3"), "Add").Validate.First.Line is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if shape.IsMethodHeader(value)
@@ -25,7 +25,7 @@ MemberIssues ValidationIssues slow
 	Sample.MemberIssues.Length is 1 and Sample.MemberIssues.First.Line is 1
 	Sample.MemberIssues.First to Text is "UnusedMemberMustBeRemoved: unused, capitalize it when other types use it"
 	Replacing.MemberIssues.Length is 0
-	TypeValidator(TypeShape("has elements Numbers", "has Width Number", "Run", "\t2"), ("Add")).MemberIssues.Length is 0
+	TypeValidator(TypeShape("has elements Numbers", "has Width Number", "Run", "\t2"), "Add").MemberIssues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	let kept = IsExempt then MemberNames else Copied
 	for shape.lines
@@ -36,7 +36,7 @@ MemberIssues ValidationIssues slow
 	issues
 MemberNames Texts
 	Sample.MemberNames is ("unused", "logger")
-	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), ("Add")).MemberIssues.Length is 0
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), "Add").MemberIssues.Length is 0
 	for shape.lines
 		if shape.IsMemberLine(value)
 			HeaderTokens(Tokenizer(value).Tokens).MemberName
@@ -59,19 +59,19 @@ IsUsedIn(line Text, name Text) Boolean
 	line.IndexOf(" " + name) is not -1 or line.IndexOf("\t" + name) is not -1 or line.IndexOf("(" + name) is not -1
 IsExempt Boolean
 	Sample.IsExempt is false
-	TypeValidator(TypeShape("has a Number", "Run", "\ta", "Other Number", "\t2"), ("Add")).IsExempt is false
-	TypeValidator(TypeShape("has a Number", "has b Number", "Run", "\tvalue"), ("Add")).IsExempt is false
-	TypeValidator(TypeShape("has a Number", "Run", "\tvalue", "Other", "\tvalue"), ("Add")).IsExempt
-	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), ("Add")).IsExempt
-	TypeValidator(TypeShape("has a Number", "Run", "\ta"), ("Add")).IsExempt
-	TypeValidator(TypeShape("has a Number", "from(text Text)", "\ta", "Run", "\ta"), ("Add")).IsExempt
+	TypeValidator(TypeShape("has a Number", "Run", "\ta", "Other Number", "\t2"), "Add").IsExempt is false
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run", "\tvalue"), "Add").IsExempt is false
+	TypeValidator(TypeShape("has a Number", "Run", "\tvalue", "Other", "\tvalue"), "Add").IsExempt
+	TypeValidator(TypeShape("has a Number", "has b Number", "Run"), "Add").IsExempt
+	TypeValidator(TypeShape("has a Number", "Run", "\ta"), "Add").IsExempt
+	TypeValidator(TypeShape("has a Number", "from(text Text)", "\ta", "Run", "\ta"), "Add").IsExempt
 	if shape.MethodScope.names.Length is MemberNames.Length or not HasMethodBody
 		return true
 	let usesValue = UsageCount("value") > 0 or "from" is in shape.MethodScope.names
 	shape.MemberScope.names.Length is 1 and usesValue
 HasMethodBody Boolean
 	Sample.HasMethodBody
-	TypeValidator(TypeShape("has a Number", "Run"), ("Add")).HasMethodBody is false
+	TypeValidator(TypeShape("has a Number", "Run"), "Add").HasMethodBody is false
 	for shape.lines
 		if value.StartsWith("\t")
 			return true

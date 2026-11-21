@@ -38,7 +38,7 @@ IsCarried(name Text) Boolean
 	for function.method.instructions
 		if value.kind is in MlirAlone.Named and value.texts(0) is name
 			let isLoad = value.kind is InstructionType.LoadVariableToRegister
-			if (isLoad then IsKeptRead(index, name, 0) else IsKeptValue(index, value.payload(0), (name), 0)) is false
+			if (isLoad then IsKeptRead(index, name, 0) else IsKeptValue(index, value.payload(0), name, 0)) is false
 				return false
 	true
 IsPlain(name Text) Boolean
@@ -73,7 +73,7 @@ IsSafeUse(at Number, register Number, name Text, depth Number) Boolean
 	if entry.kind is InstructionType.LoopBegin and entry.payload(0) is register or depth > 6
 		return false
 	let isPassed = entry.kind is InstructionType.Invoke and MlirOwned(function, 0).IsLeaked(at, register)
-	isPassed is false or IsKeepingCall(at, (name), depth + 1) and IsKeptRead(at, name, depth + 1)
+	isPassed is false or IsKeepingCall(at, name, depth + 1) and IsKeptRead(at, name, depth + 1)
 IsBack(target Text, name Text, depth Number) Boolean
 	Branching.IsBack("conditional0", "kept", 0) and Branching.IsBack("kept", "kept", 0)
 	Branching.IsBack("conditional0", "other", 0) is false and Branching.IsBack("other", "kept", 0) is false

@@ -163,7 +163,7 @@ Call(call Invocation) VmValue
 	Hello.Call(Invocation.Emptied).items.First.text is "IndexOutOfRange"
 	Hello.Typed((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
-	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, (VmValue.OfNumber(4)), VmValue.None)(5).number is 4
+	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, VmValue.OfNumber(4), VmValue.None)(5).number is 4
 	(deadline > 0 then Hosted(call).IsChanging else false) then VmValue.OfError("ChangeInMutationRun") else Routed(call)
 Routed(call Invocation) VmValue
 	Hello.Routed(Invocation.Uppered).text is "AB"

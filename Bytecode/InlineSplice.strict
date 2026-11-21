@@ -83,12 +83,12 @@ IsValued Boolean
 			return true
 	false
 Fielded(reads Numbers) List(InstructionEntry)
-	Squaring.Fielded((7)).Length is 4
-	Squaring.Fielded((7))(3).texts is ("inline5_imaginary")
+	Squaring.Fielded(7).Length is 4
+	Squaring.Fielded(7)(3).texts is ("inline5_imaginary")
 	Squaring.Spliced(4).texts is ("inline5_real")
 	Squaring.Spliced(5).payload is (3, 5, 5, 7)
-	Sample.Fielded((7)).Length is 0
-	Owning.Fielded((7)).Length is 0
+	Sample.Fielded(7).Length is 0
+	Owning.Fielded(7).Length is 0
 	if fields.Length is 0 or InlineRules(callee).IsOwn(call)
 		return List(InstructionEntry)
 	mutable lines = List(Mutable(InstructionEntry))

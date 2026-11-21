@@ -65,7 +65,7 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Counting.ParameterTypes("Twice", "Count", List(Text) + "Number") is ("Number")
 	if type is TypeName and (name is not type or Header(name).tokens.Length > 0)
 		return HeaderEntries(Chosen(name, argumentTypes), types.MethodsOf(type)).ParameterTypes
-	let declared = Declared(type, (name is type then "from" else name), argumentTypes, " types")
+	let declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
 	if name is not type or declared.Length > 0
 		return declared
 	for FromNames(type)
@@ -111,7 +111,7 @@ Header(name Text) HeaderTokens
 	Plain.Header("Missing").tokens.Length is 0
 	Plain.Header("Gree").tokens.Length is 0
 	Plain.Header("has").tokens.Length is 0
-	Hiding.ParameterTypes("C", "C", ("Number")) is ("Number")
+	Hiding.ParameterTypes("C", "C", "Number") is ("Number")
 	for shape.lines
 		if value.StartsWith(name) and shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is name
 			return HeaderTokens(Tokenizer(value).Tokens)
@@ -211,6 +211,6 @@ TypeName Text
 	Colored.TypeName is "C"
 	Ranges.ParameterTypes("Foo", "Range", List(Text)).Length is 0
 	CallTarget(NoTypes, Greeter, "S/E/G", ("S/Helper", "S/E/Helper")).PackageType("Helper") is "S/E/Helper"
-	CallTarget(NoTypes, Greeter, "S/G", ("S/E/Helper")).PackageType("Helper") is "S/E/Helper"
+	CallTarget(NoTypes, Greeter, "S/G", "S/E/Helper").PackageType("Helper") is "S/E/Helper"
 	CallTarget(NoTypes, Greeter, "Strict/E/G", ("XHelper", "Helper")).PackageType("Helper") is "Helper"
 	TypeEntry.ShortName(fullName)

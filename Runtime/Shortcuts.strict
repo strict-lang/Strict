@@ -1,7 +1,7 @@
 has method MethodEntry
 constant Back = (InstructionEntry(MutationKinds.Returned, line = 3), MutationKinds.Ended, MutationKinds.Returned)
 constant Returning = Shortcuts(MethodEntry(MutationKinds.Twice.method, instructions = MutationKinds.Guarded + InstructionEntry(MutationKinds.Loaded, line = 3) + Back))
-constant Failing = InstructionEntry.Invoke(2, List(Text) + "Strict/Error", (1), -1)
+constant Failing = InstructionEntry.Invoke(2, List(Text) + "Strict/Error", 1, -1)
 constant Guarding = Shortcuts(MethodEntry(Returning.method, instructions = MutationKinds.Guarded + InstructionEntry(Failing, line = 3) + Back))
 constant Picked = (MutationKinds.Truth, InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0))
 constant Middle = (InstructionEntry.Jump(InstructionType.JumpEnd, 0), InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1))

@@ -113,5 +113,5 @@ IsTail(scoped ScopedStatement, lines Texts) Boolean
 	Naming.IsTail(Tail, Counting)
 	Naming.IsTail(Argued, Counting) is false
 	Naming.Resultless(SyntaxNode("Body", "", List(SyntaxNode) + Tail.statement), true, Named, Drawers).Length is 0
-	Naming.Resultless(SyntaxNode("Identifier", "shot"), true, Scope(("shot"), ("None")), Drawers).Length is 0
+	Naming.Resultless(SyntaxNode("Identifier", "shot"), true, Scope("shot", "None"), Drawers).Length is 0
 	scoped.scope.TypeOf(" dropped") is "" and lines(scoped.line).StartsWith("\t\t") is false

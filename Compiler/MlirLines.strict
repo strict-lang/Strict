@@ -17,7 +17,7 @@ constant Shaped = TypeEntry("Strict/Shape", List(MemberEntry), (Twice, MethodEnt
 constant Shapes = List(MlirFunction) + Unlined
 constant Printer = ("  func.func private @strict_lines_print() {", "    %linetable = llvm.mlir.addressof @strict_lines : !llvm.ptr")
 constant Print = "    func.call @strict_lines_print() : () -> ()"
-constant Module = MlirModule(List(TypeEntry) + TypeEntry("Strict/Lined", List(MemberEntry), List(MethodEntry) + Twice), "Twice", ("Lined.strict"))
+constant Module = MlirModule(List(TypeEntry) + TypeEntry("Strict/Lined", List(MemberEntry), List(MethodEntry) + Twice), "Twice", "Lined.strict")
 Numbers Numbers
 	MlirLines(Lined).Numbers is (2, 3)
 	mutable numbers = List(Mutable(Number))
@@ -62,13 +62,13 @@ Framed Texts
 	isFramed then List(Text) + "    func.call @strict_frame_ended() : () -> ()" else List(Text)
 Placed Texts
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")
-	MlirLines(Lined, ("Strict/Shape"), ("Examples/Shape.strict")).Placed.First is "Examples/Shape.strict:2"
+	MlirLines(Lined, "Strict/Shape", "Examples/Shape.strict").Placed.First is "Examples/Shape.strict:2"
 	let file = File(function.type)
 	for Numbers
 		file + ":" + value
 File(type TypeEntry) Text
 	MlirLines(Lined, ("A", "Strict/Shape"), ("A.strict", "C/B.strict")).File(Shaped) is "C/B.strict"
-	MlirLines(Lined, ("A"), ("Math/A")).File(TypeEntry("Size", List(MemberEntry), List(MethodEntry))) is "Math/Size.strict"
+	MlirLines(Lined, "A", "Math/A").File(TypeEntry("Size", List(MemberEntry), List(MethodEntry))) is "Math/Size.strict"
 	MlirLines(Lined).File(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "List.strict"
 	let at = mainNames.Index(type.Name)
 	if at >= 0
@@ -79,7 +79,7 @@ Indexes(places Texts) Numbers
 	for Placed
 		places.Index(value)
 Places(functions List(MlirFunction), names Texts, files Texts) Texts
-	MlirLines.Places((Lined, Unlined), ("Strict/Shape"), ("Shape.strict")) is ("Shape.strict:2", "Shape.strict:3")
+	MlirLines.Places((Lined, Unlined), "Strict/Shape", "Shape.strict") is ("Shape.strict:2", "Shape.strict:3")
 	mutable places = List(Mutable(Text))
 	for emitted, place in functions, MlirLines(emitted, names, files).Placed
 		if place is not in places
@@ -96,14 +96,14 @@ Uncompiled(functions List(MlirFunction), mains List(TypeEntry)) List(MlirFunctio
 			uncompiled.Add(candidate)
 	uncompiled
 Counted(functions List(MlirFunction), mains List(TypeEntry), files Texts) List(MlirFunction)
-	MlirLines.Counted(Shapes, List(TypeEntry) + MlirFunction.Shape, ("Shape.strict")).First.lineSlots is (0, 1)
+	MlirLines.Counted(Shapes, List(TypeEntry) + MlirFunction.Shape, "Shape.strict").First.lineSlots is (0, 1)
 	Module.Text.IndexOf(Print) > 0
 	let names = NativeFolder.Names(mains)
 	let places = Places(functions + Uncompiled(functions, mains), names, files)
 	for functions
 		MlirFunction(value.types, value.type, value.method, MlirLines(value, names, files).Indexes(places))
 Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts
-	MlirLines.Table(Shapes, List(TypeEntry) + MlirFunction.Shape, ("A.strict")).First.IndexOf("tensor<6xf64>") > 0
+	MlirLines.Table(Shapes, List(TypeEntry) + MlirFunction.Shape, "A.strict").First.IndexOf("tensor<6xf64>") > 0
 	let places = Places(functions + Uncompiled(functions, mains), NativeFolder.Names(mains), files)
 	let size = places.Length * 3
 	let table = "  llvm.mlir.global internal @strict_lines(dense<0.0> : tensor<" + size + "xf64>)"

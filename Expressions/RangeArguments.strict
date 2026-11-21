@@ -5,10 +5,10 @@ constant Called = SyntaxParser(Tokenizer("a.Wrapped(Range(0, 200))").Tokens).Par
 constant Hint = ", take an Iterator(Number) or build the list"
 constant Rejected = "RangeArgumentTooLong: A.Wrapped got Range(0, 200) for a Numbers" + Hint
 Issue(call SyntaxNode, name Text, types Texts) Text
-	RangeArguments.Issue(Long, "A.Wrapped", ("Numbers")) is Rejected
-	RangeArguments.Issue(Called, "A.Wrapped", ("Numbers")) is Rejected
-	RangeArguments.Issue(Short, "A.Wrapped", ("Numbers")) + RangeArguments.Issue(Long, "A.Wrapped", List(Text)) is ""
-	RangeArguments.Issue(Long, "A.Wrapped", ("Range")) is ""
+	RangeArguments.Issue(Long, "A.Wrapped", "Numbers") is Rejected
+	RangeArguments.Issue(Called, "A.Wrapped", "Numbers") is Rejected
+	RangeArguments.Issue(Short, "A.Wrapped", "Numbers") + RangeArguments.Issue(Long, "A.Wrapped", List(Text)) is ""
+	RangeArguments.Issue(Long, "A.Wrapped", "Range") is ""
 	let start = call.Kind is "MethodCall" then 1 else 0
 	for Range(start, call.children.Length)
 		let at = value - start

@@ -41,7 +41,7 @@ Translatable(translated Texts, functions List(MetalFunction)) Texts
 		if translated(index) is not ""
 			value.Name
 Markers(functions List(MetalFunction), kept Texts) Texts
-	Sample.Markers(Sample.Functions, ("K")) is ("// parameters K 1")
+	Sample.Markers(Sample.Functions, "K") is ("// parameters K 1")
 	for functions
 		if value.IsKernel and value.Name is in kept
 			"// parameters " + value.Name + " " + value.Parameters.Length
@@ -51,7 +51,7 @@ Prototypes(functions List(MetalFunction), kept Texts) Texts
 		if value.IsKernel is false and value.Name is in kept
 			value.Signature + ";"
 Bodies(translated Texts, functions List(MetalFunction), kept Texts) Texts
-	Sample.Bodies(Sample.Translated(Sample.Functions), Sample.Functions, ("K")).Length is 1
+	Sample.Bodies(Sample.Translated(Sample.Functions), Sample.Functions, "K").Length is 1
 	for functions
 		if value.Name is in kept
 			translated(index)

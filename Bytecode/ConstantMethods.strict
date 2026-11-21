@@ -1,6 +1,6 @@
 has inference Expressions/TypeInference
 has isOptimizing Boolean = true
-constant Known = KnownTypes(("Count"), (KnownTypes.CountMembers), (Scope(("Increment", "Twice", "Started"), ("Count", "Count", "Count"))), (KnownTypes.CountParameters))
+constant Known = KnownTypes("Count", KnownTypes.CountMembers, Scope(("Increment", "Twice", "Started"), ("Count", "Count", "Count")), KnownTypes.CountParameters)
 constant ConstantNames = ("Started", "Alias", "Plain", "Rows", "Tally", "Row", "Both", "Sum")
 constant ConstantValues = ("Count(1).Twice", "Count.Started", "Count(1)", "(1, 2) + (3)", "1 + 2", "(1, 2)", "Row + Row", "Tally + Tally")
 constant Growing = ConstantMethods(TypeInference(Known, (Scope(ConstantNames, ConstantValues), TypeInference.NoShape)))

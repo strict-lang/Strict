@@ -9,9 +9,9 @@ Element Text
 	Rg.Element is "Rg"
 	MemberAverage("Strict/Number", Rg.types).Element is ""
 	MemberAverage("Strict/List(Key, Value)", Rg.types).Element is ""
-	Rg.Replaced(("Average Generic")) is Rg.Lines
+	Rg.Replaced("Average Generic") is Rg.Lines
 	Rg.Replaced(("Average Generic", "Median Number")) is Rg.Lines + "Median Number"
-	Rg.Replaced(("Median Number")) is ("Median Number")
+	Rg.Replaced("Median Number") is ("Median Number")
 	let start = type.IndexOf("List(")
 	let inner = start < 0 then "" else type.Substring(start + 5, type.Length - start - 6)
 	inner.IndexOf(",") >= 0 then "" else TypeEntry.ShortName(inner)

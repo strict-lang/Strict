@@ -9,7 +9,7 @@ constant Started = Speculation(Qwen3.Tiny.Prefilled((1, 2, 3), 0), (1, 2, 3), Qw
 constant Prompted = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0)
 constant Verified = Prompted.Steps((5, 4, 1), Qwen3.Positions(3, 3), 1)
 constant Drafting = Speculation(Prompted, (1, 2, 3), Prompted.Next, 3, 0, Drafter.Tiny)
-constant Kept = Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, (5))
+constant Kept = Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, 5)
 Generated(count Number) Numbers slow
 	Started.Generated(6) is Generation(Qwen3.Tiny).Generated((1, 2, 3), 6)
 	Started.Generated(1) is (2)
@@ -83,7 +83,7 @@ IsMatch(tokens Numbers, start Number, length Number) Boolean
 			return false
 	true
 Truncated(verified Qwen3, kept Numbers) Qwen3 slow
-	Speculation(Started, context = (1)).Truncated(Started.model, (5)).blocks.First.keys.Length is 2 * 4
+	Speculation(Started, context = (1)).Truncated(Started.model, 5).blocks.First.keys.Length is 2 * 4
 	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last, 0.002)
 	Kept.hidden.Length is 8
 	let length = context.Length + kept.Length

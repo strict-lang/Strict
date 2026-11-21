@@ -93,6 +93,6 @@ Packaged(build NativeBuild, base Text, program Text, tools Toolchain)
 	Reported("Packaging", started)
 Lowered(tools Toolchain, base Text) Text
 	let started = Process.Elapsed
-	let lowered = tools.Lowered(base, "", (tools.platform is Platform.Windows then Toolchain.Parts else 1))
+	let lowered = tools.Lowered(base, "", tools.platform is Platform.Windows then Toolchain.Parts else 1)
 	Reported("Host lowering and translation", started)
 	lowered

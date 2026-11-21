@@ -132,7 +132,7 @@ WritePosition(entry InstructionEntry) Number
 	isBinary and entry.payload(0) is 3 then 3 else Number.NotFound
 RegisterCount Number
 	Twice.RegisterCount is 3
-	LoadReuse((ReloadA, LoadA)).RegisterCount is 2 and LoadReuse((AddCall)).RegisterCount is 8
+	LoadReuse((ReloadA, LoadA)).RegisterCount is 2 and LoadReuse(AddCall).RegisterCount is 8
 	LoadReuse((InstructionEntry.Return(4), InstructionEntry.Return(5), InstructionEntry.Return(1))).RegisterCount is 6
 	mutable most = 0
 	for instructions

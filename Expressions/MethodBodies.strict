@@ -158,7 +158,7 @@ BlockType(statement SyntaxNode, scope Scope) Text
 	if not IsSelector(statement)
 		return ""
 	let lastCase = statement.children.Last.children.Last
-	inference.TypeOf((lastCase.Kind is "ElseValue" then lastCase.children(0) else lastCase.children(1)), scope, Methods)
+	inference.TypeOf(lastCase.Kind is "ElseValue" then lastCase.children(0) else lastCase.children(1), scope, Methods)
 IsSelector(statement SyntaxNode) Boolean
 	IsSelector(BodyParser("Run", "\tif a is", "\t\t1 then 2").Block(1, 1).children(0))
 	IsSelector(StatementParser(Tokenizer("if a is b").Tokens).ParseStatement) is false

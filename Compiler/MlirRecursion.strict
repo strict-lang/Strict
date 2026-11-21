@@ -47,8 +47,8 @@ Finished(node Number, path Numbers, order Numbers, edges List(Numbers)) Numbers
 			done = Finished(value, onPath, done, edges)
 	done + node
 IsBack(callees Numbers, rank Number, order Numbers) Boolean
-	Looping.IsBack((1), 0, (1, 0))
-	Looping.IsBack((1), 1, (1, 0)) is false
+	Looping.IsBack(1, 0, (1, 0))
+	Looping.IsBack(1, 1, (1, 0)) is false
 	if rank < 0
 		return true
 	for callees

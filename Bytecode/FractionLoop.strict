@@ -52,7 +52,7 @@ Built(loop SyntaxNode, parts Text) SyntaxNode
 Blocks(loop SyntaxNode) SyntaxNode
 	let start = loop.children(0).children(0)
 	let end = loop.children(0).children(1)
-	let quarter = Bin("/", (start.text is "0" then end else Bin("-", end, start)), SyntaxNode("Number", "4"))
+	let quarter = Bin("/", start.text is "0" then end else Bin("-", end, start), SyntaxNode("Number", "4"))
 	let blocks = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + quarter)
 	let divided = Bin("/", SyntaxNode("Identifier", "blocks"), SyntaxNode("Number", "2500"))
 	let width = SyntaxNode("MethodCall", "Floor", List(SyntaxNode) + divided)

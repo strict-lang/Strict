@@ -46,8 +46,8 @@ DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
 			return false
 	true
 DiskError(orbit List(Complex), position Number, offset Complex, previous Number) Number
-	DiskError((Complex.Zero), 0, Complex(1, 0), 0) > 1.000000000000003
-	DiskError((Complex.Zero), 0, Complex.Zero, 0) > 0 and DiskError((Complex.Zero), 0, Complex.Zero, 1) > 1
+	DiskError(Complex.Zero, 0, Complex(1, 0), 0) > 1.000000000000003
+	DiskError(Complex.Zero, 0, Complex.Zero, 0) > 0 and DiskError(Complex.Zero, 0, Complex.Zero, 1) > 1
 	let bound = offset.Length * RoundingGrowth
 	let factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
 	(factor * previous + bound * bound) * RoundingGrowth + bound * 0.000000000000001 + 0.00000000000000000000000000001

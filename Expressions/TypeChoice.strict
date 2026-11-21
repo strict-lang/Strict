@@ -17,8 +17,8 @@ Chosen(files Texts, source Text) Texts
 		if best is "" or best is value
 			value
 Names(files Texts) Texts
-	Plain.Names(("x\\Scene.strict")) is ("Scene.strict")
-	Plain.Best(("./WebWars/Scene.strict"), "./Content/Catalog.strict") is "./WebWars/Scene.strict"
+	Plain.Names("x\\Scene.strict") is ("Scene.strict")
+	Plain.Best("./WebWars/Scene.strict", "./Content/Catalog.strict") is "./WebWars/Scene.strict"
 	Plain.Names(Project) is ("Scene.strict", "Scene.strict", "Unit.strict")
 	for files
 		let slashed = value.IndexOf("\\") < 0 then value else value.Replace("\\", "/")
@@ -83,7 +83,7 @@ Unique(candidates Texts) Texts
 			value
 Packages(name Text) Texts
 	Plain.Packages("Units").Length is 0 and Both.Packages("Unit").Length is 0
-	TypeChoice(("Scene")).Packages("Scene").Length is 0
+	TypeChoice("Scene").Packages("Scene").Length is 0
 	TypeChoice(("a WebWars/Scene", "b WebWars/Scene")).Packages("Scene") is ("WebWars")
 	Both.Packages("Scene") is ("LogoApp", "WebWars")
 	Plain.Packages("Scene").Length is 0

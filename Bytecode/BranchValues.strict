@@ -113,7 +113,7 @@ Accumulated(line SyntaxNode) SyntaxNode
 	constant result = SyntaxNode("Identifier", "forResult")
 	if mode is "list"
 		return SyntaxNode("MethodCall", "Add", (result, line), line.line)
-	let combined = SyntaxNode("Binary", (mode is "product" then "*" else "+"), (result, line))
+	let combined = SyntaxNode("Binary", mode is "product" then "*" else "+", (result, line))
 	SyntaxNode("Reassignment", "", (result, combined), line.line)
 IsValue(line SyntaxNode) Boolean
 	Returning.IsValue(SyntaxNode("Binary", "+", (Value, Value))) and Returning.IsValue(SyntaxNode("Identifier", "then"))

@@ -71,7 +71,7 @@ Near(kind Text, ordinal Number) MethodEntry slow
 	MethodEntry(TestCodegen.Runner + "Near" + ordinal, parameters, "Strict/Boolean", returned.instructions)
 Neutral ValueCodegen slow
 	Processing.Neutral.Expression(Elapsed, TestCodegen.Counter).instructions.First.texts.First is "Strict/Process"
-	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, ("P/S"))).Neutral.target.FullName("S") is "P/S"
+	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, "P/S")).Neutral.target.FullName("S") is "P/S"
 	TestReports(TypeCodegen.Hello).Neutral.target.shape.lines is ("has logger")
 	let members = TypeShape(types.lines.Slice(0, TypeShape(types.lines).MembersEnd))
 	let neutral = CallTarget(types.inference.types, members, types.fullName, types.typeNames)

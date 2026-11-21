@@ -18,7 +18,7 @@ Vram Number
 	idealVram > 0 then idealVram else minimumVram
 Parsed(words Texts) Need
 	Need.Parsed(("need", "job", "label", "4", "8", "2", "4", "0", "wait")).minimumRam is 4
-	Need.Parsed(("need")).job is ""
+	Need.Parsed("need").job is ""
 	if words.Length < 9
 		return Need
 	let ram = (words(3) to Number, words(4) to Number)

@@ -21,7 +21,7 @@ constant Unprefixed = Inliner((TypeEntry("Caller", List(MemberEntry), List(Metho
 constant Again = MethodEntry("Again", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Caller", "Run", "Strict/Number"), List(Number), -1))
 constant Store = InstructionType.StoreRegisterToVariable
 constant Splitting = Inliner((StructLanes.Caller, StructLanes.Pair), true)
-constant Scaled = InstructionEntry.Invoke(0, ("", "*", "", "scale"), (0), 0)
+constant Scaled = InstructionEntry.Invoke(0, ("", "*", "", "scale"), 0, 0)
 constant Shifted = MemberEntry("shift", "Strict/Number", List(InstructionEntry) + InstructionEntry(InstructionType.Set, List(Text), (1, 3, 0)), false)
 constant Shifting = MethodEntry("Shift", List(MemberEntry) + Shifted, "Strict/Number", First.instructions)
 constant Unfilled = InstructionEntry.Invoke(1, ("Strict/Shifter", "Shift", "Strict/Number"), List(Number), -1)
@@ -58,7 +58,7 @@ ExpandedTypes(source List(TypeEntry)) List(TypeEntry)
 		updated(index) = TypeEntry(current.Name, current.members, Inliner(updated, isSplitting).Methods(current))
 	updated
 Methods(type TypeEntry) List(MethodEntry)
-	Sample.Inlinable(Caller, Calling.instructions(1), InstructionEntry(Kinds(15), ("x"), (1))).Name is ""
+	Sample.Inlinable(Caller, Calling.instructions(1), InstructionEntry(Kinds(15), "x", 1)).Name is ""
 	Sample.Inlinable(Caller, Calling.instructions(1), StructLanes.Calling(5)).Name is ""
 	Inliner((Caller, StructLanes.Pair)).Inlinable(Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
 	Splitting.Inlinable(StructLanes.Caller, StructLanes.Constructed, StructLanes.Calling(3)).Name is ""
@@ -124,7 +124,7 @@ IsMatched(call InstructionEntry, next InstructionEntry) Boolean
 	Sample.IsMatched(StructLanes.Calling(4), StructLanes.Calling(6)) is false
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is "Squared"
 	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 1)) is false
-	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, ("a"), List(Number) + 0)) is false
+	Sample.IsMatched(ReadTested, InstructionEntry(InstructionType.CheckError, "a", List(Number) + 0)) is false
 	next.kind is InstructionType.CheckError and next.texts.Length is 0 and next.payload(0) is call.payload(0)
 TypeOf(name Text) TypeEntry
 	Sample.TypeOf("List(Number)").Name is "Strict/List(Number)" and Sample.TypeOf("Caller").Name is "Strict/Caller"

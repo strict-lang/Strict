@@ -75,9 +75,9 @@ CallList(record Text) Texts
 	let rest = record.Split("|").Last
 	record.EndsWith("|") then List(Text) else rest.Split(",")
 Accepts(calls Texts, sure Texts) Boolean
-	SureMethods.Accepts(List(Text), ("Number.Floor"))
-	SureMethods.Accepts(("Number.Floor"), ("Number.Floor"))
-	SureMethods.Accepts(("Number.Floor", "Index"), ("Number.Floor")) is false
+	SureMethods.Accepts(List(Text), "Number.Floor")
+	SureMethods.Accepts("Number.Floor", "Number.Floor")
+	SureMethods.Accepts(("Number.Floor", "Index"), "Number.Floor") is false
 	for calls
 		if value is not in sure
 			return false

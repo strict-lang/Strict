@@ -11,7 +11,7 @@ constant Constant = TypeEntry("Strict/Counting", List(MemberEntry) + MemberEntry
 constant TailId = 1000000
 constant Start = InstructionEntry.Jump(InstructionType.JumpEnd, TailId)
 constant Restart = InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, TailId)
-constant Varied = TypeEntry("Strict/Counting", List(MemberEntry), (MethodEntry("Count", (Counted), "Strict/Number", (Again))))
+constant Varied = TypeEntry("Strict/Counting", List(MemberEntry), MethodEntry("Count", Counted, "Strict/Number", Again))
 Rewritten List(TypeEntry)
 	Sample.Rewritten.First.methods.First.instructions.Length is 7
 	Constant.Name is "Strict/Counting" and Constant.members(0).typeName is "Strict/Number"
@@ -26,9 +26,9 @@ Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Counter).First.instructions.First is Start
 	Sample.Followed(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "x"), "%v_x") is "%r2"
 	Sample.Followed(Kept, "%v_conditional0") is "" and Sample.Followed(Again, "%r1") is ""
-	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), (1)), "%r1") is "%r1"
-	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), (1)), "%r2") is ""
-	Sample.IsTail(TypeEntry("Strict/Other", List(MemberEntry), (Counting)), Counting, 1) is false
+	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), 1), "%r1") is "%r1"
+	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), 1), "%r2") is ""
+	Sample.IsTail(TypeEntry("Strict/Other", List(MemberEntry), Counting), Counting, 1) is false
 	Sample.IsTail(TypeEntry("Strict/Counting", List(MemberEntry), List(MethodEntry)), Counting, 1) is false
 	for type.methods
 		Looped(type, value)

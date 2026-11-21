@@ -172,7 +172,7 @@ Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	if types.IsPlural(listType) is false
 		return node.text is "+" then Textual(node, block) else operand
 	let isList = operand.Kind is "List" or types.IsPlural(values.TypeOf(operand, block))
-	Converted(operand, (isList then listType else types.ElementType(listType)), block)
+	Converted(operand, isList then listType else types.ElementType(listType), block)
 IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
 	Plain.IsElement("List(Numbers)", Nesting.children.Last, CodeBlock.Empty)
 	Plain.IsElement("Numberss", Nesting.children.Last, CodeBlock.Empty)

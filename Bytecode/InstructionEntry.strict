@@ -74,4 +74,4 @@ Invoke(register Number, names Texts, arguments Numbers, instance Number) Instruc
 	for Range(3, names.Length)
 		content = content + (-1 - value)
 	content = content + -3 + arguments.Length + arguments
-	InstructionEntry(InstructionType.Invoke, names, (instance < 0 then content + 0 else content + 1 + instance))
+	InstructionEntry(InstructionType.Invoke, names, instance < 0 then content + 0 else content + 1 + instance)

@@ -1,0 +1,42 @@
+has lines Texts
+constant Hint = ", pass the single value, it stands for a list with just that element"
+constant Sample = SingleLists(("Run", "\tCalling.Something((1))", "\tf(a, (b + c))", "\tg((1, 2), x)", "\th(x, (y))"))
+constant Others = SingleLists(("\tlet list = List(Text) + (1)", "\tf(a) is (1)", "\tf((1), 2)", "\tvalues is ((1), (2))", "\tf((a, b))"))
+Issues List(ValidationIssue)
+	Sample.Issues.Length is 3 and Sample.Issues.First.Line is 2
+	Sample.Issues.First.ruleName is "SingleElementListMustBeValue"
+	Sample.Issues.First.target is "( 1 )" + Hint
+	Others.Issues.Length is 1 and Others.Issues.First.Line is 3
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		issues = "(" is in value then issues + LineIssues(Tokenizer(value.Trim).Tokens, index + 1) else issues
+	issues
+LineIssues(tokens Texts, line Number) List(ValidationIssue)
+	Sample.LineIssues(("f", "(", "(", "1", ")", ")"), 2).First.target is "( 1 )" + Hint
+	Sample.LineIssues(("f", "(", "(", "1", ",", "2", ")", ")"), 2).Length is 0
+	let brackets = Brackets(lines)
+	mutable issues = List(Mutable(ValidationIssue))
+	for Range(1, tokens.Length - 2)
+		if tokens(value) is "(" and IsArgument(tokens, value, brackets)
+			let listed = tokens.Slice(value, brackets.Closing(tokens, value) - value + 1)
+			issues.Add(ValidationIssue("SingleElementListMustBeValue", Text.Combine(listed, " ") + Hint, line))
+	issues
+IsArgument(tokens Texts, open Number, brackets Brackets) Boolean
+	Sample.IsArgument(("f", "(", "(", "1", ")", ")"), 2, Brackets.Sample)
+	Sample.IsArgument(("x", "is", "(", "1", ")"), 2, Brackets.Sample) is false
+	Sample.IsArgument(("f", "(", "(", ")", ")"), 2, Brackets.Sample) is false
+	let close = brackets.Closing(tokens, open)
+	if close >= tokens.Length - 1 or close is open + 1 or brackets.HasComma(tokens, open, close)
+		return false
+	let enclosing = Enclosing(tokens, open)
+	let isCall = enclosing > 0 then brackets.IsGroupOpen(tokens, enclosing) is false else false
+	isCall and tokens(open - 1) is in ("(", ",") and tokens(close + 1) is in (")", ",")
+Enclosing(tokens Texts, position Number) Number
+	Sample.Enclosing(("f", "(", "a", ",", "(", "b", ")", ")"), 4) is 1
+	Sample.Enclosing(("(", "b", ")"), 0) is -1
+	mutable depth = 0
+	for Range(0, position).Reverse
+		depth = depth + (tokens(value) is ")" then 1 else tokens(value) is "(" then -1 else 0)
+		if depth < 0
+			return value
+	Number.NotFound

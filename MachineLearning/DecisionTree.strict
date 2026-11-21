@@ -11,8 +11,8 @@ Trained(rows List(Numbers), depth Number) DecisionTree
 	DecisionTree.Trained(Rows, 3) is Stump
 	Empty.Grown(rows, depth, rows.First.Length - 1)
 Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
-	Empty.Grown(List(Numbers) + (1, 2, 1), 2, 2) is DecisionTree((-1), (0), (-1), (1))
-	Empty.Grown(Rows, 0, 2) is DecisionTree((-1), (0), (-1), (0))
+	Empty.Grown(List(Numbers) + (1, 2, 1), 2, 2) is DecisionTree(-1, 0, -1, 1)
+	Empty.Grown(Rows, 0, 2) is DecisionTree(-1, 0, -1, 0)
 	Empty.Grown(Alternating, 1, 1) is DecisionTree((0, -1, -1), (0, 0, 0), (2, -1, -1), (-1, 0, 1))
 	Empty.Grown(Reversed, 1, 1) is DecisionTree((0, -1, -1), (4, 0, 0), (2, -1, -1), (-1, 1, 0))
 	let split = BestSplit(rows, picked)
@@ -22,10 +22,10 @@ Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
 	let left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
 	left.Grown(Side(rows, split, false), depth - 1, picked).Linked(position, left.features.Length)
 Leaf(label Number) DecisionTree
-	Empty.Leaf(1) is DecisionTree((-1), (0), (-1), (1))
+	Empty.Leaf(1) is DecisionTree(-1, 0, -1, 1)
 	DecisionTree(features + -1, thresholds + 0, rights + -1, labels + label)
 Node(split Numbers) DecisionTree
-	Empty.Node((0, 1)) is DecisionTree((0), (1), (-1), (-1))
+	Empty.Node((0, 1)) is DecisionTree(0, 1, -1, -1)
 	DecisionTree(features + split(0), thresholds + split(1), rights + -1, labels + -1)
 Linked(position Number, right Number) DecisionTree
 	Empty.Node((0, 1)).Linked(0, 2).rights is (2)

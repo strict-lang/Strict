@@ -87,7 +87,7 @@ HasAmdDriver Boolean
 	let folder = Process.Variable("SystemRoot") + "/System32"
 	ToolRunner.IsWindows then Directory.Files(folder, "amdhip64*.dll").Length > 0 else Directory.Exists("/sys/class/kfd")
 AmdCompiled(base Text, targets Texts) Text
-	Missing.AmdCompiled("Compiler/output/missing", ("gfx803")).StartsWith("mlir-opt failed")
+	Missing.AmdCompiled("Compiler/output/missing", "gfx803").StartsWith("mlir-opt failed")
 	let lowered = tools.Lowered(base + ".amd")
 	if lowered is not ""
 		return lowered
@@ -115,7 +115,7 @@ AmdTarget(base Text, target Text) Text
 	File(object).Delete
 	linked.Failed then "ld.lld failed: " + linked.error else ""
 Bundle(base Text, targets Texts) Text
-	Missing.Bundle("Compiler/output/missing", ("gfx803")).StartsWith("clang-offload-bundler failed")
+	Missing.Bundle("Compiler/output/missing", "gfx803").StartsWith("clang-offload-bundler failed")
 	File(base + ".host").Write("")
 	let triples = "-type=o -targets=host-x86_64-unknown-linux-gnu," + Text.Combine(Bundled(targets, AmdTriple, ""), ",")
 	let objects = Text.Combine(Bundled(targets, " -input=\"" + base + ".", "\""), "")

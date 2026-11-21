@@ -24,7 +24,7 @@ constant Filling = TypeInference(KnownTypes(DefaultInstance.Bags, parameters = F
 constant Defaulted = TypeCodegen("Strict/Bag", ("has items Texts = Plain.Flat", "Count Number", "\titems.Length"), Filling, List(Text))
 constant Rebuilt = SyntaxParser(Tokenizer("Greeter(Greeter(\"a\"), text = \"b\")").Tokens).Parse
 Entry TypeEntry slow
-	Texted.Methods(("to")).Length is 1
+	Texted.Methods("to").Length is 1
 	Hello.Entry is TypeEntry(TypeEntry.HelloLogger, methods = MethodEntry(MethodEntry.HelloRun, instructions = Greeted))
 	ConstantMethods.Counting.Methods(List(Text)).Length is 2
 	Specialization.Coding.Methods(List(Text) + Specialization.Halving).Length is 1
@@ -34,15 +34,15 @@ Selected(names Texts) TypeEntry slow
 	Limit.Selected("Missing").methods.Length is 0
 	Limit.Selected(List(Text)).methods.Length is 0
 	Limit.Selected("Run").methods.Length is 1
-	Limit.Selected(("to Number")).methods.Length is 0
+	Limit.Selected("to Number").methods.Length is 0
 	TypeCodegen("Strict/S", ("W Number", "H Number"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 2
 	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
 	let membersOnly = names.Length is 0 and TypeShape(lines).IsTrait is false
-	TypeEntry(fullName, Members, (membersOnly then List(MethodEntry) else Methods(names)))
+	TypeEntry(fullName, Members, membersOnly then List(MethodEntry) else Methods(names))
 Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
-	TypeCodegen("S/List(Number)", ("has x Generic"), NoTypes, List(Text)).Members.First.typeName is "Strict/Number"
-	Leveled.Member(HeaderTokens("has", "x", "Fast"), 0, Scope(("Fast"), ("Text"))).typeName is "Strict/Fast"
+	TypeCodegen("S/List(Number)", "has x Generic", NoTypes, List(Text)).Members.First.typeName is "Strict/Number"
+	Leveled.Member(HeaderTokens("has", "x", "Fast"), 0, Scope("Fast", "Text")).typeName is "Strict/Fast"
 	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
 	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target, isOptimizing)
 Members List(MemberEntry) slow
@@ -90,8 +90,8 @@ Initial(node SyntaxNode) List(InstructionEntry)
 	List(InstructionEntry) + InstructionEntry.Set(load.texts, MethodCodegen.LoadedValue(load))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
-	Limit.Methods(List(Text)).First.Name is "Run" and Texted.Methods(("to Text")).Length is 1
-	Defaulted.Methods(List(Text)).Last.Name is DefaultInstance.Starter and Defaulted.Methods(("Count")).Length is 1
+	Limit.Methods(List(Text)).First.Name is "Run" and Texted.Methods("to Text").Length is 1
+	Defaulted.Methods(List(Text)).Last.Name is DefaultInstance.Starter and Defaulted.Methods("Count").Length is 1
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
@@ -103,7 +103,7 @@ Methods(names Texts) List(MethodEntry)
 	methods + constants + Specialization(Generator).Methods(value, names) + Starts(names)
 Starts(names Texts) List(MethodEntry)
 	Limit.Starts(List(Text)).Length is 0
-	Defaulted.Starts(("Count")).Length is 0 and Defaulted.Starts((DefaultInstance.Starter)).Length is 1
+	Defaulted.Starts("Count").Length is 0 and Defaulted.Starts(DefaultInstance.Starter).Length is 1
 	Defaulted.Starts(List(Text)).First.instructions(2).texts is ("Strict/Bag", "from", "Bag", "items")
 	Defaulted.Starts(List(Text)).First.instructions.Last.kind is InstructionType.Return
 	constant generator = Generator

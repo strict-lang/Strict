@@ -84,7 +84,7 @@ Operand(register Number, suffix Text, compared Text) Texts
 	let loaded = function.Load(Temp(suffix + "c"), "%r" + register)
 	let converter = compared is "Pair" then "strict_two_from_list" else "strict_flat_from_list"
 	if compared is in Packed and kind is not compared
-		return (loaded, MlirMemory(function, position).Called(Temp(suffix), converter, (Temp(suffix + "c"))))
+		return (loaded, MlirMemory(function, position).Called(Temp(suffix), converter, Temp(suffix + "c")))
 	if compared is not "Text" or kind is not "Character"
 		return List(Text) + function.Load(Temp(suffix), "%r" + register)
 	(loaded, MlirMemory(function, position).Called(Temp(suffix), "strict_character_text", List(Text) + Temp(suffix + "c")))

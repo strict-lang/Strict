@@ -19,7 +19,7 @@ Laid MlirParts
 	let laid = MlirParts(split, lines, split.Declarations(lines), Owners(lines))
 	MlirParts(laid, shared = common, placed = split.Placed(common))
 Owners(lines Numbers) Numbers
-	MlirParts(MlirSplit.Sample).Owners((3)) is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)))
+	MlirParts(MlirSplit.Sample).Owners(3) is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)))
 	for lines
 		split.Owner(split.lines(value))
 Part(index Number, data Texts, owned Texts) Text

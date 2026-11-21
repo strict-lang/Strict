@@ -7,7 +7,7 @@ constant CodeLengthCount = 16
 constant TableBits = 9
 From(lengths Numbers) Huffman
 	Huffman.From((2, 1, 3, 3)).symbols is (1, 0, 2, 3)
-	Huffman.From((2, 2, 2, 2)).Decoded(Inflate((3)), 0) is Symbol(3, 2)
+	Huffman.From((2, 2, 2, 2)).Decoded(Inflate(3), 0) is Symbol(3, 2)
 	Huffman(Counts(lengths), Sorted(lengths)).Tabled
 Entry(bits Number) Symbol
 	Sample.Entry(0) is Symbol(1, 1)
@@ -55,7 +55,7 @@ Decoded(stream Inflate, position Number) Symbol
 Walked(stream Inflate, position Number) Symbol
 	Longest.Walked(Inflate((1, 0)), 0) is Symbol(9, 16)
 	Sample.Walked(Inflate((1, 7)), 0) is Symbol(0, 2) and Sample.Walked(Inflate((1, 7)), 8) is Symbol(3, 3)
-	Huffman.From((2, 2, 2, 2)).Walked(Inflate((3)), 0) is Symbol(3, 2)
+	Huffman.From((2, 2, 2, 2)).Walked(Inflate(3), 0) is Symbol(3, 2)
 	mutable relative = 0
 	mutable offset = 0
 	for Range(1, counts.Length)

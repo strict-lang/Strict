@@ -103,7 +103,7 @@ Called(entry InstructionEntry) Texts
 	let call = MlirWholeValues(position).Called(Temp("c"), MlirWholeFunction(callee).Symbol, Temp("a"), kinds, returned)
 	Arguments(entry, kinds) + call + Store("c", returned, entry.payload(0))
 Arguments(entry InstructionEntry, kinds Texts) Texts
-	Halving.At(3).Arguments(MlirWholeTypes.Halves(3), ("i")) is ("    %t3a0 = llvm.load %r2 : !llvm.ptr -> i64")
+	Halving.At(3).Arguments(MlirWholeTypes.Halves(3), "i") is ("    %t3a0 = llvm.load %r2 : !llvm.ptr -> i64")
 	mutable lines = List(Mutable(Text))
 	let reads = LoadReuse(function.method.instructions).InvokeReads(entry)
 	for reads

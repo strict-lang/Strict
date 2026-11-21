@@ -139,7 +139,7 @@ Merged(word Text) Numbers
 	Gpt2Tokens.Parsed("{\"\\u00c3\": 0, \"\\u00a9\": 1}", List(Text)).Merged(Text.Utf8((195, 169))) is (0, 1)
 	mutable symbols = List(Mutable(Number))
 	for word.Bytes
-		symbols.Add(ids(Text.Utf8((value))))
+		symbols.Add(ids(Text.Utf8(value)))
 	mutable best = Best(symbols)
 	for as long as best >= 0
 		symbols = Joined(symbols, best)

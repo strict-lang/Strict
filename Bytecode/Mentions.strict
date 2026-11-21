@@ -39,7 +39,7 @@ Typed(shape Expressions/TypeShape) Texts
 Outer(tokens Texts) Texts
 	Mentions.Outer(("outer", ".", "Key", ".", "F")) is ("Key")
 	Mentions.Outer(("outer", "x", "A", "inner", ".", "B", "Key", "outer", ".")).Length is 0
-	Mentions(("\tRun(value Size)")).Typed(TypeShape("has x Number")) is ("Number")
+	Mentions("\tRun(value Size)").Typed(TypeShape("has x Number")) is ("Number")
 	Mentions.Declared(TypeShape(("has x List(Size)", "Run", "A Number", "B Number"))) is ("Sizes", "None", "Number")
 	for tokens
 		if index > 1 and tokens(index - 1) is "." and tokens(index - 2) is "outer"

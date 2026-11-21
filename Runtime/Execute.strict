@@ -27,7 +27,7 @@ Run(arguments Texts) Number
 Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Execute(Logger).Test("Missing.strict", ".") is 1
 	if File(path).Exists and Directory.Exists(path) is false
-		return Failures((path), Stale((path)), root, isQuiet, sources)
+		return Failures(path, Stale(path), root, isQuiet, sources)
 	Directory.Exists(path) then Folders(logger).Tested(path, root, isRecursive, isMutating, isFull) else 1
 Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
 	let files = Sourced(stale, root, sources)
@@ -82,9 +82,9 @@ Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 	Execute(Logger).Served("Missing.strict", ".").code is 1
 	Execute(Logger).Served("Missing.strict", ".", true).Types.Length is 0
 	let isFile = File(path).Exists and Directory.Exists(path) is false and selection is in ("", "*")
-	if isFile then Stale((path)).Length is 0 else true
+	if isFile then Stale(path).Length is 0 else true
 		return Answer(Test(path, root, isQuiet, sources), known)
-	let files = Sourced((path), root, sources)
+	let files = Sourced(path, root, sources)
 	let joined = inferred.Of(files, FileCompiler.Normalized(path))
 	let answer = Verified(path, root, isQuiet, files, joined.Result.joined, true)
 	if answer.code is 0 and isQuiet is false and quietUntil is 0

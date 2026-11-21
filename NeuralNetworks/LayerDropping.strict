@@ -13,7 +13,7 @@ Run(path Text, count = 4)
 		logger.Log("without block " + kept(removed) + ": " + Reported(model, tokenizer, heldout))
 		kept.Remove(kept(removed))
 Weakest(model Gpt2, tokenizer Gpt2Tokens, texts Texts) Number slow
-	LayerDropping(Logger).Weakest(Gpt2.Tiny, Gpt2Tokens.Tiny, ("ab ab")) is 0
+	LayerDropping(Logger).Weakest(Gpt2.Tiny, Gpt2Tokens.Tiny, "ab ab") is 0
 	mutable weakest = 0
 	mutable lowest = -1
 	for model.blocks.Length

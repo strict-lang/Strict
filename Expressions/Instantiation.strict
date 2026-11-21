@@ -3,7 +3,7 @@ constant CoupleFrom = Scope(("from", "from types"), ("first,second", "Generic,Ge
 constant Couples = KnownTypes(("Couple", "Text"), (Scope(("first", "second"), ("Generic", "Generic")), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (CoupleFrom, KnownTypes.NoMembers))
 constant Implicit = Instantiation(KnownTypes(("Couple", "Text"), (Couples.members(0), KnownTypes.NoMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(("from", "from types"), ("", "Type")), KnownTypes.NoMembers)))
 constant Pairing = Instantiation(Couples)
-constant BoxMembers = (Scope(("first", "size", "second"), ("Generic", "Number", "Generic")), Scope(("Number"), ("Number")), KnownTypes.NoMembers, KnownTypes.NoMembers)
+constant BoxMembers = (Scope(("first", "size", "second"), ("Generic", "Number", "Generic")), Scope("Number", "Number"), KnownTypes.NoMembers, KnownTypes.NoMembers)
 constant BoxMethods = (Scope(("Swap", "Sizes"), ("Box(second, size, first)", "List(Number)")), Scope(("Half", "get"), ("Number", "Text")), Scope(("Abs", "size"), ("Number", "Text")), Scope(("Copy", "to"), ("Any", "Text")))
 constant Boxed = KnownTypes(("Box", "Meter", "Number", "Any"), BoxMembers, BoxMethods, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Inferring = TypeInference(Couples, (KnownTypes.NoMembers, KnownTypes.NoMembers))
@@ -15,7 +15,7 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Pairing.Name(SyntaxNode("Call", "Text"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Pairing.Name(SyntaxNode("Call", "Couple"), Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
 	Implicit.Name(Mixed, Inferring, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Couple(Text, Number)"
-	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, Scope(("Couple"), ("Text"))) is ""
+	Pairing.Name(Mixed, Inferring, KnownTypes.NoMembers, Scope("Couple", "Text")) is ""
 	let isType = current.TypeOf(node.text) is "" and scope.TypeOf(node.text) is ""
 	let declared = isType then ConstructorTypes(node) else List(Text)
 	mutable arguments = List(Mutable(Text))
@@ -25,7 +25,7 @@ Name(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	arguments.Length is 0 then "" else node.text + "(" + Text.Combine(arguments, ", ") + ")"
 ConstructorTypes(node SyntaxNode) Texts
 	Pairing.Argument("Couple(Text, Number)", "missing") is "Unknown"
-	Pairing.Name(Mixed, Inferring, Scope(("Couple"), ("Text")), KnownTypes.NoMembers) is ""
+	Pairing.Name(Mixed, Inferring, Scope("Couple", "Text"), KnownTypes.NoMembers) is ""
 	Pairing.Position("Couple(Text, Number)", "first") is 0
 	Pairing.IsGeneric("Generics") and Pairing.IsGeneric("Text") is false
 	let explicit = types.ParametersOf(node.text, "from types", node.children.Length)
@@ -75,7 +75,7 @@ Members(typeName Text, members Scope) Scope
 	Scope(members.names, concrete)
 IsGeneric(type Text) Boolean
 	Pairing.IsGeneric("Generic") and Pairing.IsGeneric("Couple") is false
-	Instantiation(KnownTypes(("S"), Couples.members, Couples.methods, (Scope((" trait"), ("true"))))).IsGeneric("S")
+	Instantiation(KnownTypes("S", Couples.members, Couples.methods, Scope(" trait", "true"))).IsGeneric("S")
 	Pairing.Filled("Strict/List(Number)", "Dictionary(Text, Generic)") is "Dictionary(Text, Number)"
 	Pairing.Filled("Strict/List(Number)", "Couple(Text, Generic, Number)") is "Couple(Text, Number, Number)"
 	Pairing.Filled("Strict/Number", "List(Generic)") is "List(Generic)"
@@ -88,7 +88,7 @@ Plural(element Text) Text
 	Pairing.Argument("Texts", "first") is "Text"
 	Instantiation(Boxed).Argument("Meter", "x") is "Text"
 	Pairing.Argument("Couple(Text)", "second") is "Unknown"
-	Pairing.Name(Mixed, Inferring, Scope(("Couple"), ("Text")), KnownTypes.NoMembers) is ""
+	Pairing.Name(Mixed, Inferring, Scope("Couple", "Text"), KnownTypes.NoMembers) is ""
 	Pairing.Plural("Text") is "Texts"
 	Pairing.Plural("Couple(Text, Number)") is "List(Couple(Text, Number))"
 	element.IndexOf("(") < 0 then element + "s" else "List(" + element + ")"

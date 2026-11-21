@@ -92,7 +92,7 @@ Mutated(scoped ScopedStatement, current Scope) Text
 	Counting.Mutated(Immutable, Counted).StartsWith("MutatingCallNeedsMutableVariable: a.Increment")
 	Counting.Mutated(ScopedStatement(Increment, Counted.With(" dropped", ""), 0), Counted) is ""
 	Counting.Mutated(ScopedStatement(Added, Counted, 0), Counted).StartsWith("UnusedValueMustBeRemoved")
-	Ticked.Changing(SyntaxNode("Member", "Next", SyntaxNode("Type", "Ticker")), Scope(("Ticker"), ("a")), Holding) is ""
+	Ticked.Changing(SyntaxNode("Member", "Next", SyntaxNode("Type", "Ticker")), Scope("Ticker", "a"), Holding) is ""
 	let statement = scoped.statement
 	if scoped.scope.TypeOf(" dropped") is "" or IsMutating(statement, scoped.scope, current) is false
 		return Unused(scoped, current)

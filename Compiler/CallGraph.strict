@@ -47,11 +47,11 @@ Joined(key Text, targets Texts, edges Dictionary(Text, Text)) Dictionary(Text, T
 	Graph.Joined("A.Run", ("B.Go", "C.Do"), Dictionary(Text, Text))("A.Run") is ",B.Go,C.Do"
 	edges.set(key, (key is in edges then edges(key) else "") + Text.Combine(Prefixed(targets), ""))
 Prefixed(targets Texts) Texts
-	Graph.Prefixed(("B.Go")) is (",B.Go")
+	Graph.Prefixed("B.Go") is (",B.Go")
 	for targets
 		"," + value
 Reversed(caller Text, targets Texts, edges Dictionary(Text, Text)) Dictionary(Text, Text)
-	Graph.Reversed("A.Run", ("B.Go"), Dictionary(Text, Text)).Length is 1
+	Graph.Reversed("A.Run", "B.Go", Dictionary(Text, Text)).Length is 1
 	mutable reversed = edges
 	for targets
 		reversed = Joined(value, List(Text) + caller, reversed)
@@ -80,7 +80,7 @@ Unvisited(names Texts, seen Dictionary(Text, Number)) Texts
 		if value is not in seen
 			value
 Marked(names Texts, seen Dictionary(Text, Number)) Dictionary(Text, Number)
-	Graph.Marked(("B.Go"), Dictionary(Text, Number)).Length is 1
+	Graph.Marked("B.Go", Dictionary(Text, Number)).Length is 1
 	mutable marked = seen
 	for names
 		marked = marked.set(value, 1)

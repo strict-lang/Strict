@@ -48,8 +48,8 @@ Checked(owner TypeEntry) Texts
 	List(Text)
 Read(validation MethodEntry, names Texts) Texts
 	Kept.Read(Validating, ("width", "height")) is ("width")
-	Kept.Read(Keeping, ("width")) is ("width", "?", "?")
-	Kept.Read(MethodEntry(Keeping, declaredType = "Strict/Text"), ("width")) is ("width")
+	Kept.Read(Keeping, "width") is ("width", "?", "?")
+	Kept.Read(MethodEntry(Keeping, declaredType = "Strict/Text"), "width") is ("width")
 	for validation.instructions
 		if value.kind is InstructionType.LoadVariableToRegister and value.texts(0) is in names
 			value.texts(0)

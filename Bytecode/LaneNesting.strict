@@ -27,7 +27,7 @@ Built(entry InstructionEntry, laned Texts, base Number) List(InstructionEntry)
 		lines = lines + Assigned(entry, Member(owner, entry.texts(3 + index)), entry.payload(value), laned, base)
 	lines + Defaults(entry, owner, entry.texts.Slice(3, entry.texts.Length - 3), base)
 Assigned(entry InstructionEntry, member MemberEntry, source Number, laned Texts, base Number) List(InstructionEntry)
-	Sample.Assigned(NestedCall, Nested.members.First, 0, ("0 Pair"), 8).First.texts is ("lanes0_real")
+	Sample.Assigned(NestedCall, Nested.members.First, 0, "0 Pair", 8).First.texts is ("lanes0_real")
 	let target = StructLanes.Lane("lanes" + entry.payload(0), member.Name)
 	let subType = Inliner(types).TypeOf(member.typeName)
 	if StructLanes.IsLane(member) or StructLanes(types).Members(subType).Length is 0
@@ -116,7 +116,7 @@ MethodSignature(type TypeEntry, call InstructionEntry) Texts
 	StructLanes(types).Members(type).Length > 0 or callee.instructions.Length is 0 then List(Text) else Fixed(callee)
 Fixed(method MethodEntry) Texts
 	Sample.Fixed(LaneCalls.Shifting) is ("offset Pair")
-	Sample.Fixed(MethodEntry("F", (LaneCalls.Offset), "None", (LaneCalls.Changed))).Length is 0
+	Sample.Fixed(MethodEntry("F", LaneCalls.Offset, "None", LaneCalls.Changed)).Length is 0
 	for method.instructions
 		let isChanged = value.kind is InstructionType.StoreRegisterToVariable and value.texts(0).StartsWith("changed_")
 		if isChanged and value.texts(0).Length > 8 and Tokenizer.IsDigit(value.texts(0)(8))

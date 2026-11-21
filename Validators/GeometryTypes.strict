@@ -56,9 +56,9 @@ IsNumber(names Texts, types Texts, target Text) Boolean
 	Sample.IsNumber(("width", "name"), ("Number", "Text"), "name") is false
 	IsTyped(names, types, target, "Number")
 IsTyped(names Texts, types Texts, target Text, expected Text) Boolean
-	Sample.IsTyped(("center"), List(Text) + "Math/Vector2", "center", "Vector2")
-	Sample.IsTyped(("center"), List(Text) + "Number", "center", "Vector2") is false
-	Sample.IsTyped(("center"), List(Text) + "MyVector2", "center", "Vector2") is false
+	Sample.IsTyped("center", List(Text) + "Math/Vector2", "center", "Vector2")
+	Sample.IsTyped("center", List(Text) + "Number", "center", "Vector2") is false
+	Sample.IsTyped("center", List(Text) + "MyVector2", "center", "Vector2") is false
 	let at = names.Index(target)
 	at >= 0 and (types(at) is expected or types(at).EndsWith("/" + expected))
 MemberLine(targets Texts) Number

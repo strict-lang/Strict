@@ -10,7 +10,7 @@ constant SampleHeader = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32
 constant CallingFunction = ("  func.func private @A() -> f64 attributes {llvm.linkage = #llvm.linkage<internal>} {", "    %r = func.call @B() : () -> f64", "    return %r : f64", "  }")
 constant CalledFunction = ("  func.func private @B(%p0: f64) -> f64 {", "    return %p0 : f64", "  }", "}")
 constant Sample = MlirSplit(SampleHeader + CallingFunction + CalledFunction)
-constant Linking = MlirSplit(("  llvm.linker_options [\"a\"]"))
+constant Linking = MlirSplit("  llvm.linker_options [\"a\"]")
 constant RuntimeParts = 8
 constant Common = Sample.Shared
 constant Placing = Sample.Placed(Common)
@@ -20,7 +20,7 @@ constant Using = Dictionary(("t", 0), ("A", 0), ("B", 0))
 constant Elsewhere = Placing.Last + 1
 Starts Numbers
 	Sample.Starts is (3, 7)
-	MlirSplit(("  llvm.func @a() {")).Starts is (0)
+	MlirSplit("  llvm.func @a() {").Starts is (0)
 	for lines
 		if value.EndsWith("{") and (value.StartsWith("  func.func ") or value.StartsWith("  llvm.func "))
 			index
@@ -55,7 +55,7 @@ Shared Texts
 	Sample.Shared.Length is 2
 	Sample.Shared.First is "  llvm.func @printf(!llvm.ptr, ...) -> i32"
 	Linking.Shared is Linking.lines
-	MlirSplit(("  func.func private @x()")).Shared.Length is 1
+	MlirSplit("  func.func private @x()").Shared.Length is 1
 	for lines
 		if value.StartsWith(Visible) or value.StartsWith(LinkerOptions)
 			value
@@ -68,8 +68,8 @@ Placed(shared Texts) Numbers
 		value.StartsWith(Visible) then Owner(value) else value.StartsWith(LinkerOptions) then 0 else Nowhere
 Data(part Number, shared Texts, placed Numbers) Texts
 	Sample.Data(Placing.Last, Common, Placing) is ("  llvm.mlir.global constant @t(\"a\\00\") : !llvm.array<2 x i8>")
-	Linking.Data(0, Linking.lines, (0)) is Linking.lines
-	Linking.Data(1, Linking.lines, (0)).Length is 0
+	Linking.Data(0, Linking.lines, 0) is Linking.lines
+	Linking.Data(1, Linking.lines, 0).Length is 0
 	for shared
 		if placed(index) is part
 			Global(value, true)
@@ -77,7 +77,7 @@ Externals(part Number, shared Texts, placed Numbers, used Dictionary(Text, Numbe
 	Sample.Externals(Placing.Last, Common, Placing, Using) is ("  llvm.func @printf(!llvm.ptr, ...) -> i32")
 	Sample.Externals(Elsewhere, Common, Placing, Using).Last.EndsWith(" external constant @t() : !llvm.array<2 x i8>")
 	Sample.Externals(Elsewhere, Common, Placing, Dictionary(Text, Number)).Length is 1
-	Linking.Externals(1, Linking.lines, (0), Using).Length is 0
+	Linking.Externals(1, Linking.lines, 0, Using).Length is 0
 	for shared
 		if placed(index) is Nowhere
 			value
@@ -140,7 +140,7 @@ Results(rest Text) Text
 	Sample.Results(" -> f64 attributes {a} {") is " -> f64"
 	Sample.Results(" {") is ""
 	Sample.Results(" attributes {a} {") is ""
-	rest.Substring(0, (rest.IndexOf(" attributes {") >= 0 then rest.IndexOf(" attributes {") else rest.Length - 2))
+	rest.Substring(0, rest.IndexOf(" attributes {") >= 0 then rest.IndexOf(" attributes {") else rest.Length - 2)
 Global(line Text, isOwned Boolean) Text
 	Sample.Global(Tricky, false).EndsWith("external @k() : f64")
 	Sample.Global("  llvm.mlir.global constant @t(0) : x", true) is "  llvm.mlir.global constant @t(0) : x"

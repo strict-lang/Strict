@@ -20,17 +20,17 @@ constant Twicing = SyntaxParser(Tokenizer("count.Twice(2)").Tokens).Parse
 constant CountScope = Scope(List(Text) + "count", List(Text) + "Count")
 constant ColorTexts = TypeInference(KnownTypes(("Color", "Text"), KnownTypes.NoMemberPair, KnownTypes.NoMemberPair, (KnownTypes.NoMembers, Scope(("from", "from types"), ("color", "Color")))), NoShapes)
 constant PairedNumber = Scope(List(Text) + "p", List(Text) + "Pair(Number)")
-constant SelfConverting = TypeInference(KnownTypes(("A"), (NoShape), (Scope(("to"), ("A"))), (NoShape)), NoShapes)
+constant SelfConverting = TypeInference(KnownTypes("A", NoShape, Scope("to", "A"), NoShape), NoShapes)
 constant Primitives = ("None", "Boolean", "Number", "Byte", "Text", "Character", "Name", "Generic")
 constant ColorFrom = (Scope(("from", "from types"), ("current", "ColorValue")), KnownTypes.NoMembers)
 constant Measuring = TypeInference(KnownTypes.Measured, NoShapes)
 constant RowParameters = Scope(("+", "+ types", "+", "+ types"), ("other", "Other", "number", "Number"))
-constant Rows = TypeInference(KnownTypes(("Row"), (NoShape), (Scope(("+", "+"), ("List", "Number"))), (RowParameters)), NoShapes)
+constant Rows = TypeInference(KnownTypes("Row", NoShape, Scope(("+", "+"), ("List", "Number")), RowParameters), NoShapes)
 constant RowSum = SyntaxParser(Tokenizer("r + r").Tokens).Parse
 constant Colors = TypeInference(KnownTypes(("Color", "ColorValue"), (Scope(List(Text) + "Red", List(Text) + "Byte"), KnownTypes.NoMembers), (Scope(List(Text) + "to", List(Text) + "ColorValue"), KnownTypes.NoMembers), ColorFrom), NoShapes)
 ConstantOf(typeName Text, name Text) Text
-	NoInference.CallType("A", Scope(("A"), ("Texts")), NoShape) is "A"
-	NoInference.CallType("q", Scope(("q"), ("Bs")), NoShape) is "B"
+	NoInference.CallType("A", Scope("A", "Texts"), NoShape) is "A"
+	NoInference.CallType("q", Scope("q", "Bs"), NoShape) is "B"
 	NoInference.TypeOf(SyntaxParser(Tokenizer("List(Text)").Tokens).Parse, NoShape, NoShape) is "Texts"
 	NoInference.TypeOf(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoShape, NoShape) is "Number"
 	Scaling.TypeOf(SyntaxParser(Tokenizer("p.Scaled(3)").Tokens).Parse, Paired, NoShape) is "Pair"
@@ -56,20 +56,20 @@ TypeOf(node SyntaxNode, scope Scope, own Scope) Text
 		return types.ElementType(TypeOf(node.children(0), scope, own))
 	node.Kind is in ("Member", "MethodCall") then MemberCallType(node, scope, own) else OperatorType(node, scope, own)
 ConstructedType(node SyntaxNode) Text
-	TypeInference(KnownTypes.Nested, NoShapes).CallType("f", Scope(("value"), ("G")), NoShape) is "F"
+	TypeInference(KnownTypes.Nested, NoShapes).CallType("f", Scope("value", "G"), NoShape) is "F"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.x(1)").Tokens).Parse, Paired, NoShape) is "Unknown"
 	NoInference.ConstructedType(SyntaxNode("Identifier", "Mutable", NoNode)) is "Mutable"
 	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Other", KnownTypes.CountMethods.Owned("Count")) is false
-	TypeInference(KnownTypes.Sample, (Limits(0))).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Text")) is false
+	TypeInference(KnownTypes.Sample, Limits(0)).IsIndexed("Limit", KnownTypes.CountMethods.Owned("Text")) is false
 	NoInference.ConstructedType(SyntaxNode("Call", "List", NoNode)) is "List"
 	NoInference.ConstructedType(SyntaxNode("Call", "Mutable", (SyntaxNode("Identifier", "Text"), NoNode))) is "Text"
 	node.Kind is "Call" and node.text is "Mutable" then ConstructedType(node.children(0)) else node.text
 IdentifierType(name Text, scope Scope, current Scope) Text
 	NoInference.MemberCallType(SyntaxNode("Member", "+", (ToText, ToText)), NoShape, NoShape) is "Unknown"
-	NoInference.MemberCallType(SyntaxParser(Tokenizer("t.value(1)").Tokens).Parse, Scope(("t"), ("Bs")), NoShape) is "B"
+	NoInference.MemberCallType(SyntaxParser(Tokenizer("t.value(1)").Tokens).Parse, Scope("t", "Bs"), NoShape) is "B"
 	NoInference.Called(SyntaxNode("Call", "Mutable", (ToText, NoNode)), NoShape, NoShape) is "Mutable"
-	NoInference.IdentifierType("q", NoShape, Scope(("q"), ("Number"))) is "Number"
-	TypeInference(KnownTypes.Nested, NoShapes).IdentifierType("f", Scope(("value"), ("G")), NoShape) is "F"
+	NoInference.IdentifierType("q", NoShape, Scope("q", "Number")) is "Number"
+	TypeInference(KnownTypes.Nested, NoShapes).IdentifierType("f", Scope("value", "G"), NoShape) is "F"
 	if scope.TypeOf(name) is not ""
 		return scope.TypeOf(name)
 	if ImplicitValueType(name, scope) is not ""
@@ -93,7 +93,7 @@ Called(node SyntaxNode, scope Scope, current Scope) Text
 CallType(name Text, scope Scope, current Scope) Text
 	NoInference.CallType("Vector2", NoShape, NoShape) is "Vector2"
 	NoInference.CallType("x", NoShape, Scope(("x", "y"), ("Texts", "Y"))) is "Text"
-	NoInference.CallType("failed", Scope(("failed"), ("Error")), NoShape) is "ErrorWithValue"
+	NoInference.CallType("failed", Scope("failed", "Error"), NoShape) is "ErrorWithValue"
 	NoInference.IdentifierType("other", NoShape, NoShape) is "Unknown"
 	NoInference.TypeOf(SyntaxParser(Tokenizer("outer.A").Tokens).Parse, NoShape, NoShape) is "A"
 	if current.TypeOf(name) is not ""
@@ -108,7 +108,7 @@ IsIndexed(name Text, current Scope) Boolean
 	NoInference.TypeOf(SyntaxParser(Tokenizer("\"a\" + (3)").Tokens).Parse, NoShape, NoShape) is "Text"
 	NoInference.TypeOf(SyntaxParser(Tokenizer("2 * (3)").Tokens).Parse, NoShape, NoShape) is "Number"
 	TypeInference(KnownTypes.Sample, (NoShape, Limits(0))).IsIndexed("Limit", NoShape) is false
-	TypeInference(KnownTypes.Sample, (Limits(0))).IsIndexed("Limit", KnownTypes.NoMembers) is false
+	TypeInference(KnownTypes.Sample, Limits(0)).IsIndexed("Limit", KnownTypes.NoMembers) is false
 	TypeInference(KnownTypes.Sample, Limits).IsIndexed("Other", KnownTypes.CountMethods) is false
 	NoInference.IsIndexed("precedences", NoShape) and Labeling.Called(Labels, NoShape, LabelMethods) is "Numbers"
 	NoInference.IsIndexed("Length", NoShape) is false
@@ -136,7 +136,7 @@ ImplicitValueType(name Text, scope Scope) Text
 	NoInference.Called(SyntaxNode("Call", "Vector2"), NoShape, NoShape) is "Vector2"
 	NoInference.MemberCallType(SyntaxNode("MethodCall", "+", (ToText, ToText)), NoShape, NoShape) is "Text"
 	NoInference.ImplicitValueType("Length", NoShape) is ""
-	TypeInference(KnownTypes.Nested, NoShapes).ImplicitValueType("Length", Scope(("value"), ("G"))) is ""
+	TypeInference(KnownTypes.Nested, NoShapes).ImplicitValueType("Length", Scope("value", "G")) is ""
 	let instance = scope.TypeOf("value")
 	if instance is ""
 		return ""
@@ -216,12 +216,12 @@ Assigned(target Text, assigned Text) Text
 	Colors.Assigned("Number", "Text") is "Text"
 	Colors.Assigned("Color", "ColorValue") is "Color"
 	Colors.Assigned("Number", "Number") is "Number"
-	NoInference.CallType("X", NoShape, Scope(("X"), ("Texts"))) is "Texts"
+	NoInference.CallType("X", NoShape, Scope("X", "Texts")) is "Texts"
 	Converter(assigned, target) is "" then assigned else target
 Enumerated(typeName Text) Texts
 	TypeInference(KnownTypes.Sample, (KnownTypes.CountMethods, NoShape)).Enumerated("Count").Length is 0
-	TypeInference(KnownTypes.Sample, (NoShape)).Enumerated("Text").Length is 0
-	TypeInference(KnownTypes.Measured, (NoShape, Scope(("Length"), ("1")))).Enumerated("Length") is ("Length")
+	TypeInference(KnownTypes.Sample, NoShape).Enumerated("Text").Length is 0
+	TypeInference(KnownTypes.Measured, (NoShape, Scope("Length", "1"))).Enumerated("Length") is ("Length")
 	TypeInference(KnownTypes.Measured, NoShapes).Enumerated("Length").Length is 0
 	TypeInference(KnownTypes.Sample, List(Scope)).Enumerated("Text").Length is 0
 	TypeInference(KnownTypes.Sample, Limits).Enumerated("Text") is ("x", "z")
@@ -239,11 +239,11 @@ Enumerated(typeName Text) Texts
 Origin(name Text, scope Scope) Text
 	NoInference.Origin("Size", Scope(("self type", "Size"), ("A", "Number"))) is "local Size"
 	Measuring.Origin("Length", Scope(("Length", "self type"), ("Length", "F"))) is "member Length"
-	Measuring.Origin("Length", Scope(("value"), ("F"))) is "Length.Length"
+	Measuring.Origin("Length", Scope("value", "F")) is "Length.Length"
 	Measuring.Origin("Length", Scope(("value", "outer"), ("F", "F"))) is "method Length"
-	NoInference.Origin("A", NoShape) is "method A" and Rows.ArithmeticType(RowSum, Scope(("r"), ("Row")), NoShape) is "Row"
+	NoInference.Origin("A", NoShape) is "method A" and Rows.ArithmeticType(RowSum, Scope("r", "Row"), NoShape) is "Row"
 	Indexing.Inferring.MemberCallType(Indexing.Positioned, Indexing.Located, NoShape) is "Number"
-	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 + a").Tokens).Parse, Scope(("a"), ("B")), NoShape) is "Number"
+	NoInference.ArithmeticType(SyntaxParser(Tokenizer("2 + a").Tokens).Parse, Scope("a", "B"), NoShape) is "Number"
 	Scaling.MemberCallType(SyntaxParser(Tokenizer("p.Scaled(3)").Tokens).Parse, PairedNumber, NoShape) is "Pair(Number)"
 	if scope.TypeOf(name) is not ""
 		return (types.MembersOf(scope.TypeOf("self type")).TypeOf(name) is "" then "local " else "member ") + name

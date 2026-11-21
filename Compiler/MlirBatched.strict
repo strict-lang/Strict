@@ -102,7 +102,7 @@ Advanced(label Text, index Text, at Text, done Text) Texts
 	constant unrolled = " {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}"
 	("    cf.br ^" + label + "NextBlock", "  ^" + label + "NextBlock:", first, last, more, loop + unrolled)
 Computed(lines Texts, prefix Text = "compute") Texts
-	Paired.Computed(("%x %at ^bb %narrow"), "p") is ("%p_x %p_at ^p_bb %p_narrow")
+	Paired.Computed("%x %at ^bb %narrow", "p") is ("%p_x %p_at ^p_bb %p_narrow")
 	for lines
 		mutable text = value
 		for Names
