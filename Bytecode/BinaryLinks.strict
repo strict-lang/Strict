@@ -90,8 +90,13 @@ Grown(own TypeEntry, entry TypeEntry, names Texts, sources BinarySources)
 	BinaryLinks(Growing).Grown(Homed, Converter, List(Text), BinarySources(List(Text))) is not Error
 	BinaryLinks(Growing).Own(Growing.Unpacked(File(Growing.Path).ReadBytes)).methods.Length is 3
 	let short = TypeEntry.ShortName(entry.Name)
-	let whole = TypeEntry(short, entry.members, own.methods + Added(own, entry))
-	let rest = own.Name is "" then List(ZipEntry) else file.Unpacked(File(file.Path).ReadBytes)
+	let read = File(file.Path).Exists then file.Unpacked(File(file.Path).ReadBytes) else List(ZipEntry)
+	let stored = Owned(read, sources.Indexed)
+	let fresh = stored.Name is "" then own else stored
+	if fresh.Name is not "" and Added(fresh, entry).Length is 0
+		return
+	let whole = TypeEntry(short, entry.members, fresh.methods + Added(fresh, entry))
+	let rest = fresh.Name is "" then List(ZipEntry) else read
 	let older = rest.Length > 0 then EntryDecoder.Of(rest.First.content).names else List(Text)
 	let found = (sources.Named(names + short).sources + older).Unique
 	file.Saved(file.Rewritten(BinarySources(found).Stamped(sources.Indexed).Header, whole, rest))

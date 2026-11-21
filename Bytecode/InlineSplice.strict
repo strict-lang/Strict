@@ -23,7 +23,8 @@ Spliced List(InstructionEntry)
 	for callee.instructions
 		if index < callee.instructions.Length - (IsChecked then 2 else 1)
 			result = result + Moved(value, returned)
-	let changed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, call.payload(0) + 1, Prefix + ChangedInstance.Name)
+	let instance = Prefix + ChangedInstance.Name
+	let changed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, call.payload(0) + 1, instance)
 	IsChanging then result + changed else result
 IsChanging Boolean
 	Changing.IsChanging and Sample.IsChanging is false
