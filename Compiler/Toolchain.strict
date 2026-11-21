@@ -13,7 +13,8 @@ constant Optimization = " -O3"
 constant Parts = 64
 constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
 constant LtoCachePolicy = "prune_interval=0s:cache_size_bytes=64m"
-constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native -Wl,/MAP" + Direct
+constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
+constant NoImports = " -Wl,/mllvm:-import-instr-limit=0"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text
@@ -115,7 +116,11 @@ Inputs(base Text) Text
 		return Quoted(base + ".ll")
 	let parts = PartObjects(base)
 	let cache = " -Xlinker " + Quoted("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
-	parts + Thin.Replace("native", cpu) + cache + " -Wno-unused-command-line-argument"
+	parts + Thin.Replace("native", cpu) + Importing(base) + cache + " -Wno-unused-command-line-argument"
+Importing(base Text) Text
+	OnWindows.Importing("a/obj/Tests.test") is NoImports
+	OnWindows.Importing("a/obj/Sum") is ""
+	base.EndsWith(".test") then NoImports else ""
 Bitcode(part Text) Text
 	OnWindows.Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\" -march=")
 	Toolchain(Platform.Windows, ".", cpu = "skylake").Bitcode("p").IndexOf("-march=skylake") > 0
