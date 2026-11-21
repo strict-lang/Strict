@@ -28,8 +28,8 @@ Compiled(body Text, index Number) MethodEntry
 	let scope = main.MethodScope(header, generator.target)
 	let expression = SyntaxParser(Tokenizer(body).Tokens).Parse
 	let code = MethodCodegen(generator).Generate(SyntaxNode("Body", "", expression), scope, main.BodyType(header))
-	let returned = generator.target.FullName(main.Concrete(main.Returned(header)))
-	MethodEntry("$Suggestion" + index, main.Parameters(header), returned, LoadReuse(code.instructions).Optimized)
+	let optimized = LoadReuse(code.instructions).Optimized
+	MethodEntry("$Suggestion" + index, main.Parameters(header), main.Declared(header), optimized)
 Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
 	mutable methods = types.First.methods
 	mutable replacement = methods.First

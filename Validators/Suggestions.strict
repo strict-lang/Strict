@@ -12,7 +12,7 @@ Run(name Text, files Texts) Number
 	let method = HeaderTokens(Tokenizer(lines(header)).Tokens)
 	let source = FileCompiler.FullName(path, root)
 	let code = TypeCodegen(source, WithBody(header), inference, FileCompiler.FullNames(files, root))
-	for SuggestionTests(code, method, root, path).Passing(Search(method).Candidates)
+	for SuggestionTests(code, method, root, path).Passing(Candidates(method))
 		Logger.Log("Suggestion: " + value)
 	0
 Header(name Text) Number
@@ -21,6 +21,12 @@ Header(name Text) Number
 			if Tokenizer(value).Tokens.First is name or (index + 1) to Text is name
 				return index
 	Number.NotFound
+Candidates(method HeaderTokens) Texts
+	let members = TypeShape(lines).MemberScope
+	if method.tokens.First is not "from" or members.names.Length is not 1
+		return Search(method).Candidates
+	for Search(HeaderTokens(method.tokens + members.types.First)).Candidates
+		members.names.First + " = " + value
 Search(header HeaderTokens) SuggestionCalls
 	let members = TypeShape(lines).MemberScope
 	let values = Scope(header.ParameterNames, header.ParameterTypes).WithAll(members.names, members.types)

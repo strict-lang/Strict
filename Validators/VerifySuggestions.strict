@@ -6,6 +6,7 @@ constant Extra = ("Doubled Number", "	Temperature(2).Doubled is 5", "	celsius * 
 constant Wrapper = ("has dispatcher Dispatcher", "Clamped Number", "	Wrapper(Dispatcher(1)).Clamped is 1")
 constant Dispatcher = ("has number", "Clamped Number", "	Wrapper(Dispatcher(number)).Clamped")
 constant Dual = ("has number", "Pick(other Number) Number", "	Dual(2).Pick(3) is 5", "	number + other", "Pick Number", "	Dual(3).Pick is 6", "	Dual(0).Pick is 0")
+constant Built = ("has number", "from(first Number, second Number)", "	Built(2, 3) is 5", "	Built(1, 6) is 7")
 constant Prefix = "Suggestion: "
 constant ToolSeconds = 30
 Run(arguments Texts) Number
@@ -55,6 +56,10 @@ CheckedMissing(folder Text, root Text) slow
 	if missing.exitCode is not 2 or "MethodNotFound" is not in missing.Output
 		return Error("UnknownMethodCaseFailed: " + (missing.exitCode to Text) + " " + missing.Output)
 	logger.Log("No tests and unknown method: passed")
+	let built = CheckedCase(folder, root, "Built", "from", Built, "number = first + second")
+	if built is Error
+		return built
+	logger.Log("from of one member: passed")
 CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expected Text) slow
 	let path = folder + "/" + name + ".strict"
 	File(path).Write(lines)
