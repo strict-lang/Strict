@@ -10,17 +10,27 @@ constant Jumps = (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTru
 constant Squaring = InlineSplice(StructLanes.Squared, StructLanes.Calling(4), 5, "", List(Text), ("real", "imaginary"), 18)
 constant Owning = InlineSplice(StructLanes.Squared, InstructionEntry.Invoke(4, ("Strict/Pair", "Squared", "Strict/Pair"), List(Number), -1), 5, "", ("real", "imaginary", "value"), ("real", "imaginary"), 18)
 constant CheckedValue = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value"), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 5), InstructionEntry.Return(0))
+constant Rebuilt = (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, ChangedInstance.Name), InstructionEntry.Return(0))
+constant Changing = InlineSplice(MethodEntry("Next", List(MemberEntry), "Strict/Number", Rebuilt), InstructionEntry.Invoke(4, ("Strict/R", "Next", "Strict/Number"), List(Number), 3), 4, "", List(Text))
 constant Valued = InlineSplice(MethodEntry("V", List(MemberEntry), "Strict/Number", CheckedValue), Inliner.Calling.instructions(1), 2, "elements", List(Text))
 Spliced List(InstructionEntry)
 	Valued.Spliced.Length is 4
 	Sample.Spliced.Length is 3
 	Sample.Spliced(2).texts.First is "inline2_elements"
+	Changing.Spliced.Last is InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "inline4_changed_instance")
 	let returned = callee.instructions.Last.payload(0) + base
 	mutable result = Prologue
 	for callee.instructions
 		if index < callee.instructions.Length - (IsChecked then 2 else 1)
 			result = result + Moved(value, returned)
-	result
+	let changed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, call.payload(0) + 1, Prefix + ChangedInstance.Name)
+	IsChanging then result + changed else result
+IsChanging Boolean
+	Changing.IsChanging and Sample.IsChanging is false
+	for callee.instructions
+		if value.kind is InstructionType.StoreRegisterToVariable and value.texts.First is ChangedInstance.Name
+			return true
+	false
 Prefix Text
 	Sample.Prefix is "inline2_"
 	"inline" + base + "_"
