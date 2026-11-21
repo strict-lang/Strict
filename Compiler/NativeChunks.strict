@@ -1,14 +1,15 @@
 has logger
 has selection Text = ""
-constant Size = 8
+constant Size = 4
 constant Saving = "Compiler/output/Hellos.strictbinary"
 constant Unsaved = "Compiler/output/Unsaved.strictbinary"
+constant Stamping = "Compiler/output/Stamping.strictbinary"
 constant Single = NativeChunks.Of(List(Text) + "Missing.strict", true)
 constant Clashing = (List(Text) + "a/P.strict", List(Text) + "b/P.strict")
 Of(folders Texts, isParallel Boolean) List(Texts)
 	NativeChunks.Of(("Examples/Sum.strict", "Examples/HelloLogger.strict"), true).Length is 2
 	NativeChunks.Of(List(Text) + "Math", false).Length is 1
-	NativeChunks.Of(List(Text) + "Math", true).First.Length is 8
+	NativeChunks.Of(List(Text) + "Math", true).First.Length is 4
 	mutable chunks = List(Mutable(Texts))
 	for folders
 		let paths = Directory.Exists(value) then Directory.Files(value, "*.strict") else List(Text) + value
@@ -48,22 +49,44 @@ Prepared(chunks List(Texts), root Text, base Text) Texts
 		return List(Text) + ""
 	mutable commands = List(Mutable(Text))
 	for chunks
-		File(Chunked(base, index)).Delete
 		commands.Add(NativeCompiler.Arguments("linked", (Chunked(base, index), root, selection) + value))
 	for ToolRunner(NativeCompiler.Executable(root)).ExecuteAll(commands, "Frontend / chunks (" + chunks.Length + " jobs)")
 		Chunked(base, index)
 Saved(output Text, root Text, paths Texts)
 	NativeChunks(Logger, "*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is Error("ChunkNotCompiled")
+	if IsKept(output, paths, root)
+		return
+	File(output).Delete
 	let counted = NativeFolder(logger, selection, false).Counted(paths, root)
 	if counted.Length < paths.Length
 		return Error("ChunkNotCompiled")
 	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(Text)))
+	Stamped(output, paths, root, counted)
+IsKept(output Text, paths Texts, root Text) Boolean
+	NativeChunks(Logger).IsKept(Unsaved, NativeFolder.Hellos, ".") is false
+	NativeChunks(Logger, "*").Saved(Stamping, ".", NativeFolder.Hellos) is not Error
+	NativeChunks(Logger, "*").IsKept(Stamping, NativeFolder.Hellos, ".")
+	NativeChunks(Logger).IsKept(Stamping, NativeFolder.Hellos, ".") is false
+	let stamp = File(output + ".stamp")
+	if File(output).Exists is false or stamp.Exists is false
+		return false
+	let lines = stamp.ReadLines
+	lines.First is Key(paths, root) and NativeCache.Adding.Matches(lines.Slice(1, lines.Length - 1))
+Key(paths Texts, root Text) Text
+	NativeChunks(Logger, "*").Key(List(Text) + "A.strict", ".") is ".\t*\tA.strict"
+	Text.Combine((root, selection) + paths, "\t")
+Stamped(output Text, paths Texts, root Text, types List(TypeEntry))
+	NativeChunks(Logger).Stamped(Unsaved, List(Text) + "Examples/Sum.strict", ".", List(TypeEntry)) is not Error
+	mutable inputs = List(Text) + Process.Current.executable
+	for paths
+		inputs = inputs + (Path(value).PathOnly.text + "/*")
+	for types
+		inputs = inputs + TypeSource(value).Located(Path(paths.First).PathOnly.text)
+	let lines = (List(Text) + Key(paths, root)) + NativeCache.Adding.Snapshot(inputs.Unique)
+	File(output + ".stamp").Write(Text.Combine(lines, "\n"))
 Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 	NativeChunks.Loaded(List(Text) + Unsaved, Single).First.Length is 0
-	let decoded = Decodings(outputs, chunks)
-	for outputs
-		File(value).Delete
-	decoded
+	Decodings(outputs, chunks)
 Decodings(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 	NativeChunks.Decodings(List(Text) + "", Single).Length is 1
 	for outputs
