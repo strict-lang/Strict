@@ -36,6 +36,9 @@ Replaced(executable Text, target Text) Text
 	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
 	Intermediates(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
+	let unrunnable = Unrunnable(executable, target)
+	if unrunnable is not ""
+		return unrunnable
 	let old = Free(executable)
 	File(executable).Rename(old)
 	File(target).Rename(executable)
@@ -43,6 +46,14 @@ Replaced(executable Text, target Text) Text
 		File(old).Rename(executable)
 	File(old).Delete
 	File(target).Exists then Used(executable, executable) else Running(logger, executable).Restarted(old)
+Unrunnable(executable Text, target Text) Text
+	Intermediates(Logger).Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
+	Intermediates(Logger).Unrunnable("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
+	Intermediates(Logger).Unrunnable("Compiler/output/strict.exe", Process.Current.executable) is ""
+	if Path(executable).FileName.RemoveExtension.text is not "strict"
+		return ""
+	let ran = Process.RunTool(target, "version")
+	ran.exitCode is 0 then "" else target + " does not run (version exit " + ran.exitCode + "), " + executable + " stays"
 Free(executable Text) Text
 	Intermediates(Logger).Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
 	IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0
