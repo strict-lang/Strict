@@ -20,7 +20,7 @@ Large features, difficult or long work and far fetched things, kept here until s
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
 
 ## Model: Ternary Bonsai 27B
-`C:/code/Models/Bonsai`, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:
+the Bonsai GGUF, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:
 - the dot products decode every PTQ1_0 block twice, the two lanes of a block should split the codes
 - one kernel for 1 to 8 tokens (like Kindi's) so `LookupDecoding` verifies cheaper (2, 4, 8 tokens 27.7, 37.3, 47.2 ms against 16.8 for one)
 - CPU loops unpack 3 bit rows to doubles (`MlirWidths` decodes only 4 and 6 bit blocks per use)
@@ -28,7 +28,7 @@ Large features, difficult or long work and far fetched things, kept here until s
 - 10 GB budget: a holder process does not simulate it on Windows (the budget never saw the holder), capping the driver's free memory at 10 GB in `strict_gpu_free_memory` does (budget 8.5 GB, peak 10.0 GB in use, the same in cold and warm runs). Then 64 tokens decode in a median of 22-24 instead of 12-14 ms: per token 3-4 of the 12 CUDA graphs are instantiated anew (5 ms, 1 ms destroying, 9 instead of 12 updates), 3-4 cuMemAlloc/cuMemFree (2 ms), the result download waits 7 instead of 3 ms; 2 tokens per run take ~290 ms freeing and allocating ~100 buffers (one uploads 298 MB)
 
 ## Model: Qwen3.8-Flash-Next
-qwen4exp, `C:/code/Models/FlashNext`, ~280 ms per token, 325 with MTP drafts. Left:
+qwen4exp (the Flash-Next GGUF), ~280 ms per token, 325 with MTP drafts. Left:
 - draft acceptance on a chat prompt with a longer answer and with 3 drafts (llama.cpp reports 89 %, here 7 and 12 of 24)
 - the 3 token `Steps` costs ~1.5 plain steps
 - the QSA indexer past 2051 tokens

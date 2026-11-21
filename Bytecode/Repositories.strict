@@ -1,7 +1,6 @@
 has logger
 has target Text
 constant Organization = "https://api.github.com/orgs/strict-lang/repos?per_page=100"
-constant Development = "C:/code/GitHub"
 constant Raw = "https://raw.githubusercontent.com/"
 constant Delimiters = (" ", ")", "]", "#", "?", "\"", "'", ">", "<", ",", "/")
 constant Listing = ("  \"tree\": [", "      \"path\": \"Math/Vector2.strict\",", "      \"path\": \"Math/Size.strict\",", "      \"path\": \"Math/README.md\",", "      \"path\": \"Vector2.strict\",")
@@ -18,6 +17,9 @@ Downloaded(type Text) Text
 		if folder is not ""
 			return folder
 	""
+Development Text
+	TypeSource.Absolute(TypeSource.Root).StartsWith(Repositories.Development + "/")
+	Path(Path(TypeSource.Absolute(TypeSource.Root)).PathOnly.text).PathOnly.text
 IsHere(folder Text) Boolean
 	Repositories.IsHere(Directory.Current)
 	Repositories.IsHere("C:/Missing") is false

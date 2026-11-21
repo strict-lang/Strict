@@ -27,7 +27,7 @@ The runtime shares Darwin facilities with macOS (`NativeRuntimeDarwin`, the 64 b
 
 ## Legacy references
 
-- `C:/code/DeltaEngine/DeltaEngine.Frameworks.IOS`: `RootViewController.cs` owns the GLK view, frame callback and Retina scaling; `IOSWindow.cs`, `Input/IOSTouch.cs`, `Multimedia/*`, `Authentication/*` and `Achievements/*` show the previous bindings. Its current project targets plain `net10.0`; this is reference code, not a verified working iOS build.
+- `DeltaEngine.Frameworks.IOS` in the old C# DeltaEngine checkout: `RootViewController.cs` owns the GLK view, frame callback and Retina scaling; `IOSWindow.cs`, `Input/IOSTouch.cs`, `Multimedia/*`, `Authentication/*` and `Achievements/*` show the previous bindings. Its current project targets plain `net10.0`; this is reference code, not a verified working iOS build.
 - `//AiServer/code/MacOSCodeFolderSafe2018/code/SoulCraft3IOS/SoulCraft/Info.plist`: `de.mobilebits.soulcraft3`, version 1.0, minimum iOS 8.0. This identifies an old SoulCraft 3 project, not necessarily the released SoulCraft app.
 - `//AiServer/code/MacOSCodeFolderSafe2018/code/SoulCraft1` and `code/HeroesOfSoulCraftIOS`: older engine/game sources. The backup also contains old IPA files and provisioning material; treat these as historical references, not current signing assets.
 
