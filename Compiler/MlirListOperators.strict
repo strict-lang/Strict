@@ -7,7 +7,8 @@ constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunctio
 constant NumbersSubtracted = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 2)))
 constant ResultsCombined = (InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 3)), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 4)), InstructionEntry.Binary(InstructionType.Add, (1, 0, 5)))
 constant Arithmetic = NumbersSubtracted + ResultsCombined
-constant ModuloSteps = NumbersSubtracted.Slice(0, 2) + InstructionEntry.Binary(InstructionType.Modulo, (0, 1, 2))
+constant Remainder = InstructionEntry.Binary(InstructionType.Modulo, (0, 1, 2))
+constant ModuloSteps = NumbersSubtracted.Slice(0, 2) + Remainder
 constant WordsAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "words"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
 constant Downcast = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", (MlirLists.Items, MlirLists.Words), "None", WordsAdded))
 constant Moduled = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", ModuloSteps))
@@ -33,7 +34,7 @@ Helper(entry InstructionEntry) Text
 	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_removed"
 	MlirListOperators(Mixed, 3).Helper(Arithmetic(3)) is "strict_list_times"
 	MlirListOperators(Mixed, 4).Helper(Arithmetic(4)) is "strict_list_divided_number"
-	MlirListOperators(Mixed, 2).Helper(InstructionEntry.Binary(InstructionType.Modulo, (0, 1, 2))) is "strict_list_modulo_number"
+	MlirListOperators(Mixed, 2).Helper(Remainder) is "strict_list_modulo_number"
 	MlirListOperators(Mixed, 5).Helper(Arithmetic(5)) is "strict_list_prepend"
 	let isList = IsList(entry.payload(2))
 	if entry.kind is InstructionType.Subtract
