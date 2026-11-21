@@ -10,68 +10,86 @@ has hidden Numbers = List(Number)
 has bos Number = Number.NotFound
 constant Unloaded = Lfm3(List(Lfm3Block), List(Numbers), List(Number), 10000, 10000, List(Number), 1, 0)
 Loaded(path Text, bits = 8) Lfm3 slow
-	let model = Gguf(path, bits)
-	let settings = Lfm3Block.Passing
-	let heads = settings.Setting(model, "attention.head_count", 1)
-	let sliding = settings.Setting(model, "attention.sliding_window", 0)
-	let pairs = settings.Setting(model, "embedding_length", 2) / heads / 2
-	let base = settings.Setting(model, "rope.freq_base", 10000)
-	let bases = (base, settings.Setting(model, "rope.freq_base_swa", base))
-	let rows = model.Rows("token_embd.weight")
-	let loaded = Layers(model, heads, sliding)
-	let named = model.Shape("output_norm.weight").Length > 0 then "output_norm.weight" else "token_embd_norm.weight"
+	model = Gguf(path, bits)
+	settings = Lfm3Block.Passing
+	heads = settings.Setting(model, "attention.head_count", 1)
+	sliding = settings.Setting(model, "attention.sliding_window", 0)
+	pairs = settings.Setting(model, "embedding_length", 2) / heads / 2
+	base = settings.Setting(model, "rope.freq_base", 10000)
+	bases = (base, settings.Setting(model, "rope.freq_base_swa", base))
+	rows = model.Rows("token_embd.weight")
+	loaded = Layers(model, heads, sliding)
+	named = model.Shape("output_norm.weight").Length > 0 then "output_norm.weight" else "token_embd_norm.weight"
 	Lfm3(loaded, rows, model.Values(named), base, bases(1), settings.Optional(model, "rope_freqs.weight"), pairs, sliding)
 Beginning(model Gguf) Number
 	Unloaded.Beginning(Gguf("NeuralNetworks/tinyqwen3.gguf")) is Number.NotFound
-	let given = model.Value("tokenizer.ggml.add_bos_token")
-	let isAdded = given is "" then model.Value("tokenizer.ggml.pre") is "lfm2" else given is in ("true", "True", "1")
+	given = model.Value("tokenizer.ggml.add_bos_token")
+	isAdded = given is "" then model.Value("tokenizer.ggml.pre") is "lfm2" else given is in ("true", "True", "1")
 	isAdded then model.Value("tokenizer.ggml.bos_token_id") to Number else Number.NotFound
 Prompted(tokens Numbers) Numbers
 	Lfm3(Unloaded, bos = 7).Prompted((1, 2)) is (7, 1, 2) and Unloaded.Prompted((1, 2)) is (1, 2)
 	bos >= 0 then List(Number) + bos + tokens else tokens
 Layers(model Gguf, heads Number, size Number) List(Lfm3Block) slow
-	let sliding = model.Value(model.Value("general.architecture") + ".attention.sliding_window_pattern").Lines
+	sliding = model.Value(model.Value("general.architecture") + ".attention.sliding_window_pattern").Lines
 	for Lfm3Block.Passing.Setting(model, "block_count", 0)
-		let isSliding = index < sliding.Length then sliding(index) is in ("true", "1") else false
+		isSliding = index < sliding.Length then sliding(index) is in ("true", "1") else false
 		Lfm3Block.Loaded(model, "blk." + index + ".", heads, isSliding then size else 0)
 Rotations(positions Numbers, base Number, scaling Numbers) Numbers
 	Unloaded.Rotations(List(Number) + 0, 10000, List(Number)) is (1, 1, 0, 0)
 	Unloaded.Rotations(List(Number) + 1, 1, List(Number))(2).IsNearlyEqual(-0.8414709848078965)
 	Unloaded.Rotations(List(Number) + 1, 1, List(Number) + 2)(3).IsNearlyEqual(0.479425538604203)
 	for positions.Length * 4 * half
-		let at = index % (4 * half)
-		let pair = at % half
-		let factor = scaling.Length > 0 then scaling(pair) else 1
-		let angle = Radians(positions((index / (4 * half)).Floor) * base ^ (-pair / half) / factor) to Degrees
+		at = index % (4 * half)
+		pair = at % half
+		factor = scaling.Length > 0 then scaling(pair) else 1
+		angle = Radians(positions((index / (4 * half)).Floor) * base ^ (-pair / half) / factor) to Degrees
 		at < 2 * half then angle.Cos else (at < 3 * half then -angle.Sin else angle.Sin)
 Forwarded(input Numbers, positions Numbers, sequences = 1) Lfm3 slow
-	let global = Rotations(positions, globalBase, factors)
-	let sliding = Rotations(positions, slidingBase, List(Number))
+	global = Rotations(positions, globalBase, factors)
+	sliding = Rotations(positions, slidingBase, List(Number))
 	mutable current = input
 	mutable updated = List(Mutable(Lfm3Block))
 	for layers
-		let forwarded = value.Forwarded(current, value.window > 0 then sliding else global, sequences)
+		forwarded = value.Forwarded(current, value.window > 0 then sliding else global, sequences)
 		current = forwarded.output
 		updated.Add(Lfm3Block(forwarded, output = List(Number)))
 	Lfm3(value, layers = updated, hidden = current)
 Embedded(tokens Numbers) Numbers
 	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedded((1, 0)) is (3, 4, 1, 2)
-	let width = embedding.First.Length
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedded((-1, 0)) is (0, 0, 1, 2)
+	width = embedding.First.Length
 	for tokens.Length * width
-		embedding(tokens((index / width).Floor))(index % width)
+		token = tokens((index / width).Floor)
+		token < 0 then 0 else embedding(token)(index % width)
 Prefilled(prompt Numbers) Lfm3 slow
-	let first = Forwarded(Embedded(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
+	first = Forwarded(Embedded(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
 	mutable model = first
 	for Range(Batch, prompt.Length.Maximum(Batch))
 		model = model.Step(prompt(value), value)
 	model
+PrefilledEach(prompts List(Numbers)) Lfm3 slow
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).PrefilledEach(((1), (0, 1))).hidden is (3, 4, 3, 4)
+	lengths = SequenceLength(prompts)
+	longest = lengths.Aligned(1)
+	first = (longest - 1).Minimum(Batch)
+	masked = Lfm3(value, layers = Masked(lengths.Pads(longest)))
+	tokens = lengths.Column(longest, 0, first)
+	positions = lengths.Positions(first, 0)
+	mutable model = first > 0 then masked.Forwarded(Embedded(tokens), positions, prompts.Length) else masked
+	for Range(first, longest)
+		model = model.Steps(lengths.Column(longest, value, 1), lengths.Positions(1, value))
+	model
+Masked(pads Numbers) List(Lfm3Block)
+	Unloaded.Masked(1).Length is 0
+	for layers
+		Lfm3Block(value, attention = Qwen3Block(value.attention, starts = pads))
 Batch Number
 	Unloaded.Batch is 256 and Lfm3(Unloaded, window = 0).Batch is 256
 	window > 0 then window else 256
 Step(token Number, position Number) Lfm3 slow
 	Forwarded(Embedded(List(Number) + token), List(Number) + position)
 Scored Numbers slow
-	let size = norm.Length
+	size = norm.Length
 	Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden.Slice(hidden.Length - size, size), norm))
 Copies(count Number) Lfm3
 	Unloaded.Copies(2).layers.Length is 0

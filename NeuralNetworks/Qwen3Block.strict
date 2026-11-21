@@ -11,28 +11,29 @@ has keys Numbers = List(Number)
 has values Numbers = List(Number)
 has queries Numbers = List(Number)
 has hybrid Hybrid = Hybrid.None
+has starts Numbers = List(Number)
 constant Epsilon = 0.000001
 constant Tiny = Qwen3Block.Loaded(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", 2, Basis.None)
 Loaded(model Gguf, prefix Text, queryHeads Number, basis Basis) Qwen3Block
 	Tiny.attention.weights.Length is 16
 	Tiny.experts.expansions.First.weights.Length is 32
 	Tiny.groups is 1
-	let attending = Attending(model, prefix, queryHeads, Experts(FeedForward(model, prefix), basis = basis))
-	let after = model.Shape(prefix + "ffn_norm.weight").Length > 0 then "ffn_norm" else "post_attention_norm"
-	let normed = model.Values(prefix + "attn_norm.weight")
+	attending = Attending(model, prefix, queryHeads, Experts(FeedForward(model, prefix), basis = basis))
+	after = model.Shape(prefix + "ffn_norm.weight").Length > 0 then "ffn_norm" else "post_attention_norm"
+	normed = model.Values(prefix + "attn_norm.weight")
 	Qwen3Block(attending, attentionNorm = normed, mlpNorm = model.Values(prefix + after + ".weight"))
 Attending(model Gguf, prefix Text, queryHeads Number, feedForward Experts) Qwen3Block
 	Tiny.Attending(Drafter.Model, "blk.3.", 2, Tiny.experts).queryNorm.Length is 4
 	Tiny.Attending(Drafter.Model, "blk.3.", 2, Tiny.experts).attentionNorm.Length is 0
-	let rows = HeadRows.Of(model, model.Shape(prefix + "attn_q_norm.weight").First, queryHeads)
-	let queried = model.Rows(prefix + "attn_q.weight")
-	let keyed = rows.Permuted(model.Rows(prefix + "attn_k.weight"))
-	let attended = rows.Queries(queried) + keyed + model.Rows(prefix + "attn_v.weight") + rows.Gates(queried)
-	let layer = Layer(attended, Layer.Unbiased)
-	let projected = Dense(model, prefix, List(Text) + "attn_output")
-	let queryNormed = rows.Norm(model.Values(prefix + "attn_q_norm.weight"))
-	let keyNormed = rows.Norm(model.Values(prefix + "attn_k_norm.weight"))
-	let keyHeads = keyed.Length / rows.size
+	rows = HeadRows.Of(model, model.Shape(prefix + "attn_q_norm.weight").First, queryHeads)
+	queried = model.Rows(prefix + "attn_q.weight")
+	keyed = rows.Permuted(model.Rows(prefix + "attn_k.weight"))
+	attended = rows.Queries(queried) + keyed + model.Rows(prefix + "attn_v.weight") + rows.Gates(queried)
+	layer = Layer(attended, Layer.Unbiased)
+	projected = Dense(model, prefix, List(Text) + "attn_output")
+	queryNormed = rows.Norm(model.Values(prefix + "attn_q_norm.weight"))
+	keyNormed = rows.Norm(model.Values(prefix + "attn_k_norm.weight"))
+	keyHeads = keyed.Length / rows.size
 	Qwen3Block(List(Number), layer, projected, queryNormed, keyNormed, List(Number), feedForward, queryHeads, keyHeads)
 FeedForward(model Gguf, prefix Text) Experts
 	Tiny.FeedForward(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.").used is 1
@@ -51,25 +52,25 @@ Cached(input Numbers, rotation Numbers, bits Number, sequences = 1) Qwen3Block
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).keys.Length is 4
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).queries.Length is 8
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 8).Cached(Tiny.mlpNorm, Tiny.mlpNorm, 8).values.Length is 8
-	let normed = Normalized(input, 0, input.Length, attentionNorm)
-	let combined = experts.basis.Sums(attention.weights, attention.biases, normed)
-	let size = queryNorm.Length
-	let tokens = input.Length / attention.weights.First.Length
-	let queried = Rotated(combined, 0, tokens * heads * size, queryNorm, rotation)
-	let width = groups * size
-	let keyed = Sequenced(Rotated(combined, heads * size, tokens * width, keyNorm, rotation), sequences, tokens, width)
-	let columns = Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, width)
-	let valued = Sequenced(columns, sequences, tokens, width)
-	let block = Qwen3Block(value, queries = queried, hybrid = hybrid.Opened(combined, tokens, (heads + 2 * groups) * size))
+	normed = Normalized(input, 0, input.Length, attentionNorm)
+	combined = experts.basis.Sums(attention.weights, attention.biases, normed)
+	size = queryNorm.Length
+	tokens = input.Length / attention.weights.First.Length
+	queried = Rotated(combined, 0, tokens * heads * size, queryNorm, rotation)
+	width = groups * size
+	keyed = Sequenced(Rotated(combined, heads * size, tokens * width, keyNorm, rotation), sequences, tokens, width)
+	columns = Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, width)
+	valued = Sequenced(columns, sequences, tokens, width)
+	block = Qwen3Block(value, queries = queried, hybrid = hybrid.Opened(combined, tokens, (heads + 2 * groups) * size))
 	Qwen3Block(block, keys = keys + Stored(keyed, bits), values = values + Stored(valued, bits))
 Sequenced(numbers Numbers, sequences Number, tokens Number, width Number) Numbers
 	Tiny.Sequenced((1, 2, 3, 4), 2, 4, 1) is (1, 3, 2, 4)
 	if sequences is 1 or tokens is sequences
 		return numbers
-	let perSequence = tokens / sequences
+	perSequence = tokens / sequences
 	for numbers.Length
-		let row = (index / width).Floor
-		let position = (row / sequences).Floor
+		row = (index / width).Floor
+		position = (row / sequences).Floor
 		numbers(((row % sequences) * perSequence + position) * width + index % width)
 Stored(numbers Numbers, bits Number) Numbers
 	Tiny.Stored((0.5, 1.125), 8) is (0.5, 1.125)
@@ -80,27 +81,27 @@ Copies(count Number, bits Number) Qwen3Block
 	Qwen3Block(value, keys = Stored(Interleaved(keys, count), bits), values = Stored(Interleaved(values, count), bits))
 Interleaved(cache Numbers, count Number) Numbers
 	Tiny.Interleaved((1, 2, 3, 4, 5, 6, 7, 8), 2) is (1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 5, 6, 7, 8)
-	let stride = groups * queryNorm.Length
-	let block = count * stride
+	stride = groups * queryNorm.Length
+	block = count * stride
 	for cache.Length * count
 		cache((index / block).Floor * stride + index % stride)
 Rotated(input Numbers, start Number, count Number, weights Numbers, rotation Numbers) Numbers
 	Tiny.Rotated((3, 4, 0, 1), 0, 4, (1, 2), (1, 1, -1, 1)).First.IsNearlyEqual(-1.41421351)
-	let size = weights.Length
-	let scales = HeadScales(input, start, count, size, rotation.Length)
+	size = weights.Length
+	scales = HeadScales(input, start, count, size, rotation.Length)
 	for count
-		let head = (index / size).Floor
-		let token = (head * rotation.Length / count / 2).Floor
-		let within = index % size
-		let first = token * Gap(input, count, size, rotation.Length) + start + head * size
-		let partner = (within + size / 2) % size
-		let own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
+		head = (index / size).Floor
+		token = (head * rotation.Length / count / 2).Floor
+		within = index % size
+		first = token * Gap(input, count, size, rotation.Length) + start + head * size
+		partner = (within + size / 2) % size
+		own = input(first + within) * weights(within) * rotation(token * 2 * size + within)
 		(own + (input(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within))) * scales(head)
 HeadScales(input Numbers, start Number, count Number, size Number, rotations Number) Float32s
 	Tiny.HeadScales((3, 4, 0, 1), 0, 4, 2, 4)(1).IsNearlyEqual(1.41421215)
-	let perRotation = count / rotations
+	perRotation = count / rotations
 	for count / size
-		let first = (index / perRotation / 2).Floor * Gap(input, count, size, rotations) + start + index * size
+		first = (index / perRotation / 2).Floor * Gap(input, count, size, rotations) + start + index * size
 		Normalization.Scale(Normalization.Squared(input, first, size), size, Epsilon)
 Gap(input Numbers, count Number, size Number, rotations Number) Number
 	Tiny.Gap((1, 2, 3, 4, 5, 6), 2, 2, 4) is 4
@@ -110,11 +111,11 @@ Normalized(input Numbers, start Number, count Number, weights Numbers) Numbers
 	Tiny.Normalized((3, 4, 0, 1), 0, 4, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, (1, 2)).Last.IsNearlyEqual(2.828424)
 	Tiny.Normalized((3, 4, 0, 1), 2, 2, List(Number)) is (0, 1)
-	let size = weights.Length
-	let part = start is 0 and count is input.Length then input else Safetensors.Part(input, start, count, 1)
+	size = weights.Length
+	part = start is 0 and count is input.Length then input else Safetensors.Part(input, start, count, 1)
 	if size is 0
 		return part
-	let scales = Scales(part, size, Epsilon)
+	scales = Scales(part, size, Epsilon)
 	for count
 		part(index) * weights(index % size) * scales((index / size).Floor)
 Scales(input Numbers, size Number, epsilon Number) Float32s
@@ -126,8 +127,8 @@ Scales(input Numbers, size Number, epsilon Number) Float32s
 		Normalization.Scale(Normalization.Squared(input, index * size, size), size, epsilon)
 Output(input Numbers, sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Output(Tiny.attentionNorm, 1).Length is 8
-	let attended = experts.basis.Sums(projection.weights, input, Merged(sequences))
+	attended = experts.basis.Sums(projection.weights, input, Merged(sequences))
 	experts.Added(Normalized(attended, 0, attended.Length, mlpNorm), attended)
 Merged(sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Merged(1).Length is 8
-	hybrid.Gated(Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences).Merged)
+	hybrid.Gated(Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences, starts = starts).Merged)

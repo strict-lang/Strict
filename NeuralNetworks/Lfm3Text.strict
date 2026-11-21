@@ -1,4 +1,3 @@
-has logger
 constant Weights = "NeuralNetworks/lfm3/LFM3-1.7B-Q8_0.gguf"
 constant Prompts = ("The capital of France is", "Three side lengths form a valid triangle when")
 constant Count = 32
@@ -6,24 +5,25 @@ constant Sequences = 32
 Run
 	Answered(Weights, 8)
 Answered(weights Text, bits Number)
-	let file = Gguf(weights)
-	let tokenizer = Gpt2Tokens.Loaded(file)
-	let started = Process.Elapsed
-	let model = Lfm3(Lfm3.Loaded(weights, bits), bos = Lfm3.Unloaded.Beginning(file))
+	file = Gguf(weights)
+	tokenizer = Gpt2Tokens.Loaded(file)
+	started = Process.Elapsed
+	model = Lfm3(Lfm3.Loaded(weights, bits), bos = Lfm3.Unloaded.Beginning(file))
 	logger.Log("Loaded in " + (Process.Elapsed - started) + " s")
 	for Prompts
-		let before = Process.Elapsed
-		let prompt = model.Prompted(tokenizer.Encoded(value))
-		let generated = Generated(model.Prefilled(prompt), prompt.Length)
-		let speed = ((Process.Elapsed - before) * 1000 / Count).Round
+		before = Process.Elapsed
+		prompt = model.Prompted(tokenizer.Encoded(value))
+		generated = Generated(model.Prefilled(prompt), prompt.Length)
+		speed = ((Process.Elapsed - before) * 1000 / Count).Round
 		logger.Log(value + tokenizer.Decoded(generated) + " (" + speed + " ms per token)")
 	Batched(model, tokenizer, Sequences)
+	Each(model, tokenizer)
 Batched(model Lfm3, tokenizer Gpt2Tokens, sequences Number)
-	let prompt = model.Prompted(tokenizer.Encoded(Prompts.First))
-	let prefilled = model.Prefilled(prompt)
-	let started = Process.Elapsed
-	let tokens = Decoded(prefilled.Copies(sequences), prefilled.Next, prompt.Length, sequences)
-	let speed = (sequences * Count / (Process.Elapsed - started)).Round
+	prompt = model.Prompted(tokenizer.Encoded(Prompts.First))
+	prefilled = model.Prefilled(prompt)
+	started = Process.Elapsed
+	tokens = Decoded(prefilled.Copies(sequences), prefilled.Next, prompt.Length, sequences)
+	speed = (sequences * Count / (Process.Elapsed - started)).Round
 	logger.Log(sequences + " sequences: " + speed + " tokens per second, first:" + tokenizer.Decoded(tokens))
 Decoded(copies Lfm3, first Number, length Number, sequences Number) Numbers
 	mutable model = copies
@@ -34,15 +34,38 @@ Decoded(copies Lfm3, first Number, length Number, sequences Number) Numbers
 		model = model.Steps(nexts, Same(length + value, sequences))
 		nexts = model.Nexts
 	firsts
+Each(model Lfm3, tokenizer Gpt2Tokens)
+	prompts = Encoded(model, tokenizer)
+	tokens = Interleaved(model.PrefilledEach(prompts), SequenceLength(prompts).Aligned(1), prompts.Length)
+	for prompts
+		single = Generated(model.Prefilled(value), value.Length)
+		batched = Picked(tokens, index, prompts.Length)
+		logger.Log((single is batched then "same batched: " else "DIFFERENT batched: ") + tokenizer.Decoded(batched))
+Encoded(model Lfm3, tokenizer Gpt2Tokens) List(Numbers)
+	for Prompts
+		model.Prompted(tokenizer.Encoded(value))
+Interleaved(state Lfm3, length Number, sequences Number) Numbers
+	mutable model = state
+	mutable nexts = model.Nexts
+	mutable all = List(Number)
+	for Count
+		all = all + nexts
+		model = model.Steps(nexts, Same(length + value, sequences))
+		nexts = model.Nexts
+	all
+Picked(tokens Numbers, sequence Number, sequences Number) Numbers
+	Lfm3Text.Picked((1, 2, 3, 4), 1, 2) is (2, 4)
+	for tokens.Length / sequences
+		tokens(index * sequences + sequence)
 Same(number Number, count Number) Numbers
-	Lfm3Text(Logger).Same(3, 2) is (3, 3)
+	Lfm3Text.Same(3, 2) is (3, 3)
 	for count
 		number
 Generated(prefilled Lfm3, length Number) Numbers
 	mutable model = prefilled
 	mutable tokens = List(Mutable(Number))
 	for Count
-		let next = model.Next
+		next = model.Next
 		tokens.Add(next)
 		model = model.Step(next, length + value)
 	tokens

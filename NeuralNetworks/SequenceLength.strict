@@ -11,10 +11,21 @@ Aligned(align Number) Number
 Padded(length Number) Numbers
 	SequenceLength(((1, 2), (3, 4, 5))).Padded(4) is (1, 2, 1, 1, 3, 4, 5, 3)
 	for prompts.Length * length
-		let prompt = prompts((index / length).Floor)
-		let at = index % length
+		prompt = prompts((index / length).Floor)
+		at = index % length
 		at < prompt.Length then prompt(at) else prompt.First
 Positions(length Number, start Number) Numbers
 	SequenceLength(((1), (2))).Positions(3, 1) is (1, 2, 3, 1, 2, 3)
 	for prompts.Length * length
 		start + index % length
+Column(length Number, start Number, count Number) Numbers
+	SequenceLength(((1), (0, 1))).Column(2, 0, 2) is (-1, 1, 0, 1)
+	SequenceLength(((1), (0, 1))).Column(2, 1, 1) is (1, 1)
+	for prompts.Length * count
+		prompt = prompts((index / count).Floor)
+		at = start + index % count - length + prompt.Length
+		at < 0 then -1 else prompt(at)
+Pads(length Number) Numbers
+	SequenceLength(((1), (0, 1))).Pads(2) is (1, 0)
+	for prompts
+		length - value.Length
