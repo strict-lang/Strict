@@ -1,0 +1,5 @@
+has variables Text
+Name Text
+	ServerFamily("		").Name is "" and ServerFamily("8	").Name.StartsWith("e")
+	ServerFamily("8	").Name is not ServerFamily("4	").Name
+	variables.Replace("	", "") is "" then "" else "e" + HashCode(variables).number.Absolute
