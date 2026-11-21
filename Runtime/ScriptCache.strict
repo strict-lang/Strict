@@ -12,17 +12,20 @@ has typeNames Texts = List(Text)
 has machine Machine = Machine.Hello.Prepared
 has code Number = 0
 has fullNames Texts = List(Text)
+has stamps Numbers = List(Number)
 constant Empty = ScriptCache
 constant ReturnOne = MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 1), InstructionEntry.Return(0)))
 constant ScratchRun = List(TypeEntry) + TypeEntry("Strict/Scratch", List(MemberEntry), ReturnOne)
 constant SampleTargets = List(Text) + "Strict/B.Go"
 constant SampleNames = ("Strict/Logger", "Strict/Number")
-constant SampleBase = ScriptCache(".", ".", List(Text) + "./Number.strict", List(Text), ResolveCheck.Counting)
+constant Numbers = List(Text) + "./Number.strict"
+constant SampleBase = ScriptCache(".", ".", Numbers, List(Text), ResolveCheck.Counting, stamps = KeptInference.Empty.Stamps(Numbers))
 constant Sample = ScriptCache(SampleBase, rawTypes = List(TypeEntry) + TypeEntry.HelloLogger, resolvedTypes = ScratchRun, targets = SampleTargets, typeNames = SampleNames)
 IsFresh(currentRoot Text, currentFolder Text) Boolean
 	Empty.IsFresh(".", ".") is false
 	Sample.IsFresh(".", ".")
-	files.Length > 0 and root is currentRoot and folder is currentFolder
+	ScriptCache(Sample, stamps = List(Number) + 1).IsFresh(".", ".") is false
+	files.Length > 0 and root is currentRoot and folder is currentFolder and KeptInference.Empty.Stamps(files) is stamps
 IsBuiltIn(target Text) Boolean
 	Sample.IsBuiltIn("Strict/Scratch.Helper")
 	Sample.IsBuiltIn("Strict/Number.to")
@@ -54,9 +57,11 @@ GenericsOf(knownTypes KnownTypes) Texts
 		if "Generic" is in knownTypes.members(index).types or "Generic" is in knownTypes.methods(index).types
 			value
 WithBase(baseFiles Texts, currentRoot Text, currentFolder Text) ScriptCache
+	let stamped = KeptInference.Empty.Stamps(baseFiles)
 	let nextInference = ResolveCheck.Inference(baseFiles)
 	let names = FileCompiler.FullNames(baseFiles, currentRoot) + "Strict/Scratch"
-	ScriptCache(currentRoot, currentFolder, baseFiles, GenericsOf(nextInference.types), nextInference, fullNames = names)
+	let found = GenericsOf(nextInference.types)
+	ScriptCache(currentRoot, currentFolder, baseFiles, found, nextInference, fullNames = names, stamps = stamped)
 BaseOnly(discovered Texts, skip = "") Texts
 	Empty.BaseOnly((Scripted.Path, "./A.strict", "./B.strict"), "./A.strict") is (List(Text) + "./B.strict")
 	for discovered

@@ -1,5 +1,4 @@
 # Bugs
-- `strict run <script>` through the resident server kept the old type of a dependency edited after the server loaded it (Validators/ErrorDrops.strict changed, the script still flagged the old way, `STRICT_SERVER=0` gave the new result, 2026-11-20).
 - `Runtime/Frame.strict` `Finished` has 12 production lines (`ProductionLinesMustNotExceedTen`): a helper for the slot write and the `Changing` spread made the VM loop 20 % slower (574-599 ms against 691-740 ms, 300000 calls) and broke rooted slots, reverted. Root fix: the compiler emits the spread of a `Changing` result as store instructions.
 - `Compiler/MlirDeviceStatements.strict` `Failed` lines 88-89 (`MlirGuards.Shifted` `Emitted(32)`: IndexOutOfRange) and `Compiler/MlirBatched.strict` line 52 (`Body.Length is 432`, got 400) fail at HEAD too (2026-11-21).
 
