@@ -1,0 +1,72 @@
+has path Text
+has lines Texts
+has reaching Texts = List(Text)
+constant Saving = TestFiles("Demo/Arena.strict", ("Count Number", "	ArenaProfile.Empty.Saved is not Error", "	1"), List(Text) + "ArenaProfile.Saved")
+constant Regexed = TestFiles("Demo/Part.strict", ("constant Letter = Part(1)", "Count Number", "	Letter.Saved(2).First is 2", "	1"), List(Text) + "Arena.Saved")
+constant Listing = TestFiles("Demo/Replays.strict", ("constant Loaded = Replays(Directory.Files(\"Replays\", \"*.replay\"))", "Count Number", "	Count is 1", "	1"))
+constant Marked = TestFiles("Demo/Arena.strict", ("Saved Number slow", "	ArenaProfile.Empty.Saved is not Error", "	1"))
+constant Inside = TestFiles("Compiler/Arena.strict", Saving.lines)
+constant Writing = ("Write", "Delete", "Rename", "Saved", "Save")
+constant Listed = ("Files", "Directories", "Create", "Delete")
+constant Hint = ", mark the method slow or keep the data in memory"
+Issues List(ValidationIssue)
+	Saving.Issues.First to Text is "TestMustNotTouchFiles: ArenaProfile.Empty.Saved is not Error" + Hint
+	Saving.Issues.First.Line is 2 and Listing.Issues.First.Line is 1
+	Marked.Issues.Length is 0 and Inside.Issues.Length is 0
+	if Path(Path(path).PathOnly.text).FileName.text is in TypeSource.InternalPackages
+		return List(ValidationIssue)
+	let shape = TypeShape(lines)
+	mutable issues = List(Mutable(ValidationIssue))
+	for lines
+		if value.StartsWith("constant ") and Touches(value)
+			issues.Add(ValidationIssue("TestMustNotTouchFiles", value + Hint, index + 1))
+		if shape.IsMethodHeader(value) and IsUnit(value)
+			issues = issues + Tested(index)
+	issues
+IsUnit(header Text) Boolean
+	Saving.IsUnit("Count Number") and Saving.IsUnit("Saved Number slow") is false and Saving.IsUnit("Go native") is false
+	Tokenizer(header).Tokens.Last is not in ("slow", "native")
+Tested(header Number) List(ValidationIssue)
+	Saving.Tested(0).Length is 1 and Listing.Tested(1).Length is 0
+	for TestChecks(lines).Tests(header)
+		if Touches(value)
+			ValidationIssue("TestMustNotTouchFiles", value + Hint, header + index + 2)
+Owner(tokens Texts, dot Number) Text
+	Regexed.Owner(("Letter", ".", "Saved"), 1) is "Part"
+	Saving.Owner(("ArenaProfile", ".", "Empty", ".", "Saved"), 3) is "ArenaProfile"
+	Saving.Owner(("ImageSaver", "(", "a", ")", ".", "Save"), 4) is "ImageSaver"
+	Saving.Owner(("x", ".", "Saved"), 1) is "Arena"
+	let own = Path(path).FileName.RemoveExtension.text
+	let open = tokens(dot - 1) is ")" then Opening(tokens, dot - 1) else -1
+	mutable start = dot - 1
+	for as long as start >= 2 then tokens(start - 1) is "." else false
+		start = start - 2
+	let first = open > 0 then tokens(open - 1) else tokens(start)
+	let isConstant = IsDeclared(first)
+	first(0).Upper is first(0) and isConstant is false and first is not ")" then first else own
+IsDeclared(name Text) Boolean
+	Regexed.IsDeclared("Letter") and Regexed.IsDeclared("Part") is false
+	for lines
+		if value.StartsWith("constant " + name + " = ")
+			return true
+	false
+Opening(tokens Texts, close Number) Number
+	Saving.Opening(("A", "(", "b", "(", ")", ")"), 5) is 1 and Saving.Opening(("a", ")"), 1) is -1
+	mutable depth = 0
+	for Range(0, close + 1).Reverse
+		depth = tokens(value) is ")" then depth + 1 else tokens(value) is "(" then depth - 1 else depth
+		if depth is 0
+			return value
+	-1
+Touches(code Text) Boolean
+	Saving.Touches("File(path).Write(lines) is not Error") and Saving.Touches("Directory.Files(\"A\").Length > 0")
+	Saving.Touches("File(path).Exists is false") is false and Saving.Touches("Character.Delete is 1") is false
+	Regexed.Issues.Length is 0 and Saving.Touches("ImageSaver(a).Save(b)") is false
+	let tokens = Tokenizer(code).Tokens
+	for tokens
+		let name = value is "." and index + 1 < tokens.Length then tokens(index + 1) else ""
+		let isListing = index > 0 then name is in Listed and tokens(index - 1) is "Directory" else false
+		let owner = name is in Writing then Owner(tokens, index) else ""
+		if owner is "File" or owner + "." + name is in reaching or isListing
+			return true
+	false
