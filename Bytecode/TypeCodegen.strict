@@ -143,9 +143,11 @@ MethodScope(header HeaderTokens, target CallTarget) Scope
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
 	Hello.BodyType(HeaderTokens("Run", "Number")) is "Number"
+	Created.BodyType(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Number"
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generic") is "Number"
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Text") is "Text"
-	let returnType = Returned(header)
+	let members = Generator.target.shape.MemberScope.types
+	let returnType = header.tokens(0) is "from" and members.Length is 1 then members.First else Returned(header)
 	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
 Returned(header HeaderTokens) Text
 	Hello.Returned(HeaderTokens("Run", "Number")) is "Number"
