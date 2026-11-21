@@ -62,8 +62,8 @@ Cookbook (Windows PowerShell 5.1 quoting):
 - Exact-once find/replace in a file (check uniqueness with `Split(...).Length is 2`). `ReadText` and `Write(text)` read and write a whole file in one call: never join `ReadLines` or split for `Write(lines)`. The text read only has `\n`, both `Write` keep the line endings an existing file has (CRLF stays CRLF), a new file gets LF. An Error on any line ends the script with exit code 1 and prints it with its line:
 ```powershell
 .\strict.exe -c @'
-let path = "Compiler/Foo.strict"
-let text = File(path).ReadText
+path = "Compiler/Foo.strict"
+text = File(path).ReadText
 if text.Split("old").Length is not 2
 	return Error("ExpectedOneMatch in " + path)
 File(path).Write(text.Replace("old", "new"))
@@ -84,7 +84,7 @@ Walk(folder Text) Texts
 - External process / env vars (`Process.RunTool` returns `ProcessResult` with `exitCode`, `Output`, `error`, `Succeeded`):
 ```powershell
 .\strict.exe -c @'
-let res = Process.RunTool("git", "status -s")
+res = Process.RunTool("git", "status -s")
 logger.Log((res.exitCode to Text) + ":" + res.Output.Trim)
 '@
 ```
@@ -136,9 +136,9 @@ What to measure
 
 Code that looks right and does something else
 - A method whose only line is a test has no tests. That line is the body.
-- The test section ends at the first `let`, and also when two `constant` lines sit in a row. Later lines run as the body.
+- The test section ends at the first non-boolean expression, including `name = expression`. A `constant` between tests still counts as a test. Two `constant` lines in a row end the tests. Later lines run as the body.
 - `and` and `or` run both sides. A guard that must skip the right side is `then`/`else` or an early return.
-- An Error passed as an argument returns from the caller. A test keeps it in a `let` and checks `is Error` before `.Name`.
+- An Error passed as an argument returns from the caller. A test keeps it in a local (`name = expression`) and checks `is Error` before `.Name`.
 - A method named `Run` makes the file a program (`Name.exe`, no test executable).
 - Tests inside `Dictionary.strict` run the Strict methods, not the runtime natives. Test the natives from a type that uses a `Dictionary`.
 - A type already at the method limit gets a new small type. Do not grow `TypeInference`, `KnownTypes`, `ResolveCheck`, `FileCheck`, `TypeShape`, `Machine` or `Frame`.

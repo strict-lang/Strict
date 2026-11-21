@@ -236,7 +236,7 @@ GCD Number
 	mutable current = first
 	mutable modulo = second
 	for as long as modulo is not 0
-		let remainder = current % modulo
+		remainder = current % modulo
 		current = modulo
 		modulo = remainder
 	current
