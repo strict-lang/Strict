@@ -47,6 +47,7 @@ The base types are the documentation: every method starts with tests showing how
 ```
 strict Examples/Sum.strict 5 10 20        run Examples/Sum.exe with these arguments, built first when outdated (or `strict Sum` in Examples)
 strict run -c "logger.Log(1 + 2 to Text)"  run these lines as the body of Run on the VM of the resident server, no file is written
+strict run Probes/Values.strict           run a script file the same way, it knows the types of its folder: logger.Log(Sum(1, 2).Result.Code)
 strict test Examples/Sum.strict           explicitly run this file, including Slow tests, on the VM
 strict test Examples/Sum.strict Run       explicitly run the tests of one method
 strict test Examples/Sum.strict unit      run only unit tests, no mutation testing (a folder on the VM too)
