@@ -1,19 +1,22 @@
 has function MlirFunction
 has position Number
-constant Operators = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide)
+constant Operators = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo)
 constant Steps = MlirLists.Listed.method.instructions
 constant WordSteps = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "words"), InstructionEntry.LoadNumber(1, 3), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
 constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Words, "None", WordSteps))
 constant NumbersSubtracted = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 2)))
 constant ResultsCombined = (InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 3)), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 4)), InstructionEntry.Binary(InstructionType.Add, (1, 0, 5)))
 constant Arithmetic = NumbersSubtracted + ResultsCombined
+constant ModuloSteps = NumbersSubtracted.Slice(0, 2) + InstructionEntry.Binary(InstructionType.Modulo, (0, 1, 2))
 constant WordsAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "words"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
 constant Downcast = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", (MlirLists.Items, MlirLists.Words), "None", WordsAdded))
+constant Moduled = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", ModuloSteps))
 constant Mixed = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", Arithmetic))
 IsOperation Boolean
 	MlirListOperators(MlirLists.Listed, 4).IsOperation
 	MlirListOperators(MlirLists.Listed, 1).IsOperation is false
 	MlirListOperators(Mixed, 5).IsOperation
+	MlirListOperators(Moduled, 2).IsOperation
 	let entry = function.method.instructions(position)
 	if entry.kind is not in Operators
 		return false
@@ -30,13 +33,15 @@ Helper(entry InstructionEntry) Text
 	MlirListOperators(Mixed, 2).Helper(Arithmetic(2)) is "strict_list_removed"
 	MlirListOperators(Mixed, 3).Helper(Arithmetic(3)) is "strict_list_times"
 	MlirListOperators(Mixed, 4).Helper(Arithmetic(4)) is "strict_list_divided_number"
+	MlirListOperators(Mixed, 2).Helper(InstructionEntry.Binary(InstructionType.Modulo, (0, 1, 2))) is "strict_list_modulo_number"
 	MlirListOperators(Mixed, 5).Helper(Arithmetic(5)) is "strict_list_prepend"
 	let isList = IsList(entry.payload(2))
 	if entry.kind is InstructionType.Subtract
 		return isList then "strict_list_without" else "strict_list_removed"
 	if entry.kind is InstructionType.Add
 		return Added(entry, isList)
-	let operation = entry.kind is InstructionType.Multiply then "strict_list_times" else "strict_list_divided"
+	let division = entry.kind is InstructionType.Modulo then "strict_list_modulo" else "strict_list_divided"
+	let operation = entry.kind is InstructionType.Multiply then "strict_list_times" else division
 	isList then operation else operation + "_number"
 Added(entry InstructionEntry, isList Boolean) Text
 	MlirListOperators(Mixed, 5).Added(Arithmetic(5), false) is "strict_list_prepend"

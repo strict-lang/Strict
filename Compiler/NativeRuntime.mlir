@@ -13361,7 +13361,7 @@
     %error = func.call @strict_error_bits(%block) : (!llvm.ptr) -> f64
     return %error : f64
   }
-  func.func private @strict_list_zip(%left: f64, %right: f64, %divide: i1, %broadcast: i1) -> f64 {
+  func.func private @strict_list_zip(%left: f64, %right: f64, %divide: i1, %broadcast: i1, %remainder: i1) -> f64 {
     %one = arith.constant 1.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
@@ -13397,12 +13397,19 @@
     %rightItems = func.call @strict_list_items(%right) : (f64) -> !llvm.ptr
     %rightSlot = llvm.getelementptr %rightItems[%rightAt] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %second = llvm.load %rightSlot : !llvm.ptr -> f64
+    cf.cond_br %remainder, ^rest, ^plain
+  ^rest:
+    %rest = func.call @strict_remainder(%first, %second) : (f64, f64) -> f64
+    cf.br ^store(%rest : f64)
+  ^plain:
     %product = arith.mulf %first, %second : f64
     %quotient = arith.divf %first, %second : f64
     %value = arith.select %divide, %quotient, %product : f64
+    cf.br ^store(%value : f64)
+  ^store(%stored: f64):
     %resultItems = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
     %target = llvm.getelementptr %resultItems[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.store %value, %target : f64, !llvm.ptr
+    llvm.store %stored, %target : f64, !llvm.ptr
     %next = arith.addi %index, %step : i64
     cf.br ^loop(%next : i64)
   ^done:
@@ -13410,15 +13417,22 @@
   }
   func.func private @strict_list_times(%left: f64, %right: f64) -> f64 {
     %no = arith.constant false
-    %result = func.call @strict_list_zip(%left, %right, %no, %no) : (f64, f64, i1, i1) -> f64
+    %result = func.call @strict_list_zip(%left, %right, %no, %no, %no) : (f64, f64, i1, i1, i1) -> f64
     return %result : f64
   }
   func.func private @strict_list_divided(%left: f64, %right: f64) -> f64 {
     %yes = arith.constant true
-    %result = func.call @strict_list_zip(%left, %right, %yes, %yes) : (f64, f64, i1, i1) -> f64
+    %no = arith.constant false
+    %result = func.call @strict_list_zip(%left, %right, %yes, %yes, %no) : (f64, f64, i1, i1, i1) -> f64
     return %result : f64
   }
-  func.func private @strict_list_scalar(%list: f64, %number: f64, %divide: i1) -> f64 {
+  func.func private @strict_list_modulo(%left: f64, %right: f64) -> f64 {
+    %yes = arith.constant true
+    %no = arith.constant false
+    %result = func.call @strict_list_zip(%left, %right, %no, %yes, %yes) : (f64, f64, i1, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_scalar(%list: f64, %number: f64, %divide: i1, %remainder: i1) -> f64 {
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
     %length = func.call @strict_list_length(%list) : (f64) -> f64
@@ -13432,12 +13446,19 @@
     %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
     %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %element = llvm.load %slot : !llvm.ptr -> f64
+    cf.cond_br %remainder, ^rest, ^plain
+  ^rest:
+    %rest = func.call @strict_remainder(%element, %number) : (f64, f64) -> f64
+    cf.br ^store(%rest : f64)
+  ^plain:
     %product = arith.mulf %element, %number : f64
     %quotient = arith.divf %element, %number : f64
     %value = arith.select %divide, %quotient, %product : f64
+    cf.br ^store(%value : f64)
+  ^store(%stored: f64):
     %resultItems = func.call @strict_list_items(%result) : (f64) -> !llvm.ptr
     %target = llvm.getelementptr %resultItems[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
-    llvm.store %value, %target : f64, !llvm.ptr
+    llvm.store %stored, %target : f64, !llvm.ptr
     %next = arith.addi %index, %step : i64
     cf.br ^loop(%next : i64)
   ^done:
@@ -13445,12 +13466,19 @@
   }
   func.func private @strict_list_times_number(%list: f64, %number: f64) -> f64 {
     %no = arith.constant false
-    %result = func.call @strict_list_scalar(%list, %number, %no) : (f64, f64, i1) -> f64
+    %result = func.call @strict_list_scalar(%list, %number, %no, %no) : (f64, f64, i1, i1) -> f64
     return %result : f64
   }
   func.func private @strict_list_divided_number(%list: f64, %number: f64) -> f64 {
     %yes = arith.constant true
-    %result = func.call @strict_list_scalar(%list, %number, %yes) : (f64, f64, i1) -> f64
+    %no = arith.constant false
+    %result = func.call @strict_list_scalar(%list, %number, %yes, %no) : (f64, f64, i1, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_modulo_number(%list: f64, %number: f64) -> f64 {
+    %yes = arith.constant true
+    %no = arith.constant false
+    %result = func.call @strict_list_scalar(%list, %number, %no, %yes) : (f64, f64, i1, i1) -> f64
     return %result : f64
   }
   func.func private @strict_hash_text(%key: f64) -> i64 {
