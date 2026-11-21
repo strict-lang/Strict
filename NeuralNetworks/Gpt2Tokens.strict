@@ -3,6 +3,7 @@ has ids Dictionary(Text, Number)
 has ranks Dictionary(Number, Number)
 has isQwen Boolean = false
 has specials Dictionary(Text, Number) = Dictionary(Text, Number)
+has digits Number = 1
 constant Printable = 33
 constant DeleteOffset = 94
 constant SoftHyphenIndex = 67
@@ -30,7 +31,12 @@ Loaded(model Gguf) Gpt2Tokens
 		raw.Add(Raw(value))
 		known(raw.Last) = index
 	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known, raw.Length)
-	Gpt2Tokens(raw, known, ranked, model.Value("tokenizer.ggml.pre") is in ("qwen2", "qwen35"), Controls(model, raw))
+	let splitting = model.Value("tokenizer.ggml.pre")
+	let isQwenLike = splitting is in ("qwen2", "qwen35") or Digits(splitting) > 1
+	Gpt2Tokens(raw, known, ranked, isQwenLike, Controls(model, raw), Digits(splitting))
+Digits(splitting Text) Number
+	Gpt2Tokens.Digits("lfm2") is 3 and Gpt2Tokens.Digits("llama-bpe") is 3 and Gpt2Tokens.Digits("qwen2") is 1
+	splitting is in ("lfm2", "llama-bpe") then 3 else 1
 Controls(model Gguf, names Texts) Dictionary(Text, Number)
 	Gpt2Tokens.Controls(Gguf.Tiny, Tiny.tokens).Length is 0
 	mutable found = Dictionary(Text, Number)
@@ -107,7 +113,7 @@ Encoded(text Text) Numbers
 		let rest = text.Substring(at + special.Length, text.Length - at - special.Length)
 		return (Encoded(text.Substring(0, at)) + specials(special)) + Encoded(rest)
 	mutable encoded = List(Mutable(Number))
-	for TokenSplitter(isQwen).Words(text)
+	for TokenSplitter(isQwen, digits).Words(text)
 		encoded = encoded + Merged(value)
 	encoded
 Special(text Text) Text
