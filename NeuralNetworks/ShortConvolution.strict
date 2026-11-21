@@ -1,0 +1,56 @@
+has inputs Layer
+has kernel Numbers
+has projection Layer
+has width Number
+has window Numbers = List(Number)
+has output Numbers = List(Number)
+constant Unit = Layer(((1, 0), (0, 1)), Layer.Unbiased)
+constant Splitting = Layer(((1, 0), (0, 1), (1, 0), (0, 1), (1, 0), (0, 1)), Layer.Unbiased)
+constant Tiny = ShortConvolution(Splitting, (0.5, 1, 2, 1), Unit, 2)
+Loaded(model Gguf, prefix Text) ShortConvolution slow
+	let projected = Layer(model.Rows(prefix + "shortconv.in_proj.weight"), Layer.Unbiased)
+	let weights = model.Values(prefix + "shortconv.conv.weight")
+	let contracted = Layer(model.Rows(prefix + "shortconv.out_proj.weight"), Layer.Unbiased)
+	ShortConvolution(projected, weights, contracted, weights.Length / contracted.weights.Length)
+Mixed(normed Numbers) ShortConvolution
+	Tiny.Mixed((1, 2, 3, 4)).output is (1, 8, 28.5, 96)
+	Tiny.Mixed((1, 2, 3, 4)).window is (9, 16)
+	Tiny.Mixed((1, 2, 3, 4)).Mixed((1, 1)).output is (5.5, 33)
+	let combined = Basis.None.Sums(inputs.weights, inputs.biases, normed)
+	let channels = projection.weights.First.Length
+	let gated = Gated(combined, channels)
+	let mixed = Picked(combined, Convolved(gated, channels), channels)
+	let projected = Basis.None.Sums(projection.weights, projection.biases, mixed)
+	ShortConvolution(value, window = Shifted(gated, channels), output = projected)
+Gated(combined Numbers, channels Number) Numbers
+	Tiny.Gated((1, 2, 3, 4, 5, 6), 2) is (5, 12)
+	let offset = 2 * channels
+	for combined.Length / 3
+		let start = (index / channels).Floor * 3 * channels + index % channels
+		combined(start) * combined(start + offset)
+Convolved(gated Numbers, channels Number) Numbers
+	Tiny.Convolved((1, 4, 9, 16), 2) is (1, 4, 9.5, 24)
+	ShortConvolution(Tiny, window = (2, 3)).Convolved((1, 1), 2) is (2, 7)
+	for gated.Length
+		let token = (index / channels).Floor
+		let channel = index % channels
+		mutable sum = 0
+		for width
+			sum = sum + kernel(channel * width + value) * Tapped(gated, token - width + 1 + value, channel, channels)
+		sum
+Tapped(gated Numbers, token Number, channel Number, channels Number) Number
+	Tiny.Tapped((1, 4), -1, 0, 2) is 0
+	ShortConvolution(Tiny, window = (2, 3)).Tapped((1, 4), -1, 1, 2) is 3
+	if token >= 0
+		return gated(token * channels + channel)
+	window.Length is 0 then 0 else window((width - 1 + token) * channels + channel)
+Picked(combined Numbers, convolved Numbers, channels Number) Numbers
+	Tiny.Picked((1, 2, 3, 4, 5, 6), (10, 20), 2) is (30, 80)
+	for convolved.Length
+		combined((index / channels).Floor * 3 * channels + channels + index % channels) * convolved(index)
+Shifted(gated Numbers, channels Number) Numbers
+	Tiny.Shifted((1, 4, 9, 16), 2) is (9, 16)
+	ShortConvolution(Tiny, width = 3).Shifted((1, 4), 2) is (0, 0, 1, 4)
+	let kept = (width - 1) * channels
+	let all = window + gated
+	all.Length >= kept then all.Slice(all.Length - kept, kept) else Layer.Zeros(kept - all.Length) + all

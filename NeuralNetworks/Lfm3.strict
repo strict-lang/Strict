@@ -1,0 +1,67 @@
+has layers List(Lfm3Block)
+has embedding List(Numbers)
+has norm Numbers
+has globalBase Number
+has slidingBase Number
+has factors Numbers
+has half Number
+has window Number
+has hidden Numbers = List(Number)
+constant Unloaded = Lfm3(List(Lfm3Block), List(Numbers), List(Number), 10000, 10000, List(Number), 1, 0)
+Loaded(path Text, bits = 8) Lfm3 slow
+	let model = Gguf(path, bits)
+	let heads = model.Value("lfm3.attention.head_count") to Number
+	let sliding = model.Value("lfm3.attention.sliding_window") to Number
+	let pairs = (model.Value("lfm3.attention.key_length") to Number) / 2
+	let bases = (model.Value("lfm3.rope.freq_base") to Number, model.Value("lfm3.rope.freq_base_swa") to Number)
+	let rows = model.Rows("token_embd.weight")
+	let loaded = Layers(model, heads, sliding)
+	let normed = model.Values("output_norm.weight")
+	Lfm3(loaded, rows, normed, bases(0), bases(1), model.Values("rope_freqs.weight"), pairs, sliding)
+Layers(model Gguf, heads Number, size Number) List(Lfm3Block) slow
+	let sliding = model.Value("lfm3.attention.sliding_window_pattern").Lines
+	for model.Value("lfm3.block_count") to Number
+		Lfm3Block.Loaded(model, "blk." + index + ".", heads, sliding(index) is in ("true", "1") then size else 0)
+Rotations(positions Numbers, base Number, scaling Numbers) Numbers
+	Unloaded.Rotations(List(Number) + 0, 10000, List(Number)) is (1, 1, 0, 0)
+	Unloaded.Rotations(List(Number) + 1, 1, List(Number))(2).IsNearlyEqual(-0.8414709848078965)
+	Unloaded.Rotations(List(Number) + 1, 1, List(Number) + 2)(3).IsNearlyEqual(0.479425538604203)
+	for positions.Length * 4 * half
+		let at = index % (4 * half)
+		let pair = at % half
+		let factor = scaling.Length > 0 then scaling(pair) else 1
+		let angle = Radians(positions((index / (4 * half)).Floor) * base ^ (-pair / half) / factor) to Degrees
+		at < 2 * half then angle.Cos else (at < 3 * half then -angle.Sin else angle.Sin)
+Forwarded(input Numbers, positions Numbers) Lfm3 slow
+	let global = Rotations(positions, globalBase, factors)
+	let sliding = Rotations(positions, slidingBase, List(Number))
+	mutable current = input
+	mutable updated = List(Mutable(Lfm3Block))
+	for layers
+		let forwarded = value.Forwarded(current, value.window > 0 then sliding else global)
+		current = forwarded.output
+		updated.Add(Lfm3Block(forwarded, output = List(Number)))
+	Lfm3(value, layers = updated, hidden = current)
+Embedded(tokens Numbers) Numbers
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedded((1, 0)) is (3, 4, 1, 2)
+	mutable rows = List(Number)
+	for tokens
+		rows = rows + embedding(value)
+	rows
+Prefilled(prompt Numbers) Lfm3 slow
+	let first = Forwarded(Embedded(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
+	mutable model = first
+	for Range(Batch, prompt.Length.Maximum(Batch))
+		model = model.Step(prompt(value), value)
+	model
+Batch Number
+	Unloaded.Batch is 256 and Lfm3(Unloaded, window = 0).Batch is 256
+	window > 0 then window else 256
+Step(token Number, position Number) Lfm3 slow
+	Forwarded(Embedded(List(Number) + token), List(Number) + position)
+Scored Numbers slow
+	let size = norm.Length
+	Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden.Slice(hidden.Length - size, size), norm))
+Next Number slow
+	let scores = Scored
+	scores.Index(scores.Maximum)
