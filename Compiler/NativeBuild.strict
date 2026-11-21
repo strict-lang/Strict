@@ -23,6 +23,7 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
 Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text))
+	CodegenStamp(root).Pending(path)
 	let isProgram = isTesting is false and IsProgram(path)
 	let base = Output(path, isProgram)
 	let beside = Path(base).PathOnly.text + "/obj/" + Path(base).FileName.text

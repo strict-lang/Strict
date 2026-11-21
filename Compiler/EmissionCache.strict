@@ -55,7 +55,7 @@ Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 		File(module.Cached).Write(Text.Combine(joined, ""))
 Keys(texts List(MlirFunction)) Texts
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
-	let shared = Shared(Process.Current.executable + "|" + File(Process.Current.executable).Modified)
+	let shared = Shared(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
 	let graph = CallGraph(module.types)
 	for texts
 		let own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name

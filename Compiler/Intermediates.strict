@@ -45,6 +45,8 @@ Replaced(executable Text, target Text) Text
 	if File(target).Exists
 		File(old).Rename(executable)
 	File(old).Delete
+	if File(target).Exists is false and Path(executable).FileName.RemoveExtension.text is "strict"
+		CodegenStamp(Path(executable).PathOnly.text).Promoted(executable)
 	File(target).Exists then Used(executable, executable) else Running(logger, executable).Restarted(old)
 Unrunnable(executable Text, target Text) Text
 	Intermediates(Logger).Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
