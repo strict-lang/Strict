@@ -39,13 +39,16 @@ Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked
 		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
 	fresh
 Stored Dictionary(Text, Text) slow
+	File(module.Cached).Exists then Parsed(File(module.Cached).ReadText) else Dictionary(Text, Text)
+Parsed(text Text) Dictionary(Text, Text)
+	Counting.Parsed(Separator + "a\nx" + Separator + "b\ny").Length is 2
+	Counting.Parsed(Separator + "a\nx" + Separator + "a\ny")("a") is "x"
 	mutable stored = Dictionary(Text, Text)
-	if File(module.Cached).Exists is false
-		return stored
-	for File(module.Cached).ReadText.Split(Separator)
+	for text.Split(Separator)
 		let end = value.IndexOf("\n")
-		if end > 0
-			stored = stored.Add(value.Substring(0, end), value.Substring(end + 1))
+		let key = end > 0 then value.Substring(0, end) else ""
+		if key is not "" and key is not in stored
+			stored = stored.Add(key, value.Substring(end + 1))
 	stored
 Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 	mutable isNew = keys.Length is not stored.Length
