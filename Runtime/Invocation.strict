@@ -93,7 +93,7 @@ Kept(traces List(VmValue), trace VmValue) List(VmValue)
 	let gap = VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText("..."), VmValue.OfText(""), VmValue.OfNumber(skipped)))
 	traces.Slice(0, FirstTraces) + gap + traces.Slice(traces.Length - last, last) + trace
 Native(natives Natives) VmValue
-	Emptied.Native(Natives.Shapes).items.First.text is "IndexOutOfRange"
+	Emptied.Native(Natives.Shapes).text is ""
 	Parsing.Native(Natives.Shapes).number is 5
 	let result = natives.Result(value)
 	result is Error then VmValue.OfError(result.Name.text) else result

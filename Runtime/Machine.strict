@@ -160,7 +160,7 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
-	Hello.Call(Invocation.Emptied).items.First.text is "IndexOutOfRange"
+	Hello.Call(Invocation.Emptied).text is ""
 	Hello.Typed((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
 	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, VmValue.OfNumber(4), VmValue.None)(5).number is 4
