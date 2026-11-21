@@ -1,5 +1,6 @@
 has methods MethodCodegen
 constant Plain = LoopCodegen(MethodCodegen.Plain)
+constant EmptyLoop = SyntaxNode("Body", "", SyntaxNode("For", "for", SyntaxNode("Identifier", "numbers")))
 constant BodyMissing = "LoopBodyMissing: a for loop needs the lines it runs indented below it"
 constant DoubledBody = BodyParser("Doubled Numbers", "\tfor 3", "\t\tindex * 2").Block(1, 1)
 constant Three = BodyParser("Run", "\t3").Block(1, 1)
@@ -27,10 +28,13 @@ Aggregation(body SyntaxNode, returnType Text) Text
 	LoopCodegen(TypeSums.Paired.methods).Aggregation(MethodCodegen.SumBody, "Pair") is "add"
 	Plain.Aggregation(BranchLoops, "Numbers") is "list"
 	LoopCodegen(Numbered).Aggregation(MethodCodegen.SumBody, "Count") is "sum"
+	Plain.Aggregation(EmptyLoop, "Number") is Error(BodyMissing)
 	let loop = BranchValues(returnType).LastLoop(body)
 	let isList = ListFits(methods.values.inference.types).IsList(returnType)
 	if loop.Kind is not "For" or returnType is "Boolean" or isList
 		return loop.Kind is not "For" then "" else (isList then "list" else "any")
+	if loop.children.Last.children.Length is 0
+		return Error(BodyMissing)
 	Reduced(BranchValues(returnType).Reduction(loop.children.Last.children.Last), returnType)
 Reduced(reduction Text, returnType Text) Text
 	LoopCodegen(Numbered).Reduced("*", "Count") is "product"

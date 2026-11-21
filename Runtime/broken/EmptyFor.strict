@@ -1,0 +1,4 @@
+has numbers Numbers
+Count Number
+	EmptyFor((1)).Count is 1
+	for numbers

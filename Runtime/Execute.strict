@@ -92,6 +92,9 @@ Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
 	let cache = BinaryFile(FileCompiler.Normalized(path))
 	let linked = FileCompiler(isQuiet, selection).Built(path, root, true, files, inference, known)
+	if linked is Error
+		logger.Log(path + ": " + (linked to Text))
+		return Answer(1, known)
 	let types = linked.entries
 	if types.Length is 0
 		return Answer(1, known)
@@ -142,8 +145,7 @@ Loaded(path Text, root Text, withTests = true, sources Texts = List(Text)) List(
 	let entries = cache.Unpacked(File(cache.Path).ReadBytes)
 	let isReady = withTests and selection is "" and IsEdited(path) is false and BinaryLinks(cache).IsTested(entries)
 	let types = isReady then cache.Current(entries) else List(TypeEntry)
-	let status = types.Length > 0 then "hit" else "miss"
-	BuildProfile.Reported("Bytecode cache " + status, started)
+	BuildProfile.Reported("Bytecode cache " + (types.Length > 0 then "hit" else "miss"), started)
 	types.Length > 0 then types else FileCompiler(false, selection).Compiled(path, root, withTests, sources)
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger)

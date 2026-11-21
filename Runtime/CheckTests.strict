@@ -33,7 +33,12 @@ Checked(folder Text) Boolean
 	if second is Error
 		return second
 	let third = CheckWaiting(folder) is Error then Error("WaitingFailed") else CheckProbe
-	third is Error then third else CheckShares(folder)
+	let fourth = third is Error then third else CheckShares(folder)
+	if fourth is Error
+		return fourth
+	let broken = Ran("test Runtime/broken unit")
+	let isRun = "All tests passed in Runtime/broken/Fine.strict" is in broken.Output
+	isRun then CheckFail(broken, "LoopBodyMissing", "BrokenFile") else Error("BrokenFileStoppedFolder: " + broken.Output)
 CheckDeps(folder Text) Boolean
 	File(folder + "/Doubling.strict").Write(DoubleCode)
 	File(folder + "/Tripling.strict").Write(TripleCode)

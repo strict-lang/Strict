@@ -1,0 +1,4 @@
+has numbers Numbers
+Count Number
+	Fine((1)).Count is 1
+	numbers.Length
