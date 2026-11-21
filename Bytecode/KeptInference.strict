@@ -5,6 +5,8 @@ has raw TypeInference
 has refined TypeInference
 has mentioned Texts
 has joined TypeInference
+has tested Text = ""
+has signature Text = ""
 constant Nothing = ResolveCheck.Counting
 constant Empty = KeptInference("", Inferring.None, List(Number), Nothing, Nothing, List(Text), Nothing)
 constant Pair = ("Logger.strict", "TextWriter.strict")
@@ -13,20 +15,62 @@ constant Writer = List(Text) + "TextWriter.strict"
 constant Loggers = Empty.Of(Pair, "Logger.strict")
 constant One = List(Scope) + KnownTypes.NoMembers
 constant Counted = TypeInference(KnownTypes(List(Text) + "TextWriter", List(Scope) + KnownTypes.CountMembers, One, One), One)
+constant Writing = Empty.Of(Pair, "TextWriter.strict")
+constant Reading = ("mutable n Number", "Go Number", "\tn")
 constant Doctored = KeptInference(Loggers, raw = Counted, refined = Counted)
 Of(files Texts, path Text) KeptInference
 	Loggers.joined is ResolveCheck.Inference(Pair) and Loggers.base.files is Writer
 	Loggers.Of(Swapped, "Logger.strict").joined is ResolveCheck.Inference(Swapped)
 	Doctored.Of(Pair, "Logger.strict").joined.types.members(1) is KnownTypes.CountMembers
 	Empty.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
+	Writing.tested is "TextWriter.strict" and Writing.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
 	let at = files.Index(path)
+	if at >= 0 and IsCurrent(files, path)
+		return Replaced(files, at)
 	let rest = Rest(files, path)
 	let isKept = IsKept(rest)
 	let names = isKept then mentioned else Mentioned(rest)
 	let name = ResolveCheck.TypeName(path)
 	if at < 0 or name is in names or name + "s" is in names
-		return KeptInference(value, joined = ResolveCheck.Inference(files))
+		return at < 0 then KeptInference(value, joined = ResolveCheck.Inference(files)) else Mentioned(files, at)
 	(isKept then value else Fresh(rest, names)).Joined(files, at)
+Matches(files Texts, path Text) Boolean
+	Writing.Matches(Pair, "TextWriter.strict") and Writing.Matches(Pair, "Logger.strict") is false
+	Fits(Rest(files, path)) or tested is path and base.files is files
+IsCurrent(files Texts, path Text) Boolean
+	Writing.IsCurrent(Pair, "TextWriter.strict") and Loggers.IsCurrent(Pair, "Logger.strict") is false
+	KeptInference(Writing, signature = "x").IsCurrent(Pair, "TextWriter.strict") is false
+	if tested is not path or base.files is not files or folder is not Directory.Current
+		return false
+	Stamps(Rest(files, path)) is stamps and Signature(ResolveCheck.Shapes(List(Text) + path).First.lines) is signature
+Signature(lines Texts) Text
+	Empty.Signature(("Run", "\t1")) is Empty.Signature(("Run", "\t2"))
+	Empty.Signature(("has items Generics", "Run", "\t1")) is not Empty.Signature(("has items Numbers", "Run", "\t1"))
+	Empty.Signature(Reading) is not Empty.Signature(("mutable n Number", "Go Number", "\tn = 1"))
+	let marks = Changes(lines).Methods + "|" + Changes(lines, true).Methods
+	Text.Combine(Unindented(lines) + marks, "\n")
+Unindented(lines Texts) Texts
+	Empty.Unindented(("Run", "\t1")) is ("Run")
+	for lines
+		if value.StartsWith("\t") is false
+			value
+Mentioned(files Texts, at Number) KeptInference
+	Writing.base.files is Pair and Writing.stamps.Length is 1
+	let shapes = BuildProfile(Logger).Shapes(files)
+	let inferring = Inferring(files, shapes, ResolveCheck.Generics(files, shapes))
+	let inferred = inferring.Raw
+	let typed = inferring.Refined(inferred)
+	let stamped = Stamps(Rest(files, files(at)))
+	let signed = Signature(shapes(at).lines)
+	KeptInference(Directory.Current, inferring, stamped, inferred, typed, mentioned, typed, files(at), signed)
+Replaced(files Texts, at Number) KeptInference
+	Writing.Replaced(Pair, 1).joined is ResolveCheck.Inference(Pair)
+	let shape = ResolveCheck.Shapes(List(Text) + files(at)).First
+	let shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at + 1, base.shapes.Length - at - 1)
+	let indexed = TypeInference(KnownTypes(raw.types, positions = ResolveCheck.Positions(raw.types.names)), raw.constants)
+	let typed = Inferring(files, shapes, base.templates).Typed(indexed, at)
+	let methods = refined.types.methods.Slice(0, at) + typed + refined.types.methods.Slice(at + 1, files.Length - at - 1)
+	KeptInference(value, joined = TypeInference(KnownTypes(refined.types, methods = methods), refined.constants))
 IsKept(rest Texts) Boolean
 	Loggers.IsKept(Writer) and Empty.IsKept(List(Text)) is false
 	Loggers.IsKept(List(Text) + "Text.strict") is false
