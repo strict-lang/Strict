@@ -3,7 +3,7 @@ has start Number
 has width Number
 has weights Numbers
 has rotation Numbers
-has epsilon Number
+has Epsilon Number
 Rotated BFloat16s
 	HeadRotated((3, 4, 0, 1, 0, 0), 0, 2, (1, 2), (1, 1, -1, 1), 0.000001).Rotated.First.IsNearlyEqual(-1.414214)
 	let size = weights.Length

@@ -13,6 +13,7 @@ has merged Numbers = List(Number)
 has sigmoidGate Boolean = false
 has rates Layer = Layer.None
 constant Tiny = DeltaBlock.Loaded(Drafter.Model, "blk.0.", Layer.Zeros(16), Basis.None)
+constant Pulse = (1, 2) + Layer.Zeros(30)
 Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) DeltaBlock slow
 	Tiny.inputs.weights.Length is 32
 	let mixing = Mixing(model, prefix, zeros, Experts(Qwen3Block.FeedForward(model, prefix), basis = basis))
@@ -61,7 +62,9 @@ Cached(combined Numbers, sequences = 1) DeltaBlock slow
 	let tokens = combined.Length / Width
 	let keyed = Keyed(Convolved(combined, tokens, tokens / sequences))
 	constant Chunk = 16
-	let chunks = DeltaChunks(decays.Length, KeyHeads, norm.Length, Chunk, tokens, keyed, Decayed(combined, tokens), memory, sequences = sequences)
+	let decayed = Decayed(combined, tokens)
+	let size = norm.Length
+	let chunks = DeltaChunks(decays.Length, KeyHeads, size, Chunk, tokens, keyed, decayed, memory, sequences = sequences)
 	let read = tokens is 1 then chunks.Stepped(value) else chunks.Read
 	DeltaBlock(value, memory = read.memory, window = Shifted(combined, tokens), merged = Gated(read.reads, combined))
 Rewound(combined Numbers) DeltaBlock slow
@@ -76,30 +79,37 @@ Rewound(combined Numbers) DeltaBlock slow
 	DeltaBlock(current, window = Shifted(combined, tokens))
 Convolved(combined Numbers, tokens Number, seqLen Number) Numbers
 	Tiny.Convolved(Layer.Zeros(64), 2, 2) is Layer.Zeros(32)
-	Tiny.Convolved(Layer.Zeros(32) + (1, 2) + Layer.Zeros(30), 2, 1)(16) is Tiny.Convolved((1, 2) + Layer.Zeros(30), 1, 1)(0)
+	Tiny.Convolved(Layer.Zeros(32) + Pulse, 2, 1)(16) is Tiny.Convolved(Pulse, 1, 1)(0)
 	let channels = convolution.Length / 4
 	let width = combined.Length / tokens
+	let isWhole = seqLen is tokens
 	for tokens * channels
 		let token = (index / channels).Floor
 		let channel = index % channels
 		let pos = token % seqLen
-		let older = Tapped(combined, width, pos < 3 then (seqLen is tokens then pos - 3 else -9) else token - 3, channel) * convolution(4 * channel)
-		let old = older + Tapped(combined, width, pos < 2 then (seqLen is tokens then pos - 2 else -9) else token - 2, channel) * convolution(4 * channel + 1)
-		let sum = old + Tapped(combined, width, pos < 1 then (seqLen is tokens then pos - 1 else -9) else token - 1, channel) * convolution(4 * channel + 2)
-		let all = sum + Tapped(combined, width, token, channel) * convolution(4 * channel + 3)
+		let older = Tap(combined, width, Back(pos, token, 3, isWhole), channel, channels, 0)
+		let old = older + Tap(combined, width, Back(pos, token, 2, isWhole), channel, channels, 1)
+		let sum = old + Tap(combined, width, Back(pos, token, 1, isWhole), channel, channels, 2)
+		let all = sum + Tap(combined, width, token, channel, channels, 3)
 		all / (1 + (-all).Exponential)
-Tapped(combined Numbers, width Number, token Number, channel Number) Number
-	Tiny.Tapped((1, 2, 3, 4), 2, 1, 0) is 3
-	Tiny.Tapped((1, 2, 3, 4), 2, -1, 0) is 0
-	Tiny.Tapped((1, 2, 3, 4), 2, -9, 0) is 0
-	token < -3 then 0 else (token < 0 then window((3 + token) * convolution.Length / 4 + channel) else combined(token * width + channel))
+Tap(combined Numbers, width Number, token Number, channel Number, channels Number, weight Number) Number
+	Tiny.Tap((1, 2, 3, 4), 2, 1, 0, 1, 3) is 3 * Tiny.convolution(3)
+	Tapped(combined, width, token, channel, channels) * convolution(4 * channel + weight)
+Back(position Number, token Number, back Number, isWhole Boolean) Number
+	Tiny.Back(1, 5, 2, true) is -1 and Tiny.Back(1, 5, 2, false) is -9 and Tiny.Back(3, 5, 2, true) is 3
+	position < back then (isWhole then position - back else -9) else token - back
+Tapped(combined Numbers, width Number, token Number, channel Number, channels Number) Number
+	Tiny.Tapped((1, 2, 3, 4), 2, 1, 0, 1) is 3
+	Tiny.Tapped((1, 2, 3, 4), 2, -1, 0, 1) is 0
+	Tiny.Tapped((1, 2, 3, 4), 2, -9, 0, 1) is 0
+	token < -3 then 0 else (token < 0 then window((3 + token) * channels + channel) else combined(token * width + channel))
 Shifted(combined Numbers, tokens Number) Numbers
 	Hybrid.Single.Prepared(Drafter.Rows(2)).entered(0).IsNearlyEqual(1.773538, 0.00001)
 	Tiny.Shifted(Layer.Zeros(32), 1).Length is 48
 	let channels = convolution.Length / 4
 	let width = combined.Length / tokens
 	for 3 * channels
-		Tapped(combined, width, tokens - 3 + (index / channels).Floor, index % channels)
+		Tapped(combined, width, tokens - 3 + (index / channels).Floor, index % channels, channels)
 Keyed(mixed Numbers) Numbers
 	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0))(3).IsNearlyEqual(0.7071064)
 	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0))(5).IsNearlyEqual(0.8)

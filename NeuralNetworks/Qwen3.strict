@@ -14,6 +14,7 @@ constant Prompted = Tiny.Prefilled((1, 2), 0)
 constant TinyHybrid = Qwen3.Loaded("NeuralNetworks/tinyqwen35.gguf", 32)
 constant TinyBasis = Qwen3.Loaded("NeuralNetworks/tinyqwen35basis.gguf", 32)
 constant Interleaved = 60
+constant Uneven = ((1, 2), (1, 2, 3))
 Loaded(path Text, bits = 8, isGenerating = true) Qwen3 slow
 	Tiny.blocks.Length is 1
 	Tiny.theta is 1000000
@@ -85,33 +86,25 @@ Prefilled(prompt Numbers, start Number, chunk = 8192) Qwen3
 		current = current.Steps(Safetensors.Part(prompt, first, count, 1), Positions(start + first, count), 1)
 	current
 PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) native
-	Tiny.PrefilledBatch(((1, 2), (1, 2, 3))).Last.Last.IsNearlyEqual(Tiny.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
-	TinyHybrid.PrefilledBatch(((1, 2), (1, 2, 3))).First.First.IsNearlyEqual(TinyHybrid.Prefilled((1, 2), 0).hidden.First, 0.0001)
-	TinyHybrid.PrefilledBatch(((1, 2), (1, 2, 3))).Last.Last.IsNearlyEqual(TinyHybrid.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
+	Tiny.PrefilledBatch(Uneven).Last.Last.IsNearlyEqual(Tiny.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
+	TinyHybrid.PrefilledBatch(Uneven).First.First.IsNearlyEqual(TinyHybrid.Prefilled((1, 2), 0).hidden.First, 0.0001)
+	TinyHybrid.PrefilledBatch(Uneven).Last.Last.IsNearlyEqual(TinyHybrid.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
 	if prompts.Length < 2
 		return prompts.Length is 0 then List(Numbers) else List(Numbers) + Prefilled(prompts.First, start).hidden
-	let align = blocks.First.hybrid.layers.Length > 0 then 16 else 1
-	let seqLen = SequenceLength(prompts).Aligned(align)
-	let width = norm.Length
+	let seqLen = SequenceLength(prompts).Aligned(blocks.First.hybrid.layers.Length > 0 then 16 else 1)
 	let perBatch = (chunk / blocks.First.experts.used / seqLen).Floor.Clamp(1, prompts.Length)
 	mutable results = List(Mutable(Numbers))
 	for (prompts.Length / perBatch).Ceiling
 		let first = index * perBatch
 		let count = (prompts.Length - first).Clamp(0, perBatch)
-		let hidden = Steps(Padded(prompts.Slice(first, count), seqLen), BatchPositions(count, seqLen, start), count).hidden
+		let batched = Batched(prompts.Slice(first, count), seqLen, start)
 		for count
-			results.Add(hidden.Slice(index * seqLen * width, prompts(first + index).Length * width))
+			results.Add(batched.Slice(index * seqLen * norm.Length, prompts(first + index).Length * norm.Length))
 	results
-Padded(prompts List(Numbers), seqLen Number) Numbers
-	Tiny.Padded(((1, 2), (3, 4, 5)), 4) is (1, 2, 1, 1, 3, 4, 5, 3)
-	for prompts.Length * seqLen
-		let prompt = prompts((index / seqLen).Floor)
-		let at = index % seqLen
-		at < prompt.Length then prompt(at) else prompt.First
-BatchPositions(count Number, seqLen Number, start Number) Numbers
-	Tiny.BatchPositions(2, 3, 1) is (1, 2, 3, 1, 2, 3)
-	for count * seqLen
-		start + index % seqLen
+Batched(prompts List(Numbers), length Number, start Number) Numbers
+	Tiny.Batched(Uneven, 3, 0).Length is 2 * 3 * Tiny.norm.Length
+	let part = SequenceLength(prompts)
+	Steps(part.Padded(length), part.Positions(length, start), prompts.Length).hidden
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16

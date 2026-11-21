@@ -56,20 +56,21 @@ Cached(input Numbers, rotation Numbers, bits Number, sequences = 1) Qwen3Block
 	let size = queryNorm.Length
 	let tokens = input.Length / attention.weights.First.Length
 	let queried = Rotated(combined, 0, tokens * heads * size, queryNorm, rotation)
-	let keyed = Sequenced(Rotated(combined, heads * size, tokens * groups * size, keyNorm, rotation), sequences, tokens, groups * size)
-	let valued = Sequenced(Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, groups * size), sequences, tokens, groups * size)
+	let width = groups * size
+	let keyed = Sequenced(Rotated(combined, heads * size, tokens * width, keyNorm, rotation), sequences, tokens, width)
+	let columns = Batch.Columns(combined, combined.Length / tokens, (heads + groups) * size, width)
+	let valued = Sequenced(columns, sequences, tokens, width)
 	let block = Qwen3Block(value, queries = queried, hybrid = hybrid.Opened(combined, tokens, (heads + 2 * groups) * size))
 	Qwen3Block(block, keys = keys + Stored(keyed, bits), values = values + Stored(valued, bits))
-Sequenced(values Numbers, sequences Number, tokens Number, width Number) Numbers
+Sequenced(numbers Numbers, sequences Number, tokens Number, width Number) Numbers
 	Tiny.Sequenced((1, 2, 3, 4), 2, 4, 1) is (1, 3, 2, 4)
 	if sequences is 1 or tokens is sequences
-		return values
-	let perSeq = tokens / sequences
-	for values.Length
+		return numbers
+	let perSequence = tokens / sequences
+	for numbers.Length
 		let row = (index / width).Floor
-		let pos = (row / sequences).Floor
-		let seq = row % sequences
-		values((seq * perSeq + pos) * width + index % width)
+		let position = (row / sequences).Floor
+		numbers(((row % sequences) * perSequence + position) * width + index % width)
 Stored(numbers Numbers, bits Number) Numbers
 	Tiny.Stored((0.5, 1.125), 8) is (0.5, 1.125)
 	Tiny.Stored((0.3, 1), 32) is (0.3, 1)

@@ -8,3 +8,13 @@ Aligned(align Number) Number
 		if value.Length > longest
 			longest = value.Length
 	((longest + align - 1) / align).Floor * align
+Padded(length Number) Numbers
+	SequenceLength(((1, 2), (3, 4, 5))).Padded(4) is (1, 2, 1, 1, 3, 4, 5, 3)
+	for prompts.Length * length
+		let prompt = prompts((index / length).Floor)
+		let at = index % length
+		at < prompt.Length then prompt(at) else prompt.First
+Positions(length Number, start Number) Numbers
+	SequenceLength(((1), (2))).Positions(3, 1) is (1, 2, 3, 1, 2, 3)
+	for prompts.Length * length
+		start + index % length
