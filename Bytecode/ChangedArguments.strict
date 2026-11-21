@@ -19,7 +19,7 @@ Positions(type Text, name Text) Numbers
 	Repaint.text is "Painter"
 	Repaint.Kind is "Member"
 	Painting.StoredBack(Short, Holding.At(1), Holding.Declare("painter mutable", "mutable")).instructions.Length is 0
-	for values.inference.types.ParameterScope(type).TypeOf(name + " types").Split(",")
+	for values.inference.types.ParameterNames(values.inference.types.ParameterScope(type).TypeOf(name + " types"))
 		if value is not "" and Changes.HasChanges(values.inference.types.ParameterScope(value.Trim))
 			index
 Owner(call SyntaxNode, block CodeBlock) Text

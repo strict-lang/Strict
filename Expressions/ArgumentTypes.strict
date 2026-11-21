@@ -163,7 +163,7 @@ Declared(instance Text, method Text) Texts
 		return List(Text)
 	let declared = parameters.TypeOf(method + " types")
 	if declared is not "" or method is not "from"
-		return declared.Split(",")
+		return declared is "" then declared.Split(",") else inference.types.ParameterNames(declared)
 	for parameters.TypeOf("from").Split(",")
 		inference.types.MembersOf(instance).TypeOf(value)
 Matched(arguments Texts, types Texts, instance Text, method Text) Number

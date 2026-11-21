@@ -109,7 +109,10 @@ ParameterScope(typeName Text) Scope
 	position is -1 then NoMembers else parameters(position)
 ParameterNames(joined Text) Texts
 	Sample.ParameterNames("a,b") is ("a", "b")
-	joined is "" then List(Text) else joined.Split(",")
+	Sample.ParameterNames("Dictionary(Text, Text),Text") is ("Dictionary(Text, Text)", "Text")
+	if joined.IndexOf("(") < 0
+		return joined is "" then List(Text) else joined.Split(",")
+	Instantiation(value).Arguments("P(" + joined + ")")
 ShapeScope(typeName Text) Scope
 	KnownTypes(("Any"), (NoMembers), (Scope(("to"), ("Text"))), (NoMembers)).MemberMethodType("Foo", "to", 1) is ""
 	KnownTypes(("Any"), (NoMembers), (Scope(("to"), ("Text"))), (NoMembers)).DeclaredType("Foo", "to", 1) is "Text"
