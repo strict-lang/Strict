@@ -13,7 +13,7 @@ constant Optimization = " -O3"
 constant Parts = 64
 constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
 constant LtoCachePolicy = "prune_interval=0s:cache_size_bytes=64m"
-constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
+constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native -Wl,/MAP" + Direct
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Located(name Text) Text

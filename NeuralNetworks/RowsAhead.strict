@@ -1,0 +1,11 @@
+has file Safetensors
+constant Bytes = RowsAhead(Safetensors.Bytes)
+Started(name Text) List(Numbers) slow
+	Bytes.Finished(Bytes.Started("a")) is Safetensors.Bytes.Quantized("a")
+	TensorFile.Started(file.path, file.Entry(name + ".weight"), file.Entry(name + ".weight_scale"), 8)
+Finished(rows List(Numbers)) List(Numbers) slow
+	Bytes.Finished(Safetensors.Bytes.Quantized("a")) is Safetensors.Bytes.Quantized("a")
+	TensorFile.Finished(rows) is rows.Length then rows else List(Numbers)
+Retuned(rows List(Numbers), downs Numbers, ups Numbers, scales Numbers) List(Numbers) slow
+	Bytes.Retuned(Bytes.Started("a"), List(Number), List(Number), List(Number)) is Safetensors.Bytes.Quantized("a")
+	GpuMemory.Tuned(Finished(rows), downs, ups, scales)

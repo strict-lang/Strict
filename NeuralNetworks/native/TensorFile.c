@@ -913,6 +913,130 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 	return failure ? strict_fail(failure) : result;
 }
 
+/* The rows of TensorFile_Quantized filled on 16 threads of their own while the program goes on (TensorFile_Started):
+   H3 merges a LoRA into each of its 200 matrices on the GPU (10 to 36 ms each) and read the next one from the file
+   (26 ms) only after that. One matrix at a time; its rows must not be read before TensorFile_Finished. */
+enum { FillThreads = 16 };
+typedef struct { Placing placing; Tensor tensor; float* factors; atomic_uint_fast64_t next; uint64_t chunks; int running;
+	double list;
+#ifdef _WIN32
+	HANDLE threads[FillThreads];
+#elif !defined(__EMSCRIPTEN__)
+	pthread_t threads[FillThreads];
+#endif
+} Filling;
+static Filling filling;
+
+static void Filled(void)
+{
+	for (uint64_t chunk = atomic_fetch_add(&filling.next, 1); chunk < filling.chunks; chunk = atomic_fetch_add(&filling.next, 1))
+		PlacedChunk(&filling.placing, chunk);
+}
+#ifdef _WIN32
+static DWORD WINAPI Filler(void* context)
+{
+	Filled();
+	if (ReadEvent)
+		CloseHandle(ReadEvent);
+	ReadEvent = 0;
+	free(chunkBuffer);
+	chunkBuffer = 0;
+	chunkBufferCap = 0;
+	return 0;
+}
+#elif !defined(__EMSCRIPTEN__)
+static void* Filler(void* context)
+{
+	Filled();
+	free(chunkBuffer);
+	chunkBuffer = 0;
+	chunkBufferCap = 0;
+	return 0;
+}
+#endif
+
+/* Waits for the rows being filled, 1 when they are complete (or none were being filled). */
+static int FillJoined(void)
+{
+	for (int index = 0; index < filling.running; index++)
+	{
+#ifdef _WIN32
+		WaitForSingleObject(filling.threads[index], INFINITE);
+		CloseHandle(filling.threads[index]);
+#elif !defined(__EMSCRIPTEN__)
+		pthread_join(filling.threads[index], 0);
+#endif
+	}
+	filling.running = 0;
+	if (!filling.placing.file)
+		return 1;
+	Filled();
+	Closed(filling.placing.file);
+	filling.placing.file = 0;
+	free(filling.factors);
+	filling.factors = 0;
+	return !atomic_load(&filling.placing.failed);
+}
+
+STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales, double tokenBits);
+/* The list of TensorFile_Quantized at once, its rows are filled meanwhile: TensorFile_Finished before anything reads
+   them. Read like TensorFile_Quantized when the rows can not be filled on the side (the web, I4 rows, no header). */
+STRICT_EXPORT double TensorFile_Started(double self, double path, double entry, double scales, double tokenBits)
+{
+	if (!ThreadReady())
+		return strict_fail("NativeThreadStateFailed");
+	FillJoined();
+	Tensor scaled;
+	const char* failure = Described(strict_text(entry), &filling.tensor);
+	if (!failure)
+		failure = Described(strict_text(scales), &scaled);
+	uint64_t start = failure || IsRemote(strict_text(path)) ? 0 : DataStart(strict_text(path)), fileSize = 0;
+	const Tensor* tensor = &filling.tensor;
+	if (!start || tensor->isNibbles || !tensor->isSigned || tensor->rank != 2 || scaled.bytes != 4 ||
+		scaled.height * scaled.width != tensor->height)
+		return TensorFile_Quantized(self, path, entry, scales, tokenBits);
+	filling.factors = Read(path, &scaled, &failure);
+	if (!filling.factors)
+		return strict_fail(failure);
+	unsigned char* data = 0;
+	uint64_t stride = 0;
+	double bits = tokenBits > 8 ? 8 + STRICT_KEPT_TOKENS : 8;
+	double result = strict_rows(tensor->height, tensor->width, bits, &data, &stride);
+	Opening file = data ? OpenedFile(strict_text(path), &fileSize) : 0;
+	if (!file)
+	{
+		free(filling.factors);
+		filling.factors = 0;
+		return strict_fail(data ? "TensorFileNotReadable" : "TensorTooLarge");
+	}
+	Placing placing = { file, tensor, start + tensor->start, data, stride, bits, 1, filling.factors, 0 };
+	filling.placing = placing;
+	atomic_store(&filling.placing.failed, 0);
+	filling.chunks = (tensor->height + ChunkRows - 1) / ChunkRows;
+	filling.list = result;
+	atomic_store(&filling.next, 0);
+#ifndef __EMSCRIPTEN__
+	for (int index = 0; index < FillThreads; index++)
+	{
+#ifdef _WIN32
+		filling.threads[filling.running] = CreateThread(0, 0, Filler, 0, 0, 0);
+		filling.running += filling.threads[filling.running] != 0;
+#else
+		filling.running += pthread_create(&filling.threads[filling.running], 0, Filler, 0) == 0;
+#endif
+	}
+#endif
+	return result;
+}
+
+/* The count of rows once they are complete (they are when another matrix is being filled: starting that one waited
+   for them), 0 when their file could not be read. */
+STRICT_EXPORT double TensorFile_Finished(double self, double rows)
+{
+	int isOther = filling.placing.file && memcmp(&rows, &filling.list, sizeof(double)) != 0;
+	return isOther || FillJoined() ? (double)strict_count(rows) : 0;
+}
+
 STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales, double tokenBits)
 {
 	if (!ThreadReady())

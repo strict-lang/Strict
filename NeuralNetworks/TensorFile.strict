@@ -9,4 +9,6 @@ HostedPart(path Text, entry Text, scales Text, first Number, count Number) List(
 Fours(path Text, entry Text, scales Text, scale Text, inputs Text, rowFactors Text, tokenBits Number) List(Numbers)
 Tuned(path Text, entry Text, scales Text, factors Numbers) List(Numbers)
 Written(path Text, header Text, numbers Numbers)
+Started(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
+Finished(rows List(Numbers)) Number
 Prefetched(path Text) Number
