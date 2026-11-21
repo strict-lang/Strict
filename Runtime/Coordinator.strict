@@ -13,7 +13,6 @@ constant StaleSeconds = 16
 constant BeatSeconds = 5
 constant NoSocket = 0
 constant NoReply = ""
-constant Start = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
 constant Sample = Coordinator
 Place Text
 	Coordinator("Compiler/output/coord").Place is "Compiler/output/coord"
@@ -75,13 +74,6 @@ Finished(word Text) Text
 	busyVram = 0
 	seenAt = Process.Elapsed
 	wantsFree then "free" else "ok"
-Command Text
-	Sample.Command.IndexOf("coordinator") > 0
-	exe = Launcher(Process.Current.executable)
-	isWindows = Process.OperatingSystem is "Windows"
-	quoted = Forwarding.Quote + Forwarding.Quote + exe + Forwarding.Quote
-	hidden = Start + quoted + " coordinator " + Forwarding.Quote + "' -WindowStyle Hidden"
-	isWindows then hidden else "-c \"nohup '" + exe + "' coordinator >/dev/null 2>&1 &\""
 Launcher(current Text) Text
 	Sample.Launcher("C:/Release/Ben.exe") is Process.Find("strict").executable
 	strict = Process.Find("strict")
@@ -157,8 +149,7 @@ Linked Number
 	existing = Connected
 	if existing is not NoSocket
 		return existing
-	tool = Process.OperatingSystem is "Windows" then "powershell" else "sh"
-	for Range(0, Process.RunTool(tool, Command).exitCode is 0 then BeatSeconds else 0)
+	for Range(0, Process(Launcher(Process.Current.executable)).Launched("coordinator") > 0 then BeatSeconds else 0)
 		if File(Place).Exists
 			return Connected
 		Process.Wait(1)
