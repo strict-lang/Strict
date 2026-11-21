@@ -13,3 +13,10 @@ Delete(path Text) slow
 	let command = isWindows then "/c rd /s /q \"" + path.Replace("/", "\\") + "\"" else "-rf \"" + path + "\""
 	if Process.RunTool(isWindows then "cmd" else "rm", command).exitCode < 0 or Exists(path)
 		return Error("DirectoryNotDeleted: " + path)
+Temporary Text
+	Directory.Exists(Directory.Temporary)
+	Directory.Temporary.EndsWith("/") is false
+	let windows = Process.Variable("TEMP").Replace("\\", "/")
+	let other = Process.Variable("TMPDIR")
+	let folder = windows is not "" then windows else (other is not "" then other else "/tmp")
+	folder.Length > 1 and folder.EndsWith("/") then folder.Substring(0, folder.Length - 1) else folder
