@@ -1,7 +1,8 @@
 has hashes Dictionary(Text, Number)
 has callees Dictionary(Text, Text)
 has callers Dictionary(Text, Text)
-constant Range = 1000000007
+constant Range = 4503599627370496
+constant Shift = 1048576
 constant Invoking = (InstructionEntry.Invoke(0, ("Strict/B", "Go", "Strict/Number"), List(Number), -1), InstructionEntry.Return(0))
 constant Going = MethodEntry("Go", List(MemberEntry), "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))
 constant Running = MethodEntry("Run", List(MemberEntry), "Strict/Number", Invoking)
@@ -17,11 +18,13 @@ Key(type TypeEntry, method MethodEntry) Text
 	TypeEntry.ShortName(type.Name) + "." + method.Name
 Hashed(types List(TypeEntry)) Dictionary(Text, Number)
 	Graph.Hashed(Types).Length is 2
+	Graph.Hashed(Types)("A.Run") > 1000000007
 	mutable hashed = Dictionary(Text, Number)
 	for type, method in types, type.methods
 		let key = Key(type, method)
 		let earlier = key is in hashed then hashed(key) else 0
-		hashed = hashed.set(key, (earlier + HashCode(method.instructions).number % Range) % Range)
+		let wide = HashCode(method.instructions).number * Shift + HashCode(method.instructions.Reverse).number
+		hashed = hashed.set(key, (earlier + wide % Range) % Range)
 	hashed
 Called(types List(TypeEntry)) Dictionary(Text, Text)
 	Graph.Called(Types)("A.Run") is ",B.Go"
