@@ -1,0 +1,30 @@
+has words Numbers
+has at Number = 0
+Seeded(seed Number) Twister slow
+	Twister.Seeded(5489).Number is 3499211612
+	Twister.Seeded(5489).Next.Number is 581869302
+	Twister.Seeded(5489).Next.Next.Number is 3890346734
+	Twister(Twister(MersenneTwister.Seeded(seed).state).Grown(0))
+Grown(position Number) Numbers
+	Twister.Seeded(5489).Grown(0).Length is MersenneTwister.StateSize + MersenneTwister.Twists
+	Twister.Seeded(5489).Grown(227).Length is MersenneTwister.StateSize + 2 * MersenneTwister.Twists
+	let generated = words.Length - MersenneTwister.StateSize
+	position < generated then words else words + MersenneTwister(words).Generation(words, generated)
+Number Number
+	Twister.Seeded(42).Skipped(624).Number is 108880612
+	MersenneTwister(List(Number)).Tempered(words(MersenneTwister.StateSize + at))
+Next Twister
+	Twister.Seeded(5489).Next.at is 1
+	Twister(Grown(at + 1), at + 1)
+Skipped(count Number) Twister
+	Twister.Seeded(5489).Skipped(2).Number is 3890346734
+	mutable twister = value
+	for count
+		twister = twister.Next
+	twister
+Whole(low Number, high Number) Number
+	Twister.Seeded(5489).Whole(0, 9) is 2 and Twister.Seeded(5489).Whole(5, 5) is 5
+	low + Number % (high - low + 1)
+Choice(texts Texts) Text
+	Twister.Seeded(5489).Choice(("red", "blue")) is "red"
+	texts(Number % texts.Length)
