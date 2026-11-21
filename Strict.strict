@@ -64,7 +64,9 @@ Replied(resident Resident, request Text, socket Number, arguments Texts, variabl
 	let answer = isAnswered then Answered(resident, request, socket, arguments, last) else last
 	let stamped = isAnswered and started > 0 then answer.Stamped(started) else answer
 	resident.Released(request)
-	resident.Ended(socket, isAnswered then stamped.code else (isStopping then 0 else Resident.Refused))
+	let code = isAnswered then stamped.code else (isStopping then 0 else Resident.Refused)
+	logger.Log(Time(Time.Now).Iso8601 + " " + Text.Combine(arguments, " ") + " exit " + code)
+	resident.Ended(socket, code)
 	stamped
 Answered(resident Resident, request Text, socket Number, arguments Texts, last Answer) Answer slow
 	let home = Directory.Current
