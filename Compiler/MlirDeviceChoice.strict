@@ -69,9 +69,10 @@ IsChoosing(callee MlirFunction) Boolean
 Sides(callee MlirFunction) Texts
 	Maximum.Sides(Chooser) is ("left", "right")
 	Maximum.Sides(Maximal) is ("value", "other")
+	Maximum.Sides(MlirFunction(Maximal, type = TypeEntry(GpuChoiceSamples.Numbered, Name = "Number"))).Length is 2
 	let parameters = callee.method.parameters
 	let numbers = parameters.Length > 0 then parameters(0).typeName is "Strict/Number" else false
-	if numbers and parameters.Length is 1 and callee.type.Name is "Strict/Number"
+	if numbers and parameters.Length is 1 and TypeEntry.ShortName(callee.type.Name) is "Number"
 		return ("value", parameters(0).Name)
 	let both = numbers and parameters.Length is 2 then parameters(1).typeName is "Strict/Number" else false
 	both then (parameters(0).Name, parameters(1).Name) else List(Text)
