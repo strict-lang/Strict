@@ -79,9 +79,12 @@ Shapes(files Texts) List(TypeShape)
 	shapes
 Inlined(types List(TypeEntry)) List(TypeEntry)
 	let started = Process.Elapsed
-	let inlined = StructLanes(Inliner(types, true).Inlined).Split
+	let inlined = Inliner(types, true).Inlined
 	Reported("Frontend / inlining", started)
-	inlined
+	let before = Process.Elapsed
+	let split = StructLanes(inlined).Split
+	Reported("Frontend / struct lanes", before)
+	split
 Packaged(build NativeBuild, base Text, program Text, tools Toolchain)
 	if build.isFast
 		return

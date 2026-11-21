@@ -1,0 +1,65 @@
+has lanes Texts
+has relevant Texts
+has isChecked Boolean = false
+constant Paired = LaneSkips((StructLanes.Pair, StructLanes.Caller))
+constant Drawn = LaneSkips((StructLanes.Pair, LaneCalls.Drawer))
+constant None = LaneSkips(List(TypeEntry))
+from(types List(TypeEntry))
+	Paired.lanes is ("Pair")
+	LaneSkips(List(TypeEntry) + StructLanes.Caller).lanes.Length is 0
+	let found = Lanes(types)
+	lanes = found
+	relevant = Built(found) + Called(types, found)
+	isChecked = Process.Variable("STRICT_LANES_CHECK") is "1"
+Lanes(types List(TypeEntry)) Texts
+	Paired.Lanes((StructLanes.Pair, StructLanes.Caller)) is ("Pair")
+	Drawn.lanes is ("Pair", "Drawer")
+	let calls = LaneCalls(types)
+	for types
+		if StructLanes.Members(value).Length > 0 or calls.Laned(value.members).Length > 0
+			TypeEntry.ShortName(value.Name)
+IsUntouched(type TypeEntry, method MethodEntry) Boolean
+	Paired.IsUntouched(StructLanes.Caller, MethodEntry.CountingLoop)
+	Paired.IsUntouched(StructLanes.Pair, MethodEntry.CountingLoop) is false
+	Paired.IsUntouched(StructLanes.Caller, StructLanes.Caller.methods.First) is false
+	if lanes.Length is 0
+		return true
+	if TypeEntry.ShortName(type.Name) is in lanes
+		return false
+	Mentioned(Header(type, method), lanes) is false and Mentioned(Texts(method), lanes) is false
+Header(type TypeEntry, method MethodEntry) Text
+	Paired.Header(StructLanes.Caller, MethodEntry.CountingLoop).EndsWith("None")
+	(type.members to Text) + (method.parameters to Text) + method.declaredType
+Texts(method MethodEntry) Text
+	Paired.Texts(MethodEntry.CountingLoop) is not Paired.Texts(StructLanes.Caller.methods.First)
+	mutable joined = ""
+	for method.instructions
+		joined = joined + " " + Text.Combine(value.texts, " ")
+	joined
+Mentioned(text Text, names Texts) Boolean
+	Paired.Mentioned("Strict/Pair", Paired.lanes) and Paired.Mentioned("Number", Paired.lanes) is false
+	for names
+		if text.IndexOf(value) >= 0
+			return true
+	false
+Built(names Texts) Texts
+	Paired.Built(Paired.lanes) is ("Pair.from")
+	for names
+		value + ".from"
+Called(types List(TypeEntry), names Texts) Texts
+	Drawn.Called(List(TypeEntry) + LaneCalls.Drawer, Drawn.lanes) is ("Drawer.Shifted")
+	for type, method in types, type.methods
+		if Mentioned(method.parameters to Text, names)
+			TypeEntry.ShortName(type.Name) + "." + method.Name
+IsPlainCall(entry InstructionEntry) Boolean
+	Paired.IsPlainCall(StructLanes.Calling(4))
+	Paired.IsPlainCall(StructLanes.Constructed) is false
+	Drawn.IsPlainCall(LaneCalls.Shift) is false
+	None.IsPlainCall(StructLanes.Calling(4)) is false
+	if entry.kind is not InstructionType.Invoke or entry.texts.Length < 2 or lanes.Length is 0
+		return false
+	TypeEntry.ShortName(entry.texts(0)) + "." + entry.texts(1) is not in relevant
+Checked(type TypeEntry, rewritten MethodEntry, full MethodEntry)
+	Paired.Checked(StructLanes.Caller, MethodEntry.CountingLoop, MethodEntry.CountingLoop) is not Error
+	if isChecked then rewritten.instructions is not full.instructions else false
+		Logger.Log("LaneSkipMismatch: " + type.Name + "." + rewritten.Name)

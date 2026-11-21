@@ -15,6 +15,7 @@ constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), List(MethodEntry
 constant Sample = StructLanes((Caller, Pair))
 constant Halves = TypeEntry("Strict/Halves", (Real, MemberEntry("half", "Strict/Number", List(InstructionEntry), false, 32)), List(MethodEntry))
 constant Custom = TypeEntry("Strict/Custom", (Real, Imaginary), List(MethodEntry) + MethodEntry("from", List(MemberEntry), "Strict/Custom", List(InstructionEntry)))
+constant Labeled = TypeEntry("Strict/Named", (MemberEntry("name", "Strict/Text", List(InstructionEntry), false), Real), List(MethodEntry))
 constant Kept = TypeEntry("Strict/Kept", (Real, MemberEntry("Zero", "Strict/Kept", List(InstructionEntry), true)), List(MethodEntry))
 constant Splitting = StructLanes(Inliner((Caller, Pair), true).Inlined)
 constant Width = MemberEntry("Width", "Strict/Number", List(InstructionEntry), false, 32)
@@ -41,10 +42,13 @@ Members(type TypeEntry) Texts
 Fields(type TypeEntry) Texts
 	StructLanes.Fields(Pair) is ("real", "imaginary")
 	StructLanes.Fields(Kept) is ("real")
+	StructLanes.Fields(Labeled) is ("")
 	StructLanes.Members(TypeEntry("Strict/Five", (Real, Real, Real, Real, Real), List(MethodEntry))).Length is 0
 	let bits = LaneCalls(types).LeafBits(type)
 	mutable names = List(Text)
 	for type.members
+		if names.Length > 4 or "" is in names
+			return names
 		if value.IsConstant is false and value.typeName is not in DataLess
 			let sub = LaneNesting(types).SubFields(value, bits, type.Name)
 			names = sub.Length is 0 then names + "" else names + sub
@@ -60,19 +64,25 @@ Split List(TypeEntry)
 	Sample.Split.First.methods.First.instructions.Length is 11
 	Splitting.Split.First.methods.First.instructions.Length is 20
 	Splitting.Split.First.methods.First.instructions(18).texts is ("lanes3_real")
+	let skips = LaneSkips(types)
 	for types
 		let members = Members(value).Length > 0 then value.members else LaneCalls(types).Divided(value.members)
-		TypeEntry(value.Name, members, Methods(value))
-Methods(type TypeEntry) List(MethodEntry)
-	Sample.Methods(Caller).First.instructions(2).texts is ("lanes2_real")
+		TypeEntry(value.Name, members, Methods(value, skips))
+Methods(type TypeEntry, skips LaneSkips) List(MethodEntry)
+	Sample.Methods(Caller, LaneSkips(Sample.types)).First.instructions(2).texts is ("lanes2_real")
 	let nesting = LaneNesting(types)
 	for type.methods
-		let rewritten = Rewritten(type, value)
-		let split = Members(type).Length is 0 and nesting.Fixed(value).Length > 0
+		let isSkipped = skips.IsUntouched(type, value)
+		let rewritten = isSkipped then Unlaned(value) else Rewritten(type, value, skips)
+		skips.Checked(type, rewritten, skips.isChecked then Rewritten(type, value, LaneSkips.None) else rewritten)
+		let split = isSkipped then false else Members(type).Length is 0 and nesting.Fixed(value).Length > 0
 		let parameters = split then LaneCalls(types).Divided(value.parameters) else value.parameters
 		MethodEntry(value.Name, parameters, value.declaredType, rewritten.instructions, value.Slots)
-Rewritten(type TypeEntry, method MethodEntry) MethodEntry
-	Sample.Rewritten(Caller, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+Unlaned(method MethodEntry) MethodEntry
+	Sample.Unlaned(MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+	MethodEntry(method, instructions = Inliner(types).Looped(method.instructions))
+Rewritten(type TypeEntry, method MethodEntry, skips LaneSkips) MethodEntry
+	Sample.Rewritten(Caller, MethodEntry.CountingLoop, LaneSkips(Sample.types)) is MethodEntry.CountingLoop
 	let calls = LaneCalls(types)
 	let fixed = Members(type).Length > 0 then List(Text) else LaneNesting(types).Fixed(method) + calls.Laned(type.members)
 	let flow = LaneFlow(types, LaneFlow(types).Lists(type, method), fixed)
@@ -81,7 +91,8 @@ Rewritten(type TypeEntry, method MethodEntry) MethodEntry
 	mutable laned = List(Text)
 	mutable result = List(InstructionEntry)
 	for method.instructions
-		result = result + Replaced(value, flow, laned, variables, base)
+		let plain = skips.IsPlainCall(value) then Materialized(value, laned, base) + value else List(InstructionEntry)
+		result = result + (plain.Length > 0 then plain else Replaced(value, flow, laned, variables, base))
 		laned = flow.Tracked(value, laned, variables)
 	MethodEntry(method.Name, method.parameters, method.declaredType, Inliner(types).Looped(result), method.Slots)
 Replaced(entry InstructionEntry, flow LaneFlow, laned Texts, variables Texts, base Number) List(InstructionEntry)
@@ -106,7 +117,8 @@ Other(entry InstructionEntry, flow LaneFlow, laned Texts, base Number) List(Inst
 	if laneType is not "" and entry.kind is in (InstructionType.FieldLoad, InstructionType.CheckError)
 		return Forwarded(entry, base)
 	let calls = LaneCalls(types)
-	calls.Signature(entry).Length > 0 then calls.Called(entry, laned, base) else Materialized(entry, laned, base) + entry
+	let signature = calls.Signature(entry)
+	signature.Length > 0 then calls.Called(entry, laned, base, signature) else Materialized(entry, laned, base) + entry
 Forwarded(entry InstructionEntry, base = 0) List(InstructionEntry)
 	Sample.Forwarded(Calling(6)).First.texts is ("lanes3_real")
 	Sample.Forwarded(Calling(6)).First.payload is (4, -1)
