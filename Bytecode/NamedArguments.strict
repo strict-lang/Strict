@@ -15,6 +15,12 @@ constant Lights = (Scope(List(Text) + "Light", List(Text) + "1"), KnownTypes.NoM
 constant Lit = NamedArguments(ValueCodegen(Shined.values, inference = TypeInference(ShineTypes, Lights)))
 constant Boxing = NamedArguments(ValueCodegen.Boxing)
 constant OwnDefaults = NamedArguments(ValueCodegen(Lit.values, inference = TypeInference(KnownTypes(ShineTypes, parameters = (Constructing.With("mask default", "Light"), KnownTypes.NoMembers)), Lights)))
+constant SizeMembers = Scope(("Width", "Height"), ("Number", "Number"))
+constant SizeParameters = Scope(("from", "from types"), ("Width,Height", "Number,Number"))
+constant FontMembers = Scope(("atlas", "volume"), ("Size", "Number"))
+constant FontParameters = Scope(("from", "from types"), ("atlas,volume", "Size,Number"))
+constant AtlasTypes = KnownTypes(("Font", "Size"), (FontMembers, SizeMembers), (KnownTypes.NoMembers, KnownTypes.NoMembers), (FontParameters, SizeParameters))
+constant Atlased = NamedArguments(ValueCodegen(TypeInference(AtlasTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget(AtlasTypes, TypeShape("has atlas Size", "has volume Number"), "Strict/Font", List(Text))))
 Arranged(call SyntaxNode, block CodeBlock) SyntaxNode slow
 	Parts.Arranged(Masked, CodeBlock.Empty) to Text is "Part(1, 0, 3)"
 	Parts.Arranged(SyntaxParser(Tokenizer("Part(1, 2)").Tokens).Parse, CodeBlock.Empty) to Text is "Part(1, 2)"
@@ -80,13 +86,62 @@ Argument(call SyntaxNode, owner Text, prefix Text, name Text, scope Scope) Synta
 		if value.Kind is "Reassignment" and value.children(0).text is name
 			return value.children(1)
 	let fallback = Fallback(owner, prefix + name)
-	fallback is "" then Captured(name, scope) else Qualified(owner, fallback)
-Captured(name Text, scope Scope) SyntaxNode
-	Parts.Captured("buffer", CallTarget.NoScope).Kind is "Identifier"
-	Boxing.Captured("Width", CallTarget.NoScope) to Text is "0"
-	Boxing.Captured("Width", Scope(List(Text) + "Width", List(Text) + "Number")).Kind is "Identifier"
-	let isHeld = scope.TypeOf(name) is "" and values.target.Holding(values.target.TypeName, name) is not ""
-	isHeld then SyntaxNode("Number", "0") else SyntaxNode("Identifier", name)
+	fallback is "" then Captured(owner, prefix, name, scope) else Qualified(owner, fallback)
+Captured(owner Text, prefix Text, name Text, scope Scope) SyntaxNode
+	Parts.Captured("Part", "", "buffer", CallTarget.NoScope).Kind is "Identifier"
+	Boxing.Captured("Box", "", "Width", CallTarget.NoScope) to Text is "0"
+	Boxing.Captured("Box", "", "Width", Scope(List(Text) + "Width", List(Text) + "Number")).Kind is "Identifier"
+	Atlased.Captured("Font", "", "atlas", Scope(List(Text) + "atlas", List(Text) + "Size")).Kind is "Identifier"
+	Atlased.Captured("Font", "", "atlas", Scope(List(Text) + "atlas", List(Text) + "SpriteAtlas")) to Text is "Size(0, 0)"
+	Atlased.Captured("Font", "", "volume", Scope(List(Text) + "volume", List(Text) + "Text")) to Text is "0"
+	let found = scope.TypeOf(name)
+	let isHeld = found is "" and values.target.Holding(values.target.TypeName, name) is not ""
+	let expected = ParameterType(owner, prefix, name)
+	let mismatches = found is not "" and expected is not "" and Overloads(values.inference.types).Assignable(found, expected, false) is false
+	if isHeld
+		return SyntaxNode("Number", "0")
+	mismatches then DefaultNode(expected, 0) else SyntaxNode("Identifier", name)
+ParameterType(owner Text, prefix Text, name Text) Text
+	Atlased.ParameterType("Font", "", "atlas") is "Size"
+	Atlased.ParameterType("Font", "", "volume") is "Number"
+	Parts.ParameterType("Part", "", "mask") is "Number"
+	Boxing.ParameterType("Box", "", "Width") is ""
+	let key = prefix is "" then "from" else prefix.Trim
+	let parameters = values.inference.types.ParameterScope(owner)
+	let position = parameters.TypeOf(key).Split(",").Index(name)
+	let types = parameters.TypeOf(key + " types").Split(",")
+	position >= 0 and position < types.Length then types(position) else values.inference.types.MembersOf(owner).TypeOf(name)
+DefaultNode(type Text, depth Number) SyntaxNode
+	Atlased.DefaultNode("Number", 0) to Text is "0"
+	Atlased.DefaultNode("Boolean", 0) to Text is "false"
+	Atlased.DefaultNode("Text", 0) to Text is "\"\""
+	Atlased.DefaultNode("Numbers", 0) to Text is "List(Number)"
+	Atlased.DefaultNode("Size", 0) to Text is "Size(0, 0)"
+	Atlased.DefaultNode("Size", 8) to Text is "0"
+	if depth > 6 or type is "" or type is in ("None", "Generic")
+		return SyntaxNode("Number", "0")
+	if type is in ("Number", "Byte", "Character")
+		return SyntaxNode("Number", "0")
+	if type is "Boolean"
+		return SyntaxNode("Boolean", "false")
+	if type is in ("Text", "Name")
+		return SyntaxNode("Text", "\"\"")
+	let elements = ListFits(values.inference.types).Elements(type)
+	if elements.Length is 1
+		return SyntaxNode("Call", "List", List(SyntaxNode) + SyntaxNode("Identifier", elements(0)))
+	if elements.Length > 0 or type.StartsWith("List(") or type.StartsWith("Dictionary(")
+		return SyntaxNode("Call", type.StartsWith("Dictionary(") then "Dictionary" else "List")
+	let named = values.target.FromNames(type)
+	let fields = named.Length > 0 then named else values.inference.types.MembersOf(type).names
+	let members = values.inference.types.MembersOf(type)
+	mutable arguments = List(Mutable(SyntaxNode))
+	for fields
+		let fieldType = members.TypeOf(value)
+		if value is not "iterator" and fieldType is not "" and fieldType is not "Iterator"
+			arguments.Add(DefaultNode(fieldType, depth + 1))
+	if arguments.Length is 0
+		return values.inference.types.IsKnown(type) then SyntaxNode("Call", type) else SyntaxNode("Number", "0")
+	SyntaxNode("Call", type, arguments)
 Defaulted(call SyntaxNode, owner Text, start Number, scope Scope) SyntaxNode
 	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 1, CallTarget.NoScope) to Text is "Shine(1, 0, Curve.Flat)"
 	Shined.Defaulted(Parts.Parsed("Shine(1)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(1, Curve.Flat)"
