@@ -8,6 +8,7 @@ constant Older = " -and $_.CreationDate -lt $file.LastWriteTime -and $_.ProcessI
 constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + ($_.CommandLine -replace '[\\r\\n]+', ' ') } }"
 constant Missing = Running(Logger, "Compiler/output/Missing.exe")
 constant Served = Running(Logger, "C:/s/strict.exe")
+constant Idling = Running(Logger, "Compiler/output/strict.exe")
 constant EndedCodes = (0, 128)
 constant Line = "12\t\"C:/s/Sum.exe\" 5"
 Listed Texts
@@ -28,10 +29,21 @@ Command(line Text) Text
 	line.Substring(Id(line).Length + 1, line.Length - Id(line).Length - 1)
 IsStopped(line Text) Boolean
 	Missing.IsStopped(Line)
-	Served.IsStopped("12\t\"C:/s/strict.exe\" serve 2")
+	Served.IsStopped("12\t\"C:/s/strict.exe\" serve 2") is false
+	File("Compiler/output/obj/strict.free9").Write("1") is not Error
+	Idling.IsStopped("12\t\"Compiler/output/strict.exe\"  serve 9  ")
 	Served.IsStopped("12\t\"C:/s/strict.exe\" build Strict.strict") is false
 	Served.IsStopped((Process.Id to Text) + "\t\"C:/s/strict.exe\" serve 2") is false
-	Id(line) is not Process.Id to Text and (IsStrict is false or Command(line).IndexOf(" serve") > 0)
+	Id(line) is not Process.Id to Text and (IsStrict is false or IsIdle(line))
+IsIdle(line Text) Boolean
+	File("Compiler/output/obj/strict.free8").Write("1") is not Error
+	Idling.IsIdle("12\t\"Compiler/output/strict.exe\" serve 8")
+	Served.IsIdle("12\t\"C:/s/strict.exe\" serve 2") is false
+	Idling.IsIdle("12\t\"Compiler/output/strict.exe\" build A.strict") is false
+	let command = Command(line)
+	let at = command.IndexOf(" serve")
+	let slot = at < 0 then "" else command.Substring(at + 6, command.Length - at - 6).Trim.Split(" ").First
+	at >= 0 and File(Resident(Path(executable).PathOnly.text, slot).Freed).Exists
 IsStrict Boolean
 	Served.IsStrict
 	Missing.IsStrict is false
@@ -66,7 +78,7 @@ Restarted(old Text) Text slow
 			return "process " + Id(value) + " did not stop"
 	if stopping.Length > 0 and IsStrict is false and Intermediates(logger).Deleted(old) is Error
 		return old + " is still in use by " + Described
-	Started(stopping)
+	IsStrict then "" else Started(stopping)
 Started(lines Texts) Text
 	Missing.Started(List(Text)) is ""
 	for lines

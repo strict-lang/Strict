@@ -13,6 +13,7 @@ constant Ended = Error("RequestEnded")
 constant Output = "/server.log"
 constant Errors = "/server.errors.log"
 constant Previous = "/server.previous"
+constant LogLimit = 10000000
 constant Starting = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
 constant Quote = "\\\""
 constant Finding = "-NoProfile -Command Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq '"
@@ -113,8 +114,8 @@ Started(slot Text) Number
 		logger.Log("strict server " + slot + " did not start: " + started.Output + started.error)
 	Unserved
 Logged(objects Text, isWindows Boolean, slot Text) Text
-	Sample.Logged("Compiler", true, "").EndsWith(" 2>" + Quote + "Compiler/server.errors.log" + Quote)
-	Sample.Logged("Compiler", false, "2") is " >'Compiler/server2.log' 2>'Compiler/server2.errors.log'"
+	Sample.Logged("Compiler", true, "").EndsWith(" 2>>" + Quote + "Compiler/server.errors.log" + Quote)
+	Sample.Logged("Compiler", false, "2") is " >>'Compiler/server2.log' 2>>'Compiler/server2.errors.log'"
 	let hasObjects = Directory.Create(objects) is not Error
 	let output = Output.Replace("server", "server" + slot)
 	let errors = Errors.Replace("server", "server" + slot)
@@ -123,13 +124,18 @@ Logged(objects Text, isWindows Boolean, slot Text) Text
 	if hasObjects is false
 		return isWindows then "" else " >/dev/null 2>&1"
 	let mark = isWindows then Quote else "'"
-	" >" + mark + objects + output + mark + " 2>" + mark + objects + errors + mark
+	" >>" + mark + objects + output + mark + " 2>>" + mark + objects + errors + mark
 Kept(objects Text, log Text)
 	Missing.Kept("Compiler/output/Missing", Output) is not Error
+	File("Compiler/output/server.log").Write("kept") is not Error
+	Missing.Kept("Compiler/output", Output) is not Error
+	File("Compiler/output/server.log").Exists
+	let current = File(objects + log)
+	if (current.Exists then current.Length > LogLimit else false) is false
+		return
 	let previous = objects + log.Replace("/server", Previous)
 	File(previous).Delete
-	if File(objects + log).Exists
-		File(objects + log).Rename(previous)
+	current.Rename(previous)
 Claimed(server Resident, socket Number) Text
 	Sample.Claimed(Server, 0) is ""
 	let port = Socket.Port(socket)
