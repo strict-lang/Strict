@@ -1,0 +1,36 @@
+has logger
+constant Folder = "NeuralNetworks/nemotron/"
+constant Name = "Nemotron-3.5-Bolt-E4B-Q4_K_M.gguf"
+constant Address = "https://huggingface.co/nvidia/NVIDIA-Nemotron-3.5-Bolt-E4B-4GB/resolve/main/"
+constant Prompt = "The capital of France is"
+constant Count = 12
+Run(arguments Texts)
+	if "coordinator" is in arguments
+		return Coordinator(logger).Served
+	if File(Folder + Name).Exists is false
+		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + Name + "\" \"" + Address + Name + "\"").Failed
+			return Error("DownloadFailed: " + Address + Name)
+	if MachineUse.Weights(logger, "NemotronText", Folder + Name).Admitted
+		Ran(arguments)
+Ran(files Texts) slow
+	let started = Process.Elapsed
+	let tokenizer = GemmaTokens.Loaded(Gguf(Folder + Name))
+	let model = Gemma4.Loaded(Folder + Name)
+	logger.Log("Nemotron 3.5 Bolt E4B loaded in " + ((Process.Elapsed - started) * 1000).Round + " ms")
+	if files.Length is 0
+		logger.Log(Prompt + Answered(tokenizer, model, Prompt))
+	for files
+		logger.Log(Answered(tokenizer, model, Text.Utf8(File(value).ReadBytes)))
+Answered(tokenizer GemmaTokens, model Gemma4, prompt Text) Text
+	let began = Process.Elapsed
+	let generated = Generation(model).Generated(tokenizer.Encoded(prompt), Count)
+	logger.Log((generated to Text) + " in " + ((Process.Elapsed - began) * 1000).Round + " ms")
+	tokenizer.Decoded(Kept(generated, (tokenizer.ids("<eos>"), tokenizer.ids("<turn|>"))))
+Kept(generated Numbers, stops Numbers) Numbers
+	NemotronText(Logger).Kept((5, 6, 7, 6), (7, 9)) is (5, 6)
+	mutable kept = List(Mutable(Number))
+	for generated
+		if value is in stops
+			return kept
+		kept.Add(value)
+	kept

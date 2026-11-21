@@ -1,0 +1,128 @@
+has tokens Texts
+has ids Dictionary(Text, Number)
+has ranks Dictionary(Number, Number)
+has specials Dictionary(Text, Number) = Dictionary(Text, Number)
+constant Space = Text.Utf8((226, 150, 129))
+constant Hex = "0123456789ABCDEF"
+constant Pair = 192
+constant Triple = 224
+constant Quad = 240
+constant Accent = Text.Utf8((195, 169))
+constant Tiny = GemmaTokens.Loaded(Gguf("NeuralNetworks/tinygemma.gguf"))
+Loaded(model Gguf) GemmaTokens
+	Tiny.tokens.Length is 14
+	(Tiny.specials("<|turn>"), Tiny.specials.Length) is (10, 2)
+	Tiny.Encoded(" ab\n\nb<|turn>" + Accent) is (0, 5, 7, 2, 10, 8, 9)
+	let names = Unescaped(GgufFile.Escaped(model.path, "tokenizer.ggml.tokens").Lines)
+	mutable known = Dictionary(Text, Number)
+	for names
+		known(value) = index
+	let merges = Unescaped(GgufFile.Escaped(model.path, "tokenizer.ggml.merges").Lines)
+	GemmaTokens(names, known, Ranked(merges, known, names.Length), Gpt2Tokens.Controls(model, names))
+Unescaped(lines Texts) Texts
+	GemmaTokens.Unescaped(("a", "\\n\\n", "\\\\n")) is ("a", "\n\n", "\\n")
+	Tiny.tokens(7) is "\n\n" and Tiny.tokens(11) is "\\n"
+	for lines
+		value.IndexOf("\\") < 0 then value else Plain(value)
+Plain(line Text) Text
+	GemmaTokens.Plain("a\\\\\\n") is "a\\\n"
+	mutable parts = List(Mutable(Text))
+	for line.Split("\\\\")
+		parts.Add(value.Replace("\\n", "\n").Replace("\\r", "\r"))
+	Text.Combine(parts, "\\")
+Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Number, Number)
+	Tiny.ranks(1 * 14 + 2) is 0
+	Tiny.ranks(6 * 14 + 6) is 2
+	mutable ranked = Dictionary(Number, Number)
+	for merges
+		let at = value.IndexOf(" ", 1)
+		ranked(known(value.Substring(0, at)) * width + known(value.Substring(at + 1))) = index
+	ranked
+Encoded(text Text) Numbers
+	Tiny.Encoded("ab") is (0, 4)
+	(List(Number) + ids("<bos>")) + Pieces(text)
+Pieces(text Text) Numbers
+	Tiny.Pieces("a<|turn>b a") is (1, 10, 2, 3, 1)
+	let special = Shared.Special(text)
+	if special is not ""
+		let at = text.IndexOf(special)
+		return (Pieces(text.Substring(0, at)) + specials(special)) + Pieces(text.Substring(at + special.Length))
+	mutable encoded = List(Mutable(Number))
+	for Runs(text.Replace(" ", Space))
+		encoded = encoded + Word(value)
+	encoded
+Shared Gpt2Tokens
+	Tiny.Shared.Joined((3, 1, 2), 1) is (3, 4)
+	Gpt2Tokens(tokens, ids, ranks, false, specials)
+Runs(text Text) Texts
+	Tiny.Runs("a\n\nb\n") is ("a", "\n\n", "b", "\n")
+	Tiny.Runs("").Length is 0
+	mutable runs = List(Mutable(Text))
+	mutable breaks = ""
+	for text.Split("\n")
+		breaks = index > 0 then breaks + "\n" else breaks
+		if value is not "" and breaks is not ""
+			runs.Add(breaks)
+		if value is not ""
+			runs.Add(value)
+			breaks = ""
+	breaks is "" then runs else runs + breaks
+Word(word Text) Numbers
+	Tiny.Word("\n\n") is (7)
+	Tiny.Word("\n\n\n") is (7, 6)
+	Tiny.Word("ab") is (4)
+	word.StartsWith("\n") and word is in ids then List(Number) + ids(word) else Merged(word)
+Merged(word Text) Numbers
+	Tiny.Merged(Space + "ab") is (5)
+	Tiny.Merged("ba" + Accent) is (2, 1, 8, 9)
+	mutable symbols = Symbols(word.Bytes)
+	mutable best = Best(symbols)
+	for as long as best >= 0
+		symbols = Shared.Joined(symbols, best)
+		best = Best(symbols)
+	for symbols
+		value >= 0 then value else ids(Named(-1 - value))
+Symbols(bytes Numbers) Numbers
+	Tiny.Symbols((97, 195, 169, 98)) is (1, -196, -170, 2)
+	mutable symbols = List(Mutable(Number))
+	mutable start = 0
+	for as long as start < bytes.Length
+		let width = (bytes.Length - start).Minimum(Width(bytes(start)))
+		let letter = Text.Utf8(bytes.Slice(start, width))
+		symbols = letter is in ids then symbols + ids(letter) else symbols + Unknown(bytes.Slice(start, width))
+		start = start + width
+	symbols
+Unknown(bytes Numbers) Numbers
+	Tiny.Unknown((195, 169)) is (-196, -170)
+	for bytes
+		-1 - value
+Width(lead Number) Number
+	(Tiny.Width(97), Tiny.Width(169), Tiny.Width(195), Tiny.Width(226), Tiny.Width(240)) is (1, 1, 2, 3, 4)
+	lead < Pair then 1 else lead < Triple then 2 else lead < Quad then 3 else 4
+Named(byte Number) Text
+	Tiny.Named(195) is "<0xC3>"
+	"<0x" + Hex((byte / 16).Floor) + Hex(byte % 16) + ">"
+Best(symbols Numbers) Number
+	Tiny.Best((3, 1, 2)) is 1
+	Tiny.Best((3, 1)) is -1
+	Tiny.Best((-196, 2)) is -1
+	mutable best = -1
+	mutable lowest = ranks.Length
+	for Range(1, symbols.Length)
+		let pair = symbols(value - 1) * tokens.Length + symbols(value)
+		if symbols(value - 1) >= 0 and symbols(value) >= 0 and pair is in ranks and ranks(pair) < lowest
+			best = value - 1
+			lowest = ranks(pair)
+	best
+Decoded(tokenIds Numbers) Text
+	Tiny.Decoded((5, 7, 8, 9)) is " ab\n\n" + Accent
+	mutable bytes = List(Mutable(Number))
+	for tokenIds
+		bytes = bytes + Spelled(tokens(value))
+	Text.Utf8(bytes).Replace(Space, " ")
+Spelled(token Text) Numbers
+	Tiny.Spelled("<0xC3>") is (195)
+	Tiny.Spelled("ab") is (97, 98)
+	if token.StartsWith("<0x") is false or token.Length is not 6
+		return token.Bytes
+	List(Number) + (Hex.IndexOf(token(3) to Text) * 16 + Hex.IndexOf(token(4) to Text))

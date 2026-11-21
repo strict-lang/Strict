@@ -1,0 +1,113 @@
+has blocks List(Gemma4Block)
+has tokens List(Numbers)
+has norm Numbers
+has path Text
+has lifting Layer
+has lifted Numbers
+has factors Numbers
+has bases Numbers
+has softcap Number
+has hidden Numbers = List(Number)
+constant Tiny = Gemma4.Loaded("NeuralNetworks/tinygemma.gguf", 32)
+constant Prompt = (0, 4, 5)
+constant Start = Tiny.Embedded(Prompt)
+Loaded(file Text, bits = 4) Gemma4 slow
+	(Tiny.blocks.Length, Tiny.tokens.Length, Tiny.softcap) is (6, 14, 30)
+	Generation(Tiny).Generated(Prompt, 8) is (9, 2, 13, 2, 1, 4, 4, 6)
+	let model = Gguf(file, bits)
+	let global = model.Value("gemma4.rope.freq_base") to Number
+	let sliding = model.Value("gemma4.rope.freq_base_swa") to Number
+	let projecting = Layer(model.Rows("per_layer_model_proj.weight"), Layer.Unbiased)
+	let cap = model.Value("gemma4.final_logit_softcapping") to Number
+	let turning = model.Values("rope_freqs.weight")
+	let gains = model.Values("per_layer_proj_norm.weight")
+	let normed = model.Values("output_norm.weight")
+	let rows = model.Rows("token_embd.weight")
+	Gemma4(Blocks(model), rows, normed, file, projecting, gains, turning, (global, sliding), cap)
+Blocks(model Gguf) List(Gemma4Block) slow
+	Tiny.Blocks(Gemma4Block.Model).Last.source is 2
+	for model.Value("gemma4.block_count") to Number
+		Gemma4Block.Loaded(model, index)
+Step(token Number, position Number) Gemma4 slow
+	Tiny.Step(0, 0).hidden.Length is 16
+	Tiny.Step(0, 0).Step(4, 1).Step(5, 2).Next is 9
+	Steps(List(Number) + token, List(Number) + position)
+Steps(chosen Numbers, positions Numbers, sequences = 1) Gemma4 slow
+	Tiny.Steps(Prompt, (0, 1, 2)).Next is 9
+	Tiny.Steps(Prompt, (0, 1, 2)).Steps((9, 2, 13, 2), (3, 4, 5, 6)).Next is 1
+	let input = Embedded(chosen)
+	Forwarded(input, Entered(chosen, input), positions, sequences)
+Prefilled(prompt Numbers, start Number) Gemma4 slow
+	Tiny.Prefilled((0, 4, 5, 9, 2), 0).Next is 13
+	Steps(prompt, Qwen3.Positions(start, prompt.Length))
+Copies(count Number) Gemma4
+	Tiny.Prefilled(Prompt, 0).Copies(2).Steps((9, 9), (3, 3), 2).Nexts is (2, 2)
+	Tiny.Prefilled(Prompt, 0).Copies(3).Steps((9, 9, 9), (3, 3, 3), 3).Steps((2, 2, 2), (4, 4, 4), 3).Nexts is (13, 13, 13)
+	mutable copied = List(Mutable(Gemma4Block))
+	for blocks
+		copied.Add(value.Copies(count))
+	Gemma4(value, blocks = copied)
+Nexts Numbers slow
+	Tiny.Steps(Prompt, (0, 1, 2)).Nexts.Last is 9
+	let normed = Qwen3Block.Normalized(hidden, 0, hidden.Length, norm)
+	Greedy.Rows(Batch(tokens, Layer.Unbiased).Sums(normed), tokens.Length)
+Forwarded(input Numbers, added Numbers, positions Numbers, sequences = 1) Gemma4 slow
+	Tiny.Forwarded(Start, Tiny.Entered(Prompt, Start), (0, 1, 2)).hidden.Length is 48
+	mutable current = input
+	mutable updated = List(Mutable(Gemma4Block))
+	for blocks
+		let rotation = Turned(value, positions)
+		let normed = Qwen3Block.Normalized(current, 0, current.Length, value.norms(0))
+		let cached = value.Cached(normed, rotation)
+		let cache = value.source < 0 then cached else updated(value.source)
+		current = cached.Output(current, cached.Queries(normed, rotation), cache, Layered(added, index), sequences)
+		updated.Add(cached)
+	Gemma4(value, blocks = updated, hidden = current)
+Rotations(positions Numbers, size Number, base Number, slowings Numbers) Numbers slow
+	(Gemma4Block.Turns.Length, Gemma4Block.Turns(0), Gemma4Block.Turns(3)) is (16, 1, 1)
+	Gemma4Block.Turns(12).IsNearlyEqual(-0.8414709848078965)
+	Gemma4.Rotations((0, 1), 8, 1000000, (1, 2, 1000, 1000))(25).IsNearlyEqual(-0.0158107)
+	for positions.Length * 2 * size
+		let at = index % (2 * size)
+		let pair = at % (size / 2)
+		let slowing = slowings.Length is 0 then 1 else slowings(pair)
+		let angle = Radians(positions((index / (2 * size)).Floor) * base ^ (-2 * pair / size) / slowing) to Degrees
+		at < size then angle.Cos else (at < size + size / 2 then -angle.Sin else angle.Sin)
+Turned(block Gemma4Block, positions Numbers) Numbers slow
+	(Tiny.Turned(Tiny.blocks(0), (0, 1)).Length, Tiny.Turned(Tiny.blocks(2), (0, 1)).Length) is (16, 32)
+	let base = block.window > 0 then bases(1) else bases(0)
+	Rotations(positions, block.norms(1).Length, base, block.window > 0 then List(Number) else factors)
+Repeated(cache Numbers, stride Number, count Number) Numbers
+	Gemma4.Repeated((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16), 8, 2).Slice(6, 4) is (7, 8, 1, 2)
+	let block = count * stride
+	for cache.Length * count
+		cache((index / block).Floor * stride + index % stride)
+Layered(added Numbers, layer Number) Numbers
+	Tiny.Layered(Range(0, 48), 1) is (4, 5, 6, 7, 28, 29, 30, 31)
+	let size = lifted.Length
+	let stride = blocks.Length * size
+	let offset = layer * size
+	for added.Length / blocks.Length
+		added((index / size).Floor * stride + offset + index % size)
+Embedded(chosen Numbers) Numbers
+	Tiny.Embedded(Prompt).Length is 48
+	Tiny.Embedded(Prompt)(16) is Tiny.tokens(4).First * 4
+	let width = norm.Length
+	for chosen.Length * width
+		tokens(chosen((index / width).Floor))(index % width) * width.SquareRoot
+Entered(chosen Numbers, input Numbers) Numbers slow
+	Tiny.Entered(Prompt, Start).Length is 72
+	let size = lifted.Length
+	let projected = Batch(lifting.weights, Layer.Unbiased).Sums(input)
+	let scales = Qwen3Block.Scales(projected, size, Gemma4Block.Epsilon * norm.Length)
+	let picked = Gguf(path).Picked("per_layer_token_embd.weight", chosen)
+	for projected
+		(value * scales((index / size).Floor) * lifted(index % size) + picked(index) * size.SquareRoot) / 2.SquareRoot
+Scored Numbers slow
+	Tiny.Step(0, 0).Scored.Length is 14
+	let last = Qwen3Block.Normalized(hidden, hidden.Length - norm.Length, norm.Length, norm)
+	for Batch(tokens, Layer.Unbiased).Sums(last)
+		softcap * Activation.Tanh.Output(value / softcap)
+Next Number slow
+	Tiny.Step(0, 0).Next is Greedy.Largest(Tiny.Step(0, 0).Scored)
+	Greedy.Largest(Scored)

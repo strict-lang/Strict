@@ -22,7 +22,7 @@
    IQ4_NL and the ternary Q2_0, PQ2_0 and PTQ1_0 (Prism ML's llama.cpp fork), blocks decode to floats exactly like ggml's
    dequantize_row functions (no fused multiply-add). */
 enum { F32 = 0, F16 = 1, Q5_1 = 7, Q8_0 = 8, Q4_K = 12, Q5_K = 13, Q6_K = 14, IQ4_NL = 20, BF16 = 30, Q2_0 = 42, PQ2_0 = 142, PTQ1_0 = 143 };
-typedef struct { char* key; char* value; } Entry;
+typedef struct { char* key; char* value; char* escaped; } Entry;
 typedef struct { char* name; uint32_t type; uint32_t dimensions; uint64_t shape[4]; uint64_t offset; uint32_t shard; uint64_t start; } Tensor;
 typedef struct { FILE* file; int failed; } Reader;
 typedef struct { char* data; uint64_t length; uint64_t capacity; } Builder;
@@ -105,23 +105,58 @@ static int Appended(Reader* reader, uint32_t type, Builder* text)
 	return 1;
 }
 
-/* The value of one metadata entry as text, an array as its elements one per line. */
-static char* Value(Reader* reader)
+/* Appends the element of a text array from start to the end of text again with its backslashes, line feeds and carriage
+   returns escaped (\\, \n, \r), returns whether it had any. */
+static int Escaped(const Builder* text, uint64_t start, Builder* escaped)
+{
+	int found = 0;
+	if (escaped->length + 2 * (text->length - start) + 2 > escaped->capacity)
+	{
+		escaped->capacity = (escaped->length + 2 * (text->length - start) + 2) * 2;
+		escaped->data = realloc(escaped->data, escaped->capacity);
+	}
+	for (uint64_t index = start; index < text->length; index++)
+	{
+		char letter = text->data[index];
+		int isEscaped = letter == 10 || letter == 13 || letter == 92;
+		found |= isEscaped;
+		if (isEscaped)
+			escaped->data[escaped->length++] = 92;
+		escaped->data[escaped->length++] = letter == 10 ? 'n' : letter == 13 ? 'r' : letter;
+	}
+	escaped->data[escaped->length] = 0;
+	return found;
+}
+
+/* The value of one metadata entry as text, an array as its elements one per line; escaped gets the same lines with the
+   line breaks and backslashes inside the elements escaped when a text array has any (0 else, the value itself is safe). */
+static char* Value(Reader* reader, char** escaped)
 {
 	uint32_t type = (uint32_t)Unsigned(reader, 4);
 	Builder text = { calloc(1, 16), 0, 16 };
+	Builder safe = { calloc(1, 16), 0, 16 };
 	uint32_t itemType = type == 9 ? (uint32_t)Unsigned(reader, 4) : type;
 	uint64_t count = type == 9 ? Unsigned(reader, 8) : 1;
+	int isNeeded = 0;
 	for (uint64_t index = 0; index < count && !reader->failed; index++)
 	{
 		if (index > 0)
 			text.data[text.length++] = 10;
+		if (index > 0 && type == 9 && itemType == 8)
+			safe.data[safe.length++] = 10;
+		uint64_t start = text.length;
 		if (!Appended(reader, itemType, &text))
 		{
 			free(text.data);
+			free(safe.data);
 			return 0;
 		}
+		if (type == 9 && itemType == 8)
+			isNeeded |= Escaped(&text, start, &safe);
 	}
+	*escaped = isNeeded ? safe.data : 0;
+	if (!isNeeded)
+		free(safe.data);
 	return text.data;
 }
 
@@ -134,6 +169,7 @@ static void Forget(void)
 	{
 		free(entries[index].key);
 		free(entries[index].value);
+		free(entries[index].escaped);
 	}
 	for (uint64_t index = 0; index < tensorCount; index++)
 		free(tensors[index].name);
@@ -232,7 +268,7 @@ static const char* Header(const char* path, uint32_t shard)
 	for (uint64_t index = 0; index < declaredEntries && !reader.failed; index++, entryCount++)
 	{
 		entries[entryCount].key = Text(&reader);
-		entries[entryCount].value = entries[entryCount].key ? Value(&reader) : 0;
+		entries[entryCount].value = entries[entryCount].key ? Value(&reader, &entries[entryCount].escaped) : 0;
 		if (!entries[entryCount].value)
 			reader.failed = 1;
 		else if (strcmp(entries[entryCount].key, "general.alignment") == 0)
@@ -338,6 +374,19 @@ STRICT_EXPORT double GgufFile_Value(double self, double path, double key)
 	for (uint64_t index = 0; index < entryCount; index++)
 		if (strcmp(entries[index].key, strict_text(key)) == 0)
 			return strict_text_result(entries[index].value);
+	return strict_text_result("");
+}
+
+/* GgufFile_Value of a text array with the line feeds, carriage returns and backslashes inside its elements escaped as
+   \n, \r and \\ (Gemma's vocabulary has tokens of line feeds), so every line is one element. */
+STRICT_EXPORT double GgufFile_Escaped(double self, double path, double key)
+{
+	const char* failure = Loaded(strict_text(path));
+	if (failure)
+		return strict_fail(failure);
+	for (uint64_t index = 0; index < entryCount; index++)
+		if (strcmp(entries[index].key, strict_text(key)) == 0)
+			return strict_text_result(entries[index].escaped ? entries[index].escaped : entries[index].value);
 	return strict_text_result("");
 }
 
