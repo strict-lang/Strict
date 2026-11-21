@@ -10311,6 +10311,18 @@
   ^different:
     return %zero : f64
   }
+  func.func private @strict_error_or_equal(%left: f64, %right: f64, %value: (f64, f64) -> f64) -> f64 {
+    %leftFailed = func.call @strict_is_failure(%left) : (f64) -> i1
+    %rightFailed = func.call @strict_is_failure(%right) : (f64) -> i1
+    %failed = arith.ori %leftFailed, %rightFailed : i1
+    cf.cond_br %failed, ^errors, ^values
+  ^errors:
+    %named = func.call @strict_error_equal(%left, %right) : (f64, f64) -> f64
+    return %named : f64
+  ^values:
+    %same = func.call_indirect %value(%left, %right) : (f64, f64) -> f64
+    return %same : f64
+  }
   func.func private @strict_bits(%p: !llvm.ptr) -> f64 {
     %i = llvm.ptrtoint %p : !llvm.ptr to i64
     %f = arith.bitcast %i : i64 to f64

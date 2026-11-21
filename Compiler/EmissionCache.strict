@@ -55,7 +55,7 @@ Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 		File(module.Cached).Write(Text.Combine(joined, ""))
 Keys(texts List(MlirFunction)) Texts
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
-	let shared = Shared
+	let shared = Shared(Process.Current.executable + "|" + File(Process.Current.executable).Modified)
 	let graph = CallGraph(module.types)
 	for texts
 		let own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
@@ -66,9 +66,10 @@ Flags(function MlirFunction) Text
 	let slots = loops + "|" + function.Packing + "|" + function.Float
 	let calls = (function.safeCalls to Text) + "|" + (function.lineSlots to Text) + "|" + function.IsDeferred
 	function.Symbol + "|" + function.Variant + "|" + slots + "|" + calls + "|" + (function.Symbol is in recursive)
-Shared Text
-	Counting.Shared.Length > 0
-	let entry = module.entryName + "|" + module.entries + "|" + module.entrySymbol
+Shared(compiler Text) Text
+	Counting.Shared("a").Length > 0
+	Counting.Shared("a") is not Counting.Shared("b")
+	let entry = compiler + "|" + module.entryName + "|" + module.entries + "|" + module.entrySymbol
 	mutable sum = HashCode(entry + "|" + module.platform + "|" + (module.countedFiles to Text)).number % Range
 	for module.types
 		sum = (sum + HashCode(Layout(value)).number % Range) % Range

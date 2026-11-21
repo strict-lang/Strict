@@ -13,6 +13,8 @@ constant Prologue = PrologueConstants + PrologueUnset + ProloguePointers + ("   
 constant ErrorKinds = ("Error", "ErrorWithValue")
 constant Packed = ("Pair", "Flat")
 constant ErrorComparison = (InstructionEntry.LoadText(0, "a"), InstructionEntry.Invoke(1, ("Strict/Error", "from", "Strict/Error", "Name"), 0, -1), InstructionEntry.Binary(InstructionType.Equal, (0, 1)))
+constant NumberedInstructions = (InstructionEntry.LoadNumber(0, -3), ErrorComparison(1), InstructionEntry.Binary(InstructionType.Equal, (0, 1)))
+constant Numbered = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", NumberedInstructions))
 constant Failing = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", ErrorComparison))
 constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (1, 1))
 constant Epilogue = ("    cf.br ^equal", "  ^equal:", "    return %one : f64", "  ^different:", "    return %zero : f64", "  }")
@@ -26,23 +28,28 @@ Handles(entry InstructionEntry) Boolean
 	MlirEquality(MlirKinds.Graded.function, 4).Handles(InstructionEntry.Binary(InstructionType.LessThan, (2, 1)))
 	MlirEquality(MlirPacking.Listing.function, 1).Handles(Failing.method.instructions(2))
 	MlirEquality(Failing, 2).Handles(Same.method.instructions(2))
+	MlirEquality(Numbered, 2).Handles(Numbered.method.instructions(2))
 	let kinds = MlirKinds(function)
 	if kinds.IsText(position, entry.payload(1)) or kinds.IsText(position, entry.payload(2))
 		return true
 	let kind = ComparedKind(entry, false)
 	let isValue = kind is in Packed + "Error" or kind.StartsWith("List(") or MlirLayout(function).IsStruct(kind)
-	isValue and entry.kind is in Comparisons
+	(isValue or kind.StartsWith("Error|")) and entry.kind is in Comparisons
 ComparedKind(entry InstructionEntry, isText Boolean) Text
 	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), true) is "Text"
 	MlirEquality(Same, 2).ComparedKind(Same.method.instructions(2), false) is "Shape"
-	MlirEquality(Failing, 2).ComparedKind(Failing.method.instructions(2), true) is "Error"
+	MlirEquality(Failing, 2).ComparedKind(Failing.method.instructions(2), true) is "Error|Text"
+	MlirEquality(Numbered, 2).ComparedKind(Numbered.method.instructions(2), false) is "Error|Number"
 	let layout = MlirLayout(function)
 	let left = layout.Represented(MlirKinds(function).KindOf(position, entry.payload(1)))
 	let right = layout.Represented(MlirKinds(function).KindOf(position, entry.payload(2)))
-	if left is in ErrorKinds or right is in ErrorKinds
+	let isLeftError = left is in ErrorKinds
+	let isRightError = right is in ErrorKinds
+	if isLeftError and isRightError
 		return "Error"
 	let packed = left is in Packed then left else right
-	packed is in Packed then packed else isText then "Text" else left
+	let plain = packed is in Packed then packed else isText then "Text" else (isLeftError then right else left)
+	isLeftError or isRightError then "Error|" + plain else plain
 Compared(entry InstructionEntry) Texts
 	MlirEquality(Same, 2).Compared(Same.method.instructions(2)).Length is 5
 	if entry.kind is not in (Comparisons + InstructionType.LessThan + InstructionType.GreaterThan)
@@ -84,9 +91,14 @@ Operand(register Number, suffix Text, compared Text) Texts
 Call(kind Text, result Text, left Text, right Text) Texts
 	MlirEquality(Same, 2).Call("Shape", "%q", "%l", "%r").First.IndexOf("@strict_equal_Shape(%l, %r)") > 0
 	MlirEquality(Same, 2).Call("List(Text)", "%q", "%l", "%r").Length is 2
+	MlirEquality(Failing, 2).Call("Error|Text", "q", "l", "r")(1).IndexOf("@strict_error_or_equal(l, r, qe)") > 0
 	MlirEquality(Same, 2).Call("List(Text, Shape)", "%q", "%l", "%r").Last.IndexOf("pair_equal(%l, %r, %qk") > 0
 	MlirEquality(Same, 2).Call("List(Text)", "q", "l", "r")(0).StartsWith("    qe = func.constant @strict_text_equal")
 	let memory = MlirMemory(function, position)
+	if kind.StartsWith("Error|")
+		let values = Text.Combine((left, right, result + "e"), ", ")
+		let call = "    " + result + " = func.call @strict_error_or_equal(" + values + ")"
+		return (memory.Constant(result + "e", Helper(kind.Replace("Error|", "")), Comparing), call + ListSignature)
 	if kind.StartsWith("List(") is false
 		return List(Text) + memory.Called(result, Helper(kind), (left, right))
 	if MlirLayout(function).Paired(kind).Length > 0
@@ -127,7 +139,7 @@ Named(kind Text) Text
 	MlirEquality(Same, 2).Paired("List(Text, Shape)", "q", "l", "r")(1).StartsWith("    qv =")
 	MlirEquality(Same, 2).Helper("List(Shape)") is "strict_list_equal_number"
 	MlirEquality(Same, 2).Handles(Greater) is false
-	MlirEquality(Failing, 2).ComparedKind(MlirKinds.Graded.function.method.instructions(4), true) is "Error"
+	MlirEquality(Failing, 2).ComparedKind(MlirKinds.Graded.function.method.instructions(4), true) is "Error|Text"
 	MlirEquality(MlirFlats.Sample.function, 1).ComparedKind(MlirRational.Less, false) is "Flat"
 	if kind is in Packed
 		return kind is "Pair" then "strict_two_equal" else "strict_flat_equal"

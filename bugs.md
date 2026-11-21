@@ -1,6 +1,6 @@
 # Bugs
 
-- Natively a client whose resident server dies mid-request returns `Forwarding.Dropped` (-3, Ben's exit -3): `Answered` maps Dropped to `Interrupted` (Unserved, then a local run) on the VM, the compiled client returns -3 (with three log lines in that path it crashes with AccessViolation in `Slotted`). `Running.Restarted` force-stops every ` serve` process after strict.exe is replaced, also one in the middle of a request (reproduced with a private family, `STRICT_EMISSION_CHECK=2`, killed during the self-rebuild child).
+- `Running.Restarted` force-stops every ` serve` process after strict.exe is replaced, also one in the middle of a request: that client's build fails or falls back to a local run (Ben's exit -3 came from this plus the miscompile fixed 2026-11-21).
 `strict check` lets a second way of writing the same thing through (from the review of all DeltaEngine files, 2026-11-11, counts are DeltaEngine sites then):
 - `ErrorCheckCannotFail` misses callees of other types that turn every Error into a literal themselves (same-type callees are covered since 2026-11-21: a Boolean method of only `let` lines and `x is Error then <Boolean> else <Boolean>`, without `Error(`); other types need the records `SureMethods` only builds for base types.
 - `StatusNumberMustNotBeReturned` misses a huge constant for nothing found (`-1` is `NotFoundMustBeNamed` since 2026-11-21) and Number results only compared with `is 1` (Window.IsDebug, WebPage.Picture). A 0/1 result or bit sum of an Is/Has/Can/Should method is `BooleanMustNotBeNumber` since 2026-11-21.
