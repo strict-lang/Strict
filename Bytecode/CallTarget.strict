@@ -13,6 +13,8 @@ constant Hiding = CallTarget(NoTypes, TypeShape("C(first Number) Number", "	firs
 constant BareError = SyntaxNode("Identifier", "Error")
 constant Plain = CallTarget(NoTypes, Greeter, "Strict/Examples/Greeter", ("Strict/Logger", "Strict/Examples/Helper"))
 constant Counting = CallTarget(KnownTypes.Sample, Greeter, "Strict/C", List(Text))
+constant Optioned = CallTarget(KnownTypes.Options, Greeter, "Strict/C", List(Text))
+constant OwnOptions = CallTarget(KnownTypes.Options, Greeter, "Strict/Settings", List(Text))
 constant IteratorMember = Scope(List(Text) + "iterator", List(Text) + "Iterator")
 constant LengthMethod = Scope(List(Text) + "Length", List(Text) + "Number")
 constant FloorMethod = Scope(List(Text) + "Floor", List(Text) + "Number")
@@ -63,9 +65,14 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Colored.ParameterTypes("Color", "Color", ("Number", "Number", "Number")) is ("ColorValue")
 	Plain.ParameterTypes("Length", "Text", List(Text)).Length is 0
 	Counting.ParameterTypes("Twice", "Count", List(Text) + "Number") is ("Number")
+	Optioned.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
+	OwnOptions.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
+	let declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
+	let isUndeclared = type is TypeName then Header(name).tokens.Length is 0 else declared.Length is 0
+	if name is not type and isUndeclared and types.Inherited(type, name) is not ""
+		return Declared("Any", name, argumentTypes, " types")
 	if type is TypeName and (name is not type or Header(name).tokens.Length > 0)
 		return HeaderEntries(Chosen(name, argumentTypes), types.MethodsOf(type)).ParameterTypes
-	let declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
 	if name is not type or declared.Length > 0
 		return declared
 	for FromNames(type)
