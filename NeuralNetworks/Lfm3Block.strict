@@ -24,27 +24,32 @@ Loaded(model Gguf, prefix Text, heads Number, size Number) Lfm3Block slow
 	let isGated = model.Shape(prefix + "attn_gate.weight").Length > 0
 	let gating = isGated then Layer(model.Rows(prefix + "attn_gate.weight"), Layer.Unbiased) else Layer.None
 	Lfm3Block(block, attention = attending, gates = gating)
-Forwarded(input Numbers, rotation Numbers) Lfm3Block
+Forwarded(input Numbers, rotation Numbers, sequences = 1) Lfm3Block
 	Passing.Forwarded((1, 2), List(Number)).output.Length is 2
-	let mixing = Mixing(Normed(input, attentionNorm), rotation)
+	let mixing = Mixing(Normed(input, attentionNorm), rotation, sequences)
 	let operated = IsConvolution then mixing.convolution.output else mixing.output
 	let residual = Gpt2Block.Added(input, Normed(operated, postNorm))
-	let fed = feedForward.Added(Normed(residual, mlpNorm), Layer.Zeros(residual.Length))
+	let fed = Fed(Normed(residual, mlpNorm))
 	Lfm3Block(mixing, output = Gpt2Block.Added(residual, Normed(fed, postMlpNorm)))
-Mixing(normed Numbers, rotation Numbers) Lfm3Block
-	Passing.Mixing((1, 2), List(Number)).output is (1, 2)
-	IsConvolution then Lfm3Block(value, convolution = convolution.Mixed(normed)) else Attended(normed, rotation)
-Attended(normed Numbers, rotation Numbers) Lfm3Block
-	Passing.Attended(List(Number), List(Number)).output.Length is 0
+Fed(normed Numbers) Numbers
+	Passing.Fed((1, 2)).Length is 2
+	let isRouted = feedForward.router.weights.Length > 0
+	isRouted then feedForward.Forward(normed) else feedForward.Added(normed, Layer.Unbiased)
+Mixing(normed Numbers, rotation Numbers, sequences Number) Lfm3Block
+	Passing.Mixing((1, 2), List(Number), 1).output is (1, 2)
+	let convolved = IsConvolution then convolution.Mixed(normed, sequences) else convolution
+	IsConvolution then Lfm3Block(value, convolution = convolved) else Attended(normed, rotation, sequences)
+Attended(normed Numbers, rotation Numbers, sequences Number) Lfm3Block
+	Passing.Attended(List(Number), List(Number), 1).output.Length is 0
 	if attention.queryNorm.Length is 0
 		return Lfm3Block(value, output = normed)
-	let cached = attention.Cached(normed, rotation, 32)
-	let merged = Gated(cached.Merged(1), normed, cached.queryNorm.Length)
+	let cached = attention.Cached(normed, rotation, 32, sequences)
+	let merged = Gated(cached.Merged(sequences), normed, cached.queryNorm.Length)
 	let projected = Basis.None.Sums(cached.projection.weights, cached.projection.biases, merged)
-	Lfm3Block(value, attention = Trimmed(cached), output = projected)
-Trimmed(cached Qwen3Block) Qwen3Block
-	Passing.Trimmed(Unattended) is Unattended
-	let kept = window * cached.groups * cached.queryNorm.Length
+	Lfm3Block(value, attention = Trimmed(cached, sequences), output = projected)
+Trimmed(cached Qwen3Block, sequences Number) Qwen3Block
+	Passing.Trimmed(Unattended, 1) is Unattended
+	let kept = window * cached.groups * cached.queryNorm.Length * sequences
 	if window is 0 or cached.keys.Length <= kept
 		return cached
 	let keys = cached.keys.Slice(cached.keys.Length - kept, kept)
@@ -58,6 +63,9 @@ Optional(model Gguf, name Text) Numbers
 	Passing.Optional(Gguf("NeuralNetworks/tinyqwen3.gguf"), "missing.weight").Length is 0
 	Passing.Optional(Gguf("NeuralNetworks/tinyqwen3.gguf"), "output_norm.weight").Length > 0
 	model.Shape(name).Length > 0 then model.Values(name) else List(Number)
+Copied(count Number) Lfm3Block
+	Passing.Copied(2).convolution.window.Length is 0
+	Lfm3Block(value, convolution = convolution.Copied(count), attention = attention.Copies(count, 32))
 IsConvolution Boolean
 	Passing.IsConvolution is false
 	convolution.width > 1
@@ -67,9 +75,9 @@ Normed(input Numbers, weights Numbers) Numbers
 	if weights.Length is 0
 		return input
 	let size = weights.Length
+	let scales = Unattended.Scales(input, size, Epsilon)
 	for input.Length
-		let start = (index / size).Floor * size
-		input(index) * weights(index % size) * Normalization.Scale(Normalization.Squared(input, start, size), size, Epsilon)
+		input(index) * weights(index % size) * scales((index / size).Floor)
 Gated(merged Numbers, normed Numbers, size Number) Numbers
 	Passing.Gated((1, 2), (1, 2), 1) is (1, 2)
 	Lfm3Block(Passing, gates = Layer(List(Numbers) + (0, 0), Layer.Unbiased)).Gated((1, 2), (1, 2), 2) is (0.5, 1)

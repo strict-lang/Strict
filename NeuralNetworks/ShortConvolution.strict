@@ -12,45 +12,65 @@ Loaded(model Gguf, prefix Text) ShortConvolution slow
 	let weights = model.Values(prefix + "shortconv.conv.weight")
 	let contracted = Layer(model.Rows(prefix + "shortconv.out_proj.weight"), Layer.Unbiased)
 	ShortConvolution(projected, weights, contracted, weights.Length / contracted.weights.Length)
-Mixed(normed Numbers) ShortConvolution
+Mixed(normed Numbers, sequences = 1) ShortConvolution
 	Tiny.Mixed((1, 2, 3, 4)).output is (1, 8, 28.5, 96)
+	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Mixed((1, 1, 1, 1), 2).output is (2, 7, 3, 11)
+	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Mixed((1, 1, 1, 1), 2).window is (1, 1, 1, 1)
 	Tiny.Mixed((1, 2, 3, 4)).window is (9, 16)
 	Tiny.Mixed((1, 2, 3, 4)).Mixed((1, 1)).output is (5.5, 33)
 	let combined = Basis.None.Sums(inputs.weights, inputs.biases, normed)
 	let channels = projection.weights.First.Length
 	let gated = Gated(combined, channels)
-	let mixed = Picked(combined, Convolved(gated, channels), channels)
+	let mixed = Picked(combined, Convolved(gated, channels, sequences), channels)
 	let projected = Basis.None.Sums(projection.weights, projection.biases, mixed)
-	ShortConvolution(value, window = Shifted(gated, channels), output = projected)
+	ShortConvolution(value, window = Shifted(gated, channels, sequences), output = projected)
 Gated(combined Numbers, channels Number) Numbers
 	Tiny.Gated((1, 2, 3, 4, 5, 6), 2) is (5, 12)
 	let offset = 2 * channels
 	for combined.Length / 3
 		let start = (index / channels).Floor * 3 * channels + index % channels
 		combined(start) * combined(start + offset)
-Convolved(gated Numbers, channels Number) Numbers
-	Tiny.Convolved((1, 4, 9, 16), 2) is (1, 4, 9.5, 24)
-	ShortConvolution(Tiny, window = (2, 3)).Convolved((1, 1), 2) is (2, 7)
+Convolved(gated Numbers, channels Number, sequences Number) Numbers
+	Tiny.Convolved((1, 4, 9, 16), 2, 1) is (1, 4, 9.5, 24)
+	ShortConvolution(Tiny, window = (2, 3)).Convolved((1, 1), 2, 1) is (2, 7)
+	let perSequence = gated.Length / channels / sequences
 	for gated.Length
 		let token = (index / channels).Floor
 		let channel = index % channels
+		let sequence = (token / perSequence).Floor
+		let row = token % perSequence - width + 1
 		mutable sum = 0
 		for width
-			sum = sum + kernel(channel * width + value) * Tapped(gated, token - width + 1 + value, channel, channels)
+			sum = sum + kernel(channel * width + value) * Tapped(gated, sequence * perSequence, row + value, sequence, channel, channels)
 		sum
-Tapped(gated Numbers, token Number, channel Number, channels Number) Number
-	Tiny.Tapped((1, 4), -1, 0, 2) is 0
-	ShortConvolution(Tiny, window = (2, 3)).Tapped((1, 4), -1, 1, 2) is 3
-	if token >= 0
-		return gated(token * channels + channel)
-	window.Length is 0 then 0 else window((width - 1 + token) * channels + channel)
+Tapped(gated Numbers, first Number, row Number, sequence Number, channel Number, channels Number) Number
+	Tiny.Tapped((1, 4), 0, -1, 0, 0, 2) is 0
+	ShortConvolution(Tiny, window = (2, 3)).Tapped((1, 4), 0, -1, 0, 1, 2) is 3
+	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Tapped((1, 4, 1, 4), 1, -1, 1, 0, 2) is 4
+	if row >= 0
+		return gated((first + row) * channels + channel)
+	Earlier(sequence * (width - 1) + width - 1 + row, channel, channels)
 Picked(combined Numbers, convolved Numbers, channels Number) Numbers
 	Tiny.Picked((1, 2, 3, 4, 5, 6), (10, 20), 2) is (30, 80)
 	for convolved.Length
 		combined((index / channels).Floor * 3 * channels + channels + index % channels) * convolved(index)
-Shifted(gated Numbers, channels Number) Numbers
-	Tiny.Shifted((1, 4, 9, 16), 2) is (9, 16)
-	ShortConvolution(Tiny, width = 3).Shifted((1, 4), 2) is (0, 0, 1, 4)
-	let kept = (width - 1) * channels
-	let all = window + gated
-	all.Length >= kept then all.Slice(all.Length - kept, kept) else Layer.Zeros(kept - all.Length) + all
+Shifted(gated Numbers, channels Number, sequences Number) Numbers
+	Tiny.Shifted((1, 4, 9, 16), 2, 1) is (9, 16)
+	ShortConvolution(Tiny, width = 3).Shifted((1, 4), 2, 1) is (0, 0, 1, 4)
+	let kept = width - 1
+	let perSequence = gated.Length / channels / sequences
+	for sequences * kept * channels
+		let sequence = (index / (kept * channels)).Floor
+		let row = perSequence + (index / channels).Floor % kept
+		let channel = index % channels
+		row < kept then Earlier(sequence * kept + row, channel, channels) else gated((sequence * perSequence + row - kept) * channels + channel)
+Earlier(row Number, channel Number, channels Number) Number
+	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Earlier(1, 0, 2) is 4 and Tiny.Earlier(0, 0, 2) is 0
+	window.Length is 0 then 0 else window(row * channels + channel)
+Copied(count Number) ShortConvolution
+	ShortConvolution(Tiny, window = (2, 3)).Copied(2).window is (2, 3, 2, 3)
+	ShortConvolution(value, window = Repeated(count))
+Repeated(count Number) Numbers
+	ShortConvolution(Tiny, window = (2, 3)).Repeated(2) is (2, 3, 2, 3)
+	for count * window.Length
+		window(index % window.Length)

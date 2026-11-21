@@ -2,6 +2,7 @@ has logger
 constant Weights = "NeuralNetworks/lfm3/LFM3-1.7B-Q8_0.gguf"
 constant Prompts = ("The capital of France is", "Three side lengths form a valid triangle when")
 constant Count = 32
+constant Sequences = 32
 Run
 	Answered(Weights, 8)
 Answered(weights Text, bits Number)
@@ -16,6 +17,27 @@ Answered(weights Text, bits Number)
 		let generated = Generated(model.Prefilled(prompt), prompt.Length)
 		let speed = ((Process.Elapsed - before) * 1000 / Count).Round
 		logger.Log(value + tokenizer.Decoded(generated) + " (" + speed + " ms per token)")
+	Batched(model, tokenizer, Sequences)
+Batched(model Lfm3, tokenizer Gpt2Tokens, sequences Number)
+	let prompt = model.Prompted(tokenizer.Encoded(Prompts.First))
+	let prefilled = model.Prefilled(prompt)
+	let started = Process.Elapsed
+	let tokens = Decoded(prefilled.Copies(sequences), prefilled.Next, prompt.Length, sequences)
+	let speed = (sequences * Count / (Process.Elapsed - started)).Round
+	logger.Log(sequences + " sequences: " + speed + " tokens per second, first:" + tokenizer.Decoded(tokens))
+Decoded(copies Lfm3, first Number, length Number, sequences Number) Numbers
+	mutable model = copies
+	mutable nexts = Same(first, sequences)
+	mutable firsts = List(Mutable(Number))
+	for Count
+		firsts.Add(nexts.First)
+		model = model.Steps(nexts, Same(length + value, sequences))
+		nexts = model.Nexts
+	firsts
+Same(number Number, count Number) Numbers
+	Lfm3Text(Logger).Same(3, 2) is (3, 3)
+	for count
+		number
 Generated(prefilled Lfm3, length Number) Numbers
 	mutable model = prefilled
 	mutable tokens = List(Mutable(Number))

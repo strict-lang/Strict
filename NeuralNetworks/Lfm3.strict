@@ -44,22 +44,21 @@ Rotations(positions Numbers, base Number, scaling Numbers) Numbers
 		let factor = scaling.Length > 0 then scaling(pair) else 1
 		let angle = Radians(positions((index / (4 * half)).Floor) * base ^ (-pair / half) / factor) to Degrees
 		at < 2 * half then angle.Cos else (at < 3 * half then -angle.Sin else angle.Sin)
-Forwarded(input Numbers, positions Numbers) Lfm3 slow
+Forwarded(input Numbers, positions Numbers, sequences = 1) Lfm3 slow
 	let global = Rotations(positions, globalBase, factors)
 	let sliding = Rotations(positions, slidingBase, List(Number))
 	mutable current = input
 	mutable updated = List(Mutable(Lfm3Block))
 	for layers
-		let forwarded = value.Forwarded(current, value.window > 0 then sliding else global)
+		let forwarded = value.Forwarded(current, value.window > 0 then sliding else global, sequences)
 		current = forwarded.output
 		updated.Add(Lfm3Block(forwarded, output = List(Number)))
 	Lfm3(value, layers = updated, hidden = current)
 Embedded(tokens Numbers) Numbers
 	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedded((1, 0)) is (3, 4, 1, 2)
-	mutable rows = List(Number)
-	for tokens
-		rows = rows + embedding(value)
-	rows
+	let width = embedding.First.Length
+	for tokens.Length * width
+		embedding(tokens((index / width).Floor))(index % width)
 Prefilled(prompt Numbers) Lfm3 slow
 	let first = Forwarded(Embedded(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
 	mutable model = first
@@ -74,6 +73,19 @@ Step(token Number, position Number) Lfm3 slow
 Scored Numbers slow
 	let size = norm.Length
 	Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden.Slice(hidden.Length - size, size), norm))
+Copies(count Number) Lfm3
+	Unloaded.Copies(2).layers.Length is 0
+	Lfm3(value, layers = Copied(count))
+Copied(count Number) List(Lfm3Block)
+	Unloaded.Copied(2).Length is 0
+	for layers
+		value.Copied(count)
+Steps(tokens Numbers, positions Numbers) Lfm3 slow
+	Forwarded(Embedded(tokens), positions, tokens.Length)
+Nexts Numbers
+	Lfm3(Unloaded, embedding = ((1, 0), (0, 1)), norm = (1, 1), hidden = (3, 1, 1, 2)).Nexts is (0, 1)
+	let size = norm.Length
+	let scores = Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden, norm))
+	Greedy.Rows(scores, embedding.Length)
 Next Number slow
-	let scores = Scored
-	scores.Index(scores.Maximum)
+	Greedy.Largest(Scored)
