@@ -15,6 +15,7 @@ constant Spaced = ("has a", "Run", "	1", "", "Next", "	2")
 constant Ending = ("Run", "	1", "", "")
 constant Tabbed = ("Run", "	1", "	")
 constant Marked = "ByteOrderMarkIsNotAllowed: save the file as UTF-8 without BOM"
+constant Project = ", run strict in the project folder"
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
 	let started = Process.Elapsed
@@ -64,9 +65,10 @@ Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	paths
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	let normalized = Normalized(path)
+	let hidden = Mentions(File(normalized).ReadLines).Hidden(path, type)
 	let above = SourceFiles(".").SubfolderWith("..", type) + SourceFiles(".").SubfolderWith("../..", type)
-	if above is not ""
-		logger.Log("TypeNotFound: " + type + " used in " + path + " is in " + above + ", run strict in the project folder")
+	if hidden is not "" or above is not ""
+		logger.Log(hidden is "" then "TypeNotFound: " + type + " used in " + path + " is in " + above + Project else hidden)
 		return List(TypeEntry)
 	if normalized.StartsWith("./") and normalized.IndexOf("/../") < 0
 		if Repositories(logger, ".").Downloaded(type) is not ""

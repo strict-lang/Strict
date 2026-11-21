@@ -1,5 +1,7 @@
 has lines Texts
 constant Typo = Mentions(("constant Limit = 3", "has numbr", "has counts Numbers", "Add(other Number, most = Limit) Other", "	other"))
+constant Hiding = Mentions(("has prefix Text", "Kata(skills Texts) Kata", "	Kata(prefix)"))
+constant HiddenType = "MethodHidesTypeUseDifferentName: "
 constant Units = Mentions(("has units List(Unit)", "has logger", "Scored(model Shape, count = 2) Number", "\tCounted(model).Area"))
 Types Texts
 	Units.Types is ("List", "Unit", "Shape", "Number", "Counted", "Units", "Logger")
@@ -112,3 +114,11 @@ Returned(shape Expressions/TypeShape) Texts
 	for shape.lines
 		if shape.IsMethodHeader(value) and shape.IsComputed(value) is false
 			HeaderTokens(Tokenizer(value).Tokens).ReturnType
+Hidden(path Text, type Text) Text
+	Hiding.Hidden("A.strict", "Kata") is "A.strict:line 2: " + HiddenType + "Kata, the method Kata hides the type"
+	Typo.Hidden("A.strict", "Numbr") is ""
+	let shape = TypeShape(lines)
+	for lines
+		if shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is type
+			return ResolveCheck.Located(path, index + 1, HiddenType + type + ", the method " + type + " hides the type")
+	""
