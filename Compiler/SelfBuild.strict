@@ -10,7 +10,6 @@ constant ExtraPackages = ("Math", "Binary", "Compression", "Regex", "Json", "Net
 constant DaemonCommands = ("coordinator", "serve", "linked", "status", "stop")
 constant InfoCommands = ("help", "--help", "version", "--version")
 constant BuildOptions = ("", "windows", "linux", "web", "android", "ios", "fast", "library", "full", "strict")
-constant Installed = SelfBuild(Logger, "C:/s", "strict.exe")
 Rebuilt(arguments Texts) Number slow
 	SelfBuild(Logger, "Compiler/output/Missing", "Missing.exe").Rebuilt(List(Text) + "test") is Current
 	SelfBuild(Logger, ".", "strict.exe").Rebuilt(List(Text) + "stop") is Current
@@ -97,18 +96,6 @@ IsSkipped(arguments Texts) Boolean
 	let second = arguments.Length > 1 then arguments(1).Replace("\\", "/").Lower else ""
 	let isRoot = TypeSource.Absolute(root).Lower is Directory.Current.Replace("\\", "/").Lower
 	second is in BuildOptions or second.EndsWith("strict.strict") or second is "." and isRoot
-IsToolchainFile(path Text) Boolean
-	Installed.IsToolchainFile("C:/s/strict.exe") and Installed.IsToolchainFile("C:/s/Runtime/Frame.strict")
-	Installed.IsToolchainFile("C:/s/Strict.strict") and Installed.IsToolchainFile("C:/s/README.md")
-	(Installed.IsToolchainFile("C:/s/Math/Size.strict") or Installed.IsToolchainFile("./Runtime/A.strict")) is false
-	(Installed.IsToolchainFile("C:/s/Compiler/NativeRuntime.mlir") or Installed.IsToolchainFile("C:/s/native/c")) is false
-	if path.StartsWith(root + "/") is false
-		return false
-	let inside = path.Substring(root.Length + 1, path.Length - root.Length - 1)
-	if inside.StartsWith("Compiler/NativeRuntime") or inside is "Compiler/strict.h"
-		return false
-	let isCode = (inside.EndsWith(".strict") or inside.IndexOf("native/") >= 0) and inside is not "Strict.strict"
-	inside.Split("/").First is in CorePackages or isCode is false
 IsSourceScanNeeded(arguments Texts) Boolean
 	SelfBuild(Logger, ".", "strict.exe").IsSourceScanNeeded(("test", "Bytecode/SourceFiles.strict")) is false
 	SelfBuild(Logger, ".", "strict.exe").IsSourceScanNeeded(List(Text) + "Examples/Sum.strict")

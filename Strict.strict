@@ -229,7 +229,7 @@ Launched(rest Texts, folder Text) Number slow
 		return Native("test", (rest(0), rest(1), "native"))
 	let base = NativeBuild.Output(rest(0), true)
 	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	let cache = NativeCache("build", (rest(0), rest(1)), isRunning = true)
+	let cache = NativeCache("build", (rest(0), rest(1)))
 	let fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
 	if fresh is ""
 		let tested = Retested(rest)
