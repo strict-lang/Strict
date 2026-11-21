@@ -1,6 +1,7 @@
 has lines Texts
 constant Filed = RepeatedCalls(("Read Texts", "	Read is (\"a\")", "	File(path).Exists then File(path).ReadLines else List(Text)"))
 constant Typed = RepeatedCalls(("Read Texts", "	let empty = List(Text)", "	path is \"\" then List(Text) else empty"))
+constant Fixed = RepeatedCalls(("Fixed Number", "	Fixed is 1", "	mutable text = \"a\"", "	if text.IndexOf(\".\") < 0", "		text = text + \".\"", "	text.IndexOf(\".\")"))
 Issues List(ValidationIssue)
 	Filed.Issues.First to Text is "SameCallTwiceMustBeLet: File(path), keep it in a let"
 	Filed.Issues.First.Line is 3 and Typed.Issues.Length is 0
@@ -11,18 +12,38 @@ Issues List(ValidationIssue)
 			issues = issues + Repeated(index)
 	issues
 Repeated(header Number) List(ValidationIssue)
-	Filed.Repeated(0).Length is 1 and Typed.Repeated(0).Length is 0
+	Filed.Repeated(0).Length is 1 and Typed.Repeated(0).Length is 0 and Fixed.Repeated(0).Length is 0
 	let code = ErrorDrops(lines).Code(header)
 	let start = FileCheck.LastLine(lines, header) - code.Length + 2
+	let changing = Changing(code)
 	mutable seen = Dictionary(Text, Boolean)
 	mutable issues = List(Mutable(ValidationIssue))
 	for code
 		let line = start + index
-		for Calls(Tokenizer(value).Tokens)
+		let calls = Calls(Tokenizer(value).Tokens)
+		for calls - Unsteady(calls, changing)
 			if value is in seen and seen(value)
 				issues.Add(ValidationIssue("SameCallTwiceMustBeLet", value + ", keep it in a let", line))
 			seen(value) = value is not in seen
 	issues
+Changing(code Texts) Texts
+	Fixed.Changing(("mutable text = \"a\"", "text.IndexOf(\".\")")) is ("text")
+	Fixed.Changing(List(Text) + "let a = 1").Length is 0
+	for code
+		if value.StartsWith("mutable ")
+			Tokenizer(value).Tokens(1)
+Unsteady(calls Texts, changing Texts) Texts
+	Fixed.Unsteady(("text.IndexOf(\".\")", "File(path)"), List(Text) + "text") is ("text.IndexOf(\".\")")
+	for calls
+		if IsChanging(Tokenizer(value).Tokens, changing)
+			value
+IsChanging(tokens Texts, changing Texts) Boolean
+	Fixed.IsChanging(("text", "."), List(Text) + "text")
+	Fixed.IsChanging(List(Text) + "path", List(Text) + "text") is false
+	for changing
+		if value is in tokens
+			return true
+	false
 Calls(tokens Texts) Texts
 	Filed.Calls(("File", "(", "path", ")", ".", "Exists")) is ("File(path)")
 	Filed.Calls(("List", "(", "Text", ")")).Length is 0 and Filed.Calls(("Go", "(", ")")).Length is 0
