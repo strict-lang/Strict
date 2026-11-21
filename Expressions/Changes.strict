@@ -86,13 +86,15 @@ IsUsed(tokens Texts, at Number, members Texts, changing Texts) Boolean
 	Reading.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text))
 	Ticking.IsUsed(("random", ".", "Get", "."), 0, ("random"), List(Text))
 	Ticking.IsUsed(("a", "random", ".", "Get"), 1, ("random"), List(Text))
+	Ticking.IsUsed(("top", ".", "candidates", "+", "1"), 0, ("top"), List(Text)) is false
 	Reading.IsUsed(List(Text) + "value", 0, List(Text), List(Text))
 	Ticking.IsUsed(List(Text) + "step", 0, List(Text) + "step", List(Text)) is false
 	Reading.IsUsed(List(Text) + "other", 0, List(Text) + "step", List(Text)) is false
 	let token = tokens(at)
 	if at > 0 and tokens(at - 1) is "."
 		return false
-	let isCalled = token is in members and at + 1 < tokens.Length and tokens(at + 1) is "."
+	let next = at + 2 < tokens.Length then tokens(at + 2) else ""
+	let isCalled = token is in members and at + 1 < tokens.Length and tokens(at + 1) is "." and next.Lower is not next
 	token is in changing or isCalled or isReading and (token is in members or token is "value")
 Added(scope Scope) Scope
 	Ticking.Added(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
