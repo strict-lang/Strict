@@ -1,6 +1,5 @@
 # Bugs
 - `Runtime/Frame.strict` `Finished` has 12 production lines (`ProductionLinesMustNotExceedTen`): a helper for the slot write and the `Changing` spread made the VM loop 20 % slower (574-599 ms against 691-740 ms, 300000 calls) and broke rooted slots, reverted. Root fix: the compiler emits the spread of a `Changing` result as store instructions.
-- `Compiler/MlirDeviceStatements.strict` `Failed` lines 88-89 (`MlirGuards.Shifted` `Emitted(32)`: IndexOutOfRange) and `Compiler/MlirBatched.strict` line 52 (`Body.Length is 432`, got 400) fail at HEAD too (2026-11-21).
 
 `strict check` lets a second way of writing the same thing through (from the review of all DeltaEngine files, 2026-11-11, counts are DeltaEngine sites then):
 - `ErrorCheckCannotFail` misses callees that turn every Error into a literal themselves: `current.Drawn(screen) is Error` where Drawn returns false on failure (Games/WebWars/WebWars.strict:61-72, ArenaHud.Draw, FractalPage.Published).

@@ -49,7 +49,7 @@ Body Texts
 	Paired.Body.Length is 79 and Paired.Body(7) is "  ^compute_body:"
 	Paired.Body(1) is "    cf.br ^computeEntry" and Paired.Body(2) is "  ^computeEntry:"
 	Gathered.Body.Length is 72 and MlirBatched(Single.function, 2).Body(1) is "    %linearBase = arith.constant true"
-	MlirBatched(MlirGroupBatched.Sample.function, 2).Body.Length is 432
+	MlirBatched(MlirGroupBatched.Sample.function, 2).Body.Length is 400
 	let device = MlirDevice(function, position)
 	let grouped = MlirGroupBatched(function, position)
 	if IsUsed is false

@@ -85,8 +85,8 @@ Failed Texts
 	Reading.Failed(1) is "    %d6f = arith.constant 1 : i64"
 	Reading.Failed(2) is "    llvm.store %d6f, %failed : i64, !llvm.ptr"
 	Reading.Failed.Last is "    cf.br ^d6done"
-	MlirDeviceStatements(MlirGuards.Shifted, 6).Emitted(32).StartsWith("    %d6 = func.call @strict_device_floats(")
-	MlirDeviceStatements(MlirGuards.Shifted, 6).Emitted(32).EndsWith("(%d6d, %d6b, %d6k) : (!llvm.ptr, i64, i64) -> f32")
+	MlirDeviceStatements(MlirGuards.Shifted, 6).Emitted(16).StartsWith("    %d6 = func.call @strict_device_floats(")
+	MlirDeviceStatements(MlirGuards.Shifted, 6).Emitted(16).EndsWith("(%d6d, %d6b, %d6k) : (!llvm.ptr, i64, i64) -> f32")
 	MlirDeviceStatements(Summed, 9).Emitted(2) is "    %d9 = arith.addf %d9a, %d9b fastmath<contract> : f64"
 	Multiplying.Emitted(0) is "    %d2a = llvm.load %r0 : !llvm.ptr -> f64"
 	Multiplying.Emitted(1) is "    %d2b = llvm.load %r1 : !llvm.ptr -> f64"
