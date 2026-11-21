@@ -68,8 +68,7 @@ Last(call SyntaxNode, names Texts) Number
 			last = index
 	for call.children
 		let given = value.Kind is "Missing" then -1 else index
-		let position = value.Kind is "Reassignment" then names.Index(value.children(0).text) else given
-		last = position > last then position else last
+		last = (value.Kind is "Reassignment" then names.Index(value.children(0).text) else given).Maximum(last)
 	last
 IsComputed(owner Text, key Text) Boolean
 	Curved.IsComputed("Part", "mask")
@@ -97,20 +96,20 @@ Captured(owner Text, prefix Text, name Text, scope Scope) SyntaxNode
 	let found = scope.TypeOf(name)
 	let isHeld = found is "" and values.target.Holding(values.target.TypeName, name) is not ""
 	let expected = ParameterType(owner, prefix, name)
-	let mismatches = found is not "" and expected is not "" and Overloads(values.inference.types).Assignable(found, expected, false) is false
-	if isHeld
-		return SyntaxNode("Number", "0")
-	mismatches then DefaultNode(expected, 0) else SyntaxNode("Identifier", name)
+	let overloads = Overloads(values.inference.types)
+	let mismatches = found is not "" and expected is not "" and overloads.Assignable(found, expected, false) is false
+	isHeld then SyntaxNode("Number", "0") else mismatches then DefaultNode(expected, 0) else SyntaxNode("Identifier", name)
 ParameterType(owner Text, prefix Text, name Text) Text
 	Atlased.ParameterType("Font", "", "atlas") is "Size"
 	Atlased.ParameterType("Font", "", "volume") is "Number"
 	Parts.ParameterType("Part", "", "mask") is "Number"
 	Boxing.ParameterType("Box", "", "Width") is ""
 	let key = prefix is "" then "from" else prefix.Trim
-	let parameters = values.inference.types.ParameterScope(owner)
+	let known = values.inference.types
+	let parameters = known.ParameterScope(owner)
 	let position = parameters.TypeOf(key).Split(",").Index(name)
-	let types = parameters.TypeOf(key + " types").Split(",")
-	position >= 0 and position < types.Length then types(position) else values.inference.types.MembersOf(owner).TypeOf(name)
+	let types = known.ParameterNames(parameters.TypeOf(key + " types"))
+	position >= 0 and position < types.Length then types(position) else known.MembersOf(owner).TypeOf(name)
 DefaultNode(type Text, depth Number) SyntaxNode
 	Atlased.DefaultNode("Number", 0) to Text is "0"
 	Atlased.DefaultNode("Boolean", 0) to Text is "false"
@@ -118,19 +117,18 @@ DefaultNode(type Text, depth Number) SyntaxNode
 	Atlased.DefaultNode("Numbers", 0) to Text is "List(Number)"
 	Atlased.DefaultNode("Size", 0) to Text is "Size(0, 0)"
 	Atlased.DefaultNode("Size", 8) to Text is "0"
-	if depth > 6 or type is "" or type is in ("None", "Generic")
+	if depth > 6 or type is "" or type is in ("None", "Generic", "Number", "Byte", "Character")
 		return SyntaxNode("Number", "0")
-	if type is in ("Number", "Byte", "Character")
-		return SyntaxNode("Number", "0")
-	if type is "Boolean"
-		return SyntaxNode("Boolean", "false")
-	if type is in ("Text", "Name")
-		return SyntaxNode("Text", "\"\"")
+	if type is in ("Boolean", "Text", "Name")
+		return type is "Boolean" then SyntaxNode("Boolean", "false") else SyntaxNode("Text", "\"\"")
 	let elements = ListFits(values.inference.types).Elements(type)
 	if elements.Length is 1
 		return SyntaxNode("Call", "List", List(SyntaxNode) + SyntaxNode("Identifier", elements(0)))
 	if elements.Length > 0 or type.StartsWith("List(") or type.StartsWith("Dictionary(")
 		return SyntaxNode("Call", type.StartsWith("Dictionary(") then "Dictionary" else "List")
+	RecordNode(type, depth)
+RecordNode(type Text, depth Number) SyntaxNode
+	Atlased.RecordNode("Size", 0) to Text is "Size(0, 0)"
 	let named = values.target.FromNames(type)
 	let fields = named.Length > 0 then named else values.inference.types.MembersOf(type).names
 	let members = values.inference.types.MembersOf(type)
@@ -164,8 +162,7 @@ Computed(call SyntaxNode, owner Text, names Texts, given Number) Number
 		if index >= given and IsComputed(owner, call.text + " " + value)
 			last = index
 	for call.children
-		let named = value.Kind is "Reassignment" then names.Index(value.children(0).text) else -1
-		last = named > last then named else last
+		last = (value.Kind is "Reassignment" then names.Index(value.children(0).text) else -1).Maximum(last)
 	last
 Fallback(owner Text, key Text) Text
 	Parts.IsComputed("Part", "buffer") is false
