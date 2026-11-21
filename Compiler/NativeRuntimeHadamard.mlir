@@ -441,3 +441,266 @@
     func.call @strict_device_hadamard_tokens_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
     llvm.return
   }
+  // `SituRotated.Situ` in 32 bit floats in the order of its device function (powers of e like
+  // `Number.Exponential`), rounded to bfloat16 like the stored `Activated` list it replaces
+  func.func private @strict_device_situ(%hidden: f32, %gate: f32) -> f32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %zero = arith.constant 0.0 : f32
+    %one = arith.constant 1.0 : f32
+    %two = arith.constant 2.0 : f32
+    %four = arith.constant 4.0 : f32
+    %cap = arith.constant 25.0 : f32
+    %eWide = arith.constant 0x4005BF0A8B145769 : f64
+    %e = arith.truncf %eWide : f64 to f32
+    %failed = llvm.mlir.zero : !llvm.ptr
+    %negatedGate = arith.subf %zero, %gate : f32
+    %halved = arith.divf %negatedGate, %two : f32
+    %half = func.call @strict_device_powers(%failed, %e, %halved) : (!llvm.ptr, f32, f32) -> f32
+    %below = arith.subf %one, %half : f32
+    %scaled = arith.mulf %four, %below : f32
+    %above = arith.addf %one, %half : f32
+    %squared = arith.mulf %half, %half : f32
+    %aboveSquared = arith.addf %one, %squared : f32
+    %divisor = arith.mulf %above, %aboveSquared : f32
+    %squashed = arith.divf %scaled, %divisor : f32
+    %negatedHidden = arith.subf %zero, %hidden : f32
+    %doubled = arith.mulf %negatedHidden, %two : f32
+    %capped = arith.divf %doubled, %cap : f32
+    %bounded = func.call @strict_device_powers(%failed, %e, %capped) : (!llvm.ptr, f32, f32) -> f32
+    %squashedCap = arith.mulf %squashed, %cap : f32
+    %boundedBelow = arith.subf %one, %bounded : f32
+    %product = arith.mulf %squashedCap, %boundedBelow : f32
+    %boundedAbove = arith.addf %one, %bounded : f32
+    %result = arith.divf %product, %boundedAbove : f32
+    %brain = arith.truncf %result : f32 to bf16
+    %rounded = arith.extf %brain : bf16 to f32
+    return %rounded : f32
+  }
+  // strict_device_situ of the 8 hidden numbers and the 8 gates
+  func.func private @strict_device_situ_eight(%hidden: vector<8xf32>, %gates: vector<8xf32>) -> vector<8xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %empty = llvm.mlir.undef : vector<8xf32>
+    %c0 = arith.constant 0 : i32
+    %hidden0 = llvm.extractelement %hidden[%c0 : i32] : vector<8xf32>
+    %gate0 = llvm.extractelement %gates[%c0 : i32] : vector<8xf32>
+    %situ0 = func.call @strict_device_situ(%hidden0, %gate0) : (f32, f32) -> f32
+    %with0 = llvm.insertelement %situ0, %empty[%c0 : i32] : vector<8xf32>
+    %c1 = arith.constant 1 : i32
+    %hidden1 = llvm.extractelement %hidden[%c1 : i32] : vector<8xf32>
+    %gate1 = llvm.extractelement %gates[%c1 : i32] : vector<8xf32>
+    %situ1 = func.call @strict_device_situ(%hidden1, %gate1) : (f32, f32) -> f32
+    %with1 = llvm.insertelement %situ1, %with0[%c1 : i32] : vector<8xf32>
+    %c2 = arith.constant 2 : i32
+    %hidden2 = llvm.extractelement %hidden[%c2 : i32] : vector<8xf32>
+    %gate2 = llvm.extractelement %gates[%c2 : i32] : vector<8xf32>
+    %situ2 = func.call @strict_device_situ(%hidden2, %gate2) : (f32, f32) -> f32
+    %with2 = llvm.insertelement %situ2, %with1[%c2 : i32] : vector<8xf32>
+    %c3 = arith.constant 3 : i32
+    %hidden3 = llvm.extractelement %hidden[%c3 : i32] : vector<8xf32>
+    %gate3 = llvm.extractelement %gates[%c3 : i32] : vector<8xf32>
+    %situ3 = func.call @strict_device_situ(%hidden3, %gate3) : (f32, f32) -> f32
+    %with3 = llvm.insertelement %situ3, %with2[%c3 : i32] : vector<8xf32>
+    %c4 = arith.constant 4 : i32
+    %hidden4 = llvm.extractelement %hidden[%c4 : i32] : vector<8xf32>
+    %gate4 = llvm.extractelement %gates[%c4 : i32] : vector<8xf32>
+    %situ4 = func.call @strict_device_situ(%hidden4, %gate4) : (f32, f32) -> f32
+    %with4 = llvm.insertelement %situ4, %with3[%c4 : i32] : vector<8xf32>
+    %c5 = arith.constant 5 : i32
+    %hidden5 = llvm.extractelement %hidden[%c5 : i32] : vector<8xf32>
+    %gate5 = llvm.extractelement %gates[%c5 : i32] : vector<8xf32>
+    %situ5 = func.call @strict_device_situ(%hidden5, %gate5) : (f32, f32) -> f32
+    %with5 = llvm.insertelement %situ5, %with4[%c5 : i32] : vector<8xf32>
+    %c6 = arith.constant 6 : i32
+    %hidden6 = llvm.extractelement %hidden[%c6 : i32] : vector<8xf32>
+    %gate6 = llvm.extractelement %gates[%c6 : i32] : vector<8xf32>
+    %situ6 = func.call @strict_device_situ(%hidden6, %gate6) : (f32, f32) -> f32
+    %with6 = llvm.insertelement %situ6, %with5[%c6 : i32] : vector<8xf32>
+    %c7 = arith.constant 7 : i32
+    %hidden7 = llvm.extractelement %hidden[%c7 : i32] : vector<8xf32>
+    %gate7 = llvm.extractelement %gates[%c7 : i32] : vector<8xf32>
+    %situ7 = func.call @strict_device_situ(%hidden7, %gate7) : (f32, f32) -> f32
+    %with7 = llvm.insertelement %situ7, %with6[%c7 : i32] : vector<8xf32>
+    return %with7 : vector<8xf32>
+  }
+  func.func private @strict_device_situ_group(%source: !llvm.ptr, %bits: i64, %start: i64, %width: i64, %lane: i32) -> vector<8xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %c0 = arith.constant 0 : i32
+    %c1 = arith.constant 1 : i32
+    %c2 = arith.constant 2 : i32
+    %c3 = arith.constant 3 : i32
+    %c4 = arith.constant 4 : i32
+    %c5 = arith.constant 5 : i32
+    %c6 = arith.constant 6 : i32
+    %c7 = arith.constant 7 : i32
+    %c8 = arith.constant 8 : i32
+    %c16 = arith.constant 16 : i32
+    %three = arith.constant 3 : i64
+    %lane64 = arith.extui %lane : i32 to i64
+    %laneFirst = arith.shli %lane64, %three : i64
+    %at = arith.addi %start, %laneFirst : i64
+    %hidden = func.call @strict_device_hadamard_eight(%source, %bits, %at) : (!llvm.ptr, i64, i64) -> vector<8xf32>
+    %gateAt = arith.addi %at, %width : i64
+    %gates = func.call @strict_device_hadamard_eight(%source, %bits, %gateAt) : (!llvm.ptr, i64, i64) -> vector<8xf32>
+    %read = func.call @strict_device_situ_eight(%hidden, %gates) : (vector<8xf32>, vector<8xf32>) -> vector<8xf32>
+    %stepOneLow = func.call @strict_device_hadamard_quad_of(%read, %c0, %c1, %c2, %c3) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %stepOne = func.call @strict_device_hadamard_quad_of(%stepOneLow, %c4, %c5, %c6, %c7) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %eightIn = func.call @strict_device_hadamard_traded(%stepOne, %c1, %c1, %lane) : (vector<8xf32>, i32, i32, i32) -> vector<8xf32>
+    %stepFourLow = func.call @strict_device_hadamard_quad_of(%eightIn, %c0, %c4, %c1, %c5) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %stepFour = func.call @strict_device_hadamard_quad_of(%stepFourLow, %c2, %c6, %c3, %c7) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %sixteenIn = func.call @strict_device_hadamard_traded(%stepFour, %c2, %c2, %lane) : (vector<8xf32>, i32, i32, i32) -> vector<8xf32>
+    %thirtyTwoIn = func.call @strict_device_hadamard_traded(%sixteenIn, %c4, %c4, %lane) : (vector<8xf32>, i32, i32, i32) -> vector<8xf32>
+    %stepSixteenLow = func.call @strict_device_hadamard_quad_of(%thirtyTwoIn, %c0, %c2, %c4, %c6) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %stepSixteen = func.call @strict_device_hadamard_quad_of(%stepSixteenLow, %c1, %c3, %c5, %c7) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %sixtyFourIn = func.call @strict_device_hadamard_traded(%stepSixteen, %c2, %c8, %lane) : (vector<8xf32>, i32, i32, i32) -> vector<8xf32>
+    %hundredTwentyEightIn = func.call @strict_device_hadamard_traded(%sixtyFourIn, %c4, %c16, %lane) : (vector<8xf32>, i32, i32, i32) -> vector<8xf32>
+    %stepSixtyFourLow = func.call @strict_device_hadamard_quad_of(%hundredTwentyEightIn, %c0, %c2, %c4, %c6) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    %rotated = func.call @strict_device_hadamard_quad_of(%stepSixtyFourLow, %c1, %c3, %c5, %c7) : (vector<8xf32>, i32, i32, i32, i32) -> vector<8xf32>
+    return %rotated : vector<8xf32>
+  }
+  func.func private @strict_device_situ_tokens_run(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %residual, %format = func.call @strict_device_code_format(%bits) : (i64) -> (i1, i64)
+    %c0 = arith.constant 0 : i32
+    %c5 = arith.constant 5 : i32
+    %c31 = arith.constant 31 : i32
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %five = arith.constant 5 : i64
+    %eight = arith.constant 8 : i64
+    %zero = arith.constant 0.0 : f32
+    %most = arith.constant 127.0 : f32
+    %thread = func.call @strict_device_thread_index() : () -> i32
+    %block = func.call @strict_device_block_index() : () -> i32
+    %blockWidth = func.call @strict_device_block_size() : () -> i32
+    %lane = arith.andi %thread, %c31 : i32
+    %warp = arith.shrui %thread, %c5 : i32
+    %blockWarps = arith.shrui %blockWidth, %c5 : i32
+    %thread64 = arith.extui %thread : i32 to i64
+    %lane64 = arith.extui %lane : i32 to i64
+    %warp64 = arith.extui %warp : i32 to i64
+    %warps = arith.extui %blockWarps : i32 to i64
+    %token = arith.extui %block : i32 to i64
+    %start = arith.muli %token, %width : i64
+    %seven = arith.constant 7 : i64
+    %twentyFour = arith.constant 24 : i64
+    %laneLow = arith.andi %lane64, %seven : i64
+    %laneHigh = arith.andi %lane64, %twentyFour : i64
+    %laneHighTwice = arith.addi %laneHigh, %laneHigh : i64
+    %laneFirst = arith.addi %laneLow, %laneHighTwice : i64
+    %groups = arith.shrui %width, %eight : i64
+    %firstOffset = arith.shli %warp64, %eight : i64
+    %firstStart = arith.addi %start, %firstOffset : i64
+    %sourceStart = arith.addi %start, %start : i64
+    %firstSource = arith.addi %sourceStart, %firstOffset : i64
+    %firstAt = arith.addi %firstStart, %laneFirst : i64
+    %first = func.call @strict_device_situ_group(%source, %format, %firstSource, %width, %lane) : (!llvm.ptr, i64, i64, i64, i32) -> vector<8xf32>
+    %firstLargest = func.call @strict_device_hadamard_magnitude(%first) : (vector<8xf32>) -> f32
+    %secondGroup = arith.addi %warp64, %warps : i64
+    %hasSecond = arith.cmpi ult, %secondGroup, %groups : i64
+    %secondOffset = arith.shli %secondGroup, %eight : i64
+    %secondStart = arith.addi %start, %secondOffset : i64
+    %secondSource = arith.addi %sourceStart, %secondOffset : i64
+    %secondAt = arith.addi %secondStart, %laneFirst : i64
+    cf.cond_br %hasSecond, ^second, ^largest(%first, %firstLargest : vector<8xf32>, f32)
+  ^second:
+    %second = func.call @strict_device_situ_group(%source, %format, %secondSource, %width, %lane) : (!llvm.ptr, i64, i64, i64, i32) -> vector<8xf32>
+    %secondLargest = func.call @strict_device_hadamard_magnitude(%second) : (vector<8xf32>) -> f32
+    %bothLargest = arith.maxnumf %firstLargest, %secondLargest : f32
+    cf.br ^largest(%second, %bothLargest : vector<8xf32>, f32)
+  ^largest(%other: vector<8xf32>, %largest: f32):
+    %warpLargest = func.call @strict_device_largest(%largest) : (f32) -> f32
+    %shared = llvm.mlir.addressof @strict_device_hadamard_largest : !llvm.ptr<3>
+    %isFirst = arith.cmpi eq, %lane, %c0 : i32
+    cf.cond_br %isFirst, ^share, ^shared
+  ^share:
+    %sharedSlot = llvm.getelementptr %shared[%warp64] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    llvm.store %warpLargest, %sharedSlot : f32, !llvm.ptr<3>
+    cf.br ^shared
+  ^shared:
+    func.call @strict_device_barrier() : () -> ()
+    cf.br ^gather(%none, %zero : i64, f32)
+  ^gather(%index: i64, %gathered: f32):
+    %moreOthers = arith.cmpi slt, %index, %warps : i64
+    cf.cond_br %moreOthers, ^gatherBody, ^scaled
+  ^gatherBody:
+    %otherSlot = llvm.getelementptr %shared[%index] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+    %otherLargest = llvm.load %otherSlot : !llvm.ptr<3> -> f32
+    %gatheredNext = arith.maxnumf %gathered, %otherLargest : f32
+    %indexNext = arith.addi %index, %one : i64
+    cf.br ^gather(%indexNext, %gatheredNext : i64, f32)
+  ^scaled:
+    %largestScale = arith.divf %gathered, %most : f32
+    %scale = func.call @strict_device_code_scale(%largestScale, %residual) : (f32, i1) -> f32
+    %isEmpty = arith.cmpf oeq, %gathered, %zero : f32
+    %inverse = arith.divf %most, %gathered : f32
+    %factor = arith.select %isEmpty, %zero, %inverse : f32
+    func.call @strict_device_hadamard_codes(%target, %firstAt, %first, %factor, %residual) : (!llvm.ptr, i64, vector<8xf32>, f32, i1) -> ()
+    cf.cond_br %hasSecond, ^secondCodes, ^scales
+  ^secondCodes:
+    func.call @strict_device_hadamard_codes(%target, %secondAt, %other, %factor, %residual) : (!llvm.ptr, i64, vector<8xf32>, f32, i1) -> ()
+    cf.br ^scales
+  ^scales:
+    %parts = arith.shrui %width, %five : i64
+    %isScaling = arith.cmpi slt, %thread64, %parts : i64
+    cf.cond_br %isScaling, ^scale, ^exit
+  ^scale:
+    %scales = llvm.getelementptr %target[%count] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %tokenParts = arith.shrui %start, %five : i64
+    %part = arith.addi %tokenParts, %thread64 : i64
+    %scaleSlot = llvm.getelementptr %scales[%part] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    llvm.store %scale, %scaleSlot : f32, !llvm.ptr
+    cf.br ^exit
+  ^exit:
+    return
+  }
+  llvm.func @strict_device_situ_tokens(%source: !llvm.ptr, %count: i64, %width: i64, %target: !llvm.ptr, %bits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 1024, 1, 1>} {
+    %brainBits = arith.constant 17 : i64
+    %isBrain = arith.cmpi eq, %bits, %brainBits : i64
+    cf.cond_br %isBrain, ^brain, ^other
+  ^brain:
+    func.call @strict_device_situ_tokens_run(%source, %count, %width, %target, %brainBits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    llvm.return
+  ^other:
+    func.call @strict_device_situ_tokens_run(%source, %count, %width, %target, %bits) : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()
+    llvm.return
+  }
+  func.func private @strict_device_situ_hadamard_run(%count: i64, %result: !llvm.ptr, %wide: i1, %width: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) attributes {llvm.linkage = #llvm.linkage<internal>} {
+    %c1 = arith.constant 1 : i64
+    %c4 = arith.constant 4 : i64
+    %c16 = arith.constant 16 : i64
+    %c64 = arith.constant 64 : i64
+    %c256 = arith.constant 256 : i64
+    %thread32 = func.call @strict_device_thread_index() : () -> i32
+    %block32 = func.call @strict_device_block_index() : () -> i32
+    %thread = arith.extui %thread32 : i32 to i64
+    %block = arith.extui %block32 : i32 to i64
+    %start = arith.muli %block, %c256 : i64
+    %at = arith.addi %start, %thread : i64
+    %inside = arith.cmpi slt, %at, %count : i64
+    cf.cond_br %inside, ^rotate, ^done
+  ^rotate:
+    %token = arith.divui %at, %width : i64
+    %column = arith.remui %at, %width : i64
+    %tokenStart = arith.muli %token, %width : i64
+    %rowStart = arith.addi %tokenStart, %tokenStart : i64
+    %hiddenAt = arith.addi %rowStart, %column : i64
+    %gateAt = arith.addi %hiddenAt, %width : i64
+    %expandedCount = arith.addi %valuesCount, %valuesCount : i64
+    %hidden = func.call @strict_device_elements(%values, %valuesBits, %hiddenAt, %expandedCount) : (!llvm.ptr, i64, i64, i64) -> f32
+    %gate = func.call @strict_device_elements(%values, %valuesBits, %gateAt, %expandedCount) : (!llvm.ptr, i64, i64, i64) -> f32
+    %value = func.call @strict_device_situ(%hidden, %gate) : (f32, f32) -> f32
+    %first = func.call @strict_device_hadamard_stage(%value, %thread, %c1) : (f32, i64, i64) -> f32
+    %second = func.call @strict_device_hadamard_stage(%first, %thread, %c4) : (f32, i64, i64) -> f32
+    %third = func.call @strict_device_hadamard_stage(%second, %thread, %c16) : (f32, i64, i64) -> f32
+    %fourth = func.call @strict_device_hadamard_stage(%third, %thread, %c64) : (f32, i64, i64) -> f32
+    func.call @strict_device_result(%result, %at, %fourth, %wide, %results) : (!llvm.ptr, i64, f32, i1, i64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  llvm.func @strict_device_situ_hadamard(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    %wide = llvm.mlir.constant(true) : i1
+    func.call @strict_device_situ_hadamard_run(%count, %result, %wide, %columns, %values, %valuesCount, %valuesBits, %results) : (i64, !llvm.ptr, i1, i64, !llvm.ptr, i64, i64, i64) -> ()
+    llvm.return
+  }
+  llvm.func @strict_device_situ_hadamards(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %results: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>} {
+    %wide = llvm.mlir.constant(false) : i1
+    func.call @strict_device_situ_hadamard_run(%count, %result, %wide, %columns, %values, %valuesCount, %valuesBits, %results) : (i64, !llvm.ptr, i1, i64, !llvm.ptr, i64, i64, i64) -> ()
+    llvm.return
+  }

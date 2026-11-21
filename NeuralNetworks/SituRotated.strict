@@ -1,0 +1,23 @@
+has expanded Numbers
+has width Number
+has group Number = 256
+constant Cap = 25
+Rotated BFloat16s
+	SituRotated((0, 0, 0, 0, 1, 1, 1, 1), 4, 4).Rotated is (0, 0, 0, 0)
+	SituRotated((2, 0, 0, 0, 3, 0, 0, 0), 4, 4).Rotated(3) < -2.3
+	for Convrot(Activated, group).Rotated
+		value
+Activated BFloat16s
+	SituRotated((2, 1, 3, 0), 1, 4).Activated(1) is 0
+	for expanded.Length / 2
+		let first = (index / width).Floor * 2 * width + index % width
+		Situ(expanded(first), expanded(first + width))
+Situ(hidden Number, gate Number) Number
+	SituRotated.Situ(0, 1) is 0
+	SituRotated.Situ(1, 0) is 0
+	SituRotated.Situ(2, 3).IsNearlyEqual(4.8299123)
+	SituRotated.Situ(100, -100).IsNearlyEqual(0)
+	let half = (-gate / 2).Exponential
+	let squashed = 4 * (1 - half) / ((1 + half) * (1 + half * half))
+	let bounded = (-hidden * 2 / Cap).Exponential
+	squashed * Cap * (1 - bounded) / (1 + bounded)

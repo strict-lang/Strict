@@ -24008,7 +24008,23 @@
     %fusedNameLengths = llvm.mlir.addressof @strict_gpu_hadamard_tokens_name : !llvm.ptr
     %fusedName = llvm.getelementptr %fusedNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %fusedSlot = llvm.mlir.addressof @strict_gpu_hadamard_tokens_slot : !llvm.ptr
-    %fused = func.call @strict_gpu_function(%ptx, %fusedName, %fusedSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %fuseBase = llvm.mlir.addressof @strict_gpu_rotations : !llvm.ptr
+    %fuseEntryAddress = llvm.ptrtoint %rotation : !llvm.ptr to i64
+    %fuseBaseAddress = llvm.ptrtoint %fuseBase : !llvm.ptr to i64
+    %fuseEntryBytes = arith.subi %fuseEntryAddress, %fuseBaseAddress : i64
+    %fuseEntrySize = arith.constant 48 : i64
+    %fuseEntryIndex = arith.divui %fuseEntryBytes, %fuseEntrySize : i64
+    %fuseWidths = llvm.mlir.addressof @strict_gpu_rotation_widths : !llvm.ptr
+    %fuseWidthSlot = llvm.getelementptr %fuseWidths[0, %fuseEntryIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8 x i64>
+    %fuseWidth = llvm.load %fuseWidthSlot : !llvm.ptr -> i64
+    %fuseNothing = arith.constant 0 : i64
+    %isSitu = arith.cmpi ne, %fuseWidth, %fuseNothing : i64
+    %situNameLengths = llvm.mlir.addressof @strict_gpu_situ_tokens_name : !llvm.ptr
+    %situName = llvm.getelementptr %situNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %situSlot = llvm.mlir.addressof @strict_gpu_situ_tokens_slot : !llvm.ptr
+    %chosenFusedName = llvm.select %isSitu, %situName, %fusedName : i1, !llvm.ptr
+    %chosenFusedSlot = llvm.select %isSitu, %situSlot, %fusedSlot : i1, !llvm.ptr
+    %fused = func.call @strict_gpu_function(%ptx, %chosenFusedName, %chosenFusedSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %noFused = llvm.mlir.zero : !llvm.ptr
     %fusedMissing = llvm.icmp "eq" %fused, %noFused : !llvm.ptr
     cf.cond_br %fusedMissing, ^unfused, ^fuseLaunch
@@ -25151,6 +25167,9 @@
     llvm.store %function, %functionSlot : !llvm.ptr, !llvm.ptr
     %keptSlot = llvm.getelementptr %rotation[5] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %none, %keptSlot : i64, !llvm.ptr
+    %widths = llvm.mlir.addressof @strict_gpu_rotation_widths : !llvm.ptr
+    %widthSlot = llvm.getelementptr %widths[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8 x i64>
+    llvm.store %none, %widthSlot : i64, !llvm.ptr
     return %list : f64
   ^run:
     %slots = llvm.alloca %one x f64 : (i64) -> !llvm.ptr
@@ -25159,6 +25178,89 @@
     %noGuards3 = arith.constant 0 : i64
     %result = func.call @strict_gpu_run(%ptx, %name, %slot, %count, %zero, %none, %slots, %one, %one, %none, %none, %one, %none, %halves, %noGuards3) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     return %result : f64
+  ^unable:
+    return %zero : f64
+  }
+  // the width of the expanded rows of a waiting rotation of `SituRotated` (0 for `Convrot.Rotated`), by entry
+  llvm.mlir.global internal @strict_gpu_rotation_widths(dense<0> : tensor<8xi64>) : !llvm.array<8 x i64>
+  llvm.mlir.global internal constant @strict_gpu_situ_hadamard_name("strict_device_situ_hadamard\00strict_device_situ_hadamards\00") : !llvm.array<57 x i8>
+  llvm.mlir.global internal @strict_gpu_situ_hadamard_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_situ_tokens_name("\19\00\00\00\00\00\00\00\19\00\00\00\00\00\00\00strict_device_situ_tokens\00") : !llvm.array<42 x i8>
+  llvm.mlir.global internal @strict_gpu_situ_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  // `SituRotated.Rotated`: like strict_gpu_hadamard the rotation waits, its source is the expanded list
+  func.func private @strict_gpu_siturotated(%ptx: !llvm.ptr, %values: f64, %widthNumber: f64, %size: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %group = arith.constant 255 : i64
+    %quarterKilo = arith.constant 256.0 : f64
+    %length = func.call @strict_list_length(%values) : (f64) -> f64
+    %expandedCount = arith.fptosi %length : f64 to i64
+    %count = arith.shrui %expandedCount, %one : i64
+    %width = arith.fptosi %widthNumber : f64 to i64
+    %rest = arith.andi %count, %group : i64
+    %whole = arith.cmpi eq, %rest, %none : i64
+    %some = arith.cmpi sgt, %count, %none : i64
+    %isGroup = arith.cmpf oeq, %size, %quarterKilo : f64
+    %sized = arith.andi %whole, %isGroup : i1
+    %fits = arith.andi %sized, %some : i1
+    %name = llvm.mlir.addressof @strict_gpu_situ_hadamard_name : !llvm.ptr
+    %slot = llvm.mlir.addressof @strict_gpu_situ_hadamard_slot : !llvm.ptr
+    cf.cond_br %fits, ^resident, ^unable
+  ^resident:
+    %device = func.call @strict_gpu_device(%values) : (f64) -> i64
+    %resides = arith.cmpi ne, %device, %none : i64
+    cf.cond_br %resides, ^format, ^run
+  ^format:
+    %format = func.call @strict_gpu_format(%values) : (f64) -> i64
+    %isFloats = func.call @strict_gpu_floats(%format) : (i64) -> i1
+    cf.cond_br %isFloats, ^function, ^run
+  ^function:
+    %nameLength = llvm.call @strlen(%name) : (!llvm.ptr) -> i64
+    %skipped = arith.addi %nameLength, %one : i64
+    %singleName = llvm.getelementptr %name[%skipped] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %singleSlot = llvm.getelementptr %slot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %function = func.call @strict_gpu_function(%ptx, %singleName, %singleSlot) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %function, %unset : !llvm.ptr
+    cf.cond_br %missing, ^run, ^obtain
+  ^obtain:
+    func.call @strict_gpu_rotated(%device) : (i64) -> ()
+    %bytes = func.call @strict_packed_bytes(%count, %format) : (i64, i64) -> i64
+    %class = func.call @strict_gpu_class(%bytes) : (i64) -> i64
+    %block = func.call @strict_gpu_obtain(%class) : (i64) -> i64
+    %obtained = arith.cmpi ne, %block, %none : i64
+    cf.cond_br %obtained, ^wait, ^run
+  ^wait:
+    %list = func.call @strict_gpu_resident(%count, %block, %class, %format) : (i64, i64, i64, i64) -> f64
+    %rotations = llvm.mlir.addressof @strict_gpu_rotations : !llvm.ptr
+    %nextSlot = llvm.getelementptr %rotations[0, 48] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<49 x i64>
+    %next = llvm.load %nextSlot : !llvm.ptr -> i64
+    %following = arith.addi %next, %one : i64
+    llvm.store %following, %nextSlot : i64, !llvm.ptr
+    %entriesMask = arith.constant 7 : i64
+    %index = arith.andi %next, %entriesMask : i64
+    %six = arith.constant 6 : i64
+    %offset = arith.muli %index, %six : i64
+    %rotation = llvm.getelementptr %rotations[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<49 x i64>
+    func.call @strict_gpu_rotate(%rotation) : (!llvm.ptr) -> ()
+    llvm.store %block, %rotation : i64, !llvm.ptr
+    %sourceSlot = llvm.getelementptr %rotation[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %device, %sourceSlot : i64, !llvm.ptr
+    %countSlot = llvm.getelementptr %rotation[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %count, %countSlot : i64, !llvm.ptr
+    %listSlot = llvm.getelementptr %rotation[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    llvm.store %list, %listSlot : f64, !llvm.ptr
+    %functionSlot = llvm.getelementptr %rotation[4] : (!llvm.ptr) -> !llvm.ptr, !llvm.ptr
+    llvm.store %function, %functionSlot : !llvm.ptr, !llvm.ptr
+    %keptSlot = llvm.getelementptr %rotation[5] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %keptSlot : i64, !llvm.ptr
+    %widths = llvm.mlir.addressof @strict_gpu_rotation_widths : !llvm.ptr
+    %widthSlot = llvm.getelementptr %widths[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8 x i64>
+    llvm.store %width, %widthSlot : i64, !llvm.ptr
+    return %list : f64
+  ^run:
+    return %zero : f64
   ^unable:
     return %zero : f64
   }
@@ -26180,7 +26282,16 @@
     func.call @strict_gpu_argument(%arguments, %parameters, %one, %result) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %two, %failure) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %three, %none) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
-    func.call @strict_gpu_argument(%arguments, %parameters, %four, %none) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
+    %rotationsBase = llvm.mlir.addressof @strict_gpu_rotations : !llvm.ptr
+    %entryAddress = llvm.ptrtoint %entry : !llvm.ptr to i64
+    %baseAddress = llvm.ptrtoint %rotationsBase : !llvm.ptr to i64
+    %entryBytes = arith.subi %entryAddress, %baseAddress : i64
+    %entrySize = arith.constant 48 : i64
+    %entryIndex = arith.divui %entryBytes, %entrySize : i64
+    %rotationWidths = llvm.mlir.addressof @strict_gpu_rotation_widths : !llvm.ptr
+    %rotationWidthSlot = llvm.getelementptr %rotationWidths[0, %entryIndex] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<8 x i64>
+    %rotationWidth = llvm.load %rotationWidthSlot : !llvm.ptr -> i64
+    func.call @strict_gpu_argument(%arguments, %parameters, %four, %rotationWidth) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %five, %doubleBits) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %six, %source) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
     func.call @strict_gpu_argument(%arguments, %parameters, %seven, %count) : (!llvm.ptr, !llvm.ptr, i64, i64) -> ()
