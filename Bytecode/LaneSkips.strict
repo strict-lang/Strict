@@ -17,7 +17,6 @@ from(types List(TypeEntry))
 	let firsts = Firsts(types)
 	structs = Structs(types, firsts)
 	fields = Fields(types, firsts)
-	isChecked = Process.Variable("STRICT_LANES_CHECK") is "1"
 Lanes(types List(TypeEntry)) Texts
 	Paired.Lanes((StructLanes.Pair, StructLanes.Caller)) is ("Pair")
 	Drawn.lanes is ("Pair", "Drawer")

@@ -64,7 +64,7 @@ Split List(TypeEntry)
 	Sample.Split.First.methods.First.instructions.Length is 11
 	Splitting.Split.First.methods.First.instructions.Length is 20
 	Splitting.Split.First.methods.First.instructions(18).texts is ("lanes3_real")
-	let skips = LaneSkips(types)
+	let skips = LaneSkips(LaneSkips(types), isChecked = Process.Variable("STRICT_LANES_CHECK") is "1")
 	for types
 		let members = Members(value).Length > 0 then value.members else LaneCalls(types).Divided(value.members)
 		TypeEntry(value.Name, members, Methods(value, skips))
