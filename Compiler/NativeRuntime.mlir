@@ -14101,6 +14101,49 @@
     %decoded = arith.uitofp %code : i64 to f64
     return %decoded : f64
   }
+  // a text's characters as a list, for List(Character) methods called on a native Text (MlirTextLists)
+  func.func private @strict_text_list(%text: f64) -> f64 {
+    %length = func.call @strict_text_length(%text) : (f64) -> f64
+    %list = func.call @strict_list_new(%length, %length) : (f64, f64) -> f64
+    %items = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr
+    %count = arith.fptosi %length : f64 to i64
+    %start = arith.constant 0 : i64
+    %step = arith.constant 1 : i64
+    cf.br ^check(%start : i64)
+  ^check(%index: i64):
+    %more = arith.cmpi slt, %index, %count : i64
+    cf.cond_br %more, ^copy, ^done
+  ^copy:
+    %position = arith.sitofp %index : i64 to f64
+    %character = func.call @strict_text_at(%text, %position) : (f64, f64) -> f64
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %character, %slot : f64, !llvm.ptr
+    %next = arith.addi %index, %step : i64
+    cf.br ^check(%next : i64)
+  ^done:
+    return %list : f64
+  }
+  // joins a list of characters into a text, the result of a List(Character) method called on a native Text
+  func.func private @strict_characters_text(%list: f64) -> f64 {
+    %emptyTextLengths = llvm.mlir.addressof @strict_empty_text : !llvm.ptr
+    %emptyText = llvm.getelementptr %emptyTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
+    %length = func.call @strict_list_length(%list) : (f64) -> f64
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    cf.br ^check(%zero, %empty : f64, f64)
+  ^check(%index: f64, %text: f64):
+    %more = arith.cmpf olt, %index, %length : f64
+    cf.cond_br %more, ^append, ^done
+  ^append:
+    %character = func.call @strict_list_get(%list, %index) : (f64, f64) -> f64
+    %piece = func.call @strict_character_text(%character) : (f64) -> f64
+    %joined = func.call @strict_text_concat(%text, %piece) : (f64, f64) -> f64
+    %next = arith.addf %index, %one : f64
+    cf.br ^check(%next, %joined : f64, f64)
+  ^done:
+    return %text : f64
+  }
   llvm.mlir.global internal constant @strict_invalid_character("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00InvalidCharacter\00") : !llvm.array<33 x i8>
   // a text converted to a Character: its only character, an empty text has none, two or more are InvalidCharacter
   func.func private @strict_text_character(%text: f64) -> f64 {

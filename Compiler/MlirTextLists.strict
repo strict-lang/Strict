@@ -1,0 +1,34 @@
+has calls MlirCalls
+has isTexted Boolean
+has declared Text = ""
+constant Plain = MlirTextLists(MlirCalls(MlirCalls.Shapes, 2), false)
+constant Texted = MlirTextLists(MlirCalls(MlirCalls.Shapes, 2), true, "List")
+IsTexted(callee Text, owner Text) Boolean
+	MlirTextLists.IsTexted("Strict/List(Character)", "Strict/Text")
+	MlirTextLists.IsTexted("Strict/List(Number)", "Strict/Text") is false
+	MlirTextLists.IsTexted("Strict/List(Character)", "Strict/List(Character)") is false
+	TypeEntry.ShortName(callee) is "List(Character)" and TypeEntry.ShortName(owner) is "Text"
+IsListed Boolean
+	Texted.IsListed and Plain.IsListed is false
+	MlirTextLists(Texted, declared = "List(Character)").IsListed
+	isTexted and TypeEntry.ShortName(declared) is in ("List", "List(Character)")
+Instance Text
+	Plain.Instance is "%t2m" and Texted.Instance is "%t2x"
+	calls.Temp(isTexted then "x" else "m")
+Result Text
+	Plain.Result is "%t2r" and Texted.Result is "%t2l"
+	calls.Temp(IsListed then "l" else "r")
+Converted Texts
+	Plain.Converted.Length is 0
+	Texted.Converted is List(Text) + "    %t2x = func.call @strict_text_list(%t2m) : (f64) -> f64"
+	line = "    " + Instance + " = func.call @strict_text_list(" + calls.Temp("m") + ") : (f64) -> f64"
+	isTexted then List(Text) + line else List(Text)
+Called(loads Texts, defaults Texts, call Text) Texts
+	Plain.Called("a", "b", "c") is ("a", "b", "c")
+	Texted.Called("a", "b", "c").Length is 5
+	loads + Converted + defaults + call + Back
+Back Texts
+	Plain.Back.Length is 0
+	Texted.Back is List(Text) + "    %t2r = func.call @strict_characters_text(%t2l) : (f64) -> f64"
+	line = "    " + calls.Temp("r") + " = func.call @strict_characters_text(" + Result + ") : (f64) -> f64"
+	IsListed then List(Text) + line else List(Text)

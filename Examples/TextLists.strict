@@ -1,0 +1,12 @@
+has text Text
+Reversed Text
+	"ab".Reverse is "ba"
+	"ab".First is "a"
+	"ab".Last is "b"
+	"ab".Index("b") is 1
+	"abc".Slice(1, 2) is "bc"
+	"ba".Sorted is "ab"
+	"aba".Unique is "ab"
+	"aba".Count("a") is 2
+	TextLists("xay".Substring(1, 1) + "b").Reversed is "ba"
+	text.Reverse
