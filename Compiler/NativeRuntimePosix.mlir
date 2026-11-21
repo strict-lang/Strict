@@ -81,6 +81,7 @@
   llvm.func @fork() -> i32
   llvm.func @execl(!llvm.ptr, !llvm.ptr, ...) -> i32
   llvm.func @_exit(i32)
+  llvm.func @setsid() -> i32
   llvm.func @waitpid(i32, !llvm.ptr, i32) -> i32
   llvm.func @wait4(i32, !llvm.ptr, i32, !llvm.ptr) -> i32
   llvm.func @kill(i32, i32) -> i32
@@ -401,6 +402,7 @@
   llvm.mlir.global internal constant @strict_shell_name("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00sh\00") : !llvm.array<19 x i8>
   llvm.mlir.global internal constant @strict_shell_command("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00-c\00") : !llvm.array<19 x i8>
   llvm.mlir.global internal constant @strict_exec_quote("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00exec \22\00") : !llvm.array<23 x i8>
+  llvm.mlir.global internal constant @strict_launch_quiet("\1B\00\00\00\00\00\00\00\1B\00\00\00\00\00\00\00 </dev/null >/dev/null 2>&1\00") : !llvm.array<44 x i8>
   llvm.mlir.global internal constant @strict_quote_space("\02\00\00\00\00\00\00\00\02\00\00\00\00\00\00\00\22 \00") : !llvm.array<19 x i8>
   llvm.mlir.global internal constant @strict_output_redirect("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00 > \22\00") : !llvm.array<21 x i8>
   llvm.mlir.global internal constant @strict_error_redirect("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00\22 2> \22\00") : !llvm.array<23 x i8>
@@ -771,6 +773,56 @@
     %code = arith.select %isSignaled, %killed, %exited : i32
     %number = arith.sitofp %code : i32 to f64
     return %number : f64
+  }
+  // Process.Launched: a forked child in its own session runs the program through the shell with no terminal, unwaited
+  func.func private @strict_process_launched(%path: f64, %arguments: f64) -> f64 {
+    %none = arith.constant 0 : i32
+    %failure = arith.constant 127 : i32
+    %noProcess = arith.constant 0.0 : f64
+    %pathLength = func.call @strict_text_long(%path) : (f64) -> f64
+    %isMissing = arith.cmpf oeq, %pathLength, %noProcess : f64
+    cf.cond_br %isMissing, ^failed, ^start
+  ^start:
+    %execQuoteLengths = llvm.mlir.addressof @strict_exec_quote : !llvm.ptr
+    %execQuote = llvm.getelementptr %execQuoteLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteSpaceLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpace = llvm.getelementptr %quoteSpaceLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quietLengths = llvm.mlir.addressof @strict_launch_quiet : !llvm.ptr
+    %quiet = llvm.getelementptr %quietLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %execText = func.call @strict_text_of(%execQuote) : (!llvm.ptr) -> f64
+    %quoteSpaceText = func.call @strict_text_of(%quoteSpace) : (!llvm.ptr) -> f64
+    %quietText = func.call @strict_text_of(%quiet) : (!llvm.ptr) -> f64
+    %located = func.call @strict_program_joined(%path) : (f64) -> f64
+    %quoted = func.call @strict_text_concat(%execText, %located) : (f64, f64) -> f64
+    %program = func.call @strict_text_concat(%quoted, %quoteSpaceText) : (f64, f64) -> f64
+    %called = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
+    %command = func.call @strict_text_concat(%called, %quietText) : (f64, f64) -> f64
+    %placed = func.call @strict_folder_command(%command) : (f64) -> f64
+    %commandText = func.call @strict_text_ptr(%placed) : (f64) -> !llvm.ptr
+    %shellLengths = llvm.mlir.addressof @strict_shell : !llvm.ptr
+    %shell = llvm.getelementptr %shellLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellNameLengths = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
+    %shellName = llvm.getelementptr %shellNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellCommandLengths = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %shellCommand = llvm.getelementptr %shellCommandLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %null = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%null) : (!llvm.ptr) -> i32
+    %child = llvm.call @fork() : () -> i32
+    %isChild = arith.cmpi eq, %child, %none : i32
+    cf.cond_br %isChild, ^child, ^parent
+  ^child:
+    %session = llvm.call @setsid() : () -> i32
+    %executed = llvm.call @execl(%shell, %shellName, %shellCommand, %commandText, %null) vararg(!llvm.func<i32 (ptr, ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    llvm.call @_exit(%failure) : (i32) -> ()
+    llvm.unreachable
+  ^parent:
+    %notStarted = arith.cmpi slt, %child, %none : i32
+    cf.cond_br %notStarted, ^failed, ^started
+  ^started:
+    %id = arith.sitofp %child : i32 to f64
+    return %id : f64
+  ^failed:
+    return %noProcess : f64
   }
   func.func private @strict_process_execute(%path: f64, %arguments: f64, %seconds: f64) -> f64 {
     %none = arith.constant 0 : i32

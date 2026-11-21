@@ -896,6 +896,50 @@
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     return %exitNumber : f64
   }
+  // Process.Launched: a hidden child in its own process group that inherits no handles and is not waited for
+  func.func private @strict_process_launched(%path: f64, %arguments: f64) -> f64 {
+    %startupSize = arith.constant 104 : i64
+    %startupLength = arith.constant 104 : i32
+    %noInherit = arith.constant 0 : i32
+    %hidden = arith.constant 134218240 : i32
+    %quoteTextLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
+    %quoteText = llvm.getelementptr %quoteTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
+    %quoteSpaceTextLengths = llvm.mlir.addressof @strict_quote_space : !llvm.ptr
+    %quoteSpaceText = llvm.getelementptr %quoteSpaceTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %quoteSpace = func.call @strict_bits(%quoteSpaceText) : (!llvm.ptr) -> f64
+    %located = func.call @strict_program_joined(%path) : (f64) -> f64
+    %quoted = func.call @strict_text_concat(%quote, %located) : (f64, f64) -> f64
+    %program = func.call @strict_text_concat(%quoted, %quoteSpace) : (f64, f64) -> f64
+    %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
+    %startupWords = arith.constant 13 : i64
+    %startup = llvm.alloca %startupWords x i64 : (i64) -> !llvm.ptr
+    %startupZero = arith.constant 0 : i32
+    %startupCleared = llvm.call @memset(%startup, %startupZero, %startupSize) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    llvm.store %startupLength, %startup : i32, !llvm.ptr
+    %informationWords = arith.constant 3 : i64
+    %information = llvm.alloca %informationWords x i64 : (i64) -> !llvm.ptr
+    %commandText = func.call @strict_text_ptr(%command) : (f64) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    func.call @strict_flush() : () -> ()
+    %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %noInherit, %hidden, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %failed = arith.cmpi eq, %started, %noInherit : i32
+    cf.cond_br %failed, ^notStarted, ^running
+  ^notStarted:
+    %none = arith.constant 0.0 : f64
+    return %none : f64
+  ^running:
+    %process = llvm.load %information : !llvm.ptr -> !llvm.ptr
+    %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr
+    %idSlot = llvm.getelementptr %information[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %id = llvm.load %idSlot : !llvm.ptr -> i32
+    %closedProcess = llvm.call @CloseHandle(%process) : (!llvm.ptr) -> i32
+    %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
+    %idNumber = arith.uitofp %id : i32 to f64
+    return %idNumber : f64
+  }
   llvm.func @SetEnvironmentVariableA(!llvm.ptr, !llvm.ptr) -> i32
   // a child of a tool batch inherits STRICT_THREADS while it starts (a share above 0, set and removed under the lock)
   func.func private @strict_tool_environment(%share: i64, %value: !llvm.ptr) {

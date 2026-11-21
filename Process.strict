@@ -13,6 +13,9 @@ Run(arguments Text, seconds = ToolSeconds) ProcessResult slow
 Started(arguments Text) Number slow
 	Process.Find("missingStrictTool").Started("") is 127
 	Error("Process.Started needs the native runtime to start " + executable + " " + arguments)
+Launched(arguments Text) Number slow
+	Process.Find("missingStrictTool").Launched("") is 0
+	Error("Process.Launched needs the native runtime to start " + executable + " " + arguments)
 RunTool(name Text, arguments Text, seconds = ToolSeconds) ProcessResult slow
 	tool = Find(name)
 	tool.IsAvailable then tool.Run(arguments, seconds) else ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
