@@ -114,7 +114,7 @@ WithStart(line Text) Number
 		isText = (line.StartsWith("\"", index) and line.StartsWith("\\", index - 1) is false) is not isText
 		if isText is false and line.StartsWith(" with ", index)
 			return index
-	-1
+	Number.NotFound
 Parameter(header HeaderTokens, parameter Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer(Framed).Tokens), "frames") is "value >= 0"
 	Constraint.Parameter(HeaderTokens(Tokenizer("Run(frames Number)").Tokens), "frames") is ""

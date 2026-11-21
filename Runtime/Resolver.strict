@@ -100,7 +100,7 @@ Position(type TypeEntry) Number
 	for types
 		if value.Name is type.Name
 			return index
-	-1
+	Number.NotFound
 Slots(type TypeEntry, method MethodEntry) Texts
 	Doubling.Slots(Storage.Pair, Sample) is Specials + ("logger", "b", "a", "list")
 	Doubling.Slots(Machine.Doubler, MethodEntry.Logged) is Specials + "logger"
@@ -176,7 +176,7 @@ Slot(name Text, names Texts) Number
 	for Range(0, names.Length).Reverse
 		if names(value) is name
 			return value
-	-1
+	Number.NotFound
 Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
 	Doubling.Placed(InstructionEntry(InstructionType.CheckError, "e", (5, 0)), MethodEntry.Branching, 0, 9).payload(2) is 2
 	Doubling.Placed(Sample.instructions(0), Sample, 0, 9).payload is Sample.instructions(0).payload

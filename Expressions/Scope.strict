@@ -48,7 +48,7 @@ Position(name Text, ordinal Number) Number
 			found = found + 1
 			if found is ordinal
 				return index
-	-1
+	Number.NotFound
 Indexed Scope
 	Scope(("a", "b", "a"), ("A", "B", "C")).Indexed.indexed is 3
 	Scope(("a", "b", "a"), ("A", "B", "C")).Indexed.TypeOf("a") is "C"

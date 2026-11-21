@@ -31,13 +31,13 @@ Call Number
 	MlirTokens(MlirGpu.Layering.function, 2).Call is -1
 	MlirTokens(Summing.function, -1).Call is -1
 	if position < 0
-		return -1
+		return Number.NotFound
 	if MlirLoops(function, position).Collection is not ""
-		return -1
+		return Number.NotFound
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if Names(value).Length >= 4
 			return value
-	-1
+	Number.NotFound
 Names(at Number) Texts
 	Summing.Names(15) is ("weights", "input", "width", "rows")
 	Summing.Names(12).Length is 0
@@ -125,9 +125,9 @@ Floor(at Number) Number
 	Summing.Floor(15) is -1
 	let floor = function.method.instructions(at)
 	if at < 0 or floor.kind is not InstructionType.Invoke
-		return -1
+		return Number.NotFound
 	if floor.texts(1) is not "Floor"
-		return -1
+		return Number.NotFound
 	MlirGroups(function, position).Writer(MlirDeviceCalls(function, at, function).Register(floor), at)
 Floored(at Number) Text
 	Summing.Floored(12) is "rows"

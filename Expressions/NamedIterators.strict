@@ -127,7 +127,7 @@ Distance(node SyntaxNode, level Number) Number
 	Pairs.Distance(SyntaxNode("Call", "x", List(SyntaxNode) + SyntaxNode("Number", "0")), 2) is 0
 	Pairs.Distance(SyntaxNode("Number", "2"), 2) is -1
 	let position = node.Kind is in ("Identifier", "Call") then names.Index(node.text) else -1
-	position < 0 then -1 else level - 1 - position
+	position < 0 then Number.NotFound else level - 1 - position
 IsTarget(node SyntaxNode, position Number) Boolean
 	Pairs.IsTarget(SyntaxNode("Reassignment", "", (SyntaxNode("Number", "5"), SyntaxNode("Number", "1"))), 0) is false
 	Pairs.IsTarget(SyntaxParser(Tokenizer("x = 1").Tokens).Parse, 0)

@@ -44,7 +44,7 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	let limits = Limits(lines, isBase, Limits.Scale(path), typeName).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
-	let based = isBase then List(ValidationIssue) else BaseCalls(lines).Issues
+	let based = (isBase then List(ValidationIssue) else BaseCalls(lines).Issues) + NotFoundResults(lines).Issues
 	let shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based
 	let extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
 	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues

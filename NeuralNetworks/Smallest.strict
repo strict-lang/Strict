@@ -67,7 +67,7 @@ Found(targets Numbers, steps Number) Number slow
 	for Range(1, 5)
 		if Hits(targets, index, steps)
 			return index
-	-1
+	Number.NotFound
 Sought(targets Numbers) Numbers slow
 	Smallest.Sought((0, 1, 1, 1)) is (0, 0)
 	Smallest.Sought(Xor.Targets) is (2, 3)

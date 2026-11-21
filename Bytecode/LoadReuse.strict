@@ -29,14 +29,14 @@ Source(load Number) Number
 	Twice.Source(2) is -1
 	Chain.Source(2) is 0 and Blocked.Source(1) is -1 and Spread.Source(3) is -1
 	if instructions(load).kind is not InstructionType.LoadVariableToRegister
-		return -1
+		return Number.NotFound
 	let latest = EarlierLoad(load)
 	let earlier = latest < 0 then -1 else Source(latest)
 	let first = earlier < 0 then latest else earlier
 	if first < 0
-		return -1
+		return Number.NotFound
 	let register = instructions(first).payload(0)
-	IsUnchanged(register, first, load) and CanRedirect(load, register) then first else -1
+	IsUnchanged(register, first, load) and CanRedirect(load, register) then first else Number.NotFound
 EarlierLoad(load Number) Number
 	Twice.EarlierLoad(1) is 0
 	Stored.EarlierLoad(2) is -1
@@ -48,8 +48,8 @@ EarlierLoad(load Number) Number
 		let earlier = instructions(position)
 		let isSameName = name is in earlier.texts
 		if IsBoundary(earlier) or isSameName and earlier.kind <= InstructionType.StoreRegisterToVariable
-			return earlier.kind is InstructionType.LoadVariableToRegister then position else -1
-	-1
+			return earlier.kind is InstructionType.LoadVariableToRegister then position else Number.NotFound
+	Number.NotFound
 IsUnchanged(register Number, first Number, load Number) Boolean
 	Twice.IsUnchanged(0, 0, 1)
 	Twice.IsUnchanged(1, 0, 3) is false
@@ -109,18 +109,18 @@ Written(entry InstructionEntry) Number
 	Twice.Written(Indexed) is 1
 	Twice.Written(InstructionEntry.Return(2)) is -1
 	let position = WritePosition(entry)
-	position < 0 then -1 else entry.payload(position)
+	position < 0 then Number.NotFound else entry.payload(position)
 Writer(register Number, before Number, after Number) Number
 	Twice.Writer(2, 4, -1) is 2
 	Twice.Writer(0, 4, 0) is -1
 	Twice.Writer(-1, 4, -1) is -1
 	if register < 0
-		return -1
+		return Number.NotFound
 	for before - after - 1
 		let earlier = before - 1 - index
 		if Written(instructions(earlier)) is register
 			return earlier
-	-1
+	Number.NotFound
 WritePosition(entry InstructionEntry) Number
 	Twice.WritePosition(AddBoth) is 3
 	Twice.WritePosition(InstructionEntry.Binary(InstructionType.Equal, (0, 1))) is -1
@@ -129,7 +129,7 @@ WritePosition(entry InstructionEntry) Number
 	if entry.kind is in WritingKinds
 		return 0
 	let isBinary = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
-	isBinary and entry.payload(0) is 3 then 3 else -1
+	isBinary and entry.payload(0) is 3 then 3 else Number.NotFound
 RegisterCount Number
 	Twice.RegisterCount is 3
 	LoadReuse((ReloadA, LoadA)).RegisterCount is 2 and LoadReuse((AddCall)).RegisterCount is 8

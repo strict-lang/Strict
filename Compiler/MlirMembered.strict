@@ -33,8 +33,8 @@ Rebuilding(register Number) Number
 		if (step.kind is InstructionType.Invoke then step.texts(1) is "from" else false) and register is in reuse.Reads(step)
 			return value
 		if reuse.Written(step) is register
-			return -1
-	-1
+			return Number.NotFound
+	Number.NotFound
 Slot(at Number, register Number) Number
 	Moved.Slot(7, 3) is 0
 	Moved.Slot(7, 5) is 1
@@ -46,7 +46,7 @@ Slot(at Number, register Number) Number
 		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
 		if chosen < arguments.Length then arguments(chosen) is register else false
 			return index
-	-1
+	Number.NotFound
 Target(at Number, slot Number) Text
 	Moved.Target(7, 0) is "entity"
 	Moved.Target(7, 1) is ""
@@ -74,4 +74,4 @@ Reader(at Number, register Number) Number
 	for Range(at + 1, steps.Length)
 		if register is in reuse.Reads(steps(value)) and steps(value).kind is not InstructionType.CheckError
 			return value
-	-1
+	Number.NotFound

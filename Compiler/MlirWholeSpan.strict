@@ -146,9 +146,9 @@ Carried(at Number) Number
 	let writer = LoadReuse(function.method.instructions).Writer(first, at, -1)
 	let loaded = function.method.instructions(writer < 0 then at else writer)
 	if loaded.kind is not InstructionType.LoadVariableToRegister
-		return -1
+		return Number.NotFound
 	let name = loaded.texts(0)
-	LastStore(name, at) is at + 1 and IsSkipped(StoreBefore(name, at), at) is false then first else -1
+	LastStore(name, at) is at + 1 and IsSkipped(StoreBefore(name, at), at) is false then first else Number.NotFound
 LastStore(name Text, at Number) Number
 	Quads.LastStore("sum", 12) is 13
 	Rescaled.LastStore("sum", 12) is 16
@@ -156,7 +156,7 @@ LastStore(name Text, at Number) Number
 	for Range(StoreBefore(name, at) + 1, at)
 		if function.method.instructions(value).kind is InstructionType.LoopBegin and function.method.LoopEndOf(value) >= at
 			return StoreBefore(name, function.method.LoopEndOf(value))
-	-1
+	Number.NotFound
 IsSkipped(store Number, at Number) Boolean
 	GatedSum.IsSkipped(6, 8)
 	GatedSum.IsSkipped(14, 16)
@@ -175,7 +175,7 @@ Loop(at Number) Number
 		let entry = function.method.instructions(earlier)
 		if entry.kind is InstructionType.LoopBegin and function.method.LoopEndOf(earlier) >= at
 			return earlier
-	-1
+	Number.NotFound
 StoreBefore(name Text, at Number) Number
 	Quads.StoreBefore("sum", 4) is 0
 	for at
@@ -184,14 +184,14 @@ StoreBefore(name Text, at Number) Number
 		let isStore = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		if isStore and entry.texts.Last is name
 			return earlier
-	-1
+	Number.NotFound
 Parameter(name Text) Number
 	Quads.Parameter("count") is 0
 	Quads.Parameter("value") is -1
 	for function.method.parameters
 		if value.Name is name
 			return index
-	-1
+	Number.NotFound
 Name(prefix Text, at Number) Text
 	Quads.Name("wb", 7) is "%t4wb7"
 	"%t" + position + prefix + at

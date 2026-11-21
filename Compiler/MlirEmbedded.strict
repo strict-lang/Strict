@@ -54,7 +54,7 @@ Offset(owner TypeEntry, name Text) Number
 		if value.Name is name
 			return offset
 		offset = offset + Width(owner, value)
-	-1
+	Number.NotFound
 Width(owner TypeEntry, member MemberEntry) Number
 	Sample.Width(Boxed, Boxed.members.First) is 2
 	Sample.Width(MlirInstances.Outer, MlirInstances.Outer.members.Last) is 1

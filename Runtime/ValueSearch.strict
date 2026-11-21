@@ -6,7 +6,7 @@ Index(element VmValue) Number
 	for items
 		if Matches(value, element)
 			return index
-	-1
+	Number.NotFound
 Key(key VmValue) Number
 	ValueSearch(Pairs).Key(VmValue.OfNumber(5)) is 1
 	ValueSearch(List(VmValue) + Pairs.First).Key(VmValue.OfNumber(5)) is -1
@@ -14,7 +14,7 @@ Key(key VmValue) Number
 	for items
 		if value.items.Length is 2 then Matches(value.items.First, key) else false
 			return index
-	-1
+	Number.NotFound
 Matches(left VmValue, right VmValue) Boolean
 	ValueSearch.Matches(VmValue.OfText("a"), VmValue.OfText("a"))
 	ValueSearch.Matches(VmValue.OfText("a"), VmValue.OfText("b")) is false

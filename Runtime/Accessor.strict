@@ -67,7 +67,7 @@ Member(route Number, name Text) Number
 	for machine.types(route).members
 		if value.Name is name and value.IsConstant is false
 			return index
-	-1
+	Number.NotFound
 Indexed(route Number, first InstructionEntry, middle InstructionEntry) Numbers
 	Getting.Indexed(0, Holder.methods(1).instructions.First, Holder.methods(1).instructions(1)) is (0, 1, -1, 0)
 	Getting.Indexed(0, Holder.methods(0).instructions.First, Holder.methods(1).instructions(1)).Length is 0
@@ -122,7 +122,7 @@ Wrapped(collection VmValue, at Number) Number
 	Getting.Chained(1, Loading, InstructionEntry.Invoke(1, FirstCall.texts, List(Number), 2), 0) is (1, 0, 0, 1, -1, 0)
 	Getting.Chained(1, Loading, InstructionEntry.Invoke(2, FirstCall.texts, List(Number), -1), 0).Length is 0
 	let wrapped = at < 0 then at + collection.Length else at
-	wrapped >= 0 and wrapped < collection.Length then wrapped else -1
+	wrapped >= 0 and wrapped < collection.Length then wrapped else Number.NotFound
 Item(collection VmValue, position Number) VmValue
 	Getting.Item(VmValue.OfText("ab"), 1).text is "b"
 	Getting.Item(Held.items(1), 0).number is 3

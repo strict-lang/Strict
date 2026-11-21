@@ -3,7 +3,7 @@ has folder = ""
 constant NeighborSum = ("\t\tif bitmap.IsInside(pixel, x, y)", "\t\t\tsum = sum + bitmap.Colors(pixel + x + y * bitmap.Size.Width).Red", "\tsum")
 constant Sums = ("Sums(bitmap Bitmap, pixel Number) Number", "\tmutable sum = 0", "\tfor y, x in Range(-1, 2), Range(-1, 2)") + NeighborSum
 constant Blurring = Callees(Sums, "ImageProcessing")
-constant Inside = "\tcolumn >= 0 and column < Size.Width and row >= 0 and row < Size.Height"
+constant Inside = "\tcolumn >= 0 and column < Width and row >= 0 and row < Height"
 Lines(receiver Text, method Text, at Number) Texts
 	Blurring.Lines("bitmap", "IsInside", 4).Last is Inside
 	Blurring.Lines("bitmap", "IsInside", 4).First is "IsInside(pixel Number, x Number, y Number) Boolean"
@@ -55,7 +55,7 @@ Closing(text Text, open Number) Number
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
 		if depth < 1
 			return value
-	-1
+	Number.NotFound
 BlockEnd(at Number) Number
 	Blurring.BlockEnd(2) is 5
 	Blurring.BlockEnd(4) is 5

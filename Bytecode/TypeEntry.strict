@@ -154,11 +154,11 @@ ConstantSlot(method MethodEntry) Number
 	Kept.ConstantSlot(MethodEntry("B", CharacterEntry.members, "C", List(InstructionEntry))) is -1
 	Kept.ConstantSlot(ToNumber) is -1
 	if method.parameters.Length > 0
-		return -1
+		return Number.NotFound
 	for members
 		if value.IsConstant and value.Name is method.Name
 			return index
-	-1
+	Number.NotFound
 Invoked Texts
 	TypeEntry("A", List(MemberEntry), MethodEntry.GoRun).Invoked is ("Strict/B.Go")
 	Initialized.Invoked is ("Strict/B.Go")

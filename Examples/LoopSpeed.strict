@@ -46,7 +46,7 @@ Summed(count Number) Number
 Kernels(count Number) Number native
 	LoopSpeed.Kernels(2000000) is 0
 	let before = Process.Executed(3)
-	Remainders(Counted(count)).Length is count then Process.Executed(3) - before else -1
+	Remainders(Counted(count)).Length is count then Process.Executed(3) - before else Number.NotFound
 Once(kind Text, exact Numbers, padded Numbers) Number
 	Once("offsets", Counted(2), Counted(400)) is 400 and Once("locals", Counted(2), Counted(400)) is 400
 	Once("remainders", Counted(9), Counted(9)) is 1 and Once("gathered", Counted(9), Counted(9)) is 8

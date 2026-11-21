@@ -126,7 +126,7 @@ ParameterPosition(name Text) Number
 	for Range(2, ParametersEnd)
 		if IsParameterStart(value) and tokens(value) is name
 			return value
-	-1
+	Number.NotFound
 Depth(position Number) Number
 	HeaderTokens(Tokenizer("Link(entries List(Entry), depth Number)").Tokens).Depth(5) is 2
 	let brackets = SyntaxParser(tokens)

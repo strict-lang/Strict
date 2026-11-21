@@ -23,4 +23,4 @@ IndexStart(start Number, end Number) Number
 		depth = depth + brackets.BracketDelta(tokens(end - 1 - index))
 		if depth > -1 and open < 0
 			open = end - 1 - index
-	open > start then (tokens(open - 1) is ")" then open else -1) else -1
+	open > start then (tokens(open - 1) is ")" then open else Number.NotFound) else Number.NotFound

@@ -8,13 +8,13 @@ Reader Number
 	Area.Reader is -1
 	let entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
-		return -1
+		return Number.NotFound
 	let reader = Next(entry.payload(0))
-	reader < 0 then -1 else IsPlain(position) and IsReference then reader else -1
+	reader < 0 then Number.NotFound else IsPlain(position) and IsReference then reader else Number.NotFound
 Next(register Number) Number
 	Built.Next(1) is 2
 	let reader = First(register)
-	reader < 0 then -1 else IsPlain(reader) then reader else -1
+	reader < 0 then Number.NotFound else IsPlain(reader) then reader else Number.NotFound
 First(register Number) Number
 	Built.First(1) is 2
 	let steps = function.method.instructions
@@ -24,8 +24,8 @@ First(register Number) Number
 		if register is in reuse.Reads(steps(value)) and isChecked is false
 			return value
 		if IsFlow(steps(value).kind) or reuse.Written(steps(value)) is register
-			return -1
-	-1
+			return Number.NotFound
+	Number.NotFound
 IsFlow(kind Number) Boolean
 	Built.IsFlow(InstructionType.Return)
 	Built.IsFlow(InstructionType.Invoke) is false

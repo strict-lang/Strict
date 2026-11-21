@@ -70,7 +70,7 @@ Earlier(signature Text) Number
 	Twice.Earlier("Strict/Logger:Log") is 0
 	Single.Earlier("Strict/Logger:Log") is -1
 	let type = Signature(signature).Type
-	type is in earliest then earliest(type) else -1
+	type is in earliest then earliest(type) else Number.NotFound
 Wanted(signature Text) Texts
 	Twice.Wanted("Strict/Logger:Log") is ("Log")
 	Logged.Wanted("Strict/Logger:Log;Reset") is ("Reset")

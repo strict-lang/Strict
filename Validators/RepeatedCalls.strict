@@ -69,7 +69,7 @@ Close(tokens Texts, open Number) Number
 		depth = tokens(value) is "(" then depth + 1 else tokens(value) is ")" then depth - 1 else depth
 		if depth is 0
 			return value
-	-1
+	Number.NotFound
 IsTyped(inner Texts) Boolean
 	Filed.IsTyped(("Text", ",", "Number")) and Filed.IsTyped(("Mutable", "(", "Text", ")"))
 	Filed.IsTyped(List(Text) + "path") is false and Filed.IsTyped(("Width", "+", "1")) is false

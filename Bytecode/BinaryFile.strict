@@ -48,7 +48,7 @@ Ended(bytes Bytes, position Number) Number
 	Probe.Head(List(Byte)).Length is 0
 	let reader = Header(bytes, position)
 	let isLocal = reader.bytes.Length >= ZipReader.LocalHeaderSize and reader.Read(0, 4) is ZipReader.LocalHeader
-	isLocal then position + reader.End(0) else -1
+	isLocal then position + reader.End(0) else Number.NotFound
 Entry(bytes Bytes, position Number) ZipEntry
 	Probe.Entry(Greeting, 0) is Packing.First
 	let reader = Header(bytes, position)

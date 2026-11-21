@@ -48,7 +48,7 @@ Opening(line Text, closing Number) Number
 		if character is "(" and depth is 0
 			return closing - 1 - index
 		depth = character is ")" then depth + 1 else (character is "(" then depth - 1 else depth)
-	-1
+	Number.NotFound
 Name(line Text, start Number) Text
 	Averaging.Name("\t(Ones(2)", 6) is "Ones"
 	Averaging.Name("x.Ones(2)", 6) is "Ones"
@@ -78,7 +78,7 @@ Header(name Text) Number
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and (value.StartsWith(name + "(") or value.StartsWith(name + " "))
 			return index
-	-1
+	Number.NotFound
 Ending(header Number) Number
 	Averaging.Ending(2) is 6
 	Averaging.Ending(0) is 2

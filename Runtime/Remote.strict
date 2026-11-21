@@ -26,16 +26,16 @@ Without(arguments Texts) Texts
 Named(arguments Texts) Number
 	Sample.Named(List(Text)) is -1
 	let remote = Target(arguments, "")
-	Peers.IsAny(remote) or remote is "" then -1 else Forwarded(remote, Without(arguments))
+	Peers.IsAny(remote) or remote is "" then Number.NotFound else Forwarded(remote, Without(arguments))
 Sent(arguments Texts, absent Text, reply Text, line Text) Number
 	Sample.Sent(List(Text), Ben, "go\tjob\t0", "need") is -1
 	Sample.Sent(List(Text), Ben, "", "need") is -1
 	let remote = Target(arguments, absent)
 	let verdict = reply.Split("\t").First
 	if Peers.IsAny(remote) is false or verdict is "go" or verdict is ""
-		return -1
+		return Number.NotFound
 	let chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
-	chosen is "" then -1 else Forwarded(chosen, Without(arguments))
+	chosen is "" then Number.NotFound else Forwarded(chosen, Without(arguments))
 Forwarded(name Text, arguments Texts) Number
 	Sample.Forwarded("missing", List(Text)) is Error
 	let host = Peers.Host(name)

@@ -36,7 +36,7 @@ Written Number
 	Varied.Read(30) is ""
 	MlirBiased(MlirLoops.Nested.function, 0).Written is -1
 	let last = function.method.LoopEndOf(position) - 1
-	function.method.instructions(last).kind is InstructionType.InvokeWriteToList then last else -1
+	function.method.instructions(last).kind is InstructionType.InvokeWriteToList then last else Number.NotFound
 Added(at Number, dot Number) Number
 	Biasing.Added(21, 13) is 18
 	Biasing.Added(20, 13) is -1
@@ -44,11 +44,11 @@ Added(at Number, dot Number) Number
 	Biasing.Added(21, 18) is 13
 	Biasing.Added(21, 3) is -1
 	if at < 0
-		return -1
+		return Number.NotFound
 	let entry = function.method.instructions(at)
 	if entry.kind is not InstructionType.Add
-		return -1
-	entry.payload(1) is dot then entry.payload(2) else entry.payload(2) is dot then entry.payload(1) else -1
+		return Number.NotFound
+	entry.payload(1) is dot then entry.payload(2) else entry.payload(2) is dot then entry.payload(1) else Number.NotFound
 Read(at Number) Text
 	Biasing.Read(20) is "biases"
 	Biasing.Read(6) is ""

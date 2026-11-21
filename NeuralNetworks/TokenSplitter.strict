@@ -83,7 +83,7 @@ Kind(text Text, index Number) Number
 	Gpt.Kind("a 1!", 2) is 2
 	Gpt.Kind("a 1!", 4) is -1
 	if index >= text.Length
-		return -1
+		return Number.NotFound
 	let code = text(index).number
 	if code is Character.Space or code is in Whitespace
 		return 0

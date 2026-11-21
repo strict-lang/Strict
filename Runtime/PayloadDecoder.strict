@@ -106,7 +106,7 @@ Instance Number
 	Scaled.Instance is -1
 	PayloadDecoder(Invocation.AddCall.entry).Instance is 1
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
-	reads.Length > ArgumentCount then entry.payload(reads.Last) else -1
+	reads.Length > ArgumentCount then entry.payload(reads.Last) else Number.NotFound
 SevenBit(position Number) Number
 	PayloadDecoder(InstructionEntry.Jump(InstructionType.LoopEnd, 300)).SevenBit(0) is 300
 	mutable result = 0

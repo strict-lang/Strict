@@ -33,7 +33,7 @@ Ending(start Number, id Number) Number
 	for method.instructions
 		if index >= start and value.kind is InstructionType.JumpEnd and value.payload(0) is id
 			return index
-	-1
+	Number.NotFound
 Weight(start Number, end Number) Number
 	Calling.Weight(2, 3) is 1 and Calling.Weight(5, 6) is 0 and Erring.Weight(2, 6) is -1
 	mutable weight = 0

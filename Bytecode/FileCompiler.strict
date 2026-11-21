@@ -96,7 +96,7 @@ Unparsable(lines Texts) Number
 		let isBroken = value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
 		if isEmpty or isBroken or IsBrokenConstant(value) or Tokenizer(value).HasOpenText
 			return index
-	-1
+	Number.NotFound
 IsBrokenConstant(line Text) Boolean
 	FileCompiler.IsBrokenConstant(Trailing.Last)
 	FileCompiler.IsBrokenConstant("constant LoadConstantToRegister") is false

@@ -3,6 +3,7 @@ constant Epsilon = 0.00001
 constant E = 2.718281828459045
 constant Pi = 3.141592653589793
 constant Phi = 1.618033988749895
+constant NotFound = -1
 constant ExactCountLimit = 2251799813685248
 constant RelativeTolerance = 0.0000000000000002
 constant IntegerBits = 53

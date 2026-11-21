@@ -59,7 +59,7 @@ ResultLoop Number
 		begin = value.kind is InstructionType.LoopBegin and begin < 0 then index else begin
 	let writer = begin < 0 then -1 else MlirKinds(function).Writer(begin, steps(begin).payload(0))
 	let isParameter = writer >= 0 then Text.Combine(steps(writer).texts) is in function.method.ParameterNames else false
-	loops is 1 and isParameter then begin else -1
+	loops is 1 and isParameter then begin else Number.NotFound
 Sources Texts
 	Copied.Sources is ("items")
 	MlirListDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, Weighing), 0).Sources is ("items")

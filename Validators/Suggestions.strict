@@ -20,7 +20,7 @@ Header(name Text) Number
 		if TypeShape(lines).IsMethodHeader(value)
 			if Tokenizer(value).Tokens.First is name or (index + 1) to Text is name
 				return index
-	-1
+	Number.NotFound
 Search(header HeaderTokens) SuggestionCalls
 	let members = TypeShape(lines).MemberScope
 	let values = Scope(header.ParameterNames, header.ParameterTypes).WithAll(members.names, members.types)

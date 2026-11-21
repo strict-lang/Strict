@@ -55,7 +55,7 @@ Split(tokens Texts, operators Texts) Number
 		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
 		if depth < 1 and value is in operators
 			return index
-	-1
+	Number.NotFound
 IsAdditive(tokens Texts) Boolean
 	InX.IsAdditive(Tokenizer("pixel % width + x").Tokens)
 	InX.IsAdditive(Tokenizer("x * 2").Tokens) is false
@@ -77,7 +77,7 @@ Binary(tokens Texts) Number
 		depth = depth + (value is "(" then 1 else (value is ")" then -1 else 0))
 		if depth < 1 and index > 0 and value is in ("+", "-") and tokens(index - 1) is not in Operators
 			return index
-	-1
+	Number.NotFound
 IsTerm(tokens Texts) Boolean
 	InX.IsTerm(List(Text) + "x")
 	InX.IsTerm(("-", "x"))
@@ -99,7 +99,7 @@ Matching(tokens Texts, open Number) Number
 		depth = depth + (tokens(value) is "(" then 1 else (tokens(value) is ")" then -1 else 0))
 		if depth < 1
 			return value
-	-1
+	Number.NotFound
 Mentions(tokens Texts) Boolean
 	InX.Mentions(("a", "+", "x"))
 	InX.Mentions(("a", "+", "b")) is false

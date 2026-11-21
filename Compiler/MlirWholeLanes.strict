@@ -78,11 +78,11 @@ Rowed Number
 	Blurring.Rowed is -1
 	Sized.Rowed is 1
 	if Width is ""
-		return -1
+		return Number.NotFound
 	for Kernel.Reads
 		if Kernel.Source(value) is "index" and MlirWholeRows(Kernel.Callee, index).IsRowed
 			return index
-	-1
+	Number.NotFound
 Width Text
 	Blurring.Width is ""
 	Sized.Width is "%t8wh0m1xv"

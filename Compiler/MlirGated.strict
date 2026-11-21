@@ -39,11 +39,11 @@ Up Number
 	Summing.Up is -1
 	let call = MlirTokens(function, position).Call
 	if call < 0
-		return -1
+		return Number.NotFound
 	for Range(call + 1, function.method.LoopEndOf(position))
 		if IsUp(value, call)
 			return value
-	-1
+	Number.NotFound
 IsUp(at Number, call Number) Boolean
 	Gating.IsUp(38, 15)
 	Gating.IsUp(15, 15) is false
@@ -133,4 +133,4 @@ Stored(name Texts, before Number) Number
 		let entry = function.method.instructions(candidate)
 		if entry.kind is InstructionType.StoreRegisterToVariable and entry.texts is name
 			return candidate
-	-1
+	Number.NotFound

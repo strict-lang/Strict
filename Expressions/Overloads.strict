@@ -56,14 +56,14 @@ Ordinal(owner Text, method Text, arguments Texts, isExact Boolean) Number
 	Picking.Ordinal("Picker", "Mixed", List(Text) + "Generics", true) is -1
 	let scope = types.ParameterScope(owner)
 	if scope.Count(method) < 2
-		return -1
+		return Number.NotFound
 	mutable ordinal = -1
 	for scope.names
 		if value is method + " types"
 			ordinal = ordinal + 1
 			if Fits(types.ParameterNames(scope.types(index)), arguments, owner, isExact, Required(owner, method, ordinal).Length)
 				return ordinal
-	-1
+	Number.NotFound
 Required(owner Text, method Text, ordinal Number) Texts
 	Defaulted.Required("D", "from", 1) is ("a") and Defaulted.Required("D", "from", 0) is ("text")
 	Labeling.Required("Labeler", "Labels", 0).Length is 0

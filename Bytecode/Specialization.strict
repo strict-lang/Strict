@@ -126,7 +126,7 @@ Start(lines Texts, method Text) Number
 			seen = seen + 1
 			if ordinal < 0 or seen is ordinal
 				return index
-	-1
+	Number.NotFound
 Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
 	Plain.Specialized(Coding, 1, Halving).Name is Halving
 	Overloaded.Start(("Through(wrapped Wrapped) Number", "	1", "Through(o Number) Number", "	2"), "Through(Number)") is 2

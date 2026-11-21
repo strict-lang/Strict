@@ -28,7 +28,7 @@ Member(owner VmValue, name Text) Number
 	for Natives(types).TypeOf(owner.kind).members
 		if value.Name is name
 			return index
-	-1
+	Number.NotFound
 Replaced(elements List(VmValue), slot Number, entry VmValue) List(VmValue)
 	Pairing.Replaced((VmValue.OfNumber(1), VmValue.OfNumber(2)), 1, VmValue.None).Last.kind is "None"
 	Pairing.Replaced(List(VmValue), 2, VmValue.None).Length is 3

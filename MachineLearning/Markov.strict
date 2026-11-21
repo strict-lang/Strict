@@ -13,12 +13,12 @@ Position(context Text, wanted Number) Number
 	mutable start = text.IndexOf(context)
 	for text.Length
 		if start < 0 or start + context.Length is text.Length
-			return wanted >= text.Length then found else -1
+			return wanted >= text.Length then found else Number.NotFound
 		if found is wanted
 			return start
 		found = found + 1
 		start = text.IndexOf(context, start + 1)
-	-1
+	Number.NotFound
 Next(context Text) Text
 	Sample.Next("bc") is "a"
 	Sample.Next("bd") is ""

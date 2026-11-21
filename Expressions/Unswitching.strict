@@ -29,7 +29,7 @@ Found(start Number) Number
 	for Range(start, lines.Length)
 		if IsHoistable(value)
 			return value
-	-1
+	Number.NotFound
 Hoisted(at Number) Texts
 	Blurring.Hoisted(2).Length is 7
 	Hoisting(0).StartsWith("\tif bitmap.IsInside(pixel, -1, -1) and ") and Hoisting(3) is "\telse"

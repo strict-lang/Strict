@@ -185,7 +185,7 @@ Argument(entry InstructionEntry, member MemberEntry, slot Number) Number
 	Rebuilt.Argument(MlirStructs.ProbeMade, MlirStructs.Probe.members.Last, 1) is -1
 	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	let chosen = names.Index(member.Name) < 0 then slot else names.Index(member.Name)
-	chosen < PayloadDecoder(entry).ArgumentCount then chosen else -1
+	chosen < PayloadDecoder(entry).ArgumentCount then chosen else Number.NotFound
 IsArgued(entry InstructionEntry, owner TypeEntry) Boolean
 	Rebuilt.IsArgued(Rebuilding(7), MlirInstances.Outer)
 	Rebuilt.IsArgued(MlirStructs.ProbeMade, MlirStructs.Probe) is false

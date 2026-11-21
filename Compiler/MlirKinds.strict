@@ -84,7 +84,7 @@ Writer(position Number, register Number) Number
 		let at = position - 1 - index
 		if reuse.Written(function.method.instructions(at)) is register or IsChanged(at, register)
 			return at
-	-1
+	Number.NotFound
 VariableKind(position Number, name Text) Text
 	Graded.VariableKind(2, "letter") is "Text"
 	Graded.VariableKind(2, "width") is "Number"
@@ -104,7 +104,7 @@ Stored(position Number, name Text) Number
 		let isStore = entry.kind is InstructionType.StoreRegisterToVariable and entry.texts(0) is name
 		if isStore or entry.kind is InstructionType.StoreConstantToVariable and entry.texts.Last is name
 			return at
-	-1
+	Number.NotFound
 DeclaredKind(position Number, name Text) Text
 	Graded.DeclaredKind(0, "width") is "Number"
 	Graded.DeclaredKind(0, "value") is "Shape"

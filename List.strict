@@ -126,7 +126,7 @@ Index(other Generic) Number
 	for elements
 		if value is other
 			return index
-	-1
+	Number.NotFound
 Add(element Generic) Mutable(List)
 	(1, 2).Add(3) is (1, 2, 3)
 	("a", "b").Add("c") is ("a", "b", "c")

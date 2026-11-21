@@ -57,7 +57,7 @@ Opening(tokens Texts, close Number) Number
 		depth = tokens(value) is ")" then depth + 1 else tokens(value) is "(" then depth - 1 else depth
 		if depth is 0
 			return value
-	-1
+	Number.NotFound
 Touches(code Text) Boolean
 	Saving.Touches("File(path).Write(lines) is not Error") and Saving.Touches("Directory.Files(\"A\").Length > 0")
 	Saving.Touches("File(path).Exists is false") is false and Saving.Touches("Character.Delete is 1") is false

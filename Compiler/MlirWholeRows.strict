@@ -31,13 +31,13 @@ IsIndex(register Number, at Number) Boolean
 Passed(entry InstructionEntry, at Number) Number
 	Picking.Passed(MlirWholeKernel.Measuring(7), 7) is -1
 	if entry.kind is not InstructionType.Invoke
-		return -1
+		return Number.NotFound
 	let callee = MlirWholeFunction(function).Callee(entry)
 	let isWhole = callee.Symbol is not function.Symbol and MlirWholeFunction(callee).IsWhole
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		if isWhole and IsIndex(entry.payload(value), at) and MlirWholeRows(callee, index).IsRowed
 			return index
-	-1
+	Number.NotFound
 Emitted(statements MlirWholeStatements) Texts
 	Text.Combine(Picking.Emitted(Wrapping)).IndexOf("cf.br ^t7rowed(%rx : i64)") > 0
 	Picking.Emitted(Wrapping.At(6)) is Wrapping.At(6).Emitted

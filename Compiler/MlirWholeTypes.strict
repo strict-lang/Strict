@@ -83,7 +83,7 @@ Stored(at Number, registers Text, naturals Text) Text
 Named(entry InstructionEntry, stored Text) Number
 	Row.Named(Row.function.method.instructions(17), "") is -1
 	Divided.Named(Divided.function.method.instructions(5), "f") is 2
-	stored is "" then -1 else function.VariableNames.Index(entry.texts.Last)
+	stored is "" then Number.NotFound else function.VariableNames.Index(entry.texts.Last)
 IsExact Boolean
 	Halving.IsExact
 	MlirWholeTypes(MlirArguments.Halfway.functions.First).IsExact is false

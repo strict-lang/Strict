@@ -49,8 +49,8 @@ Position(instanceType Text, name Text) Number
 	for members.names
 		position = IsGeneric(members.types(index)) then position + 1 else position
 		if value is name
-			return IsGeneric(members.types(index)) then position else -1
-	-1
+			return IsGeneric(members.types(index)) then position else Number.NotFound
+	Number.NotFound
 Arguments(instanceType Text) Texts
 	Pairing.Arguments("Couple(Text, Number)") is ("Text", "Number")
 	Pairing.Arguments("Couple(List(Text, Number), Number)") is ("List(Text, Number)", "Number")

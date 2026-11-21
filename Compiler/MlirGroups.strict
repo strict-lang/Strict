@@ -30,15 +30,15 @@ Call Number
 	Norming.Call is 11 and Twice.Call is -1
 	MlirGroups(MlirGpu.Layering.function, 2).Call is -1
 	if MlirLoops(function, position).Collection is not ""
-		return -1
+		return Number.NotFound
 	mutable found = -1
 	for Range(position + 1, function.method.LoopEndOf(position))
 		let adding = Adding(value)
 		if function.method.instructions(value).kind is InstructionType.LoopBegin or adding < 0
-			return -1
+			return Number.NotFound
 		if adding > 0
 			found = found is not -1 or Size(value) is "" then -2 else value
-	found < 0 then -1 else found
+	found < 0 then Number.NotFound else found
 Adding(at Number) Number
 	Norming.Adding(11) is 1
 	Norming.Adding(7) is 0
@@ -49,7 +49,7 @@ Adding(at Number) Number
 	let callee = callees.First
 	for callee.method.instructions
 		if value.kind is InstructionType.LoopBegin and MlirDeviceChoice(callee, index).IsChoice
-			return -1
+			return Number.NotFound
 	let summed = MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false)
 	summed then 1 else Wraps(callee) then 1 else 0
 Wraps(callee MlirFunction) Boolean

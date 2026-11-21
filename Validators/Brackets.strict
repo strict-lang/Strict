@@ -74,7 +74,7 @@ LeftPrecedence(tokens Texts, open Number) Number
 	if IsCompoundIs(tokens, open, previous)
 		return Precedence("is")
 	if previous is "not" or previous is "-" and (open is 1 or tokens(open - 2) is in Openers)
-		return -1
+		return Number.NotFound
 	Precedence(previous)
 IsCompoundIs(tokens Texts, open Number, previous Text) Boolean
 	Sample.IsCompoundIs(("a", "is", "not", "in", "(", "b", ")"), 4, "in")
