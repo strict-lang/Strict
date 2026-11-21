@@ -78,11 +78,15 @@ Finished(word Text) Text
 	wantsFree then "free" else "ok"
 Command Text
 	Sample.Command.IndexOf("coordinator") > 0
-	let exe = Process.Current.executable
+	let exe = Launcher(Process.Current.executable)
 	let isWindows = Process.OperatingSystem is "Windows"
 	let quoted = Forwarding.Quote + Forwarding.Quote + exe + Forwarding.Quote
 	let hidden = Start + quoted + " coordinator " + Forwarding.Quote + "' -WindowStyle Hidden"
 	isWindows then hidden else "-c \"nohup '" + exe + "' coordinator >/dev/null 2>&1 &\""
+Launcher(current Text) Text
+	Sample.Launcher("C:/Release/Ben.exe") is Process.Find("strict").executable
+	let strict = Process.Find("strict")
+	strict.IsAvailable then strict.executable else current
 Held(words Texts) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
 	Coordinator(Logger, busyJob = "video", busyVram = LockNeed + 1).Held(("holding", "0", LockHeld to Text)) is "free"
