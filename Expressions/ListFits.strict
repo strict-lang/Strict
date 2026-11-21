@@ -1,5 +1,7 @@
 has types KnownTypes
 constant Scaling = ListFits(Overloads.Scaler)
+constant Sorter = KnownTypes("Sorter", KnownTypes.NoMembers, Scope(("Sorted", "Sorted"), ("Numbers", "Numbers")).Owned("Sorter"), Scope(("Sorted", "Sorted types", "Sorted", "Sorted types"), ("", "", "numbers", "Numbers")))
+constant Sorts = Overloads(Sorter)
 Widened(argument Text, declared Text) Boolean
 	Scaling.Widened("Bytes", "Numbers")
 	Scaling.Widened("List(Bytes, Numbers)", "List(Numbers)")

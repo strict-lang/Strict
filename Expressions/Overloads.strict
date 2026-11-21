@@ -49,8 +49,25 @@ Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Defaulted.Chosen("D", "from", List(Text) + "Number") is 1
 	Defaulted.Chosen("D", "from", ("Number", "Number")) is 1
 	Picking.Chosen("Picker", "Put", List(Text) + "Number") is 1
+	ListFits.Sorts.Chosen("Sorter", "Sorted", List(Text) + "Number") is -1
 	let exact = Ordinal(owner, method, argumentTypes, true)
-	exact < 0 then Ordinal(owner, method, argumentTypes, false) else exact
+	if exact >= 0
+		return exact
+	let widened = Ordinal(owner, method, argumentTypes, false)
+	IsIndexing(owner, method, argumentTypes, widened) then Number.NotFound else widened
+IsIndexing(owner Text, method Text, arguments Texts, ordinal Number) Boolean
+	ListFits.Sorts.IsIndexing("Sorter", "Sorted", List(Text) + "Number", 1)
+	ListFits.Sorts.IsIndexing("Sorter", "Sorted", List(Text) + "Numbers", 1) is false
+	Picking.IsIndexing("Picker", "Put", List(Text) + "Number", 0) is false
+	if ordinal < 0 or arguments.Length is not 1
+		return false
+	let scope = types.ParameterScope(owner)
+	if arguments.First is not "Number" or scope.TypeAt(method + " types", ordinal) is "Number"
+		return false
+	for Range(0, scope.Count(method))
+		if scope.TypeAt(method, value) is ""
+			return true
+	false
 Ordinal(owner Text, method Text, arguments Texts, isExact Boolean) Number
 	Scaling.Ordinal("Scaler", "Scaled", List(Text) + "Number", true) is -1
 	Picking.Ordinal("Picker", "Mixed", List(Text) + "Generics", true) is -1
@@ -138,11 +155,17 @@ Unfit(call SyntaxNode, instance Text, method Text, inference TypeInference, scop
 	Scaling.Unfit(ScaledTwice, "Scaler", "Scaled", ScalerInference, Scalers, Scalers).EndsWith("Number, Number")
 	Scaling.Unfit(Rescaled, "Scaler", "Missing", ScalerInference, Scalers, Scalers) is ""
 	Scaling.Unfit(Renamed, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is ""
+	ListFits.Sorts.Unfit(ScaledRead, "Sorter", "Sorted", ScalerInference, Scalers, Scalers).StartsWith("IndexOrList")
 	let arguments = Arguments(call, inference, scope, current)
 	let isOverloaded = types.ParameterScope(instance).Count(method) > 1
 	let isNamed = call.children.Length > 0 and call.children.Last.Kind is "Reassignment"
-	let isUnfit = isOverloaded and isNamed is false and Chosen(instance, method, arguments) < 0
-	isUnfit then "NoOverloadFits: " + instance + "." + method + " got " + Text.Combine(arguments, ", ") else ""
+	if isOverloaded is false or isNamed or Chosen(instance, method, arguments) >= 0
+		return ""
+	let target = instance + "." + method
+	if IsIndexing(instance, method, arguments, Ordinal(instance, method, arguments, false))
+		let reason = "(Number) indexes " + method + " or passes a one-element list, index a let of it"
+		return "IndexOrListIsAmbiguous: " + target + reason
+	"NoOverloadFits: " + target + " got " + Text.Combine(arguments, ", ")
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
 	Picking.Typed(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"
