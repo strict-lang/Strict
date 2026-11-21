@@ -35,8 +35,7 @@ Rounds(methods List(MethodEntry)) Number
 	Mutation.Rounds((Compared.method, Twice.method)) is 3
 	mutable rounds = 0
 	for methods
-		let count = Mutation(value).Candidates.Length
-		rounds = count > rounds then count else rounds
+		rounds = Mutation(value).Candidates.Length.Maximum(rounds)
 	rounds
 Candidates Numbers
 	Twice.Candidates is (13, 18)

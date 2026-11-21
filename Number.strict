@@ -90,6 +90,12 @@ IsNearlyEqual(other, difference = 0) Boolean
 	let delta = (value - other).Absolute
 	let scale = value.Absolute > other.Absolute then value.Absolute else other.Absolute
 	value is other or delta < 1 / 0 and (delta <= difference or delta <= Epsilon * (1 + scale))
+Maximum(other Number) Number
+	3.Maximum(5) is 5 and 5.Maximum(3) is 5 and -2.Maximum(-7) is -2
+	value > other then value else other
+Minimum(other Number) Number
+	3.Minimum(5) is 3 and 5.Minimum(3) is 3 and -2.Minimum(-7) is -7
+	value < other then value else other
 Clamp(minimum = 0, maximum = 1) Number
 	1.7.Clamp(0.5, 1.5) is 1.5
 	0.3.Clamp is 0.3

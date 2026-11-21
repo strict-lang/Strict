@@ -118,7 +118,7 @@ Fewest(instance Text, name Text) Number
 		if value is name + " required"
 			let required = scope.types(index) to Number
 			fewest = fewest < 0 or required < fewest then required else fewest
-	fewest < 0 then 0 else fewest
+	fewest.Maximum(0)
 UnknownMembers(call SyntaxNode) Texts
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("c + cs").Tokens).Parse).Length is 0
 	Counting.UnknownMembers(SyntaxParser(Tokenizer("c.Count(size = 2)").Tokens).Parse).Length is 0

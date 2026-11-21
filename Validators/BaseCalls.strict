@@ -1,14 +1,17 @@
 has lines Texts
 constant Larger = BaseCalls(("Rest Text", "	Rest is \"b\"", "	text.Substring(start, text.Length - start)"))
+constant Extremes = (("$a", ">", "$b", "then", "$a", "else", "$b"), ("$a", ">", "$b", "then", "$b", "else", "$a"), ("$a", "<", "$b", "then", "$a", "else", "$b"), ("$a", "<", "$b", "then", "$b", "else", "$a"))
+constant Inclusive = (("$a", ">=", "$b", "then", "$a", "else", "$b"), ("$a", ">=", "$b", "then", "$b", "else", "$a"), ("$a", "<=", "$b", "then", "$a", "else", "$b"), ("$a", "<=", "$b", "then", "$b", "else", "$a"))
 constant Rest = List(Texts) + ("$a", ".", "Substring", "(", "$b", ",", "$a", ".", "Length", "-", "$b", ")")
 constant Bit = List(Texts) + ("(", "$a", "/", "2", "^", "$b", ")", ".", "Floor", "%", "2", "is", "1")
 constant Others = (("$a", "+", "(", "$b", "-", "$a", ")", "*", "$c"), ("$a", ".", "Round", "(", "0", ")"), ("$a", "^", "0.5"), ("$a", "<", "$b", "or", "$a", ">", "$b"))
-constant Patterns = Rest + Bit + Others
-constant Templates = List(Text) + "$a.Substring($b)" + "$a.IsBitSet($b)" + ("$a.Lerp($b, $c)", "$a.Round", "$a.SquareRoot", "$a is not $b")
+constant Patterns = Rest + Bit + Others + Extremes + Inclusive
+constant Extreme = ("$a.Maximum($b)", "$a.Minimum($b)", "$a.Minimum($b)", "$a.Maximum($b)")
+constant Templates = (List(Text) + "$a.Substring($b)" + "$a.IsBitSet($b)" + ("$a.Lerp($b, $c)", "$a.Round", "$a.SquareRoot", "$a is not $b")) + Extreme + Extreme
 constant Suggestion = "BaseMethodMustBeUsed: text . Substring ( start , text . Length - start ), use text.Substring(start)"
-constant Stronger = (".", "*", "/", "%", "^", "-", "(")
+constant Stronger = (".", "*", "/", "%", "^", "-", "(", "and", "or", "not")
 constant Continuing = (".", "(", "+", "-", "*", "/", "%", "^")
-constant Keys = ("Substring", "Floor", ") *", "Round(0)", "^ 0.5", " or ")
+constant Keys = ("Substring", "Floor", ") *", "Round(0)", "^ 0.5", " or ", "then", "then", "then", "then", "then", "then", "then", "then")
 Issues List(ValidationIssue)
 	Larger.Issues.First to Text is Suggestion
 	Larger.Issues.First.Line is 3 and BaseCalls(("A", "	A is 1", "	b + c")).Issues.Length is 0
@@ -32,8 +35,11 @@ Suggested(code Text) Text
 	Larger.Suggested("let rest = text.Substring(start, text.Length - start)").EndsWith("use text.Substring(start)")
 	Larger.Suggested("(flags / 2 ^ bit).Floor % 2 is 1").EndsWith("use flags.IsBitSet(bit)")
 	Larger.Suggested("start + (end - start) * amount").EndsWith("use start.Lerp(end, amount)")
-	Larger.Suggested("size.Round(0)").EndsWith("use size.Round")
-	Larger.Suggested("2 ^ 0.5").EndsWith("use 2.SquareRoot")
+	Larger.Suggested("x.Round(0)").EndsWith("use x.Round") and Larger.Suggested("2 ^ 0.5").EndsWith("2.SquareRoot")
+	Larger.Suggested("a < b then a else b").EndsWith("use a.Minimum(b)")
+	Larger.Suggested("x < low then low else x").EndsWith("use x.Maximum(low)")
+	Larger.Suggested("width >= height then width else height").EndsWith("use width.Maximum(height)")
+	Larger.Suggested("value < limit and value > below then value else below") is ""
 	Larger.Suggested("x < a or x > a").EndsWith("use x is not a") and Larger.Suggested("width + height") is ""
 	Larger.Suggested("y * a + (b - a) * t") is ""
 	let tokens = Tokenizer(code).Tokens

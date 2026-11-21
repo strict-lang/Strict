@@ -41,7 +41,7 @@ Reported(issues Texts) Number
 		logger.Log(value)
 	issues.Length
 CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean) List(ValidationIssue)
-	let limits = Limits(lines, isBase, Limits.Scale(path)).Issues + SubstringLengths(lines).Issues
+	let limits = Limits(lines, isBase, Limits.Scale(path), typeName).Issues + SubstringLengths(lines).Issues
 	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
 	let based = isBase then List(ValidationIssue) else BaseCalls(lines).Issues

@@ -19,7 +19,7 @@ Position(scores Numbers, start Number, count Number) Number
 	mutable position = start
 	for count
 		position = Above(scores(start + index), largest, start + index, position)
-		largest = Softmax.Larger(largest, scores(start + index))
+		largest = largest.Maximum(scores(start + index))
 	position
 Maxima(pairs Numbers) Numbers
 	Greedy.Maxima((3, 1, 2, 2)) is (3, 2)

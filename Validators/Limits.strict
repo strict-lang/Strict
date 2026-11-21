@@ -1,6 +1,7 @@
 has lines Texts
 has isBase Boolean
 has scale Number = 1
+has typeName Text = ""
 constant MaxCharacters = 120
 constant MaxMethods = 18
 constant MaxMembers = 15
@@ -29,7 +30,7 @@ Issues ValidationIssues
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LineIssues(value, index) + NegationIssues(value, index) + AsciiIssues(value, index)
-	issues + MethodBudgets(lines, scale).Issues + CountIssues
+	issues + MethodBudgets(lines, scale, typeName).Issues + CountIssues
 OrderIssues ValidationIssues
 	Limits(("Run", "\t1", "has a"), false).OrderIssues.First to Text is "MembersMustComeBeforeMethods: has a"
 	Limits(("has a", "Run", "\t1"), false).OrderIssues.Length is 0

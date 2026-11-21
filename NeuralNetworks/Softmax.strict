@@ -31,9 +31,5 @@ Largest(scores Numbers, start Number, count Number) Number
 	Softmax.Largest((1, 3, 2, 0), 2, 2) is 2
 	mutable largest = scores(start)
 	for count
-		largest = Larger(largest, scores(start + index))
+		largest = largest.Maximum(scores(start + index))
 	largest
-Larger(left Number, right Number) Number
-	Softmax.Larger(1, 2) is 2
-	Softmax.Larger(3, 2) is 3
-	left > right then left else right

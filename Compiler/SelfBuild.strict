@@ -73,8 +73,7 @@ IsStale(arguments Texts) Boolean
 	let exeTime = File(TargetExecutable).Modified
 	if exeTime is 0
 		return false
-	let checkedTime = File(root + CheckedFile).Modified
-	let stamp = checkedTime > exeTime then checkedTime else exeTime
+	let stamp = File(root + CheckedFile).Modified.Maximum(exeTime)
 	IsGitNewer(stamp) then true else IsSourceScanNeeded(arguments) and NewestSource > stamp
 IsGitNewer(stamp Number) Boolean
 	SelfBuild(Logger, "Compiler/output/Missing", "strict.exe").IsGitNewer(0) is false

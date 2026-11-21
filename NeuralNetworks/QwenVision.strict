@@ -80,8 +80,7 @@ Resized(image Numbers, height Number, width Number, grid Numbers) Numbers slow
 		Blended(image, (index / (rows * columns)).Floor * height * width, 1, row, column, height, width)
 Source(target Number, size Number, count Number) Number
 	(Tiny.Source(0, 2, 4), Tiny.Source(3, 2, 4)) is (0, 1.25)
-	let source = (target + 0.5) * size / count - 0.5
-	source < 0 then 0 else source
+	((target + 0.5) * size / count - 0.5).Maximum(0)
 Blended(values Numbers, start Number, step Number, row Number, column Number, height Number, width Number) Number
 	Tiny.Blended((1, 2, 3, 4), 0, 1, 0.5, 0.5, 2, 2) is 2.5
 	let top = row.Floor

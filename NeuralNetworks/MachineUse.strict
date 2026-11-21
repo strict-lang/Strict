@@ -27,8 +27,7 @@ constant Sample = MachineUse(Logger, "H3Video", 25 * Gigabyte, 22 * Gigabyte)
 Models(logging Logger, name Text, model Number, encoder Number, growth Number, forced Boolean) MachineUse
 	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, false).ram is 16 * Gigabyte
 	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, true).vram is 6 * Gigabyte
-	let encoding = encoder * growth
-	MachineUse(logging, name, encoding > model then encoding else model, model + Gigabyte, forced)
+	MachineUse(logging, name, (encoder * growth).Maximum(model), model + Gigabyte, forced)
 Weights(logging Logger, name Text, path Text) MachineUse slow
 	MachineUse.Weights(Logger, "Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
 	let parts = path.Split("-00001-of-")

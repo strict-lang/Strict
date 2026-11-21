@@ -1,13 +1,18 @@
 has lines Texts
 has scale Number = 1
+has typeName Text = ""
 constant MaxTests = 10
 constant MaxLets = 10
 constant MaxProduction = 10
+constant VmLoops = List(Text) + "Frame.Finished"
+constant MaxVmLoop = 12
 constant Tested = MethodBudgets(("Run Number", "	Run is 1", "	constant one = 1", "	Run > 0", "	let a = 1", "	if a > 0", "		let b = 2", "		return b", "	a"))
+constant Looping = ("Finished", "	a", "	b", "	c", "	d", "	e", "	f", "	g", "	h", "	i", "	j", "	k", "	l")
 constant Busy = MethodBudgets(("Run", "	a", "	b", "	c", "	d", "	e", "	f", "	g", "	h", "	i", "	j", "	k"))
 Issues List(ValidationIssue)
 	Busy.Issues.First to Text is "ProductionLinesMustNotExceedTen: Run has 11"
 	Busy.Issues.First.Line is 1 and Tested.Issues.Length is 0 and MethodBudgets(Busy.lines, 2).Issues.Length is 0
+	MethodBudgets(Looping, 1, "Frame").Issues.Length is 0 and MethodBudgets(Looping, 1, "Other").Issues.Length is 1
 	let shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
@@ -20,7 +25,7 @@ Exceeded(header Number, counts Numbers) List(ValidationIssue)
 	Busy.Exceeded(0, (10, 10, 10)).Length is 0
 	let name = Tokenizer(lines(header)).Tokens.First
 	constant rules = ("TestLinesMustNotExceedTen", "LetLinesMustNotExceedTen", "ProductionLinesMustNotExceedTen")
-	let limits = (MaxTests, MaxLets, MaxProduction)
+	let limits = (MaxTests, MaxLets, typeName + "." + name is in VmLoops then MaxVmLoop else MaxProduction)
 	for counts
 		if value > limits(index) * scale
 			ValidationIssue(rules(index), name + " has " + value, header + 1)
