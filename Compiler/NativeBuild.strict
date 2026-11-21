@@ -24,10 +24,13 @@ IsProgram(path Text) Boolean
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
 Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text))
 	let isProgram = isTesting is false and IsProgram(path)
-	let module = Folder.Module(path, root, isCounting, isProgram, Target, sources)
+	let base = Output(path, isProgram)
+	let beside = Path(base).PathOnly.text + "/obj/" + Path(base).FileName.text
+	let objects = base.IndexOf("/obj/") >= 0 then base else beside
+	let loaded = Folder.Module(path, root, isCounting, isProgram, Target, sources)
+	let module = MlirModule(loaded, Cached = objects + ".emitted")
 	if module.types.Length is 0
 		return Error("NoTypesCompiled")
-	let base = Output(path, isProgram)
 	let program = BuildProfile(logger).Program(module, base, root, value)
 	if program is ""
 		return Error("NoProgramEmitted")

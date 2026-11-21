@@ -4,6 +4,7 @@ has countedFiles Texts = List(Text)
 has entries = 1
 has entrySymbol Text = "main"
 has platform = -1
+has Cached = ""
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
@@ -54,8 +55,7 @@ Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numb
 	result
 Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
 	Counters.Emitted(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
-	for texts
-		Emission(value, functions, recursive)
+	EmissionCache(value, functions, recursive).Emitted(texts)
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
 	Counters.Emission(MlirWhole.Row.function, NoFunctions, List(Text)).IndexOf("alwaysinline") > 0
 	let text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text

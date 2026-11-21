@@ -28,8 +28,7 @@ Slotted(arguments Texts, slot Number) Number
 	Missing.Slotted(List(Text) + "test", Resident.Servers) is Unserved
 	if slot >= Resident.Servers
 		return Unserved
-	let family = ServerFamily(Resident.Variables).Name
-	let server = Resident(root, family + (slot is 0 then "" else slot to Text))
+	let server = Resident(root, ServerFamily(Resident.Variables).Name + (slot is 0 then "" else slot to Text))
 	let port = Port(server)
 	let isFree = File(server.Freed).Exists and port > 0
 	let answer = isFree then Answered(server, port, arguments) else Unserved

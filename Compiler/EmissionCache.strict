@@ -1,0 +1,81 @@
+has module MlirModule
+has functions List(MlirFunction)
+has recursive Texts
+constant Separator = "\n// strict emission "
+constant Range = 1000000007
+constant Counting = EmissionCache(MlirModule.Counters, MlirModule.Counters.Functions, List(Text))
+Emitted(texts List(MlirFunction)) Texts slow
+	Counting.Emitted(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
+	if module.Cached is ""
+		return Fresh(texts)
+	let keys = Keys(texts)
+	let stored = Stored
+	let emitted = Reused(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
+	Saved(keys, emitted, stored)
+	emitted
+Fresh(texts List(MlirFunction)) Texts
+	Counting.Fresh(MlirModule.Counters.Functions).Length is 1
+	for texts
+		module.Emission(value, functions, recursive)
+Reused(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
+	mutable reused = 0
+	for keys
+		reused = value is in stored then reused + 1 else reused
+	let checking = isChecked then ", each compared with a fresh emission" else ""
+	Logger.Log("Emission cache: " + reused + " of " + texts.Length + " functions reused" + checking)
+	Picked(texts, keys, stored, isChecked)
+Picked(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
+	for texts
+		Chosen(value, keys(index), stored, isChecked)
+Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked Boolean) Text slow
+	if key is not in stored
+		return module.Emission(function, functions, recursive)
+	if isChecked is false
+		return stored(key)
+	let fresh = module.Emission(function, functions, recursive)
+	if stored(key) is not fresh
+		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
+	fresh
+Stored Dictionary(Text, Text) slow
+	mutable stored = Dictionary(Text, Text)
+	if File(module.Cached).Exists is false
+		return stored
+	for File(module.Cached).ReadText.Split(Separator)
+		let end = value.IndexOf("\n")
+		if end > 0
+			stored = stored.Add(value.Substring(0, end), value.Substring(end + 1))
+	stored
+Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
+	mutable isNew = keys.Length is not stored.Length
+	mutable joined = List(Mutable(Text))
+	for keys
+		isNew = isNew or value is not in stored
+		joined.Add(Separator + value + "\n" + emitted(index))
+	if isNew
+		File(module.Cached).Write(Text.Combine(joined, ""))
+Keys(texts List(MlirFunction)) Texts
+	Counting.Keys(MlirModule.Counters.Functions).Length is 1
+	let shared = Shared
+	let graph = CallGraph(module.types)
+	for texts
+		let own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
+		(HashCode(Flags(value) + "|" + shared + "|" + graph.Closure(own) + "|" + graph.Calling(own)).number % Range) to Text
+Flags(function MlirFunction) Text
+	Counting.Flags(MlirModule.Counters.Functions.First).StartsWith("Counter_Run_0|")
+	let loops = function.FastLoop + "|" + function.Group + "|" + function.Guarded
+	let slots = loops + "|" + function.Packing + "|" + function.Float
+	let calls = (function.safeCalls to Text) + "|" + (function.lineSlots to Text) + "|" + function.IsDeferred
+	function.Symbol + "|" + function.Variant + "|" + slots + "|" + calls + "|" + (function.Symbol is in recursive)
+Shared Text
+	Counting.Shared.Length > 0
+	let entry = module.entryName + "|" + module.entries + "|" + module.entrySymbol
+	mutable sum = HashCode(entry + "|" + module.platform + "|" + (module.countedFiles to Text)).number % Range
+	for module.types
+		sum = (sum + HashCode(Layout(value)).number % Range) % Range
+	sum to Text
+Layout(type TypeEntry) Text
+	Counting.Layout(MlirModule.Counters.types.First).StartsWith("Strict/Counter|")
+	mutable headers = List(Mutable(Text))
+	for type.methods
+		headers.Add(value.Name + "(" + (value.parameters to Text) + ")" + value.returnType)
+	type.Name + "|" + (type.members to Text) + "|" + Text.Combine(headers, ";")

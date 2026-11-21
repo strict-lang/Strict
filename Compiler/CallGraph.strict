@@ -1,0 +1,90 @@
+has hashes Dictionary(Text, Number)
+has callees Dictionary(Text, Text)
+has callers Dictionary(Text, Text)
+constant Range = 1000000007
+constant Invoking = (InstructionEntry.Invoke(0, ("Strict/B", "Go", "Strict/Number"), List(Number), -1), InstructionEntry.Return(0))
+constant Going = MethodEntry("Go", List(MemberEntry), "Strict/Number", List(InstructionEntry) + InstructionEntry.Return(0))
+constant Running = MethodEntry("Run", List(MemberEntry), "Strict/Number", Invoking)
+constant Types = (TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + Running), TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry) + Going))
+constant Graph = CallGraph(Types)
+from(types List(TypeEntry))
+	Graph.callees("A.Run") is ",B.Go" and Graph.callers("B.Go") is ",A.Run"
+	hashes = Hashed(types)
+	callees = Called(types)
+	callers = Callers(types)
+Key(type TypeEntry, method MethodEntry) Text
+	Graph.Key(Types.First, Running) is "A.Run"
+	TypeEntry.ShortName(type.Name) + "." + method.Name
+Hashed(types List(TypeEntry)) Dictionary(Text, Number)
+	Graph.Hashed(Types).Length is 2
+	mutable hashed = Dictionary(Text, Number)
+	for type, method in types, type.methods
+		let key = Key(type, method)
+		let earlier = key is in hashed then hashed(key) else 0
+		hashed = hashed.set(key, (earlier + HashCode(method.instructions to Text).number % Range) % Range)
+	hashed
+Called(types List(TypeEntry)) Dictionary(Text, Text)
+	Graph.Called(Types)("A.Run") is ",B.Go"
+	mutable called = Dictionary(Text, Text)
+	for type, method in types, type.methods
+		called = Joined(Key(type, method), Targets(method), called)
+	called
+Callers(types List(TypeEntry)) Dictionary(Text, Text)
+	Graph.Callers(Types)("B.Go") is ",A.Run"
+	mutable calling = Dictionary(Text, Text)
+	for type, method in types, type.methods
+		calling = Reversed(Key(type, method), Targets(method), calling)
+	calling
+Targets(method MethodEntry) Texts
+	Graph.Targets(Running) is ("B.Go")
+	for method.instructions
+		if value.kind is InstructionType.Invoke and value.texts.Length > 1
+			TypeEntry.ShortName(value.texts(0)) + "." + value.texts(1)
+Joined(key Text, targets Texts, edges Dictionary(Text, Text)) Dictionary(Text, Text)
+	Graph.Joined("A.Run", ("B.Go", "C.Do"), Dictionary(Text, Text))("A.Run") is ",B.Go,C.Do"
+	edges.set(key, (key is in edges then edges(key) else "") + Text.Combine(Prefixed(targets), ""))
+Prefixed(targets Texts) Texts
+	Graph.Prefixed(("B.Go")) is (",B.Go")
+	for targets
+		"," + value
+Reversed(caller Text, targets Texts, edges Dictionary(Text, Text)) Dictionary(Text, Text)
+	Graph.Reversed("A.Run", ("B.Go"), Dictionary(Text, Text)).Length is 1
+	mutable reversed = edges
+	for targets
+		reversed = Joined(value, List(Text) + caller, reversed)
+	reversed
+Listed(key Text, edges Dictionary(Text, Text)) Texts
+	Graph.Listed("A.Run", Graph.callees) is ("B.Go") and Graph.Listed("B.Go", Graph.callees).Length is 0
+	key is in edges then edges(key).Split(",") - "" else List(Text)
+Hash(key Text) Number
+	Graph.Hash("A.Run") is Graph.hashes("A.Run") and Graph.Hash("C.Do") is 1
+	key is in hashes then hashes(key) else 1
+Closure(start Text) Text
+	Graph.Closure("A.Run") is not Graph.Closure("B.Go")
+	mutable seen = Dictionary(Text, Number).Add(start, 1)
+	mutable pending = List(Mutable(Text)) + start
+	mutable sum = 0
+	for as long as pending.Length > 0
+		let current = pending.Last
+		let fresh = Unvisited(Listed(current, callees), seen)
+		sum = (sum + Hash(current)) % Range
+		pending = pending.Slice(0, pending.Length - 1) + fresh
+		seen = Marked(fresh, seen)
+	sum to Text
+Unvisited(names Texts, seen Dictionary(Text, Number)) Texts
+	Graph.Unvisited(("B.Go", "C.Do"), Dictionary(Text, Number).Add("B.Go", 1)) is ("C.Do")
+	for names
+		if value is not in seen
+			value
+Marked(names Texts, seen Dictionary(Text, Number)) Dictionary(Text, Number)
+	Graph.Marked(("B.Go"), Dictionary(Text, Number)).Length is 1
+	mutable marked = seen
+	for names
+		marked = marked.set(value, 1)
+	marked
+Calling(own Text) Text
+	Graph.Calling("B.Go") is Graph.hashes("A.Run") to Text and Graph.Calling("A.Run") is "0"
+	mutable sum = 0
+	for Listed(own, callers)
+		sum = (sum + Hash(value)) % Range
+	sum to Text
