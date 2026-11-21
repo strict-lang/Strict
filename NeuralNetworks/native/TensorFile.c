@@ -769,7 +769,14 @@ static const char* Placed(double path, const Tensor* tensor, unsigned char* data
 		isStored, scales, fours };
 	if (!placing.file)
 		return "TensorFileNotReadable";
-	Parallel(PlacedChunk, &placing, (tensor->height + ChunkRows - 1) / ChunkRows);
+	/* a tensor of one chunk or below 1 MB is read on this thread: waking the pool for it took about 2 ms each (858
+	   small tensors of a LoRA of H3 1.7 s) */
+	uint64_t chunks = (tensor->height + ChunkRows - 1) / ChunkRows;
+	if (chunks <= 1 || tensor->height * tensor->width * tensor->bytes < 1048576)
+		for (uint64_t chunk = 0; chunk < chunks; chunk++)
+			PlacedChunk(&placing, chunk);
+	else
+		Parallel(PlacedChunk, &placing, chunks);
 	Closed(placing.file);
 	return atomic_load(&placing.failed) ? "TensorFileDataTruncated" : 0;
 }
