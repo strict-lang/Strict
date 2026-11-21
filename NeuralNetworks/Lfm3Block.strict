@@ -29,12 +29,10 @@ Forwarded(input Numbers, rotation Numbers, sequences = 1) Lfm3Block
 	let mixing = Mixing(Normed(input, attentionNorm), rotation, sequences)
 	let operated = IsConvolution then mixing.convolution.output else mixing.output
 	let residual = Gpt2Block.Added(input, Normed(operated, postNorm))
-	let fed = Fed(Normed(residual, mlpNorm))
-	Lfm3Block(mixing, output = Gpt2Block.Added(residual, Normed(fed, postMlpNorm)))
+	Lfm3Block(mixing, output = Gpt2Block.Added(residual, Normed(Fed(Normed(residual, mlpNorm)), postMlpNorm)))
 Fed(normed Numbers) Numbers
 	Passing.Fed((1, 2)).Length is 2
-	let isRouted = feedForward.router.weights.Length > 0
-	isRouted then feedForward.Forward(normed) else feedForward.Added(normed, Layer.Unbiased)
+	feedForward.router.weights.Length > 0 then feedForward.Forward(normed) else feedForward.Added(normed, Layer.Unbiased)
 Mixing(normed Numbers, rotation Numbers, sequences Number) Lfm3Block
 	Passing.Mixing((1, 2), List(Number), 1).output is (1, 2)
 	let convolved = IsConvolution then convolution.Mixed(normed, sequences) else convolution

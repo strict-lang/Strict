@@ -39,9 +39,10 @@ Convolved(gated Numbers, channels Number, sequences Number) Numbers
 		let channel = index % channels
 		let sequence = (token / perSequence).Floor
 		let row = token % perSequence - width + 1
+		let first = sequence * perSequence
 		mutable sum = 0
 		for width
-			sum = sum + kernel(channel * width + value) * Tapped(gated, sequence * perSequence, row + value, sequence, channel, channels)
+			sum = sum + kernel(channel * width + value) * Tapped(gated, first, row + value, sequence, channel, channels)
 		sum
 Tapped(gated Numbers, first Number, row Number, sequence Number, channel Number, channels Number) Number
 	Tiny.Tapped((1, 4), 0, -1, 0, 0, 2) is 0
@@ -63,7 +64,8 @@ Shifted(gated Numbers, channels Number, sequences Number) Numbers
 		let sequence = (index / (kept * channels)).Floor
 		let row = perSequence + (index / channels).Floor % kept
 		let channel = index % channels
-		row < kept then Earlier(sequence * kept + row, channel, channels) else gated((sequence * perSequence + row - kept) * channels + channel)
+		let later = (sequence * perSequence + row - kept) * channels + channel
+		row < kept then Earlier(sequence * kept + row, channel, channels) else gated(later)
 Earlier(row Number, channel Number, channels Number) Number
 	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Earlier(1, 0, 2) is 4 and Tiny.Earlier(0, 0, 2) is 0
 	window.Length is 0 then 0 else window(row * channels + channel)

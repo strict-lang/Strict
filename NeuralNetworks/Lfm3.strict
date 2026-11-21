@@ -84,8 +84,6 @@ Steps(tokens Numbers, positions Numbers) Lfm3 slow
 	Forwarded(Embedded(tokens), positions, tokens.Length)
 Nexts Numbers
 	Lfm3(Unloaded, embedding = ((1, 0), (0, 1)), norm = (1, 1), hidden = (3, 1, 1, 2)).Nexts is (0, 1)
-	let size = norm.Length
-	let scores = Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden, norm))
-	Greedy.Rows(scores, embedding.Length)
+	Greedy.Rows(Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden, norm)), embedding.Length)
 Next Number slow
 	Greedy.Largest(Scored)
