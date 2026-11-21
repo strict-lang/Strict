@@ -85,7 +85,7 @@ Rewritten(type TypeEntry, method MethodEntry, skips LaneSkips) MethodEntry
 	Sample.Rewritten(Caller, MethodEntry.CountingLoop, LaneSkips(Sample.types)) is MethodEntry.CountingLoop
 	let calls = LaneCalls(types)
 	let fixed = Members(type).Length > 0 then List(Text) else LaneNesting(types).Fixed(method) + calls.Laned(type.members)
-	let flow = LaneFlow(types, LaneFlow(types).Lists(type, method), fixed)
+	let flow = LaneFlow(types, LaneFlow(types).Lists(type, method), fixed, skips)
 	let variables = flow.Variables(method.instructions, List(Text), 4) + fixed
 	let base = LoadReuse(method.instructions).RegisterCount
 	mutable laned = List(Text)

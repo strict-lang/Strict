@@ -1,22 +1,29 @@
 has lanes Texts
 has relevant Texts
+has structs Texts
+has fields Texts
 has isChecked Boolean = false
 constant Paired = LaneSkips((StructLanes.Pair, StructLanes.Caller))
 constant Drawn = LaneSkips((StructLanes.Pair, LaneCalls.Drawer))
 constant None = LaneSkips(List(TypeEntry))
+constant Sizes = LaneSkips(List(TypeEntry) + StructLanes.Sized)
 from(types List(TypeEntry))
 	Paired.lanes is ("Pair")
 	LaneSkips(List(TypeEntry) + StructLanes.Caller).lanes.Length is 0
+	Sizes.structs is ("Size") and Drawn.fields is ("Drawer.offset Pair")
 	let found = Lanes(types)
 	lanes = found
 	relevant = Built(found) + Called(types, found)
+	let firsts = Firsts(types)
+	structs = Structs(types, firsts)
+	fields = Fields(types, firsts)
 	isChecked = Process.Variable("STRICT_LANES_CHECK") is "1"
 Lanes(types List(TypeEntry)) Texts
 	Paired.Lanes((StructLanes.Pair, StructLanes.Caller)) is ("Pair")
 	Drawn.lanes is ("Pair", "Drawer")
 	let calls = LaneCalls(types)
 	for types
-		if StructLanes.Members(value).Length > 0 or calls.Laned(value.members).Length > 0
+		if StructLanes(types).Members(value).Length > 0 or calls.Laned(value.members).Length > 0
 			TypeEntry.ShortName(value.Name)
 IsUntouched(type TypeEntry, method MethodEntry) Boolean
 	Paired.IsUntouched(StructLanes.Caller, MethodEntry.CountingLoop)
@@ -42,6 +49,29 @@ Mentioned(text Text, names Texts) Boolean
 		if text.IndexOf(value) >= 0
 			return true
 	false
+Firsts(types List(TypeEntry)) List(TypeEntry)
+	Paired.Firsts((StructLanes.Pair, StructLanes.Pair, StructLanes.Caller)).Length is 2
+	mutable seen = List(Text)
+	mutable firsts = List(TypeEntry)
+	for types
+		let short = TypeEntry.ShortName(value.Name)
+		if "(" is not in value.Name and short is not in seen
+			seen = seen + short
+			firsts = firsts + value
+	firsts
+Structs(types List(TypeEntry), firsts List(TypeEntry)) Texts
+	Sizes.Structs(List(TypeEntry) + StructLanes.Sized, List(TypeEntry) + StructLanes.Sized) is ("Size")
+	let analysis = StructLanes(types)
+	for firsts
+		if analysis.Members(value).Length > 0
+			TypeEntry.ShortName(value.Name)
+Fields(types List(TypeEntry), firsts List(TypeEntry)) Texts
+	Drawn.Fields((StructLanes.Pair, LaneCalls.Drawer), (StructLanes.Pair, LaneCalls.Drawer)) is ("Drawer.offset Pair")
+	for type, field in firsts, LaneCalls(types).Laned(type.members)
+		TypeEntry.ShortName(type.Name) + "." + field
+IsTabled(name Text) Boolean
+	Drawn.IsTabled("Strict/Drawer") and Drawn.IsTabled("Strict/List(Pair)") is false and None.IsTabled("Pair") is false
+	lanes.Length > 0 and "(" is not in name
 Built(names Texts) Texts
 	Paired.Built(Paired.lanes) is ("Pair.from")
 	for names

@@ -1,6 +1,7 @@
 has types List(TypeEntry)
 has lists Texts = List(Text)
 has fixed Texts = List(Text)
+has skips LaneSkips = LaneSkips.None
 constant Sample = LaneFlow((StructLanes.Caller, StructLanes.Pair))
 constant Kept = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "pair")
 constant Reloaded = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "pair")
@@ -105,20 +106,29 @@ Produced(entry InstructionEntry, variables Texts) Text
 	Sample.Produced(StructLanes.Calling(4), List(Text)) is ""
 	LaneFlow(Sample.types, ("pairs Pair")).Produced(Picking, List(Text)) is "Pair"
 	LaneFlow(LaneCalls.Sample.types).Produced(LaneCalls.Offsets, List(Text)) is "Pair"
+	LaneFlow(Sample.types, skips = LaneSkips.Drawn).Produced(LaneCalls.Offsets, List(Text)) is "Pair"
 	if IsBuilt(entry)
 		return TypeEntry.ShortName(entry.texts(0))
 	if entry.kind is InstructionType.IndexCall
 		return TypeEntry.ShortName(Typed(lists, entry.texts(0)))
 	if entry.kind is InstructionType.FieldLoad
-		return Typed(LaneCalls(types).Laned(Inliner(types).TypeOf(entry.texts(1)).members), entry.texts(0))
+		return Field(entry)
 	entry.kind is InstructionType.LoadVariableToRegister then Typed(variables, entry.texts(0)) else ""
+Field(entry InstructionEntry) Text
+	LaneFlow(LaneCalls.Sample.types).Field(LaneCalls.Offsets) is "Pair" and Sample.Field(LaneCalls.Offsets) is ""
+	if skips.IsTabled(entry.texts(1))
+		return Typed(skips.fields, TypeEntry.ShortName(entry.texts(1)) + "." + entry.texts(0))
+	Typed(LaneCalls(types).Laned(Inliner(types).TypeOf(entry.texts(1)).members), entry.texts(0))
 IsBuilt(entry InstructionEntry) Boolean
 	Sample.IsBuilt(StructLanes.Constructed)
 	Sample.IsBuilt(StructLanes.Calling(4)) is false
+	LaneFlow(Sample.types, skips = LaneSkips.Sizes).IsBuilt(StructLanes.Constructed) is false
 	Sample.IsBuilt(StructLanes.Calling(0)) is false
 	Sample.IsBuilt(LaneCalls.Paired) is false
 	Sample.IsBuilt(InstructionEntry.Invoke(2, ("Pair", "from", "Pair", "real"), List(Number) + 0, -1)) is false
 	if entry.kind is not InstructionType.Invoke or entry.texts(1) is not "from"
+		return false
+	if skips.IsTabled(entry.texts(0)) and TypeEntry.ShortName(entry.texts(0)) is not in skips.structs
 		return false
 	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
 	let type = Inliner(types).TypeOf(entry.texts(0))
