@@ -1,11 +1,15 @@
 has logger
 Run(folder Text, root Text) Number
 	mutable issues = 0
-	for ResolveCheck.Tree(folder)
+	for Parts(folder)
 		issues = issues + Checked(value, root)
 	issues = issues + ProjectRules(logger, root).Checked(folder)
 	logger.Log("Validation issues: " + issues)
 	issues + (issues is 0 then Folders(logger).Tested(folder, root) else 0)
+Parts(path Text) Texts slow
+	ValidateCheck(Logger).Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
+	ValidateCheck(Logger).Parts("./Math") is ResolveCheck.Tree("./Math")
+	path.EndsWith(".strict") then List(Text) + path else ResolveCheck.Tree(path)
 Checked(folder Text, root Text) Number slow
 	let problems = FileCompiler.Problems(Files(folder))
 	let files = Parsed(Files(folder), problems)
