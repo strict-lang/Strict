@@ -1,10 +1,9 @@
-has logger
 has root Text
 has coordinator = ""
 constant Nowhere = "Compiler/output/MissingCoordinator"
-constant Sample = Forwarding(Logger, "Compiler/output", Nowhere)
+constant Sample = Forwarding("Compiler/output", Nowhere)
 constant Server = Resident("Compiler/output")
-constant Missing = Forwarding(Logger, "Compiler/output/Missing", Nowhere)
+constant Missing = Forwarding("Compiler/output/Missing", Nowhere)
 constant Dropped = -3
 constant NoPort = 0
 constant NoClaim = ""
@@ -75,7 +74,7 @@ Stopped Number
 	Missing.Stopped is 0
 	let killed = Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
 	let job = Path(Process.Current.executable.Replace("\\", "/")).FileName.RemoveExtension.text
-	if Coordinator(logger, coordinator).Sent("exit\t" + job, false) is "busy"
+	if Coordinator(coordinator).Sent("exit\t" + job, false) is "busy"
 		logger.Log("The coordinator keeps running for a job of another program")
 	killed
 Killed Number
@@ -155,7 +154,7 @@ Streamed(socket Number) Number
 	mutable code = -2
 	for as long as code is -2
 		let block = Server.Received(socket, "\n")
-		code = StreamedLines(logger).Code(block.Split("\n"), block.EndsWith("\n") then code else Dropped)
+		code = StreamedLines.Code(block.Split("\n"), block.EndsWith("\n") then code else Dropped)
 	code is Resident.Refused then Unserved else code
 Loopback(code Number) Number slow
 	let server = Socket.Local(0)

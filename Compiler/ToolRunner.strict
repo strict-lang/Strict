@@ -18,7 +18,7 @@ ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
 	let tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
 	let started = Process.Elapsed
 	let results = Process.RunTools(name, arguments)
-	BuildProfile(Logger).Reported(phase is "" then tool else phase, started)
+	BuildProfile.Reported(phase is "" then tool else phase, started)
 	for results
 		Retried(Cleaned(value), arguments(index))
 Retried(result ProcessResult, arguments Text) ProcessResult

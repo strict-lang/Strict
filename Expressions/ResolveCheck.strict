@@ -1,4 +1,3 @@
-has logger
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Stray = "A.strict:line 3: MembersMustComeBeforeMethods: constant B = 1"
 constant Joined = ("Names Texts", "\t\"a\" + \"b\"")
@@ -95,7 +94,7 @@ TypeNames(files Texts) Texts
 	for files
 		TypeName(value)
 Inference(files Texts) TypeInference
-	let shapes = BuildProfile(Logger).Shapes(files)
+	let shapes = BuildProfile.Shapes(files)
 	let inferring = Inferring(files, shapes, Generics(files, shapes))
 	inferring.Refined(inferring.Raw)
 Shapes(files Texts) List(TypeShape)

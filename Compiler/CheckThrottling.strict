@@ -1,4 +1,3 @@
-has logger
 constant ToolSeconds = 270
 constant CompileSeconds = 60
 constant CheckSeconds = 90

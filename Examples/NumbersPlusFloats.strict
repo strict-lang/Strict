@@ -1,11 +1,10 @@
-has logger
 Run
 	logger.Log(Appended(List(Numbers) + (1, 2), Float32s + Float32(3) + Float32(4)) to Text)
 	logger.Log(Converted((5, 6)) to Text)
 Appended(rows List(Numbers), floats Float32s) List(Numbers)
-	NumbersPlusFloats(Logger).Appended(List(Numbers) + (1, 2), Float32s + Float32(3)).Length is 2
-	NumbersPlusFloats(Logger).Appended(List(Numbers) + (1, 2), Float32s + Float32(3)).Last is (3)
+	NumbersPlusFloats.Appended(List(Numbers) + (1, 2), Float32s + Float32(3)).Length is 2
+	NumbersPlusFloats.Appended(List(Numbers) + (1, 2), Float32s + Float32(3)).Last is (3)
 	rows + floats
 Converted(numbers Numbers) Numbers
-	NumbersPlusFloats(Logger).Converted((5, 6)) is (5, 6)
+	NumbersPlusFloats.Converted((5, 6)) is (5, 6)
 	numbers to Numbers

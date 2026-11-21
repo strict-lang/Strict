@@ -1,4 +1,3 @@
-has logger
 constant ToolSeconds = 90
 constant OptFlags = "--symbol-dce --convert-scf-to-cf --convert-arith-to-llvm --convert-func-to-llvm --convert-cf-to-llvm --reconcile-unrealized-casts"
 constant ClangFlags = "--target=nvptx64-nvidia-cuda -O3 -fno-slp-vectorize -S -Wno-override-module -Xclang -target-feature -Xclang +ptx78 -march=sm_80"

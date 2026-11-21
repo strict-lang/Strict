@@ -97,7 +97,7 @@ Installing(missing Texts) Text
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text) Text
 	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
-	let lowered = BuildProfile(Logger).Lowered(value, base)
+	let lowered = BuildProfile.Lowered(value, base)
 	if lowered is not ""
 		return lowered
 	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)

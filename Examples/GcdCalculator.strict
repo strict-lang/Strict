@@ -1,6 +1,5 @@
 has first Number
 has second Number
-has logger
 GCD Number
 	GcdCalculator(48, 18).GCD is 6
 	GcdCalculator(12, 8).GCD is 4

@@ -1,4 +1,3 @@
-has logger
 constant Generations = 200
 Run
 	logger.Log(Report("Planar arm", Reach.Planar, Generations))

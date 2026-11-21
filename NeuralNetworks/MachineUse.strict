@@ -1,4 +1,3 @@
-has logger
 has program Text
 has ram Number
 has vram Number
@@ -23,21 +22,21 @@ constant Advice = "Close them or wait until they finish, then run "
 constant TooSmall = "Add --force (STRICT_FORCE=1) to run anyway, much slower because the model does not fit"
 constant Forcing = ", or add --force (STRICT_FORCE=1) to run anyway, very slow while they hold the memory"
 constant Nowhere = "NeuralNetworks/MissingCoordinator"
-constant Sample = MachineUse(Logger, "H3Video", 25 * Gigabyte, 22 * Gigabyte)
+constant Sample = MachineUse("H3Video", 25 * Gigabyte, 22 * Gigabyte)
 Models(logging Logger, name Text, model Number, encoder Number, growth Number, forced Boolean) MachineUse
 	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, false).ram is 16 * Gigabyte
 	MachineUse.Models(Logger, "MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, true).vram is 6 * Gigabyte
-	MachineUse(logging, name, (encoder * growth).Maximum(model), model + Gigabyte, forced)
+	MachineUse(name, (encoder * growth).Maximum(model), model + Gigabyte, forced)
 Weights(logging Logger, name Text, path Text) MachineUse slow
 	MachineUse.Weights(Logger, "Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
 	let parts = path.Split("-00001-of-")
 	let single = File(path).Exists then File(path).Length else 0
 	if parts.Length < 2
-		return MachineUse(logging, name, single, single is 0 then 0 else single + Gigabyte, IsForced(List(Text)))
+		return MachineUse(name, single, single is 0 then 0 else single + Gigabyte, IsForced(List(Text)))
 	mutable size = 0
 	for Directory.Files(Path(path).PathOnly.text, "*-of-" + parts(1))
 		size = size + File(value).Length
-	MachineUse(logging, name, size, size is 0 then 0 else size + Gigabyte, IsForced(List(Text)))
+	MachineUse(name, size, size is 0 then 0 else size + Gigabyte, IsForced(List(Text)))
 IsForced(arguments Texts) Boolean
 	MachineUse.IsForced(("--quality", "best", Force))
 	Force is in arguments or Process.Variable("STRICT_FORCE") is "1"
@@ -46,12 +45,12 @@ IsChecked(arguments Texts, root Text) Boolean slow
 	MachineUse.IsChecked(("--quality", "best"), "artifacts/missing")
 	(Local is in arguments is false and File(root + Resident.Stamp).Exists or arguments is (Resident.Stopping)) is false
 Needed Text
-	MachineUse(Logger, "H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
+	MachineUse("H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
 	let mode = isForced then "force" else "wait"
 	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
 Admitted Boolean slow
-	MachineUse(Logger, "H3Video", 0, 0, true, Nowhere).Admitted
-	let reply = Coordinator(logger, coordinator).Resolved(Needed)
+	MachineUse("H3Video", 0, 0, true, Nowhere).Admitted
+	let reply = Coordinator(coordinator).Resolved(Needed)
 	if reply.StartsWith("refused")
 		Explained(reply)
 		return false

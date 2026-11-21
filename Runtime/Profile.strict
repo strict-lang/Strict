@@ -1,10 +1,9 @@
-has logger
 has selection Text = ""
 constant Lines = ("$Sample A.Run line 2", "x", "$Sample A.Run line 2", "$Sample A.Go line 5")
 constant Shown = 20
 constant Padding = 1000000
 Run(path Text, root Text) Number
-	Profile(Logger).Run("Missing.strict", ".") is 2
+	Profile.Run("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
 	let mode = selection is "" then "unit" else (selection is "*" then "" else selection)
@@ -14,11 +13,11 @@ Run(path Text, root Text) Number
 		logger.Log(value)
 	result.exitCode
 Sampled(path Text, root Text) Number
-	Profile(Logger).Sampled("Missing.strict", ".") is 2
+	Profile.Sampled("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let types = FileCompiler(logger, true, selection).Compiled(path, root, true)
-	types.Length is 0 then 1 else Execute(logger).Started(types, path, false, true, true).Tested(types.First.Name)
+	let types = FileCompiler(true, selection).Compiled(path, root, true)
+	types.Length is 0 then 1 else Execute.Started(types, path, false, true, true).Tested(types.First.Name)
 Report(lines Texts) Texts
 	Profile.Report(Lines).First is "3 ms sampled, slowest lines:"
 	Profile.Report(Lines).Slice(1, 2) is ("  66.7 % 2 ms A.Run line 2", "  33.3 % 1 ms A.Go line 5")

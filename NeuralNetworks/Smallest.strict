@@ -1,4 +1,3 @@
-has logger
 constant Rate = 5
 constant Budget = 80
 constant Long = 500

@@ -1,4 +1,3 @@
-has logger
 constant BuildSeconds = 180
 constant ToolSeconds = 60
 constant ProgramA = ("has logger", "Run", "	let file = Safetensors(\"kept.safetensors\", 32)", "	let tokens = file.Values(\"tokens\")")

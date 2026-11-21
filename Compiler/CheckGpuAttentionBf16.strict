@@ -1,4 +1,3 @@
-has logger
 constant BuildSeconds = 120
 constant CompileSeconds = 60
 constant WriteSeconds = 30

@@ -1,4 +1,3 @@
-has logger
 constant SourceHead = ("has logger", "Run Number", "	let method = MethodEntry(Frame.Twice.method, Slots = 32)", "	let started = Process.Elapsed")
 constant SourceLoop = ("	for 10000", "		let slots = Frame.Doubling.Bound(Machine.Doubler, VmValue.OfNumber(index), method, List(VmValue), VmValue.None)")
 constant SourceCheck = ("		if (slots.Length is not 32) or (slots.First.number is not index)", "			return 1", "	let elapsed = Process.Elapsed - started")

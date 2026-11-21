@@ -21,7 +21,7 @@ Text Text
 	NoRun.Text.StartsWith("unsupported:")
 	let started = Process.Elapsed
 	let reachable = Linked
-	BuildProfile(Logger).Reported("Emission / reachability (" + reachable.functions.Length + " functions)", started)
+	BuildProfile.Reported("Emission / reachability (" + reachable.functions.Length + " functions)", started)
 	let edges = reachable.Edges
 	let functions = Safe(reachable.functions, edges)
 	let problem = Problem(functions)
@@ -39,19 +39,19 @@ Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
 	let started = Process.Elapsed
 	let functions = MlirSafety(reachable, edges).Marked
-	BuildProfile(Logger).Reported("Emission / safety", started)
+	BuildProfile.Reported("Emission / safety", started)
 	functions
 Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts
 	Counters.Declared(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	let started = Process.Elapsed
 	let recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
-	BuildProfile(Logger).Reported("Emission / recursion", started)
+	BuildProfile.Reported("Emission / recursion", started)
 	let lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
-	let emitted = BuildProfile(Logger).Emitted(value, texts, functions, recursive)
+	let emitted = BuildProfile.Emitted(value, texts, functions, recursive)
 	let before = Process.Elapsed
 	let result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
-	BuildProfile(Logger).Reported("Emission / helpers", before)
+	BuildProfile.Reported("Emission / helpers", before)
 	result
 Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
 	Counters.Emitted(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
@@ -68,11 +68,11 @@ Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) 
 	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	let started = Process.Elapsed
 	let device = MlirGpu.Module(functions)
-	BuildProfile(Logger).Reported("Emission / GPU kernels", started)
+	BuildProfile.Reported("Emission / GPU kernels", started)
 	let before = Process.Elapsed
 	let main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
-	BuildProfile(Logger).Reported("Emission / globals and assembly", before)
+	BuildProfile.Reported("Emission / globals and assembly", before)
 	outer.Text.Combine((host, device, platform is Platform.Web then WgslShader.Scripts(functions) else "") - "", "\n")
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1

@@ -1,16 +1,15 @@
-has logger
 has base Text
 constant Listing = "  1) 0A1B \"Developer ID Application: Some One (T1)\"\n     1 valid identities found"
 constant Header = ("<?xml version=\"1.0\" encoding=\"UTF-8\"?>", "<plist version=\"1.0\"><dict>")
 constant Footer = ("<key>CFBundlePackageType</key><string>APPL</string>", "<key>NSHighResolutionCapable</key><true/>", "</dict></plist>")
 Name Text
-	MacOSBundle(Logger, "Games/App/App").Name is "App"
+	MacOSBundle("Games/App/App").Name is "App"
 	Path(base).FileName.text
 Contents Text
-	MacOSBundle(Logger, "Games/App/App").Contents is "Games/App/Release/MacOS/App.app/Contents"
-	Release(logger, base).Parent + "/Release/MacOS/" + Name + ".app/Contents"
+	MacOSBundle("Games/App/App").Contents is "Games/App/Release/MacOS/App.app/Contents"
+	Release(base).Parent + "/Release/MacOS/" + Name + ".app/Contents"
 Plist Texts
-	"<key>CFBundleExecutable</key><string>App</string>" is in MacOSBundle(Logger, "Games/App/App").Plist
+	"<key>CFBundleExecutable</key><string>App</string>" is in MacOSBundle("Games/App/App").Plist
 	let executable = "<key>CFBundleExecutable</key><string>" + Name + "</string>"
 	let identifier = "<key>CFBundleIdentifier</key><string>lang.strict." + Name + "</string>"
 	let icon = "<key>CFBundleIconFile</key><string>" + Name + "</string>"
@@ -30,20 +29,20 @@ Signing(identity Text, app Text) Text
 	let developer = "--force --options runtime --timestamp --sign \"" + identity + "\" " + quoted
 	identity is "-" then "--force --sign - " + quoted else developer
 Released
-	MacOSBundle(Logger, "Compiler/output/App").Released is Error("ExecutableMissing")
+	MacOSBundle("Compiler/output/App").Released is Error("ExecutableMissing")
 	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
 	let app = Contents.Substring(0, Contents.Length - 9)
-	let release = Release(logger, base)
+	let release = Release(base)
 	let folder = release.Parent + "/Release"
 	for (release.Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
 	release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Delivered(base), List(Text) + "")
 	Completed(release.Icon)
 Converting(icon Text) Text
-	MacOSBundle(Logger, "Missing/App").Converting("a.ico").StartsWith("-s format icns \"a.ico\" --out ")
+	MacOSBundle("Missing/App").Converting("a.ico").StartsWith("-s format icns \"a.ico\" --out ")
 	"-s format icns \"" + icon + "\" --out \"" + Contents + "/Resources/" + Name + ".icns\""
 Completed(icon Text)
-	MacOSBundle(Logger, "Missing/App").Completed("Missing.ico") is Error("ExecutableMissing")
+	MacOSBundle("Missing/App").Completed("Missing.ico") is Error("ExecutableMissing")
 	if File(Contents + "/MacOS/" + Name).Exists is false
 		return Error("ExecutableMissing")
 	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))

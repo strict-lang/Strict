@@ -1,4 +1,3 @@
-has logger
 constant Passes = " --mem2reg --cse --canonicalize -o "
 constant Lowered = "Compiler/obj/Seed.opt.mlir"
 constant ToolSeconds = 270
@@ -6,7 +5,7 @@ Run(arguments Texts) Number
 	if arguments.Length is 0
 		Written
 	else
-		NativeCompiler(logger).Built(arguments.Slice(1, arguments.Length - 1), List(Text), List(TypeEntry))
+		NativeCompiler.Built(arguments.Slice(1, arguments.Length - 1), List(Text), List(TypeEntry))
 	0
 Written
 	if Process.Variable("STRICT_GPU") is not "0"

@@ -1,4 +1,3 @@
-has logger
 has isCrossing Boolean = true
 has isWeb Boolean = false
 has isAndroid Boolean = false
@@ -11,13 +10,13 @@ has isFast Boolean = false
 has gated List(TypeEntry) = List(TypeEntry)
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
-constant Unbuilt = NativeBuild(Logger, false, isReleased = true)
+constant Unbuilt = NativeBuild(false, isReleased = true)
 constant CpuNotice = "llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64)"
 Folder NativeFolder
-	NativeBuild(Logger, gated = Logged).Folder.gated is Logged
-	NativeBuild(Logger, selection = "A").Folder.selection is "A"
-	NativeBuild(Logger, isRecursive = false).Folder.isRecursive is false
-	NativeFolder(logger, selection, isRecursive, gated)
+	NativeBuild(gated = Logged).Folder.gated is Logged
+	NativeBuild(selection = "A").Folder.selection is "A"
+	NativeBuild(isRecursive = false).Folder.isRecursive is false
+	NativeFolder(selection, isRecursive, gated)
 IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false
@@ -32,17 +31,17 @@ Compile(path Text, root Text, isTesting = false, isCounting = false, sources Tex
 	let module = MlirModule(loaded, Cached = objects + ".emitted")
 	if module.types.Length is 0
 		return Error("NoTypesCompiled")
-	let program = BuildProfile(logger).Program(module, base, root, value)
+	let program = BuildProfile.Program(module, base, root, value)
 	if program is ""
 		return Error("NoProgramEmitted")
-	let natives = NativeFolder(logger, isRecursive = isRecursive).Natives(path, root, module.types)
+	let natives = NativeFolder(isRecursive = isRecursive).Natives(path, root, module.types)
 	Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
 Tested(path Text, root Text, isCounting Boolean, sources Texts) Number
 	Compile(path, root, true, isCounting, sources)
 	Ran(Output(path, false), Toolchain(Platform.Current, root), path, isCounting)
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
-	NativeBuild(Logger, isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
+	NativeBuild(isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
 	let failure = Failure(program)
 	if failure is not ""
 		return Checked("Native compilation failed, " + failure)
@@ -54,8 +53,8 @@ Device(program Text, base Text, root Text) Text
 	let ptx = Target is Platform.Current then gpu.Built(base, device, MlirTensors.Attending.Used(program)) else List(Text)
 	Checked(gpu.Embedded(program.Substring(0, marker), ptx, base))
 Checked(built Text) Text
-	NativeBuild(Logger).Checked("module") is "module"
-	NativeBuild(Logger).Checked("GPU kernels failed: x") is ""
+	NativeBuild.Checked("module") is "module"
+	NativeBuild.Checked("GPU kernels failed: x") is ""
 	if (built.StartsWith("GPU kernels failed") or built.StartsWith("Native compilation failed")) is false
 		return built
 	logger.Log(built)
@@ -75,31 +74,31 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 Build(base Text, program Text, tools Toolchain, isCounting = false)
 	Unbuilt.Build("Compiler/output/Unbuilt/App", Broken, Toolchain.OnWindows) is Error("NotBuilt")
 	Directory.Exists("Compiler/output/Unbuilt/Release") is false
-	let built = Rebuilt(base, BuildProfile(logger).Runtime(value, program, tools.root), tools)
+	let built = Rebuilt(base, BuildProfile.Runtime(value, program, tools.root), tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return Error("NotBuilt")
 	CrossBuild(base, program, tools, isCounting)
-	Intermediates(logger).Removed(base)
-	BuildProfile(logger).Packaged(value, base, program, tools)
+	Intermediates.Removed(base)
+	BuildProfile.Packaged(value, base, program, tools)
 Target Number
-	NativeBuild(Logger, isIOS = true).Target is Platform.IOS
-	NativeBuild(Logger, isIOS = true, isSimulator = true).Target is Platform.IOSSimulator
+	NativeBuild(isIOS = true).Target is Platform.IOS
+	NativeBuild(isIOS = true, isSimulator = true).Target is Platform.IOSSimulator
 	if isIOS
 		return isSimulator then Platform.IOSSimulator else Platform.IOS
 	isAndroid then Platform.Android else (isWeb then Platform.Web else Platform.Current)
 IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
-	NativeBuild(Logger).IsUnchanged("Compiler/output/missing", "module {\n}", Toolchain.OnWindows) is false
+	NativeBuild.IsUnchanged("Compiler/output/missing", "module {\n}", Toolchain.OnWindows) is false
 	let sources = NativeSources(tools.natives)
 	let headers = tools.natives.Length is 0 then List(Text) else sources.Inputs(Platform.Current, tools.root)
-	let inputs = (base + ".mlir", Process.Current.executable, Release(logger, base).Icon) + sources.Files + headers
+	let inputs = (base + ".mlir", Process.Current.executable, Release(base).Icon) + sources.Files + headers
 	let previous = File(base + ".mlir")
 	let isCross = isAndroid or isIOS or tools.isWeb or tools.cpu is not "native"
 	if isCross or previous.Exists is false or sources.IsCurrent(tools.Executable(base), inputs) is false
 		return false
 	previous.Length is not mlir.Length then false else Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
-	NativeBuild(Logger).Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
+	NativeBuild.Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
 		return tools.Installing(missing)
@@ -126,13 +125,13 @@ Linked(base Text, tools Toolchain) Text slow
 	let isSwapped = Platform.Current is Platform.Windows and tools.isWeb is false and File(executable).Exists
 	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
 	let built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
-	let problem = isSwapped and built.StartsWith("Built ") then Intermediates(logger).Replaced(executable, target) else ""
+	let problem = isSwapped and built.StartsWith("Built ") then Intermediates.Replaced(executable, target) else ""
 	let kept = File(target).Exists then ", the new build is " + target else ""
 	let failed = (kept is "" then "Replaced " else "Could not replace ") + executable + ", " + problem + kept
 	problem is "" then built.Replace(target, executable) else failed
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
-	NativeBuild(Logger).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is not Error
-	NativeBuild(Logger, false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is not Error
+	NativeBuild.CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is not Error
+	NativeBuild(false).CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, false) is not Error
 	if Target is not Platform.Windows or isCounting or isCrossing is false
 		return
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
@@ -153,7 +152,7 @@ Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.MacOS).IndexOf("llvm.func @strict_opendir(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
-	NativeBuild(Logger, false).Mlir("module {\n" + CpuNotice + "\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
+	NativeBuild(false).Mlir("module {\n" + CpuNotice + "\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
 	let runtime = Released(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
 	let system = Text.Combine(Platform.Runtime(platform, root), "\n")
 	let body = program.Substring(0, program.Length - 1)
@@ -161,8 +160,8 @@ Mlir(program Text, root Text, platform Number) Text slow
 		return WebBuild.Sized(body + runtime) + "\n" + system + "\n}"
 	Text.Combine((body, runtime, "\n", system, "\n}"), "")
 Released(mlir Text) Text
-	NativeBuild(Logger, isWeb = true).Released(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
-	NativeBuild(Logger, false).Released(CpuNotice) is CpuNotice
+	NativeBuild(isWeb = true).Released(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
+	NativeBuild(false).Released(CpuNotice) is CpuNotice
 	isWeb then mlir.Replace(CpuNotice, CpuNotice.Replace("(1 : i64)", "(0 : i64)")) else mlir
 Failure(program Text) Text
 	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"

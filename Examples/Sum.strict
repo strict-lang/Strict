@@ -1,3 +1,2 @@
-has logger
 Run(numbers)
 	logger.Log(numbers.Sum to Text)

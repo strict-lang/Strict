@@ -1,4 +1,3 @@
-has logger
 constant Weights = "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
 constant Address = "https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/main/"
 constant Prompt = "def fibonacci(n):"

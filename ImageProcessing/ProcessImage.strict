@@ -1,4 +1,3 @@
-has logger
 Run(path)
 	let image = ImageLoader(path).Loaded
 	let adjusted = AdjustBrightness(AdjustBrightness.Increase).Process(image)

@@ -1,6 +1,5 @@
 has number
 mutable text
-has logger
 TotalLength Number
 	AutofilledMutable(5).TotalLength is 5
 	AutofilledMutable(5, "abc").TotalLength is 8

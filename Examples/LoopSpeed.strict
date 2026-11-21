@@ -1,4 +1,3 @@
-has logger
 constant Shift = 397
 constant Divisor = 7
 constant Small = 227
@@ -64,7 +63,7 @@ Spent(started Number, elements Number) Number
 	LoopSpeed.Spent(Process.Elapsed, 1) >= 0
 	((Process.Elapsed - started) * Nanoseconds / elements).Round(1)
 Measured(kind Text, exact Numbers, padded Numbers, rounds Number) Number
-	LoopSpeed(Logger).Measured("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4), 0) is 6
+	LoopSpeed.Measured("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4), 0) is 6
 	mutable total = Once(kind, exact, padded)
 	let started = Process.Elapsed
 	for rounds

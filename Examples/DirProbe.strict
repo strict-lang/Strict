@@ -1,3 +1,2 @@
-has logger
 Run
 	logger.Log(Directory.Exists(".") to Text)

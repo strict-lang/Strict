@@ -77,4 +77,4 @@ IsInternal Boolean
 	Directory.Exists(rest(0)) is false and TypeSource.IsInternal(name)
 Executing(logger Logger, known Dictionary(Text, TypeEntry), kept InferenceCache) Execute
 	Shown.Executing(Logger, Dictionary(Text, TypeEntry), InferenceCache.None).selection is "*"
-	Execute(logger, Selection, IsRecursive, IsMutating, Part, IsFull, known, inferred = kept)
+	Execute(Selection, IsRecursive, IsMutating, Part, IsFull, known, inferred = kept)

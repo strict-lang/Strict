@@ -1,4 +1,3 @@
-has logger
 constant Target = "METHINKS IT IS LIKE A WEASEL"
 constant Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
 constant Offspring = 100

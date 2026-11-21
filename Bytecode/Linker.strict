@@ -33,7 +33,7 @@ Linked(entries List(TypeEntry), signatures Texts) LinkRound slow
 	round
 Settled(next LinkRound, complete Boolean, started Number) Boolean
 	let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
-	BuildProfile(Logger).Reported(phase, started)
+	BuildProfile.Reported(phase, started)
 	complete
 Next(round LinkRound) LinkRound slow
 	Sample.Next(LinkRound.Single).entries.Length is 1

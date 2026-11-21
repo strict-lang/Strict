@@ -1,4 +1,3 @@
-has logger
 constant Sentence = "Strict finds small networks."
 constant Span = "ab ab"
 constant Folder = "NeuralNetworks/gpt2"

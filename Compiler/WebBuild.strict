@@ -14,10 +14,10 @@ Linked(base Text, executable Text) Text
 	let compiled = Compiled(base)
 	if compiled is not ""
 		return compiled
-	let folder = Release(Logger, base).Parent
+	let folder = Release(base).Parent
 	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
 	let page = " --shell-file " + tools.Quoted(Shell(base))
-	Release(Logger, base).Created(Path(executable).PathOnly.text)
+	Release(base).Created(Path(executable).PathOnly.text)
 	let inputs = tools.PartObjects(base + ".web") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
 	let output = " -o " + tools.Quoted(executable) + Options + Thinned(base) + " -O1"
 	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + output)
@@ -42,7 +42,7 @@ Optimized(executable Text) Text
 Iconed(executable Text) Text
 	let page = Text.Combine(File(executable).ReadLines, "\n")
 	let source = executable.Replace("/Release/Web/", "/obj/").Replace(".html", "")
-	let own = Release(Logger, source).Icon is not TypeSource.Root + "/Strict.ico"
+	let own = Release(source).Icon is not TypeSource.Root + "/Strict.ico"
 	File(executable).Write(Favicons(page, own then "favicon.ico" else "https://strict-lang.org/img/favicon.ico"))
 	"Built " + executable
 Favicons(page Text, icon Text) Text
@@ -73,7 +73,7 @@ Declared(line Text) Text
 Preloaded(content Text) Text
 	Missing.Preloaded("Compiler/output/missing") is ""
 	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""
-	Release(Logger, "Missing/App").Created("Compiler/output/EmptyApp/Content/Inner") is not Error
+	Release("Missing/App").Created("Compiler/output/EmptyApp/Content/Inner") is not Error
 	Missing.Preloaded("Compiler/output/EmptyApp/Content") is ""
 	HasFiles(content) then " --preload-file \"" + content + "@/Content\"" else ""
 HasFiles(folder Text) Boolean

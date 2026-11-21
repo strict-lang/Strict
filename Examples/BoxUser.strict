@@ -1,4 +1,3 @@
-has logger
 Rounded(boxed Boxed) Number
-	BoxUser(Logger).Rounded(Boxed(2.5)) is 2
+	BoxUser.Rounded(Boxed(2.5)) is 2
 	boxed.Rounded

@@ -1,5 +1,4 @@
 has types List(TypeEntry)
-has logger
 has prototypes ConstantCache = ConstantCache(List(VmValue))
 has folder Text = ""
 has isTracing = false
@@ -71,7 +70,7 @@ Prepared Machine
 		created.Add(Natives(types).Fresh(value))
 		located(value.Name) = TypeSource(value).Located(folder)
 		placed(value.Name) = index
-	let prepared = Machine(types, logger, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)
+	let prepared = Machine(types, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)
 	Constants(Machine(prepared, places = placed)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2

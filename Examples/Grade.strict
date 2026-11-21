@@ -1,5 +1,4 @@
 has score Number
-has logger
 constant MinimumA = 90
 constant MinimumB = 80
 constant MinimumPass = 60

@@ -3,8 +3,8 @@ constant Booleans = List(Text) + "Boolean.strict"
 constant Dictionaries = List(Text) + "Dictionary.strict"
 Named(paths Texts) Texts slow
 	SureMethods.Named(List(Text)).Length is 0
-	"Boolean.xor" is in SureMethods(ResolveCheck(Logger).Inference(Booleans)).Named(Booleans)
-	("Dictionary.get" is in SureMethods(ResolveCheck(Logger).Inference(Dictionaries)).Named(Dictionaries)) is false
+	"Boolean.xor" is in SureMethods(ResolveCheck.Inference(Booleans)).Named(Booleans)
+	("Dictionary.get" is in SureMethods(ResolveCheck.Inference(Dictionaries)).Named(Dictionaries)) is false
 	let bases = Bases(paths)
 	mutable records = List(Mutable(Text))
 	for Parsed(bases, InputOutputs.Read(bases))

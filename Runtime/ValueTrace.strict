@@ -1,11 +1,10 @@
-has logger
 has selection Text = ""
 constant SumEvents = ("$Hit Strict/Examples/Sum|2", "$Use Strict/Examples/Sum|2|b|5", "$Set Strict/Examples/Sum|2|a|7")
 constant Events = SumEvents + SumEvents + ("$Hit Sum|3", "$Result Sum|3|1", "$Hit Sum|3", "$Result Sum|3|2")
 constant Operators = ("+", "-", "*", "/", "%", "^", "is", "not", "and", "or", "xor", "to", "in", "then", "else", "=", ">", "<", ">=", "<=", ",", "(")
 constant Summed = "\nUse|b|5"
 Run(path Text, root Text) Number
-	ValueTrace(Logger).Run("Missing.strict", ".") is 2
+	ValueTrace.Run("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
 	let mode = selection is "" then "unit" else (selection is "*" then "" else selection)
@@ -22,14 +21,14 @@ Plain(lines Texts) Texts
 		if value.StartsWith("$") is false
 			value
 Traced(path Text, root Text) Number
-	ValueTrace(Logger).Traced("Missing.strict", ".") is 2
+	ValueTrace.Traced("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let types = FileCompiler(logger, true, selection).Compiled(path, root, true)
-	types.Length is 0 then 1 else Execute(logger).Started(types, path, true).Tested(types.First.Name)
+	let types = FileCompiler(true, selection).Compiled(path, root, true)
+	types.Length is 0 then 1 else Execute.Started(types, path, true).Tested(types.First.Name)
 Valued(lines Texts, folder Text) Texts
-	ValueTrace(Logger).Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")
-	ValueTrace(Logger).Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
+	ValueTrace.Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")
+	ValueTrace.Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
 	for Hits(lines)
 		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
@@ -59,7 +58,7 @@ Rest(event Text) Text
 	let start = parts(0).Length + parts(1).Length + 2
 	start < event.Length then event.Substring(start) else ""
 Line(place Text, summaries Texts, folder Text) Text
-	ValueTrace(Logger).Line("Sum|3", List(Text) + "Hit", "Examples").EndsWith("line 3 hit 1 times")
+	ValueTrace.Line("Sum|3", List(Text) + "Hit", "Examples").EndsWith("line 3 hit 1 times")
 	let parts = place.Split("|")
 	let file = TypeSource(TypeEntry(parts(0), List(MemberEntry), List(MethodEntry))).Located(folder)
 	let start = "Value " + file + ":line " + parts(1) + " hit " + summaries.Length + " times"

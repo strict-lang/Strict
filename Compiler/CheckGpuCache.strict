@@ -1,4 +1,3 @@
-has logger
 constant ToolSeconds = 60
 constant KindNamesA = ("strict_gpu_active_has", "strict_gpu_oldest", "strict_gpu_is_rows", "strict_gpu_alloc", "strict_gpu_free", "strict_gpu_free_memory", "strict_gpu_driver_free", "strict_gpu_sized", "strict_gpu_size_slot")
 constant KindNamesB = ("strict_gpu_unspilled", "strict_gpu_spilled", "strict_gpu_spill_at", "strict_gpu_put_async", "strict_gpu_put_ahead", "strict_gpu_ahead_join", "strict_gpu_followed", "strict_gpu_prefetch", "strict_gpu_ahead_hit")

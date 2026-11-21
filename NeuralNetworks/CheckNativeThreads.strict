@@ -1,4 +1,3 @@
-has logger
 constant ToolSeconds = 90
 constant HeadA = ("#include <math.h>", "#include <stdint.h>", "#include <stdio.h>", "#include <stdlib.h>", "#include <string.h>")
 constant HeadB = ("#ifdef _WIN32", "#include <windows.h>", "#include <process.h>", "#define DOPEN(p) LoadLibraryA(p)", "#define DSYM(d,n) (void*)GetProcAddress((HMODULE)(d),(n))")

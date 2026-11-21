@@ -1,4 +1,3 @@
-has logger
 Counted(count Number) Numbers
 	Squares.Counted(3) is (0, 1, 2)
 	for count

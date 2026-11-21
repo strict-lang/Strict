@@ -105,7 +105,7 @@ Resource(base Text, platform Number, root Text) Text
 	Adding.Resource("Examples/Sum", Platform.Current, ".") is (Platform.Current is Platform.Windows then Summed else "")
 	Adding.Resource(Iconed, Platform.Linux, ".") is ""
 	Adding.Resource(Iconed, Platform.Current, ".") is (Platform.Current is Platform.Windows then Resourced else "")
-	let icon = Release(Logger, base).Icon
+	let icon = Release(base).Icon
 	if platform is not Platform.Windows or File(icon).Exists is false
 		return ""
 	let full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
@@ -124,7 +124,7 @@ LinuxLinked(base Text, program Text, root Text) Text
 	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
 	let libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
 	let output = " -o " + tools.Quoted(tools.WslPath(program)) + libraries
-	Release(Logger, base).Created(Path(program).PathOnly.text)
+	Release(base).Created(Path(program).PathOnly.text)
 	let linked = ToolRunner("wsl").Execute(linkage + sources + output)
 	linked.Failed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
 Wsl(flags Text, tools Toolchain) Text

@@ -1,4 +1,3 @@
-has logger
 has evaluation NeuralNetworks/Evaluation
 constant Address = "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
 constant Downloaded = "MachineLearning/shakespeare.txt"

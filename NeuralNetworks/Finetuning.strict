@@ -1,10 +1,9 @@
-has logger
-constant Tuning = Finetuning(Logger)
+constant Tuning = Finetuning
 Run(path Text, steps = 100, length = 256)
 	let tokenizer = Gpt2Tokens.Folder(path)
-	let evaluation = Evaluation(logger)
+	let evaluation = Evaluation
 	let heldout = evaluation.Heldout(8)
-	let dropping = LayerDropping(logger)
+	let dropping = LayerDropping
 	mutable training = Gpt2Training.Loaded(path + "/model.safetensors", BFloat16.Bits)
 	logger.Log(path + " before training: " + dropping.Reported(training.model, tokenizer, heldout))
 	let windows = Windows(tokenizer, evaluation.Calibration((steps / 2).Ceiling), length)

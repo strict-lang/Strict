@@ -113,7 +113,7 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 	Tiny.Forwarded(Tiny.Embedded((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
 	mutable current = input
 	mutable updated = List(Mutable(Qwen3Block))
-	let completion = Completion(Logger, progress, blocks.Length, Process.Elapsed)
+	let completion = Completion(progress, blocks.Length, Process.Elapsed)
 	for blocks
 		let prepared = value.hybrid.Prepared(current, sequences)
 		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits, sequences)

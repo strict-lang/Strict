@@ -1,8 +1,7 @@
-has logger
 constant Flag = "--remote"
 constant Any = "any"
 constant Ben = "any"
-constant Sample = Remote(Logger)
+constant Sample = Remote
 Target(arguments Texts, absent Text) Text
 	Sample.Target(("--remote", "AiServer", "a"), "") is "AiServer"
 	Sample.Target(("a", "b"), "") is ""

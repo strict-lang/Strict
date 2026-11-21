@@ -1,5 +1,4 @@
 has number
-has logger
 constant FizzBuzzDivisor = 15
 Classify Text
 	FizzBuzz(3).Classify is "Fizz"

@@ -1,4 +1,3 @@
-has logger
 constant Features = 19
 Run
 	let dataset = Csv(File("NeuralNetworks/diabetes.csv").ReadLines).Classified(2)

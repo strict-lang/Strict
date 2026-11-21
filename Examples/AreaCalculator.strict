@@ -1,5 +1,4 @@
 has Size
-has logger
 Area Number
 	AreaCalculator(Size(3, 4)).Area is 12
 	AreaCalculator(Size(10, 5)).Area is 50

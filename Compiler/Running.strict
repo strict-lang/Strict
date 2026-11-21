@@ -1,4 +1,3 @@
-has logger
 has executable Text
 constant Own = "$me = (Get-CimInstance Win32_Process -Filter ProcessId=$PID).ParentProcessId; "
 constant Stopped = (0, 128)
@@ -6,9 +5,9 @@ constant Listing = "-NoProfile -Command " + Own + "$file = Get-Item -ErrorAction
 constant Matching = "'; if ($file) { Get-CimInstance Win32_Process | Where-Object { $_.ExecutablePath -eq $file.FullName"
 constant Older = " -and $_.CreationDate -lt $file.LastWriteTime -and $_.ProcessId -ne $me }"
 constant Printed = " | ForEach-Object { '' + $_.ProcessId + [char]9 + ($_.CommandLine -replace '[\\r\\n]+', ' ') } }"
-constant Missing = Running(Logger, "Compiler/output/Missing.exe")
-constant Served = Running(Logger, "C:/s/strict.exe")
-constant Idling = Running(Logger, "Compiler/output/strict.exe")
+constant Missing = Running("Compiler/output/Missing.exe")
+constant Served = Running("C:/s/strict.exe")
+constant Idling = Running("Compiler/output/strict.exe")
 constant EndedCodes = (0, 128)
 constant Line = "12\t\"C:/s/Sum.exe\" 5"
 Listed Texts
@@ -76,7 +75,7 @@ Restarted(old Text) Text slow
 		logger.Log("Stopping " + executable + " (process " + Id(value) + ")")
 		if Ended(Id(value)) is false
 			return "process " + Id(value) + " did not stop"
-	if stopping.Length > 0 and IsStrict is false and Intermediates(logger).Deleted(old) is Error
+	if stopping.Length > 0 and IsStrict is false and Intermediates.Deleted(old) is Error
 		return old + " is still in use by " + Described
 	IsStrict then "" else Started(stopping)
 Started(lines Texts) Text

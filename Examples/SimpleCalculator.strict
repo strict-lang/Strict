@@ -1,6 +1,5 @@
 has first Number
 has second Number
-has logger
 Add Number
 	SimpleCalculator(2, 3).Add is 5
 	SimpleCalculator(0, 0).Add is 0

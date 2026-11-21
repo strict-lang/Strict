@@ -1,11 +1,10 @@
-has logger
 has code Text
 constant Path = "./Scratch.strict"
-constant Loop = Scripted(Logger, "for Range(17, 32)\n  logger.Log(value)")
+constant Loop = Scripted("for Range(17, 32)\n  logger.Log(value)")
 constant Looped = "has logger\nRun\n\tfor Range(17, 32)\n\t\tlogger.Log(value)"
-constant Doubling = Scripted(Logger, "has number\nlet twice = Twice(number)\nlogger.Log(twice)\nTwice(count Number) Number\n\tcount * 2")
+constant Doubling = Scripted("has number\nlet twice = Twice(number)\nlogger.Log(twice)\nTwice(count Number) Number\n\tcount * 2")
 constant Doubled = "has number\nhas logger\nRun\n\tlet twice = Twice(number)\n\tlogger.Log(twice)\nTwice(count Number) Number\n\tcount * 2"
-constant Given = ("value", "index", "outer", "arguments")
+constant Given = ("value", "index", "outer", "arguments", "logger")
 constant Declaring = ("let", "mutable", "constant", "has")
 constant NewLine = Character(1) to Text
 constant Tab = Character(2) to Text
@@ -32,7 +31,7 @@ Packed(arguments Texts) Texts
 		value.Replace("\n", NewLine).Replace("\t", Tab)
 Lines Texts
 	Loop.Lines is ("for Range(17, 32)", "\tlogger.Log(value)")
-	Scripted(Logger, "if true" + NewLine + Tab + "1\r").Lines is ("if true", "\t1")
+	Scripted("if true" + NewLine + Tab + "1\r").Lines is ("if true", "\t1")
 	let lines = code.Replace(NewLine, "\n").Replace(Tab, "\t").Replace("\r", "").Split("\n")
 	mutable unit = 0
 	for lines
@@ -104,9 +103,9 @@ Used(line Text) Texts
 			used.Add(value)
 	used
 Wanted(lines = List(Text)) Texts
-	Loop.Wanted is ("logger")
-	Doubling.Wanted is ("logger")
-	Scripted(Logger, "let file = File(arguments(0))\nfile.Delete").Wanted.Length is 0
+	Loop.Wanted.Length is 0
+	Doubling.Wanted.Length is 0
+	Scripted("let file = File(arguments(0))\nfile.Delete").Wanted.Length is 0
 	let items = lines.Length > 0 then lines else Lines
 	let declared = Declared(items) + Given
 	mutable wanted = List(Mutable(Text))
@@ -117,7 +116,7 @@ Wanted(lines = List(Text)) Texts
 LinesOf(members Texts, lines = List(Text)) Texts
 	Loop.LinesOf(List(Text) + "logger") is ("has logger", "Run", "\tfor Range(17, 32)", "\t\tlogger.Log(value)")
 	Doubling.LinesOf(List(Text) + "logger") is Doubled.Split("\n")
-	Scripted(Logger, "Run\n\t1").LinesOf(List(Text)) is ("Run", "\t1")
+	Scripted("Run\n\t1").LinesOf(List(Text)) is ("Run", "\t1")
 	let items = lines.Length > 0 then lines else Lines
 	mutable result = Picked("member", items)
 	for members
@@ -128,7 +127,7 @@ LinesOf(members Texts, lines = List(Text)) Texts
 Source(members Texts) Text
 	Loop.Source(List(Text) + "logger") is Looped
 	Doubling.Source(List(Text) + "logger") is Doubled
-	Scripted(Logger, "Run\n\t1").Source(List(Text)) is "Run\n\t1"
+	Scripted("Run\n\t1").Source(List(Text)) is "Run\n\t1"
 	Text.Combine(LinesOf(members), "\n")
 Stored(source Text) Texts slow
 	Loop.Stored("a\nb") is ("a", "b")
@@ -143,7 +142,7 @@ Members(root Text, lines = List(Text)) Texts slow
 Loaded(root Text) List(TypeEntry) slow
 	if Stored(Source(Members(root))).Length is 0
 		return List(TypeEntry)
-	let types = Execute(logger).Loaded(Path, root, false)
+	let types = Execute.Loaded(Path, root, false)
 	File(Path).InMemory("")
 	types
 Ran(arguments Texts, root Text) Boolean slow
@@ -151,7 +150,7 @@ Ran(arguments Texts, root Text) Boolean slow
 	for Range(3, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
 	let types = Loaded(root)
-	types.Length > 0 then Execute(logger).Started(types, Path).Completed(types.First.Name, texts) else false
+	types.Length > 0 then Execute.Started(types, Path).Completed(types.First.Name, texts) else false
 RanWith(arguments Texts, root Text, cache Answer, path = "") Answer slow
 	let raw = Lines
 	let lines = LinesOf(Members(root, raw), raw)

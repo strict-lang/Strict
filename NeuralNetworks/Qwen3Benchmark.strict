@@ -1,4 +1,3 @@
-has logger
 constant Prompt = "Alan Turing theorized that computers would one day become"
 constant TopK = 40
 constant TopP = 0.95
@@ -19,7 +18,7 @@ Ran(path Text, bits Number, count Number, repeats Number, batch Number, cacheBit
 	let durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
 	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
 Fastest(model Qwen3, prompt Numbers) Number slow
-	Qwen3Benchmark(Logger).Fastest(Qwen3.Tiny, (1, 2)) > 0
+	Qwen3Benchmark.Fastest(Qwen3.Tiny, (1, 2)) > 0
 	mutable fastest = 1000000
 	for 3
 		let before = Process.Elapsed
@@ -28,7 +27,7 @@ Fastest(model Qwen3, prompt Numbers) Number slow
 		fastest = first >= 0 and milliseconds < fastest then milliseconds else fastest
 	fastest
 Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers slow
-	Qwen3Benchmark(Logger).Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
+	Qwen3Benchmark.Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
 	let started = Process.Elapsed
 	let tokens = Generation(model, Sampling(temperature, TopK, TopP, PseudoRandom(1))).Continued(position, count)
 	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
@@ -36,12 +35,12 @@ Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers 
 		logger.Log("sampled " + count + " tokens at temperature " + temperature + " in " + milliseconds + " ms per token")
 	tokens
 Repeated(tokens Numbers, repeats Number) Numbers
-	Qwen3Benchmark(Logger).Repeated((1, 2), 2) is (1, 2, 1, 2)
+	Qwen3Benchmark.Repeated((1, 2), 2) is (1, 2, 1, 2)
 	for tokens.Length * repeats
 		tokens(index % tokens.Length)
 Durations(model Qwen3, token Number, start Number, count Number, batch Number) Numbers slow
-	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 1).Length is 2
-	Qwen3Benchmark(Logger).Durations(Qwen3.Tiny.Step(1, 0).Copies(2), 0, 1, 2, 2).Length is 2
+	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 1).Length is 2
+	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0).Copies(2), 0, 1, 2, 2).Length is 2
 	mutable current = model
 	mutable chosen = Repeated(List(Number) + token, batch)
 	mutable last = Process.Elapsed
@@ -53,8 +52,8 @@ Durations(model Qwen3, token Number, start Number, count Number, batch Number) N
 		last = last + duration / 1000
 		duration
 Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
-	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30), 1).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")
-	Qwen3Benchmark(Logger).Report(2, 4, (10, 20, 30), 8).EndsWith("median 20 ms (400 tokens/s) mean 20 ms p95 30 ms")
+	Qwen3Benchmark.Report(2, 4, (10, 20, 30), 1).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")
+	Qwen3Benchmark.Report(2, 4, (10, 20, 30), 8).EndsWith("median 20 ms (400 tokens/s) mean 20 ms p95 30 ms")
 	let median = Quantile(durations, 0.5)
 	let mean = durations.Sum / durations.Length
 	let prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "
@@ -63,8 +62,8 @@ Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
 	let late = " ms p95 " + Quantile(durations, TailShare).Round(2) + " ms"
 	prefilled + decoded + " tokens/s) mean " + mean.Round(2) + late
 Quantile(numbers Numbers, share Number) Number
-	Qwen3Benchmark(Logger).Quantile((3, 1, 2), 0.5) is 2
-	Qwen3Benchmark(Logger).Quantile((4, 1, 3, 2), 0.5) is 3
-	Qwen3Benchmark(Logger).Quantile((4, 1, 3, 2), 0.95) is 4
-	Qwen3Benchmark(Logger).Quantile((1, 2, 2, 3), 0.5) is 2
+	Qwen3Benchmark.Quantile((3, 1, 2), 0.5) is 2
+	Qwen3Benchmark.Quantile((4, 1, 3, 2), 0.5) is 3
+	Qwen3Benchmark.Quantile((4, 1, 3, 2), 0.95) is 4
+	Qwen3Benchmark.Quantile((1, 2, 2, 3), 0.5) is 2
 	numbers.Sorted((numbers.Length * share).Floor)

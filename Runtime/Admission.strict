@@ -1,11 +1,10 @@
-has logger
 constant HostShare = 2
 constant VideoShare = 4
 constant Gigabyte = 1073741824
 constant BigNeed = Need(minimumRam = 64 * Gigabyte, idealRam = 70 * Gigabyte, minimumVram = 10 * Gigabyte)
 constant SmallMachine = MachineView(freeRam = 20 * Gigabyte, freeVram = 4 * Gigabyte, totalRam = 32 * Gigabyte, totalVram = 24 * Gigabyte)
 constant HeldMachine = MachineView(SmallMachine, totalRam = 128 * Gigabyte, idleRam = 40 * Gigabyte, idleVram = 18 * Gigabyte)
-constant Sample = Admission(logger = Logger)
+constant Sample = Admission
 Verdict(need Need, seen MachineView) Text
 	Sample.Verdict(Need.Tiny, MachineView.Wide) is "refused"
 	Sample.Verdict(Need.Small, MachineView.Wide) is "go"

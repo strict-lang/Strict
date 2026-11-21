@@ -1,4 +1,3 @@
-has logger
 Run
 	constant width = 1280 / 4
 	constant height = 720 / 4

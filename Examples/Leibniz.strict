@@ -1,4 +1,3 @@
-has logger
 constant Digits = 16
 Pi(rounds Number) Number
 	Leibniz.Pi(0) is 4

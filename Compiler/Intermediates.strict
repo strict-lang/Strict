@@ -1,4 +1,3 @@
-has logger
 constant CrossEndings = (".ios.o", ".ios.new.a", ".android.o", ".llvm.mlir", ".ll", ".res", ".gpu.mlir", ".gpu.kept.mlir", ".gpu.llvm.mlir", ".gpu.ll", ".sm_75.ptx", ".sm_80.ptx", ".amd.mlir", ".amd.llvm.mlir", ".amd.ll", ".amd.bc")
 constant LinuxEndings = (".linux.mlir", ".linux.llvm.mlir", ".linux.ll", ".linux.o", ".pre.js", ".shaders.js", ".o", ".gpu.opt.ll")
 constant RuntimeEndings = (".runtime.gpu.mlir", ".runtime.gpu.kept.mlir", ".runtime.gpu.llvm.mlir", ".runtime.gpu.ll", ".runtime.sm_75.ptx", ".runtime.sm_80.ptx")
@@ -10,7 +9,7 @@ constant IsWindows = Process.OperatingSystem is "Windows"
 constant Kept = "Compiler\\output\\Held.old.exe"
 constant Holding = "/c copy /y %SystemRoot%\\System32\\PING.EXE " + Kept + " >nul & start \"\" /b " + Kept + " -n 3 127.0.0.1 >nul"
 Removed(base Text)
-	Intermediates(Logger).Removed("Compiler/output/missing") is not Error
+	Intermediates.Removed("Compiler/output/missing") is not Error
 	mutable files = Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
 	for Endings
 		files = files + (base + value)
@@ -21,10 +20,10 @@ Removed(base Text)
 			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")
 			return Error("IntermediateNotRemoved")
 Part(name Text) Texts
-	Intermediates(Logger).Part("a") is ("a", "a.mlir", "a.llvm.mlir")
+	Intermediates.Part("a") is ("a", "a.mlir", "a.llvm.mlir")
 	(name, name + ".mlir", name + ".llvm.mlir")
 Deleted(path Text)
-	Intermediates(Logger).Deleted("Compiler/output/missing") is not Error
+	Intermediates.Deleted("Compiler/output/missing") is not Error
 	let started = Process.Elapsed
 	for as long as File(path).Exists and Process.Elapsed - started < 5
 		File(path).Delete
@@ -34,7 +33,7 @@ Deleted(path Text)
 		return Error("FileNotDeleted: " + path)
 Replaced(executable Text, target Text) Text
 	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
-	Intermediates(Logger).Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
+	Intermediates.Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
 	let unrunnable = Unrunnable(executable, target)
 	if unrunnable is not ""
@@ -47,19 +46,19 @@ Replaced(executable Text, target Text) Text
 	File(old).Delete
 	if File(target).Exists is false and Path(executable).FileName.RemoveExtension.text is "strict"
 		CodegenStamp(Path(executable).PathOnly.text).Promoted(executable)
-	File(target).Exists then Used(executable, executable) else Running(logger, executable).Restarted(old)
+	File(target).Exists then Used(executable, executable) else Running(executable).Restarted(old)
 Unrunnable(executable Text, target Text) Text
-	Intermediates(Logger).Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
-	Intermediates(Logger).Unrunnable("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
-	Intermediates(Logger).Unrunnable("Compiler/output/strict.exe", Process.Current.executable) is ""
+	Intermediates.Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
+	Intermediates.Unrunnable("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
+	Intermediates.Unrunnable("Compiler/output/strict.exe", Process.Current.executable) is ""
 	if Path(executable).FileName.RemoveExtension.text is not "strict"
 		return ""
 	let ran = Process.RunTool(target, "version")
 	ran.exitCode is 0 then "" else target + " does not run (version exit " + ran.exitCode + "), " + executable + " stays"
 Free(executable Text) Text
-	Intermediates(Logger).Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
+	Intermediates.Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
 	IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0
-	IsWindows is false or Intermediates(Logger).Free(Held.base + ".exe") is Held.base + ".old2.exe"
+	IsWindows is false or Intermediates.Free(Held.base + ".exe") is Held.base + ".old2.exe"
 	let pattern = Path(executable).FileName.text.Replace(".exe", ".old*.exe")
 	for Directory.Files(Path(executable).PathOnly.text, pattern)
 		File(value).Delete
@@ -74,6 +73,6 @@ Old(executable Text, number Number) Text
 Used(file Text, executable Text) Text slow
 	File("Compiler/output/Held.exe").Locked
 	Held.Saved(List(Text) + ".new.exe", List(Text) + "built") is not Error
-	Intermediates(Logger).Replaced(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
+	Intermediates.Replaced(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
 	File("Compiler/output/Held.exe").Delete
-	file + " is in use by " + Running(logger, executable).Described
+	file + " is in use by " + Running(executable).Described

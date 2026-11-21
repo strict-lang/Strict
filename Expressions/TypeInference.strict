@@ -69,6 +69,7 @@ IdentifierType(name Text, scope Scope, current Scope) Text
 	NoInference.MemberCallType(SyntaxParser(Tokenizer("t.value(1)").Tokens).Parse, Scope("t", "Bs"), NoShape) is "B"
 	NoInference.Called(SyntaxNode("Call", "Mutable", (ToText, NoNode)), NoShape, NoShape) is "Mutable"
 	NoInference.IdentifierType("q", NoShape, Scope("q", "Number")) is "Number"
+	NoInference.IdentifierType("logger", NoShape, NoShape) is "Logger"
 	TypeInference(KnownTypes.Nested, NoShapes).IdentifierType("f", Scope("value", "G"), NoShape) is "F"
 	if scope.TypeOf(name) is not ""
 		return scope.TypeOf(name)
@@ -76,6 +77,8 @@ IdentifierType(name Text, scope Scope, current Scope) Text
 		return ImplicitValueType(name, scope)
 	if current.TypeOf(name) is not ""
 		return current.TypeOf(name)
+	if name is "logger"
+		return "Logger"
 	name(0).Upper is name(0) or name is "outer" then name else "Unknown"
 Called(node SyntaxNode, scope Scope, current Scope) Text
 	NoInference.Called(SyntaxNode("Call", "Mutable", SyntaxNode("Number", "5")), NoShape, NoShape) is "Number"

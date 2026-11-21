@@ -1,4 +1,3 @@
-has logger
 has root Text = ""
 mutable idleRam Number = 0
 mutable idleVram Number = 0
@@ -15,16 +14,16 @@ constant BeatSeconds = 5
 constant NoSocket = 0
 constant NoReply = ""
 constant Start = "-NoProfile -Command Start-Process -FilePath cmd -ArgumentList '/c "
-constant Sample = Coordinator(Logger)
+constant Sample = Coordinator
 Place Text
-	Coordinator(Logger, "Compiler/output/coord").Place is "Compiler/output/coord"
-	Coordinator(Logger).Place.EndsWith("/coordinator")
+	Coordinator("Compiler/output/coord").Place is "Compiler/output/coord"
+	Coordinator.Place.EndsWith("/coordinator")
 	if root is not ""
 		return root
 	let home = Process.Variable(Process.OperatingSystem is "Windows" then "LOCALAPPDATA" else "HOME")
 	home + (Process.OperatingSystem is "Windows" then "/Strict" else "/.cache/strict") + "/coordinator"
 Opened Number
-	Coordinator(Logger, "Compiler/output/coord").Opened > 0
+	Coordinator("Compiler/output/coord").Opened > 0
 	let server = Socket.Local(Peers.Port)
 	let bound = server is Error then Socket.Local(0) else server
 	if bound is Error
@@ -59,7 +58,7 @@ Replied(socket Number) Boolean
 	busyJob is not "" or Process.Elapsed - seenAt < StaleSeconds
 Chosen(words Texts) Text
 	Sample.Chosen("status") is "busy\t\t"
-	Coordinator(Logger, busyLabel = "H3Image").Chosen("status") is "busy\t\t"
+	Coordinator(busyLabel = "H3Image").Chosen("status") is "busy\t\t"
 	if words.Length > 0 and words(0) is "holding"
 		return Held(words)
 	if words.Length > 0 and (words(0) is "done" or JobCancel.Matches(words, busyJob))
@@ -67,9 +66,9 @@ Chosen(words Texts) Text
 	if words.Length > 0 and words(0) is "need"
 		return Needed(Need.Parsed(words), Seen)
 	let busy = "busy\t" + busyJob + "\t" + (busyJob is "" then "" else busyLabel)
-	words.Length > 0 and words(0) is "status" then busy else RemoteRun(logger).Answered(words, Seen)
+	words.Length > 0 and words(0) is "status" then busy else RemoteRun.Answered(words, Seen)
 Finished(word Text) Text
-	Coordinator(Logger, busyJob = "video", busyLabel = "H3Image").Finished("done") is "ok"
+	Coordinator(busyJob = "video", busyLabel = "H3Image").Finished("done") is "ok"
 	wantsFree = word is not "done"
 	busyJob = ""
 	busyLabel = ""
@@ -89,8 +88,8 @@ Launcher(current Text) Text
 	strict.IsAvailable then strict.executable else current
 Held(words Texts) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
-	Coordinator(Logger, busyJob = "video", busyVram = LockNeed + 1).Held(("holding", "0", LockHeld to Text)) is "free"
-	Coordinator(Logger, busyJob = "video", busyVram = LockNeed).Held(("holding", "0", LockHeld to Text)) is "ok"
+	Coordinator(busyJob = "video", busyVram = LockNeed + 1).Held(("holding", "0", LockHeld to Text)) is "free"
+	Coordinator(busyJob = "video", busyVram = LockNeed).Held(("holding", "0", LockHeld to Text)) is "ok"
 	idleRam = words.Length > 1 then words(1) to Number else 0
 	idleVram = words.Length > 2 then words(2) to Number else 0
 	seenAt = Process.Elapsed
@@ -99,7 +98,7 @@ Held(words Texts) Text
 		return busyLabel is "exit" then "exit" else "free"
 	"ok"
 Needed(need Need, seen MachineView) Text
-	let verdict = Admission(logger).Verdict(need, seen)
+	let verdict = Admission.Verdict(need, seen)
 	if verdict is "go"
 		busyJob = need.job
 		busyLabel = need.label
@@ -110,10 +109,10 @@ Needed(need Need, seen MachineView) Text
 	busyLabel = verdict is "refused" and wantsFree then "exit" else busyLabel
 	let refusal = "refused\t" + need.job + "\t"
 	let waiting = "wait\t" + need.job + "\t1\t" + need.label + "\t0\t0"
-	verdict is "refused" and wantsFree is false then refusal + Admission(logger).Reason(need, seen) else waiting
+	verdict is "refused" and wantsFree is false then refusal + Admission.Reason(need, seen) else waiting
 Granted(words Texts, seen MachineView) Text
 	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
-	mutable sample = Coordinator(Logger)
+	mutable sample = Coordinator
 	let isHeld = sample.Held(("holding", "4", "2")) is "ok" and sample.idleRam is 4
 	isHeld then sample.Needed(Need.Parsed(words), seen) else "bad"
 Seen MachineView slow
@@ -125,8 +124,8 @@ Seen MachineView slow
 	let totalRam = MachineView.Forced("STRICT_MACHINE_RAM", GpuMemory.HostTotal)
 	MachineView(freeRam, video(1), totalRam, video(0), idle, device, busyJob is not "")
 Sent(line Text, isStarting = true) Text
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("status") is ""
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
+	Coordinator("Compiler/output/MissingCoordinator").Sent("status") is ""
+	Coordinator("Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
 	let socket = root is "" and isStarting then Linked else Connected
 	if socket is NoSocket
 		return NoReply
@@ -137,7 +136,7 @@ Sent(line Text, isStarting = true) Text
 	Socket.Close(socket)
 	reply is Error then NoReply else reply.Trim
 Resolved(line Text) Text
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Resolved("need") is ""
+	Coordinator("Compiler/output/MissingCoordinator").Resolved("need") is ""
 	mutable reply = Sent(line)
 	if reply.StartsWith("wait")
 		logger.Log("Waiting for other programs to finish or to free the memory this run needs")
@@ -147,14 +146,14 @@ Resolved(line Text) Text
 		reply = again is NoReply then Sent(line) else again
 	reply
 Connected Number
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
+	Coordinator("Compiler/output/MissingCoordinator").Connected is 0
 	let port = File(Place).Exists then File(Place).ReadLines.First to Number else 0
 	if port is Error or port is 0
 		return NoSocket
 	let socket = Socket.Connect("127.0.0.1", port)
 	socket is Error then NoSocket else socket
 Linked Number
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Connected is 0
+	Coordinator("Compiler/output/MissingCoordinator").Connected is 0
 	let existing = Connected
 	if existing is not NoSocket
 		return existing
@@ -165,6 +164,6 @@ Linked Number
 		Process.Wait(1)
 	NoSocket
 Reported
-	Coordinator(Logger, "Compiler/output/MissingCoordinator").Reported is not Error
+	Coordinator("Compiler/output/MissingCoordinator").Reported is not Error
 	let reply = Sent("status")
 	logger.Log(reply is NoReply then "No coordinator" else reply)

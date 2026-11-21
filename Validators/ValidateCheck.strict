@@ -1,34 +1,33 @@
-has logger
 Run(folder Text, root Text) Number
 	mutable issues = 0
 	for Parts(folder)
 		issues = issues + Checked(value, root)
-	issues = issues + ProjectRules(logger, root).Checked(folder)
+	issues = issues + ProjectRules(root).Checked(folder)
 	logger.Log("Validation issues: " + issues)
-	issues + (issues is 0 then Folders(logger).Tested(folder, root) else 0)
+	issues + (issues is 0 then Folders.Tested(folder, root) else 0)
 Parts(path Text) Texts slow
-	ValidateCheck(Logger).Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
-	ValidateCheck(Logger).Parts("./Math") is ResolveCheck.Tree("./Math")
+	ValidateCheck.Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
+	ValidateCheck.Parts("./Math") is ResolveCheck.Tree("./Math")
 	path.EndsWith(".strict") then List(Text) + path else ResolveCheck.Tree(path)
 Checked(folder Text, root Text) Number slow
 	let problems = FileCompiler.Problems(Files(folder))
 	let files = Parsed(Files(folder), problems)
-	let mutations = Mutations(files + ResolveCheck(logger).AllFiles(root))
+	let mutations = Mutations(files + ResolveCheck.AllFiles(root))
 	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
-	let inference = ResolveCheck(logger).Inference(reached)
+	let inference = ResolveCheck.Inference(reached)
 	let sure = SureMethods(inference).Named(reached)
 	let reaching = InputOutputs(inference).Named(reached)
 	Reported(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching)).Sum
 Parsed(files Texts, problems Texts) Texts
-	ValidateCheck(Logger).Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
+	ValidateCheck.Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
 	for files
 		if problems(index) is ""
 			value
 Files(folder Text) Texts slow
-	ValidateCheck(Logger).Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
-	ValidateCheck(Logger).Files("Validators").Length > 1
+	ValidateCheck.Files("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
+	ValidateCheck.Files("Validators").Length > 1
 	folder.EndsWith(".strict") then List(Text) + folder else Directory.Files(folder, "*.strict")
 Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, inference Expressions/TypeInference, known List(Texts)) Numbers slow
 	for files
@@ -39,7 +38,7 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		let tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
 		Logged(value, found + reached + tested + TestFiles(value, lines, known(1)).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number slow
-	Reported(ResolveCheck(logger).Unresolved(path, inference))
+	Reported(ResolveCheck.Unresolved(path, inference))
 Reported(issues Texts) Number
 	for issues
 		logger.Log(value)

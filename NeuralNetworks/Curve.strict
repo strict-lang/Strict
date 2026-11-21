@@ -1,4 +1,3 @@
-has logger
 constant Widths = (1, 2, 4, 8)
 constant Passes = 40
 constant Gray16 = 256

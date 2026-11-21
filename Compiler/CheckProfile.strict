@@ -1,4 +1,3 @@
-has logger
 constant ToolSeconds = 90
 constant ProbeLines = ("has profile Compiler/BuildProfile", "Run Number", "	BuildProfile(Logger).Reported(\"Fast profile probe\", Process.Elapsed)", "	(profile.Detailed is BuildProfile.Detailed) then 0 else 1")
 constant ProgramLines = ("Run Number", "	0")

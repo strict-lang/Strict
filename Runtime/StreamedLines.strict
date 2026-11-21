@@ -1,7 +1,6 @@
-has logger
 Code(lines Texts, code Number) Number
-	StreamedLines(Logger).Code((Resident.Exiting + "3", "x"), -2) is 3
-	StreamedLines(Logger).Code("x", -2) is -2
+	StreamedLines.Code((Resident.Exiting + "3", "x"), -2) is 3
+	StreamedLines.Code("x", -2) is -2
 	mutable exited = code
 	for lines
 		let isExit = value.StartsWith(Resident.Exiting)

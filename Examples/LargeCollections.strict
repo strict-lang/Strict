@@ -1,4 +1,3 @@
-has logger
 Copied(times Number) Number slow
 	LargeCollections.Copied(2) is 2 * 67108865
 	constant Doublings = 25

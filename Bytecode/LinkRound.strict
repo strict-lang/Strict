@@ -85,7 +85,7 @@ Explained(target Text) Text
 	PtxCache("Compiler/output/Stray").Saved(".strict", "Run\n\t1\nconstant A = 1") is not Error
 	Single.Explained("Strict/Compiler/output/Stray.A").EndsWith(":line 3: MembersMustComeBeforeMethods: constant A = 1")
 	let path = linker.SourcePath(target.Substring(0, target.LastIndexOf(".")))
-	let misplaced = File(path).Exists then ResolveCheck(Logger).Misplaced(path, File(path).ReadLines) else List(Text)
+	let misplaced = File(path).Exists then ResolveCheck.Misplaced(path, File(path).ReadLines) else List(Text)
 	misplaced.Length > 0 then misplaced.First else "UnresolvedLink: " + target
 Unresolved Texts
 	Writing.Unresolved.Length is 0

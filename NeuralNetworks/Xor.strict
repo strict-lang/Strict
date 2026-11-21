@@ -1,4 +1,3 @@
-has logger
 constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 constant Targets = (0, 1, 1, 0)
 constant Epoch = Descent(Network.Pair).Epoch(Inputs, Smallest.Wrapped(Targets), 1)

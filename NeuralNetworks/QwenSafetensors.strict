@@ -23,7 +23,7 @@ Loaded(theta Number, picked = List(Number)) Qwen3 slow
 	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(width) else Norm("norm.weight")
 	Qwen3(Blocks(basis), file.Hosted("embed_tokens", picked), List(Numbers), normed, theta, rotary = rotary, basis = basis)
 Blocks(basis Basis) List(Qwen3Block) slow
-	let completion = Completion(Logger, label, Layers, Process.Elapsed)
+	let completion = Completion(label, Layers, Process.Elapsed)
 	mutable blocks = List(Mutable(Qwen3Block))
 	mutable deltas = List(Mutable(DeltaBlock))
 	for Layers

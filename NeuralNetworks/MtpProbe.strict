@@ -1,4 +1,3 @@
-has logger
 Run(path Text, count Number, drafts Number)
 	let model = Qwen3(Qwen3.Loaded(path, 4), cacheBits = Number.SingleBits)
 	let prompt = Gpt2Tokens.Loaded(Gguf(path)).Encoded(Qwen3Benchmark.Prompt)
@@ -10,7 +9,7 @@ Run(path Text, count Number, drafts Number)
 	let drafted = Safetensors.Part(started.Finished(count).context, prompt.Length, count, 1)
 	logger.Log(Gpt2Tokens.Loaded(Gguf(path)).Decoded(drafted))
 Timed(started Speculation, count Number) Text slow
-	MtpProbe(Logger).Timed(Speculation.Drafting, 2).EndsWith("tokens per step")
+	MtpProbe.Timed(Speculation.Drafting, 2).EndsWith("tokens per step")
 	let before = Process.Elapsed
 	let finished = started.Finished(count)
 	let milliseconds = ((Process.Elapsed - before) * 1000 / count).Round(2)

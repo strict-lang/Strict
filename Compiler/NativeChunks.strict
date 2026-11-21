@@ -1,4 +1,3 @@
-has logger
 has selection Text = ""
 constant Size = 4
 constant Saving = "Compiler/output/Hellos.strictbinary"
@@ -18,15 +17,15 @@ Of(folders Texts, isParallel Boolean) List(Texts)
 			chunks.Add(paths.Slice(value * size, (paths.Length - value * size).Clamp(0, size)))
 	chunks
 Compiled(chunks List(Texts), root Text, base Text) List(List(TypeEntry))
-	NativeChunks(Logger, "*").Compiled(List(Texts), ".", "Compiler/output/Compiled").Length is 0
-	NativeChunks(Logger, "*").Compiled(Clashing, ".", "Compiler/output/Compiled").First.Length is 0
+	NativeChunks("*").Compiled(List(Texts), ".", "Compiler/output/Compiled").Length is 0
+	NativeChunks("*").Compiled(Clashing, ".", "Compiler/output/Compiled").First.Length is 0
 	let clash = Clash(chunks)
 	if clash is not ""
 		logger.Log(clash)
 		return (List(TypeEntry), List(TypeEntry))
 	let loaded = Loaded(Prepared(chunks, root, base), chunks)
 	for chunks
-		loaded(index).Length > 0 then loaded(index) else NativeFolder(logger, selection, false).Counted(value, root)
+		loaded(index).Length > 0 then loaded(index) else NativeFolder(selection, false).Counted(value, root)
 Clash(chunks List(Texts)) Text
 	NativeChunks.Clash(Single) is ""
 	NativeChunks.Clash(Clashing).StartsWith("SameNamedTypes: P in a/P.strict and b/P.strict, a build keys")
@@ -44,7 +43,7 @@ Chunked(base Text, index Number) Text
 	NativeChunks.Chunked("./Math/Tests.test", 2) is "./Math/Tests.test-2.strictbinary"
 	base + "-" + index + ".strictbinary"
 Prepared(chunks List(Texts), root Text, base Text) Texts
-	NativeChunks(Logger).Prepared(Single, ".", "Compiler/output/Prepared") is ("")
+	NativeChunks.Prepared(Single, ".", "Compiler/output/Prepared") is ("")
 	if chunks.Length is 1
 		return List(Text) + ""
 	mutable commands = List(Mutable(Text))
@@ -53,30 +52,30 @@ Prepared(chunks List(Texts), root Text, base Text) Texts
 	for ToolRunner(NativeCompiler.Executable(root)).ExecuteAll(commands, "Frontend / chunks (" + chunks.Length + " jobs)")
 		Chunked(base, index)
 Saved(output Text, root Text, paths Texts)
-	NativeChunks(Logger, "*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is Error("ChunkNotCompiled")
+	NativeChunks("*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is Error("ChunkNotCompiled")
 	if IsKept(output, paths, root)
 		return
 	File(output).Delete
-	let counted = NativeFolder(logger, selection, false).Counted(paths, root)
+	let counted = NativeFolder(selection, false).Counted(paths, root)
 	if counted.Length < paths.Length
 		return Error("ChunkNotCompiled")
 	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(Text)))
 	Stamped(output, paths, root, counted)
 IsKept(output Text, paths Texts, root Text) Boolean
-	NativeChunks(Logger).IsKept(Unsaved, NativeFolder.Hellos, ".") is false
-	NativeChunks(Logger, "*").Saved(Stamping, ".", NativeFolder.Hellos) is not Error
-	NativeChunks(Logger, "*").IsKept(Stamping, NativeFolder.Hellos, ".")
-	NativeChunks(Logger).IsKept(Stamping, NativeFolder.Hellos, ".") is false
+	NativeChunks.IsKept(Unsaved, NativeFolder.Hellos, ".") is false
+	NativeChunks("*").Saved(Stamping, ".", NativeFolder.Hellos) is not Error
+	NativeChunks("*").IsKept(Stamping, NativeFolder.Hellos, ".")
+	NativeChunks.IsKept(Stamping, NativeFolder.Hellos, ".") is false
 	let stamp = File(output + ".stamp")
 	if File(output).Exists is false or stamp.Exists is false
 		return false
 	let lines = stamp.ReadLines
 	lines.First is Key(paths, root) and NativeCache.Adding.Matches(lines.Slice(1, lines.Length - 1))
 Key(paths Texts, root Text) Text
-	NativeChunks(Logger, "*").Key(List(Text) + "A.strict", ".") is ".\t*\tA.strict"
+	NativeChunks("*").Key(List(Text) + "A.strict", ".") is ".\t*\tA.strict"
 	Text.Combine((root, selection) + paths, "\t")
 Stamped(output Text, paths Texts, root Text, types List(TypeEntry))
-	NativeChunks(Logger).Stamped(Unsaved, List(Text) + "Examples/Sum.strict", ".", List(TypeEntry)) is not Error
+	NativeChunks.Stamped(Unsaved, List(Text) + "Examples/Sum.strict", ".", List(TypeEntry)) is not Error
 	mutable inputs = List(Text) + Process.Current.executable
 	for paths
 		inputs = inputs + (Path(value).PathOnly.text + "/*")
@@ -93,7 +92,7 @@ Decodings(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 		Decoded(value, chunks(index).Length)
 Decoded(output Text, count Number) List(TypeEntry)
 	NativeChunks.Decoded(Unsaved, 1).Length is 0
-	NativeChunks(Logger, "*").Saved(Saving, ".", NativeFolder.Hellos) is not Error
+	NativeChunks("*").Saved(Saving, ".", NativeFolder.Hellos) is not Error
 	NativeChunks.Decoded(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
 	if File(output).Exists is false
 		return List(TypeEntry)

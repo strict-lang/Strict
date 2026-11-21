@@ -1,4 +1,3 @@
-has logger
 constant Folder = "NeuralNetworks/qwen3/"
 constant Address = "https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf"
 constant Prompt = "Alan Turing theorized that computers would one day become"
@@ -19,7 +18,7 @@ Ran
 	logger.Log(Prompt + tokenizer.Decoded(Generation(model).Generated(tokenizer.Encoded(Prompt), Count)))
 	logger.Log(Timings((started, loaded, warmed, Process.Elapsed), first))
 Timings(times Numbers, first Text) Text
-	Qwen3Text(Logger).Timings((0, 1.5, 2, 2.1), " a").EndsWith("1500 ms, first token a after 500 ms, then 5 ms per token")
+	Qwen3Text.Timings((0, 1.5, 2, 2.1), " a").EndsWith("1500 ms, first token a after 500 ms, then 5 ms per token")
 	let loading = "Qwen3 0.6B loaded in " + ((times(1) - times(0)) * 1000).Round + " ms, first token" + first
 	let warming = " after " + ((times(2) - times(1)) * 1000).Round + " ms, then "
 	loading + warming + ((times(3) - times(2)) * 1000 / Count).Round(1) + " ms per token"

@@ -1,4 +1,3 @@
-has logger
 constant Keywords = ("return ", "if ", "for ", "mutable ")
 constant Labels = ("Return", "If", "For", "Declaration")
 Run

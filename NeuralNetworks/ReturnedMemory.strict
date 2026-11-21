@@ -1,4 +1,3 @@
-has logger
 constant Count = 25000000
 constant Kept = 150000000
 Anchor Numbers native

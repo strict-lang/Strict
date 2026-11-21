@@ -1,4 +1,3 @@
-has logger
 constant Pattern = "constant \\w+ = "
 Run
 	let lines = Lines("Compiler")
@@ -19,20 +18,20 @@ Lines(folder Text) Texts slow
 		lines = lines + File(value).ReadLines
 	lines
 Matches(lines Texts, prefix Text) Number
-	RegexSpeed(Logger).Matches(("constant Wait = 1", "x"), "") is 1
+	RegexSpeed.Matches(("constant Wait = 1", "x"), "") is 1
 	for lines
 		if Regex(prefix + Pattern).IsMatch(value)
 			1
 Kept(lines Texts, regex Regex) Number
-	RegexSpeed(Logger).Kept(("constant Wait = 1", "x"), Regex(Pattern)) is 1
+	RegexSpeed.Kept(("constant Wait = 1", "x"), Regex(Pattern)) is 1
 	for lines
 		if regex.IsMatch(value)
 			1
 Found(lines Texts) Number
-	RegexSpeed(Logger).Found(("constant Wait = 1", "x")) is 1
+	RegexSpeed.Found(("constant Wait = 1", "x")) is 1
 	for lines
 		if value.IndexOf("constant ") >= 0
 			1
 Milliseconds(seconds Number) Number
-	RegexSpeed(Logger).Milliseconds(0.0015) is 1.5
+	RegexSpeed.Milliseconds(0.0015) is 1.5
 	(seconds * 1000).Round(1)

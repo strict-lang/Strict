@@ -1,18 +1,17 @@
-has logger
-constant Pruning = NeuronPruning(Logger)
+constant Pruning = NeuronPruning
 constant Measured = Activity(Gpt2.Tiny).Measured(Gpt2Tokens.Tiny, ("ab ab", "ab"))
 constant Fractions = (0.1, 0.2, 0.3, 0.5)
 Run(path Text)
-	let evaluation = Evaluation(logger)
+	let evaluation = Evaluation
 	let calibrating = evaluation.Calibration(8)
 	let tokenizer = Gpt2Tokens.Folder(path)
 	let model = Gpt2.Loaded(path + "/model.safetensors", BFloat16.Bits)
 	let activity = Activity(model).Measured(tokenizer, calibrating(0) + calibrating(1))
 	let heldout = evaluation.Heldout(8)
-	logger.Log(path + " with all MLP neurons: " + LayerDropping(logger).Reported(model, tokenizer, heldout))
+	logger.Log(path + " with all MLP neurons: " + LayerDropping.Reported(model, tokenizer, heldout))
 	for Fractions
 		let pruned = Pruned(model, activity, value)
-		logger.Log("without " + value * 100 + "% of them: " + LayerDropping(logger).Reported(pruned, tokenizer, heldout))
+		logger.Log("without " + value * 100 + "% of them: " + LayerDropping.Reported(pruned, tokenizer, heldout))
 Pruned(model Gpt2, activity Activity, fraction Number) Gpt2 slow
 	Pruning.Pruned(Gpt2.Tiny, Measured, 0.5).blocks.First.expansion.biases.Length is 24
 	mutable blocks = List(Mutable(Gpt2Block))

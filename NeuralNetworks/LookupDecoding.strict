@@ -1,4 +1,3 @@
-has logger
 constant Story = "Alan Turing theorized that computers would one day become"
 constant CopiedCharacters = 300
 constant WarmupTokens = 20
@@ -15,7 +14,7 @@ Run(path Text, count = 200, bits = 4)
 		let verified = Verified(model.Prefilled(copying, 0), copying.Length, value)
 		logger.Log("verifying " + value + " tokens after " + copying.Length + ": " + verified + " ms")
 Verified(prefilled Qwen3, start Number, count Number) Number slow
-	LookupDecoding(Logger).Verified(Qwen3.Tiny.Prefilled((1, 2), 0), 2, 2) > 0
+	LookupDecoding.Verified(Qwen3.Tiny.Prefilled((1, 2), 0), 2, 2) > 0
 	let block = Safetensors.Part((1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2), 0, count, 1)
 	mutable current = prefilled
 	mutable fastest = 1000
@@ -26,7 +25,7 @@ Verified(prefilled Qwen3, start Number, count Number) Number slow
 		fastest = (Process.Elapsed - started).Clamp(0, fastest)
 	(fastest * 1000).Round(2)
 Compared(model Qwen3, prompt Numbers, count Number) Text slow
-	LookupDecoding(Logger).Compared(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
+	LookupDecoding.Compared(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
 	let prefilled = model.Prefilled(prompt, 0)
 	let next = prefilled.Next
 	let again = model.Prefilled(prompt, 0)
@@ -39,8 +38,8 @@ Compared(model Qwen3, prompt Numbers, count Number) Text slow
 	let speed = (count / (middle - started)).Round(1) + " instead of " + (count / (ended - middle)).Round(1) + " tokens/s"
 	Agreement(drafted, plain) + ", " + (count / finished.steps).Round(2) + " tokens per step, " + speed
 Agreement(drafted Numbers, plain Numbers) Text
-	LookupDecoding(Logger).Agreement((1, 2), (1, 2)) is "same tokens"
-	LookupDecoding(Logger).Agreement((1, 2, 3), (1, 4, 3)) is "same tokens up to 1"
+	LookupDecoding.Agreement((1, 2), (1, 2)) is "same tokens"
+	LookupDecoding.Agreement((1, 2, 3), (1, 4, 3)) is "same tokens up to 1"
 	for drafted
 		if value is not plain(index)
 			return "same tokens up to " + index

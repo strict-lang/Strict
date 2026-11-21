@@ -1,4 +1,3 @@
-has logger
 constant Folder = "NeuralNetworks/gpt2/"
 constant Address = "https://huggingface.co/openai-community/gpt2/resolve/main/"
 constant Prompt = "Alan Turing theorized that computers would one day become"

@@ -1,7 +1,6 @@
 has red Number
 has green Number
 has blue Number
-has logger
 Brighten Number
 	Pixel(100, 150, 200).Brighten is 250
 	red + green

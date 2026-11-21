@@ -1,4 +1,3 @@
-has logger
 has target Text
 constant Organization = "https://api.github.com/orgs/strict-lang/repos?per_page=100"
 constant Raw = "https://raw.githubusercontent.com/"
@@ -56,11 +55,11 @@ Fetched(repository Text, type Text) Text
 	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
 	Provided(local, type)
 Downloaded(url Text, file Text)
-	Repositories(Logger, "artifacts").Downloaded("https://missing.invalid/a", "Compiler/output/a") is Error
+	Repositories("artifacts").Downloaded("https://missing.invalid/a", "Compiler/output/a") is Error
 	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + url + "\"").Failed
 		return Error("DownloadFailed: " + url)
 Copied(folder Text, type Text) Text slow
-	Repositories(Logger, "artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
+	Repositories("artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
 	let local = target + "/" + Path(folder).FileName.text
 	for BinaryFile(folder).Contained(folder)
 		if value.EndsWith(".strict") or value.Replace("\\", "/").IndexOf("/native/") > 0
@@ -141,6 +140,6 @@ Updated(folder Text) Number
 		let files = Directory.Files(value, "*.strict")
 		if File(value + "/.origin").Exists and files.Length > 0
 			let type = Path(files.First.Replace("\\", "/")).FileName.text
-			if Repositories(logger, folder).Downloaded(type.Substring(0, type.Length - 7)) is not ""
+			if Repositories(folder).Downloaded(type.Substring(0, type.Length - 7)) is not ""
 				updated = updated + 1
 	updated

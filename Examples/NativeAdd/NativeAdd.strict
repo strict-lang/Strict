@@ -1,4 +1,3 @@
-has logger
 Added Number slow
 	NativeAdd.Added is 3
 	Adder.Add(1, 2)

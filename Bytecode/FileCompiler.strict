@@ -1,4 +1,3 @@
-has logger
 has isQuiet Boolean = false
 has selection Text = ""
 has isOptimizing Boolean = true
@@ -21,14 +20,14 @@ Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List
 	let started = Process.Elapsed
 	let files = known.Length > 0 then known else SourceFiles(root).Of(Normalized(path))
 	if known.Length is 0
-		BuildProfile(logger).Reported("Frontend / source discovery (" + files.Length + " files)", started)
+		BuildProfile.Reported("Frontend / source discovery (" + files.Length + " files)", started)
 	let before = Process.Elapsed
 	let inference = ResolveCheck.Inference(files)
-	BuildProfile(logger).Reported("Frontend / type inference", before)
+	BuildProfile.Reported("Frontend / type inference", before)
 	Built(path, root, withTests, files, inference).entries
 Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference, known = Dictionary(Text, TypeEntry)) LinkRound
 	let source = Normalized(path)
-	let isParsed = BuildProfile(logger).Parsed(value, List(Text) + source)
+	let isParsed = BuildProfile.Parsed(value, List(Text) + source)
 	let missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
 		return Unlinked.With(Located(source, root, withTests, missing.First))
@@ -36,16 +35,16 @@ Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 		return Unlinked
 	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
-	let entry = BuildProfile(logger).Entry(main, withTests, isQuiet, selection)
-	let linked = BuildProfile(logger).Linked(Linker(root, main, known, BinarySources(files).Stamped), entry)
+	let entry = BuildProfile.Entry(main, withTests, isQuiet, selection)
+	let linked = BuildProfile.Linked(Linker(root, main, known, BinarySources(files).Stamped), entry)
 	LinkHomes(linked.With(Checked(linked.linker, linked.entries, source, inference))).Saved
 Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
 	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
 	let sources = BinaryFile.Unchecked(Sources(linker, linked, source))
-	if sources.Length > 0 and BuildProfile(logger).Parsed(value, sources) is false
+	if sources.Length > 0 and BuildProfile.Parsed(value, sources) is false
 		return List(TypeEntry)
 	mutable failures = 0
-	for sources.Length > 0 then BuildProfile(logger).Issues(value, sources, inference) else List(Texts)
+	for sources.Length > 0 then BuildProfile.Issues(value, sources, inference) else List(Texts)
 		failures = failures + value.Length
 		for value
 			logger.Log(value)
@@ -53,7 +52,7 @@ Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInfere
 Issues(sources Texts, inference TypeInference) List(Texts)
 	FileCompiler.Issues(List(Text), ResolveCheck.Counting).Length is 0
 	for sources
-		ResolveCheck(logger).Unresolved(value, inference)
+		ResolveCheck.Unresolved(value, inference)
 Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	FileCompiler.Sources(Linker.Sample, Logged, "./Examples/A.strict") is List(Text) + "./Examples/HelloLogger.strict"
 	mutable paths = List(Mutable(Text))
@@ -71,7 +70,7 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 		logger.Log(hidden is "" then "TypeNotFound: " + type + " used in " + path + " is in " + above + Project else hidden)
 		return List(TypeEntry)
 	if normalized.StartsWith("./") and normalized.IndexOf("/../") < 0
-		if Repositories(logger, ".").Downloaded(type) is not ""
+		if Repositories(".").Downloaded(type) is not ""
 			return Compiled(path, root, withTests)
 	logger.Log(ResolveCheck.Located(path, LineOf(File(path).ReadLines, type), "TypeNotFound: " + type + Tips))
 	List(TypeEntry)
@@ -141,7 +140,7 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	node.Kind is in ("Not", "Negate", "List") or isBinary
 Resolved(source Text, inference TypeInference, files Texts = List(Text)) Boolean slow
 	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
-	mutable unresolved = ResolveCheck(logger).Unresolved(source, inference)
+	mutable unresolved = ResolveCheck.Unresolved(source, inference)
 	for files
 		if value is not source and DefaultCheck(inference).HasCheckedMembers(ResolveCheck.TypeName(value))
 			unresolved = unresolved + DefaultCheck(inference).Members(value, File(value).ReadLines)

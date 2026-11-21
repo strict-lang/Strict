@@ -1,4 +1,3 @@
-has logger
 Run
 	logger.Log("Directory exists: " + Exists(Path(".")))
 Exists(path) Boolean slow

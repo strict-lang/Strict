@@ -1,4 +1,3 @@
-has logger
 constant Bogus = ("Doubled(number Number) Number", "	Doubled(3) is 6", "	Doubled(0) is 0", "	number + number")
 constant Suggest = ("has number", "Doubled Number", "	Suggesting(3).Doubled is 6", "	Suggesting(0).Doubled is 0")
 constant Temp = ("has celsius Number", "Clamped(minimum Number, maximum Number) Number", "	Temperature(30).Clamped(0, 20) is 20", "	Temperature(10).Clamped(0, 20) is 10")

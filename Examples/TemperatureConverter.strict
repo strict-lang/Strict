@@ -1,5 +1,4 @@
 has celsius Number
-has logger
 constant FahrenheitFreezing = 32
 constant KelvinFreezing = 273.15
 ToFahrenheit Number

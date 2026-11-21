@@ -1,4 +1,3 @@
-has logger
 has path Text
 has seconds Number = 0.2
 has part Text = ""
@@ -10,7 +9,7 @@ constant Unbudgeted = (Budgeted.First, InstructionEntry.Invoke(2, ("A", "Started
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
 constant Started13 = Resolver(Sample.Replaced(Doubled, Twice, Mutation.Twice.Mutant(13))).Resolved.First.methods.First
-constant Sample = Mutants(Logger, "Examples/Fibonacci.strict")
+constant Sample = Mutants("Examples/Fibonacci.strict")
 constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
 constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
 constant Inputs = ("/File", "/Memo", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")
@@ -18,7 +17,7 @@ constant Hint = " kept passing all tests, improve the tests!"
 constant Wave = 8
 Survivors(types List(TypeEntry)) Texts
 	Sample.Survivors(Doubled).Length is 0
-	Mutants(Logger, "Compiler/output/Cached.strict", 0).Survivors(Doubled).Length is 0
+	Mutants("Compiler/output/Cached.strict", 0).Survivors(Doubled).Length is 0
 	let cache = MutationCache(path, isWhole)
 	let isCached = part is "" and cache.IsCurrent
 	if isCached is false and seconds is 0
@@ -33,7 +32,7 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 	let cache = MutationCache(path, isWhole)
 	let held = part is "" then cache.Held(TypeSource.Root + "/obj") else List(Text)
 	let isFresh = part is not "" or cache.IsCurrent is false
-	let unoptimized = FileCompiler(logger, true, isWhole then "*" else "", false)
+	let unoptimized = FileCompiler(true, isWhole then "*" else "", false)
 	let survivors = Survivors(isFresh then unoptimized.Built(path, root, true, files, inference).entries else types)
 	if cache.Released(held) is false
 		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
@@ -60,7 +59,7 @@ Shown(survivor Text) Text
 	Sample.Shown(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
 	Sample.Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
 	Sample.Shown(Sample.path + ":line 3") is Sample.path + ":line 3"
-	Mutants(Logger, Sample.path, part = "1/2").Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length is 1
+	Mutants(Sample.path, part = "1/2").Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length is 1
 	let start = survivor.IndexOf(":line ")
 	let end = start < 0 then -1 else survivor.IndexOf(": ", start)
 	if part is not "" or end < 0
@@ -98,10 +97,10 @@ Alone(ready List(TypeEntry), position Number, mutant MethodEntry) Machine
 	let looped = TailCalls(ready).Looped(first, mutant)
 	let placed = Resolver(ready).Methods(TypeEntry(first, methods = List(MethodEntry) + looped)).First
 	let changed = Replaced(ready, List(MethodEntry) + first.methods(position), List(MethodEntry) + placed)
-	Machine(changed, logger, ConstantCache(List(VmValue)), Path(path).PathOnly.text).Prepared
+	Machine(changed, ConstantCache(List(VmValue)), Path(path).PathOnly.text).Prepared
 Passes(started Machine, runner Text, budget Number, isRetried = false) Boolean
 	Sample.Passes(Machine.Hello, TestCodegen.Runner, 1)
-	Mutants(Logger, "A.strict", 0).Passes(Frame.Doubling, "Missing", 0) is false
+	Mutants("A.strict", 0).Passes(Frame.Doubling, "Missing", 0) is false
 	let begun = Process.Elapsed
 	let failed = Machine(started, deadline = begun + budget).Tested(started.types.First.Name, runner)
 	if failed is not 0 and isRetried is false and Baseline.Expired(begun, budget)

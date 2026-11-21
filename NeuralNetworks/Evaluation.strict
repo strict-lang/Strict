@@ -1,4 +1,3 @@
-has logger
 constant Corpus = "NeuralNetworks/corpus/"
 constant Book = "https://gutenberg.pglaf.org/1/6/6/1661/1661-0.txt"
 constant Novel = "https://gutenberg.pglaf.org/1/3/4/1342/1342-0.txt"
@@ -13,14 +12,14 @@ Run(path Text)
 	logger.Log(path + " English: " + Described(reports(0)))
 	logger.Log(path + " Strict: " + Described(reports(1)))
 Heldout(count Number) List(Texts) slow
-	Evaluation(Logger).Heldout(1)(1).First.StartsWith("has real Number")
+	Evaluation.Heldout(1)(1).First.StartsWith("has real Number")
 	Texts(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", "Math", count)
 Calibration(count Number) List(Texts) slow
-	Evaluation(Logger).Calibration(1)(0).First.StartsWith("It is a truth")
+	Evaluation.Calibration(1)(0).First.StartsWith("It is a truth")
 	Texts(Downloaded(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
 Downloaded(path Text, address Text) Text slow
-	Evaluation(Logger).Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
-	Evaluation(Logger).Downloaded("NeuralNetworks/corpus/missing-download.txt", "") is Error
+	Evaluation.Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
+	Evaluation.Downloaded("NeuralNetworks/corpus/missing-download.txt", "") is Error
 	if File(path).Exists is false
 		let partial = path + ".part"
 		let download = Process.RunTool("curl", "-sfL --create-dirs -o \"" + partial + "\" \"" + address + "\"")
@@ -29,13 +28,13 @@ Downloaded(path Text, address Text) Text slow
 		File(partial).Rename(path)
 	Text.Combine(File(path).ReadLines, "\n")
 Texts(english Text, anchor Text, folder Text, count Number) List(Texts) slow
-	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(0)(1).Length is Width
-	Evaluation(Logger).Texts(Sources("Math"), "has", "Math", 2)(1).First.StartsWith("has real Number")
+	Evaluation.Texts(Sources("Math"), "has", "Math", 2)(0)(1).Length is Width
+	Evaluation.Texts(Sources("Math"), "has", "Math", 2)(1).First.StartsWith("has real Number")
 	(Spans(english, anchor, count), Spans(Sources(folder), "", count))
 Spans(text Text, anchor Text, count Number) Texts
-	Evaluation(Logger).Spans(Text.Combine(("x", "To Sherlock"), "\n"), "To", 0).Length is 0
-	Evaluation(Logger).Spans(Sources("Math"), "", 2)(1).Length is Width
-	Evaluation(Logger).Spans("short", "missing", 1) is Error
+	Evaluation.Spans(Text.Combine(("x", "To Sherlock"), "\n"), "To", 0).Length is 0
+	Evaluation.Spans(Sources("Math"), "", 2)(1).Length is Width
+	Evaluation.Spans("short", "missing", 1) is Error
 	let start = anchor is "" then 0 else text.IndexOf(anchor)
 	if start < 0
 		return Error("Corpus anchor not found: " + anchor)
@@ -44,13 +43,13 @@ Spans(text Text, anchor Text, count Number) Texts
 	for count
 		text.Substring(start + index * Width, Width)
 Sources(folder Text) Text slow
-	Evaluation(Logger).Sources("Math").Length > 10000
+	Evaluation.Sources("Math").Length > 10000
 	mutable joined = ""
 	for Directory.Files(folder, "*.strict")
 		joined = joined + Text.Combine(File(value).ReadLines, "\n") + "\n"
 	joined
 Described(report Numbers) Text
-	Evaluation(Logger).Described((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
+	Evaluation.Described((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
 	let perplexity = (report(0) / report(1)).Exponential.Round(3)
 	constant NatsPerBit = 0.6931471805599453
 	let bits = (report(0) / NatsPerBit / report(2)).Round(4)

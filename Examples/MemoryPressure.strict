@@ -1,4 +1,3 @@
-has logger
 AllocateMany Number
 	mutable values = List(Mutable(Number))
 	constant Allocations = 20000

@@ -1,4 +1,3 @@
-has logger
 constant FixedPort = 34567
 constant Threads = 16
 constant ToolSeconds = 30

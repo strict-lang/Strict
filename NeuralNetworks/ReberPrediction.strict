@@ -1,4 +1,3 @@
-has logger
 constant Strings = 2000
 constant Untrained = Gru.Random(7, 7)
 Run

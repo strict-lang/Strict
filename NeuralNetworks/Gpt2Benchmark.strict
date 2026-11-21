@@ -1,4 +1,3 @@
-has logger
 constant LongCount = 110
 Run
 	let folder = Gpt2Text.Folder

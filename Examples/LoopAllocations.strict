@@ -1,4 +1,3 @@
-has logger
 constant Iterations = 500
 constant Allowed = 1600
 Run

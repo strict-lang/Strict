@@ -1,9 +1,6 @@
-has logger
 constant Prompt = "Alan Turing theorized that computers would one day become"
 constant Tries = 3
 Run(path Text, count Number, repeats = 1, batch = 1)
-	if path is "coordinator"
-		return Coordinator(logger).Served
 	if MachineUse.Weights(logger, "Gemma4Benchmark", path).Admitted
 		Ran(path, count, repeats, batch)
 Ran(path Text, count Number, repeats Number, batch Number) slow
@@ -11,15 +8,15 @@ Ran(path Text, count Number, repeats Number, batch Number) slow
 	let started = Process.Elapsed
 	let model = Gemma4.Loaded(path)
 	let loaded = Process.Elapsed
-	let prompt = Qwen3Benchmark(logger).Repeated(tokenizer.Encoded(Prompt), repeats)
+	let prompt = Qwen3Benchmark.Repeated(tokenizer.Encoded(Prompt), repeats)
 	logger.Log(Prompt + tokenizer.Decoded(Generation(model.Prefilled(prompt, 0)).Continued(prompt.Length, count)))
 	let prefill = Fastest(model, prompt)
 	let prefilled = model.Prefilled(prompt, 0)
 	let durations = Durations(prefilled.Copies(batch), prefilled.Next, prompt.Length, count, batch)
-	let report = Qwen3Benchmark(logger).Report(prompt.Length, prefill, durations, batch)
+	let report = Qwen3Benchmark.Report(prompt.Length, prefill, durations, batch)
 	logger.Log(report + ", loaded in " + (loaded - started).Round(1) + " s")
-Fastest(model Gemma4, prompt Numbers) Number slow
-	Gemma4Benchmark(Logger).Fastest(Gemma4.Tiny, Gemma4.Prompt) > 0
+Fastest(model Gemma4, prompt Numbers) Number native
+	Gemma4Benchmark.Fastest(Gemma4.Tiny, Gemma4.Prompt) > 0
 	mutable fastest = 1000000
 	for Tries
 		let before = Process.Elapsed
@@ -27,14 +24,15 @@ Fastest(model Gemma4, prompt Numbers) Number slow
 		let milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
 		fastest = first >= 0 and milliseconds < fastest then milliseconds else fastest
 	fastest
-Durations(model Gemma4, token Number, start Number, count Number, batch Number) Numbers slow
-	Gemma4Benchmark(Logger).Durations(Gemma4.Tiny.Prefilled(Gemma4.Prompt, 0).Copies(2), 9, 3, 2, 2).Length is 2
+Durations(model Gemma4, token Number, start Number, count Number, batch Number) Numbers native
+	Gemma4Benchmark.Durations(Gemma4.Tiny.Prefilled(Gemma4.Prompt, 0).Copies(2), 9, 3, 2, 2).Length is 2
 	mutable current = model
-	mutable chosen = Qwen3Benchmark(logger).Repeated(List(Number) + token, batch)
+	mutable chosen = Qwen3Benchmark.Repeated(List(Number) + token, batch)
 	mutable last = Process.Elapsed
 	for count
-		current = current.Steps(chosen, Qwen3Benchmark(logger).Repeated(List(Number) + (start + index), batch), batch)
+		current = current.Steps(chosen, Qwen3Benchmark.Repeated(List(Number) + (start + index), batch), batch)
 		chosen = current.Nexts
+		GpuMemory.Finished
 		let duration = (Process.Elapsed - last) * 1000
 		last = last + duration / 1000
 		duration

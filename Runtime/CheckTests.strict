@@ -1,4 +1,3 @@
-has logger
 constant ToolSeconds = 90
 constant ProbePath = "Bytecode/PolicyProbe.strict"
 constant DeadlineName = "TestDurationMustNotExceedTwoHundredMilliseconds"

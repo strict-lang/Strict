@@ -1,4 +1,3 @@
-has logger
 Run
 	constant Trees = 25
 	let data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3)

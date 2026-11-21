@@ -1,5 +1,4 @@
 has numbers
-has logger
 Total Number
 	NumberSummer((1, 2, 3)).Total is 6
 	NumberSummer((10, 20, 30)).Total is 60

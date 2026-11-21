@@ -46,7 +46,7 @@ IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 	entry.texts(0).StartsWith("Test failed: ") or isReporting and entry.texts(0) is not "  got: "
 Logged(position Number, slots List(VmValue))
 	for Logs(position, slots)
-		frame.machine.logger.Log(value)
+		logger.Log(value)
 Logs(position Number, slots List(VmValue)) Texts
 	Lined.Logs(4, Frame.Listed).Length is 0 and Lined.Logs(0, Frame.Listed).Length is 2
 	Lined.Logs(2, Started).Length is 2

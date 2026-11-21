@@ -1,4 +1,3 @@
-has logger
 has root Text
 has executable Text
 constant Current = Error("Current")
@@ -11,8 +10,8 @@ constant DaemonCommands = ("coordinator", "serve", "linked", "status", "stop")
 constant InfoCommands = ("help", "--help", "version", "--version")
 constant BuildOptions = ("", "windows", "linux", "web", "android", "ios", "fast", "library", "full", "strict")
 Rebuilt(arguments Texts) Number slow
-	SelfBuild(Logger, "Compiler/output/Missing", "Missing.exe").Rebuilt(List(Text) + "test") is Current
-	SelfBuild(Logger, ".", "strict.exe").Rebuilt(List(Text) + "stop") is Current
+	SelfBuild("Compiler/output/Missing", "Missing.exe").Rebuilt(List(Text) + "test") is Current
+	SelfBuild(".", "strict.exe").Rebuilt(List(Text) + "stop") is Current
 	if IsStale(arguments) is false
 		return Current
 	if File(root + HoldFile).Exists
@@ -20,10 +19,10 @@ Rebuilt(arguments Texts) Number slow
 		return Current
 	Built(arguments) then Process(TargetExecutable).Started(Quoted(arguments)) else Current
 TargetExecutable Text
-	SelfBuild(Logger, "C:\\a", "C:\\b\\strict.exe").TargetExecutable is "C:/a/strict.exe"
+	SelfBuild("C:\\a", "C:\\b\\strict.exe").TargetExecutable is "C:/a/strict.exe"
 	root.Replace("\\", "/") + "/" + Path(executable).FileName.text
 Shown Text
-	SelfBuild(Logger, "C:\\a/b", "s").Shown is (Process.OperatingSystem is "Windows" then "C:\\a\\b\\s" else "C:/a/b/s")
+	SelfBuild("C:\\a/b", "s").Shown is (Process.OperatingSystem is "Windows" then "C:\\a\\b\\s" else "C:/a/b/s")
 	Process.OperatingSystem is "Windows" then TargetExecutable.Replace("/", "\\") else TargetExecutable
 Built(arguments Texts) Boolean slow
 	let exeBefore = File(TargetExecutable).Modified
@@ -40,8 +39,8 @@ RebuiltCore Boolean slow
 	logger.Log(Shown + " is older than Strict sources, rebuilding")
 	IsRebuilt(Process(TargetExecutable).Started("build Strict.strict ."))
 IsRebuilt(code Number) Boolean
-	SelfBuild(Logger, "a", "strict.exe").IsRebuilt(0)
-	SelfBuild(Logger, "a", "strict.exe").IsRebuilt(3) is false
+	SelfBuild("a", "strict.exe").IsRebuilt(0)
+	SelfBuild("a", "strict.exe").IsRebuilt(3) is false
 	if code is 0
 		return true
 	logger.Log(Shown + " could not be rebuilt (exit code " + code + "), it stays in use until the sources change")
@@ -59,14 +58,14 @@ Locked Boolean slow
 			return true
 	false
 Unlocked Boolean
-	SelfBuild(Logger, "Compiler/output", "s").Locked and SelfBuild(Logger, "Compiler/output", "s").Unlocked
+	SelfBuild("Compiler/output", "s").Locked and SelfBuild("Compiler/output", "s").Unlocked
 	File(root + BuildLock).Delete
 	File(root + BuildLock).Exists is false
 Marked
 	Directory.Create(root + "/obj")
 	File(root + CheckedFile).Write("checked")
 IsStale(arguments Texts) Boolean
-	SelfBuild(Logger, "Compiler/output/Missing", "strict.exe").IsStale(List(Text) + "test") is false
+	SelfBuild("Compiler/output/Missing", "strict.exe").IsStale(List(Text) + "test") is false
 	if File(root + "/Strict.strict").Exists is false or IsSkipped(arguments)
 		return false
 	let exeTime = File(TargetExecutable).Modified
@@ -75,7 +74,7 @@ IsStale(arguments Texts) Boolean
 	let stamp = File(root + CheckedFile).Modified.Maximum(exeTime)
 	IsGitNewer(stamp) then true else IsSourceScanNeeded(arguments) and NewestSource > stamp
 IsGitNewer(stamp Number) Boolean
-	SelfBuild(Logger, "Compiler/output/Missing", "strict.exe").IsGitNewer(0) is false
+	SelfBuild("Compiler/output/Missing", "strict.exe").IsGitNewer(0) is false
 	let log = File(root + "/.git/logs/HEAD")
 	if log.Exists
 		return log.Modified > stamp
@@ -85,9 +84,9 @@ IsGitNewer(stamp Number) Boolean
 	let parsed = result.Succeeded then result.Output.Trim to Number else 0
 	parsed is not Error and parsed > stamp
 IsSkipped(arguments Texts) Boolean
-	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "Strict.strict"))
-	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "."))
-	SelfBuild(Logger, ".", "strict.exe").IsSkipped(("build", "Examples/Sum.strict")) is false
+	SelfBuild(".", "strict.exe").IsSkipped(("build", "Strict.strict"))
+	SelfBuild(".", "strict.exe").IsSkipped(("build", "."))
+	SelfBuild(".", "strict.exe").IsSkipped(("build", "Examples/Sum.strict")) is false
 	let command = arguments.Length > 0 then arguments(0) else ""
 	if command is in DaemonCommands or command is in InfoCommands
 		return true
@@ -97,8 +96,8 @@ IsSkipped(arguments Texts) Boolean
 	let isRoot = TypeSource.Absolute(root).Lower is Directory.Current.Replace("\\", "/").Lower
 	second is in BuildOptions or second.EndsWith("strict.strict") or second is "." and isRoot
 IsSourceScanNeeded(arguments Texts) Boolean
-	SelfBuild(Logger, ".", "strict.exe").IsSourceScanNeeded(("test", "Bytecode/SourceFiles.strict")) is false
-	SelfBuild(Logger, ".", "strict.exe").IsSourceScanNeeded(List(Text) + "Examples/Sum.strict")
+	SelfBuild(".", "strict.exe").IsSourceScanNeeded(("test", "Bytecode/SourceFiles.strict")) is false
+	SelfBuild(".", "strict.exe").IsSourceScanNeeded(List(Text) + "Examples/Sum.strict")
 	if root is not "." and Directory.Current.Replace("\\", "/").Lower is not root.Replace("\\", "/").Lower
 		return true
 	let command = arguments.Length > 0 then arguments(0) else ""
@@ -108,8 +107,8 @@ IsSourceScanNeeded(arguments Texts) Boolean
 		return true
 	IsCoreTarget(arguments.Length > 1 then arguments(1).Replace("\\", "/") else "") is false
 IsCoreTarget(target Text) Boolean
-	SelfBuild(Logger, ".", "strict.exe").IsCoreTarget("Bytecode/SourceFiles.strict")
-	SelfBuild(Logger, ".", "strict.exe").IsCoreTarget("Examples/Sum.strict") is false
+	SelfBuild(".", "strict.exe").IsCoreTarget("Bytecode/SourceFiles.strict")
+	SelfBuild(".", "strict.exe").IsCoreTarget("Examples/Sum.strict") is false
 	if target is "" or target.EndsWith(".strict") and target.IndexOf("/") < 0
 		return true
 	for CorePackages + ExtraPackages
@@ -117,7 +116,7 @@ IsCoreTarget(target Text) Boolean
 			return true
 	false
 NewestSource Number
-	SelfBuild(Logger, "Compiler/output/Missing", "strict.exe").NewestSource is 0
+	SelfBuild("Compiler/output/Missing", "strict.exe").NewestSource is 0
 	mutable newest = File(root + "/Strict.strict").Modified
 	newest = MaxModified(Directory.Files(root, "*.strict"), newest)
 	newest = MaxModified(Directory.Files(root + "/Compiler", "*.mlir"), newest)
@@ -125,7 +124,7 @@ NewestSource Number
 		newest = MaxModified(Directory.Files(root + "/" + value, "*.strict"), newest)
 	newest
 MaxModified(paths Texts, current Number) Number
-	SelfBuild(Logger, ".", "strict.exe").MaxModified(List(Text) + "Missing.strict", 5) is 5
+	SelfBuild(".", "strict.exe").MaxModified(List(Text) + "Missing.strict", 5) is 5
 	mutable newest = current
 	for paths
 		let modified = File(value).Modified
@@ -133,7 +132,7 @@ MaxModified(paths Texts, current Number) Number
 			newest = modified
 	newest
 Quoted(arguments Texts) Text
-	SelfBuild(Logger, ".", "strict.exe").Quoted(("a b", "c\"d")) is "\"a b\" \"c\\\"d\""
+	SelfBuild(".", "strict.exe").Quoted(("a b", "c\"d")) is "\"a b\" \"c\\\"d\""
 	mutable text = ""
 	for arguments
 		let quoted = value.IndexOf(" ") >= 0 or value.IndexOf("\"") >= 0 or value is ""

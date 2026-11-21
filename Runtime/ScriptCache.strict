@@ -106,7 +106,7 @@ Linked(entry TypeEntry, main TypeCodegen, logger Logger) ScriptCache
 	let round = fast.Linked((List(TypeEntry) + entry) + BaseRaw, signatures)
 	if round.entries.Length is 0
 		return ScriptCache(value, code = 1)
-	let nextMachine = Execute(logger).Started(round.entries, Scripted.Path, false, true)
+	let nextMachine = Execute.Started(round.entries, Scripted.Path, false, true)
 	mutable nextKnown = known
 	for round.signatures
 		nextKnown(value) = round.entries(index + 1)
@@ -126,9 +126,9 @@ Executed(entry TypeEntry, logger Logger, arguments List(VmValue)) Boolean
 	let resolved = TypeEntry(rewritten.Name, rewritten.members, methods)
 	let nextTypes = (List(TypeEntry) + resolved) + base
 	if machine.prototypes.entries.Length is 0
-		return Machine(nextTypes, logger, ConstantCache(List(VmValue)), folder).Prepared.Completed(entry.Name, arguments)
+		return Machine(nextTypes, ConstantCache(List(VmValue)), folder).Prepared.Completed(entry.Name, arguments)
 	machine.prototypes.Stored(0, Natives(nextTypes).Fresh(resolved))
-	let prepared = Machine(nextTypes, logger, machine.prototypes, folder, false, machine.sources)
+	let prepared = Machine(nextTypes, machine.prototypes, folder, false, machine.sources)
 	machine.prototypes.Stored(0, Constants(prepared).Filled(0))
 	prepared.Completed(entry.Name, arguments)
 Ran(entry TypeEntry, main TypeCodegen, logger Logger, arguments List(VmValue)) ScriptCache
@@ -144,7 +144,7 @@ Validated(lines Texts, merged TypeInference, logger Logger) Boolean
 		return false
 	let knownNames = merged.types.names + ("value", "index", "outer") + merged.types.ShapeScope("Scratch").names
 	let bodies = MethodBodies("Scratch", TypeShape(lines), merged)
-	let issues = ResolveCheck(logger).Found(FileCheck(merged, knownNames), bodies, lines, Scripted.Path)
+	let issues = ResolveCheck.Found(FileCheck(merged, knownNames), bodies, lines, Scripted.Path)
 	for issues
 		logger.Log(value)
 	issues.Length is 0

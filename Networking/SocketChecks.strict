@@ -1,4 +1,3 @@
-has logger
 Failures Number slow
 	Socket.Send(0, List(Number)) is Error("InvalidSocket")
 	Socket.Receive(0, 1) is Error("InvalidSocket")

@@ -1,4 +1,3 @@
-has logger
 constant Population = 50
 constant Generations = 300
 constant Strength = 0.5

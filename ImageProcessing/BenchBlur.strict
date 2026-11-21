@@ -1,4 +1,3 @@
-has logger
 constant Source = "ImageProcessing/Compare/Landscape.ppm"
 constant Target = Source.Replace(".ppm", ".strict.ppm")
 constant Radius = 4

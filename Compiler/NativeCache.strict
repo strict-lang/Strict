@@ -25,7 +25,7 @@ Output Text
 	let program = command is "build" and NativeBuild.IsProgram(rest(0))
 	let base = NativeBuild.Output(rest(0), program)
 	if "web" is in NativeCompiler.Options(rest)
-		return Release(Logger, base).Parent + "/Release/Web/" + Path(base).FileName.text + ".html"
+		return Release(base).Parent + "/Release/Web/" + Path(base).FileName.text + ".html"
 	Toolchain(Platform.Current, rest(1)).Executable(base)
 Stamp(path Text) Text
 	NativeCache.Stamp("Compiler/output/missing") is "unknown"
@@ -108,7 +108,7 @@ Value(path Text) Text
 	Text.Combine(files.Sorted, "\t")
 Outputs Texts
 	let base = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
-	let release = Release(Logger, base)
+	let release = Release(base)
 	mutable files = List(Text) + Output
 	if "web" is in NativeCompiler.Options(rest)
 		for (".wasm", ".js")

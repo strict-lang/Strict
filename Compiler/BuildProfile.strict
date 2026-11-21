@@ -1,4 +1,3 @@
-has logger
 constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
 Detailed Boolean
 	IsRequested
@@ -25,7 +24,7 @@ Compiled(cache NativeCache) Number
 	if files.Length > 0
 		Reported("Frontend / source discovery (" + files.Length + " files)", started)
 	let inputs = cache.IsEnabled then Inputs(cache, files) else List(Text)
-	let result = NativeCompiler(logger).Compiled(cache.command, cache.rest, files)
+	let result = NativeCompiler.Compiled(cache.command, cache.rest, files)
 	Reported("Total compilation", started)
 	if result is 0
 		let before = Process.Elapsed
@@ -89,7 +88,7 @@ Packaged(build NativeBuild, base Text, program Text, tools Toolchain)
 	if build.isFast
 		return
 	let started = Process.Elapsed
-	Release(logger, base).Packaged(program, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
+	Release(base).Packaged(program, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
 	Reported("Packaging", started)
 Lowered(tools Toolchain, base Text) Text
 	let started = Process.Elapsed
