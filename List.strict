@@ -169,32 +169,50 @@ Sorted List
 	(2, 1, 2, 0).Sorted is (0, 1, 2, 2)
 	(1).Sorted is (1)
 	("b", "c", "a").Sorted is ("a", "b", "c")
-	if Length < 2
-		return elements
-	mutable sorted = elements
+	Picked(Order)
+Sorted(numbers Numbers) List
+	("b", "c", "a").Sorted((2, 3, 1)) is ("a", "b", "c")
+	(5, 6, 7).Sorted((1, 0, 1)) is (6, 5, 7)
+	Picked(numbers.Order)
+Sorted(texts Texts) List
+	(1, 2).Sorted(("b", "a")) is (2, 1)
+	("x", "y", "z").Sorted(("b", "a", "b")) is ("y", "x", "z")
+	Picked(texts.Order)
+Picked(order Numbers) List
+	("a", "b", "c").Picked((2, 0)) is ("c", "a")
+	for order
+		elements(value)
+Order Numbers
+	(3, 1, 2).Order is (1, 2, 0)
+	(1, 0, 1).Order is (1, 0, 2)
+	(5).Order is (0)
+	mutable order = List(Number)
+	for elements
+		order = order + index
 	mutable width = 1
-	for as long as width < elements.Length
-		sorted = sorted.MergedRuns(width)
+	for as long as width < Length
+		order = MergedRuns(order, width)
 		width = width * 2
-	sorted
-MergedRuns(width Number) List
-	(3, 1, 2).MergedRuns(1) is (1, 3, 2)
-	(1, 3, 2, 4, 0).MergedRuns(2) is (1, 2, 3, 4, 0)
+	order
+MergedRuns(order Numbers, width Number) Numbers
+	(3, 1, 2).MergedRuns((0, 1, 2), 1) is (1, 0, 2)
+	(1, 3, 2, 4, 0).MergedRuns((0, 1, 2, 3, 4), 2) is (0, 2, 1, 3, 4)
 	mutable left = 0
 	mutable right = width
 	for Length
-		let isLeft = IsLeftNext(left, right, index - index % (width * 2), width)
-		let item = isLeft then elements(left) else elements(right)
+		let isLeft = IsLeftNext(order, left, right, index - index % (width * 2), width)
+		let item = isLeft then order(left) else order(right)
 		let isPairDone = (index + 1) % (width * 2) is 0
 		left = isPairDone then index + 1 else (isLeft then left + 1 else left)
 		right = isPairDone then index + 1 + width else (isLeft then right else right + 1)
 		item
-IsLeftNext(left Number, right Number, start Number, width Number) Boolean
-	(2, 1).IsLeftNext(0, 1, 0, 1) is false
-	(1, 1).IsLeftNext(0, 1, 0, 1)
-	(1, 2).IsLeftNext(1, 2, 0, 1)
-	(3, 2, 1).IsLeftNext(0, 1, 0, 2) is false
-	right >= start + width * 2 or right >= Length or left < start + width and elements(right) < elements(left) is false
+IsLeftNext(order Numbers, left Number, right Number, start Number, width Number) Boolean
+	(2, 1).IsLeftNext((0, 1), 0, 1, 0, 1) is false
+	(1, 1).IsLeftNext((0, 1), 0, 1, 0, 1)
+	(1, 2).IsLeftNext((0, 1), 1, 2, 0, 1)
+	(3, 2, 1).IsLeftNext((0, 1, 2), 0, 1, 0, 2) is false
+	let end = start + width * 2
+	right >= end or right >= Length or left < start + width and elements(order(right)) < elements(order(left)) is false
 Average Generic
 	(1, 2, 6).Average is 3
 	Sum / Length
