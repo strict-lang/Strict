@@ -20,6 +20,10 @@ constant WriterMembers = (Scope(("textWriter"), ("TextWriter")), KnownTypes.NoMe
 constant Writers = KnownTypes(("A", "B", "Logger", "TextWriter"), CallTarget.NoScopes + WriterMembers, CallTarget.NoScopes + WriterResults, CallTarget.NoScopes + WriterParameters)
 constant Logging = TypeInference(Writers, CallTarget.NoScopes + KnownTypes.NoMemberPair)
 constant OwnA = ValueCodegen(NoTypes, Scope(("A", "limits"), ("Text", "Numbers")), CallTarget.Plain)
+constant TextMethods = (Scope(List(Text) + "Upper", List(Text) + "Text"), Scope(List(Text) + "Reverse", List(Text) + "List"))
+constant TextMembers = (Scope(List(Text) + "characters", List(Text) + "Characters"), KnownTypes.NoMembers)
+constant TextTypes = KnownTypes(("Text", "List"), TextMembers, TextMethods, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Texted = ValueCodegen(TypeInference(TextTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain)
 constant Plain = ValueCodegen(NoTypes, Scope(("Greet", "Run"), ("Text", "None")), CallTarget.Plain)
 Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leaf(NoNode, CodeBlock.Empty.Declare("value", "A").Declare("outer", "A")).instructions(1).texts(0) is "x"
@@ -93,7 +97,9 @@ Held(node SyntaxNode, block CodeBlock) CodeBlock
 	let holder = isComposed then target.Holding(TypeOf(node.children(0), block), node.text) else ""
 	let held = SyntaxNode("Member", holder, List(SyntaxNode) + node.children(0), node.line)
 	let children = List(SyntaxNode) + held + node.children.Slice(1, node.children.Length - 1)
-	InstanceCall(holder is "" then node else SyntaxNode(node.Kind, node.text, children, node.line), block)
+	let call = holder is "" then node else SyntaxNode(node.Kind, node.text, children, node.line)
+	let texted = SyntaxNode("Call", "Text", List(SyntaxNode) + call, node.line)
+	IsListed(node, block) then Expression(texted, block) else InstanceCall(call, block)
 Constructed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Constructed(SyntaxNode("Call", "Dictionary", (One, One)), CodeBlock.Empty) is Plain.Leaf(Ones, CodeBlock.Empty)
 	Plain.Constructed(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
@@ -104,6 +110,13 @@ Constructed(node SyntaxNode, block CodeBlock) CodeBlock
 		return ErrorCodegen(value).Handled(node.children(0), block)
 	let isEmpty = node.text is "List" or node.children.Length is 0 or IsTypeName(node.children(0), block)
 	isEmpty then Elements.Empty(TypeOf(node, block), block) else Elements.Of(SyntaxNode("List", "", node.children), block)
+IsListed(node SyntaxNode, block CodeBlock) Boolean
+	Texted.IsListed(SyntaxNode("Member", "Reverse", NoNode), CodeBlock.Empty.Declare("x", "Text"))
+	Texted.IsListed(SyntaxNode("Member", "Upper", NoNode), CodeBlock.Empty.Declare("x", "Text")) is false
+	if node.Kind is not in ("Member", "MethodCall") or TypeOf(node.children(0), block) is not "Text"
+		return false
+	let types = inference.types
+	types.MethodsOf("Text").TypeOf(node.text) is "" and types.MethodsOf("List").TypeOf(node.text) is "List"
 InstanceCall(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.InstanceCall(SyntaxNode("Member", "Greet", NoNode), CodeBlock.Empty).instructions(1).payload.Last is 0
 	Plain.InstanceCall(ToText, CodeBlock.Empty).Result is 1
