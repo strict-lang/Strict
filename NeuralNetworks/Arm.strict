@@ -12,19 +12,19 @@ Reached(angles Numbers) Numbers
 	mutable rotation = Turned(0)
 	mutable position = (0, 0, 0)
 	for rows
-		let tilted = Times(rotation, Tilted(value(1)))
+		tilted = Times(rotation, Tilted(value(1)))
 		position = Moved(position, tilted, value)
 		rotation = Times(tilted, Turned(index < angles.Length then angles(index) else 0))
 	position
 Tilted(degrees Number) List(Numbers)
 	Planar.Tilted(90) is ((1, 0, 0), (0, 0, -1), (0, 1, 0))
-	let cosine = Degrees(degrees).Cos
-	let sine = Degrees(degrees).Sin
+	cosine = Degrees(degrees).Cos
+	sine = Degrees(degrees).Sin
 	((1, 0, 0), (0, cosine, -sine), (0, sine, cosine))
 Turned(degrees Number) List(Numbers)
 	Planar.Turned(90) is ((0, -1, 0), (1, 0, 0), (0, 0, 1))
-	let cosine = Degrees(degrees).Cos
-	let sine = Degrees(degrees).Sin
+	cosine = Degrees(degrees).Cos
+	sine = Degrees(degrees).Sin
 	((cosine, -sine, 0), (sine, cosine, 0), (0, 0, 1))
 Times(left List(Numbers), right List(Numbers)) List(Numbers)
 	Planar.Times(Planar.Turned(90), Planar.Turned(-90)) is Planar.Turned(0)
@@ -32,9 +32,9 @@ Times(left List(Numbers), right List(Numbers)) List(Numbers)
 		Row(value, right)
 Row(row Numbers, right List(Numbers)) Numbers
 	Planar.Row((1, 2, 3), Planar.Turned(90)) is (2, -1, 3)
-	let first = right(0)
-	let second = right(1)
-	let third = right(2)
+	first = right(0)
+	second = right(1)
+	third = right(2)
 	for row
 		row(0) * first(index) + row(1) * second(index) + row(2) * third(index)
 Moved(position Numbers, frame List(Numbers), link Numbers) Numbers

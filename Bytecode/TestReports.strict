@@ -37,7 +37,7 @@ Helpers(scope Scope) List(MethodEntry) slow
 	Even.Helpers(Either).First is Even.Helper("Got0", ErrorCodegen.Tested, "Boolean or Text", Plainly)
 	mutable helpers = List(Mutable(MethodEntry))
 	for Marked(scope, Showing)
-		let shown = value is "None" then Nothing else value.IndexOf(" or ") > 0 then Plainly else Shown
+		shown = value is "None" then Nothing else value.IndexOf(" or ") > 0 then Plainly else Shown
 		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, shown))
 	if isQuiet is false
 		helpers.Add(Helper("Took", "elapsed", "Number", Duration))
@@ -50,29 +50,29 @@ Helper(name Text, parameter Text, type Text, expression SyntaxNode) MethodEntry 
 	Even.Helper("Took", "elapsed", "Number", Duration).parameters is (ElapsedParameter)
 	Even.Helpers(TestCodegen.Counter.Declare(Showing, "None")).First is Even.Helper("Got0", "tested", "Error", Nothing)
 	Erring.Helper("Got0", "tested", "Number", Shown).instructions(1) is InstructionEntry.LoadAnyError(1)
-	let neutral = Neutral
-	let declared = type is "None" then "Error" else type
-	let generated = neutral.Expression(expression, CodeBlock.Empty.Declare(parameter, declared))
-	let entry = MemberEntry(parameter, neutral.target.FullName(declared), List(InstructionEntry), false)
-	let returned = generated.Add(InstructionEntry.Return(generated.Result))
+	neutral = Neutral
+	declared = type is "None" then "Error" else type
+	generated = neutral.Expression(expression, CodeBlock.Empty.Declare(parameter, declared))
+	entry = MemberEntry(parameter, neutral.target.FullName(declared), List(InstructionEntry), false)
+	returned = generated.Add(InstructionEntry.Return(generated.Result))
 	MethodEntry(TestCodegen.Runner + name, List(MemberEntry) + entry, "Strict/Text", returned.instructions)
 Near(kind Text, ordinal Number) MethodEntry slow
 	NearNumbers.Name is "$TestsNear0" and NearNumbers.returnType is "Strict/Boolean"
 	NearNumbers.parameters.Last.Name is Expected and NearText.IndexOf("Strict/Unknown, ") is -1
 	Erring.Near("Number", 0).instructions(5).payload is InstructionEntry.LoadAnyError(1).payload
-	let values = Neutral
-	let tested = ErrorCodegen.Tested
-	let declared = CodeBlock.Empty.Declare(tested, kind).Declare(Expected, kind)
-	let lines = Closeness(values.inference.types).Lines(tested, Expected, (kind, kind), "1", false, List(Text))
-	let body = MethodCodegen(values).Body(BodyParser(TestComparison(values).Shortcut(tested, lines)).Block(1, 1), declared)
-	let parameter = MemberEntry(tested, values.target.FullName(kind), List(InstructionEntry), false)
-	let returned = body.Add(InstructionEntry.Return(body.Result))
-	let parameters = (parameter, MemberEntry(parameter, Name = Expected))
+	values = Neutral
+	tested = ErrorCodegen.Tested
+	declared = CodeBlock.Empty.Declare(tested, kind).Declare(Expected, kind)
+	lines = Closeness(values.inference.types).Lines(tested, Expected, (kind, kind), "1", false, List(Text))
+	body = MethodCodegen(values).Body(BodyParser(TestComparison(values).Shortcut(tested, lines)).Block(1, 1), declared)
+	parameter = MemberEntry(tested, values.target.FullName(kind), List(InstructionEntry), false)
+	returned = body.Add(InstructionEntry.Return(body.Result))
+	parameters = (parameter, MemberEntry(parameter, Name = Expected))
 	MethodEntry(TestCodegen.Runner + "Near" + ordinal, parameters, "Strict/Boolean", returned.instructions)
 Neutral ValueCodegen slow
 	Processing.Neutral.Expression(Elapsed, TestCodegen.Counter).instructions.First.texts.First is "Strict/Process"
 	TestReports(TypeCodegen("P/H", List(Text), Even.types.inference, "P/S")).Neutral.target.FullName("S") is "P/S"
 	TestReports(TypeCodegen.Hello).Neutral.target.shape.lines is ("has logger")
-	let members = TypeShape(types.lines.Slice(0, TypeShape(types.lines).MembersEnd))
-	let neutral = CallTarget(types.inference.types, members, types.fullName, types.typeNames)
+	members = TypeShape(types.lines.Slice(0, TypeShape(types.lines).MembersEnd))
+	neutral = CallTarget(types.inference.types, members, types.fullName, types.typeNames)
 	ValueCodegen(types.inference, MethodCodegen.NoScope, neutral)

@@ -24,7 +24,7 @@ Locals(lists List(Numbers), count Number) Numbers
 	LoopSpeed.Locals(List(Numbers), 2) is Error
 	LoopSpeed.Locals(List(Numbers), 0).Length is 0
 	LoopSpeed.Locals(List(Numbers) + LoopSpeed.Counted(400), 4) is Error("IndexOutOfRange")
-	let raw = lists.First
+	raw = lists.First
 	for count
 		raw(index + Shift) + raw(index) * raw(index + 1)
 Remainders(numbers Numbers) Numbers
@@ -44,7 +44,7 @@ Summed(count Number) Number
 	sum
 Kernels(count Number) Number native
 	LoopSpeed.Kernels(2000000) is 0
-	let before = Process.Executed(3)
+	before = Process.Executed(3)
 	Remainders(Counted(count)).Length is count then Process.Executed(3) - before else Number.NotFound
 Once(kind Text, exact Numbers, padded Numbers) Number
 	Once("offsets", Counted(2), Counted(400)) is 400 and Once("locals", Counted(2), Counted(400)) is 400
@@ -65,7 +65,7 @@ Spent(started Number, elements Number) Number
 Measured(kind Text, exact Numbers, padded Numbers, rounds Number) Number
 	LoopSpeed.Measured("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4), 0) is 6
 	mutable total = Once(kind, exact, padded)
-	let started = Process.Elapsed
+	started = Process.Elapsed
 	for rounds
 		total = total + Once(kind, exact, padded)
 	if rounds > 0

@@ -10,30 +10,30 @@ Contents Text
 	Release(base).Parent + "/Release/MacOS/" + Name + ".app/Contents"
 Plist Texts
 	"<key>CFBundleExecutable</key><string>App</string>" is in MacOSBundle("Games/App/App").Plist
-	let executable = "<key>CFBundleExecutable</key><string>" + Name + "</string>"
-	let identifier = "<key>CFBundleIdentifier</key><string>lang.strict." + Name + "</string>"
-	let icon = "<key>CFBundleIconFile</key><string>" + Name + "</string>"
+	executable = "<key>CFBundleExecutable</key><string>" + Name + "</string>"
+	identifier = "<key>CFBundleIdentifier</key><string>lang.strict." + Name + "</string>"
+	icon = "<key>CFBundleIconFile</key><string>" + Name + "</string>"
 	Header + executable + identifier + ("<key>CFBundleName</key><string>" + Name + "</string>") + icon + Footer
 Identity(identities Text) Text
 	MacOSBundle.Identity(Listing) is "Developer ID Application: Some One (T1)"
 	MacOSBundle.Identity("     0 valid identities found") is "-"
-	let start = identities.IndexOf("\"Developer ID Application: ")
+	start = identities.IndexOf("\"Developer ID Application: ")
 	if start < 0
 		return "-"
-	let rest = identities.Substring(start + 1, identities.Length - start - 1)
+	rest = identities.Substring(start + 1, identities.Length - start - 1)
 	rest.Substring(0, rest.IndexOf("\""))
 Signing(identity Text, app Text) Text
 	MacOSBundle.Signing("-", "A.app") is "--force --sign - \"A.app\""
 	MacOSBundle.Signing("D", "A.app") is "--force --options runtime --timestamp --sign \"D\" \"A.app\""
-	let quoted = "\"" + app + "\""
-	let developer = "--force --options runtime --timestamp --sign \"" + identity + "\" " + quoted
+	quoted = "\"" + app + "\""
+	developer = "--force --options runtime --timestamp --sign \"" + identity + "\" " + quoted
 	identity is "-" then "--force --sign - " + quoted else developer
 Released
 	MacOSBundle("Compiler/output/App").Released is Error("ExecutableMissing")
 	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
-	let app = Contents.Substring(0, Contents.Length - 9)
-	let release = Release(base)
-	let folder = release.Parent + "/Release"
+	app = Contents.Substring(0, Contents.Length - 9)
+	release = Release(base)
+	folder = release.Parent + "/Release"
 	for (release.Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
 	release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Delivered(base), List(Text) + "")
@@ -48,9 +48,9 @@ Completed(icon Text)
 	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))
 	if ToolRunner("sips").Execute(Converting(icon)).Failed
 		logger.Log("sips could not convert " + icon)
-	let identity = Identity(ToolRunner("security").Execute("find-identity -v -p codesigning").Output)
-	let app = Contents.Substring(0, Contents.Length - 9)
-	let signed = ToolRunner("codesign").Execute(Signing(identity, app))
+	identity = Identity(ToolRunner("security").Execute("find-identity -v -p codesigning").Output)
+	app = Contents.Substring(0, Contents.Length - 9)
+	signed = ToolRunner("codesign").Execute(Signing(identity, app))
 	logger.Log(signed.Failed then "codesign failed: " + signed.error else "Signed " + app + " (" + identity + ")")
 	if signed.Failed
 		return Error("CodesignFailed")

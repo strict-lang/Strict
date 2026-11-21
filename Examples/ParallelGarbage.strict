@@ -4,7 +4,7 @@ constant Doublings = 12
 constant RowLength = 4097
 Grown Number slow
 	ParallelGarbage(ParallelGarbage.Counted(64)).Grown < 1200000000
-	let before = Process.MemoryUsed
+	before = Process.MemoryUsed
 	Lengths(Count).Sum is rounds.Length * Count * 16 * RowLength then Process.MemoryUsed - before else 1000000000000
 Lengths(count Number) Numbers
 	ParallelGarbage((1, 2)).Lengths(1) is (16 * 4097, 16 * 4097)
@@ -12,7 +12,7 @@ Lengths(count Number) Numbers
 		Garbage(value, count)
 Garbage(round Number, count Number) Number
 	ParallelGarbage(List(Number)).Garbage(1, 2) is 2 * 16 * 4097
-	let prefix = LargeCollections.Doubled((round % 10) to Text, Doublings)
+	prefix = LargeCollections.Doubled((round % 10) to Text, Doublings)
 	mutable length = 0
 	for count
 		length = length + Text.Combine(Rows(prefix, index), "").Length

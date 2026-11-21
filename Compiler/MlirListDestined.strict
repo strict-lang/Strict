@@ -38,9 +38,9 @@ IsDestined Boolean
 	Copied.IsDestined
 	MlirListDestined(MlirFunction(List(TypeEntry), MlirFunction.Shape, Peeking), 0).IsDestined is false
 	MlirListDestined(MlirDestined.Made.function, 2).IsDestined is false
-	let steps = function.method.instructions
-	let begin = ResultLoop
-	let returned = MlirLayout(function).Represented(TypeEntry.ShortName(function.method.returnType))
+	steps = function.method.instructions
+	begin = ResultLoop
+	returned = MlirLayout(function).Represented(TypeEntry.ShortName(function.method.returnType))
 	if begin < 0 or returned.StartsWith("List(") is false
 		return false
 	for Range(begin + 1, steps.Length)
@@ -50,15 +50,15 @@ IsDestined Boolean
 ResultLoop Number
 	Copied.ResultLoop is 2
 	MlirListDestined(MlirDestined.Made.function, 0).ResultLoop is -1
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	mutable loops = 0
 	mutable begin = -1
 	for steps
 		if value.kind is InstructionType.StoreConstantToVariable and Text.Combine(value.texts).EndsWith("forResult")
 			loops = loops + 1
 		begin = value.kind is InstructionType.LoopBegin and begin < 0 then index else begin
-	let writer = begin < 0 then -1 else MlirKinds(function).Writer(begin, steps(begin).payload(0))
-	let isParameter = writer >= 0 then Text.Combine(steps(writer).texts) is in function.method.ParameterNames else false
+	writer = begin < 0 then -1 else MlirKinds(function).Writer(begin, steps(begin).payload(0))
+	isParameter = writer >= 0 then Text.Combine(steps(writer).texts) is in function.method.ParameterNames else false
 	loops is 1 and isParameter then begin else Number.NotFound
 Sources Texts
 	Copied.Sources is ("items")
@@ -73,39 +73,39 @@ Created(result Text, capacity Text) Texts
 	Copied.Created("%r", "%a").First is "    %rc = arith.constant 0.0 : f64"
 	Lined.Created("%r", "%a").First is "    %rc = arith.constant 3.0 : f64"
 	Lined.Created("%r", "%a").Last is "    %r = func.call @strict_list_created(%a, %rc) : (f64, f64) -> f64"
-	let element = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, "forResult"))
+	element = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, "forResult"))
 	if MlirEmbedded(function).IsNumbers(element)
 		return MlirEmbedded(function).Listed(element, result, capacity)
-	let counted = "    " + result + "c = arith.constant " + MlirFlats(function, position).Count(element) + ".0 : f64"
+	counted = "    " + result + "c = arith.constant " + MlirFlats(function, position).Count(element) + ".0 : f64"
 	(counted, "    " + result + " = func.call " + Allocation(result, capacity, element) + " -> f64")
 Allocation(result Text, capacity Text, element Text) Text
 	Copied.Allocation("%r", "%a", "Number") is "@strict_numbers_new(%a) : (f64)"
 	Lined.Allocation("%r", "%a", "Tripling") is "@strict_list_created(%a, %rc) : (f64, f64)"
 	MlirListDestined(Copied.function, 2).Allocation("%r", "%a", "Tripling").StartsWith("@strict_list_into(")
 	MlirListDestined(Copied.function, 2).Allocation("%r", "%a", "Tripling").EndsWith("%a, %rc) : (f64, f64, f64)")
-	let isNumber = element is "Number"
+	isNumber = element is "Number"
 	if IsDestined and ResultLoop is position
-		let into = "@strict_list_into(%listDestination, " + capacity + ", " + result + "c) : (f64, f64, f64)"
+		into = "@strict_list_into(%listDestination, " + capacity + ", " + result + "c) : (f64, f64, f64)"
 		return isNumber then "@strict_numbers_into(%listDestination, " + capacity + ") : (f64, f64)" else into
-	let numbers = "@strict_numbers_new(" + capacity + ") : (f64)"
+	numbers = "@strict_numbers_new(" + capacity + ") : (f64)"
 	isNumber then numbers else "@strict_list_created(" + capacity + ", " + result + "c) : (f64, f64)"
 IsElement(entry InstructionEntry) Boolean
 	Remade.IsElement(Remaking.instructions(4))
 	MlirListDestined(Remade.function, 3).IsElement(Remaking.instructions(4)) is false
 	Keeping.IsElement(Remaking.instructions(4)) is false
-	let steps = function.method.instructions
-	let reads = LoadReuse(steps).InvokeReads(entry)
-	let writer = reads.Length > 0 then MlirKinds(function).Writer(position, entry.payload(reads.Last)) else -1
-	let isValue = writer >= 0 then Text.Combine(steps(writer).texts) is "value" else false
-	let callees = MlirModule(function.types, "").Called(function, position)
-	let isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
+	steps = function.method.instructions
+	reads = LoadReuse(steps).InvokeReads(entry)
+	writer = reads.Length > 0 then MlirKinds(function).Writer(position, entry.payload(reads.Last)) else -1
+	isValue = writer >= 0 then Text.Combine(steps(writer).texts) is "value" else false
+	callees = MlirModule(function.types, "").Called(function, position)
+	isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
 	isValue and IsDestined and isFlat and IsKept(writer)
 IsKept(at Number) Boolean
 	Remade.IsKept(3)
 	Keeping.IsKept(3) is false
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	for steps
-		let isValue = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is "value" else false
+		isValue = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is "value" else false
 		if isValue and index is not at and MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) is false
 			return false
 	true
@@ -116,20 +116,20 @@ Element(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	MlirListDestined(Remade.function, 3).Element(Remaking.instructions(4), Remaking.instructions(6), "call") is ("call")
 	if Text.Combine(next.texts) is not "forResult" or IsElement(entry) is false
 		return compiled
-	let temp = "%t" + position + "e"
-	let arguments = temp + "v, %listDestination, " + temp + "i, " + temp + "r"
-	let destined = "    func.call @strict_flat_destine_element(" + arguments + ") : (f64, f64, f64, f64) -> ()"
-	let loads = (function.Load(temp + "v", "%v_value"), function.Load(temp + "i", "%v_" + Iterated))
+	temp = "%t" + position + "e"
+	arguments = temp + "v, %listDestination, " + temp + "i, " + temp + "r"
+	destined = "    func.call @strict_flat_destine_element(" + arguments + ") : (f64, f64, f64, f64) -> ()"
+	loads = (function.Load(temp + "v", "%v_value"), function.Load(temp + "i", "%v_" + Iterated))
 	loads + function.Load(temp + "r", "%v_forResult") + destined + compiled
 IsCollected(name Text) Boolean
 	Lined.IsCollected("forResult") is false
 	Remade.IsCollected("value") is false
 	Lined.IsCollected("listResult0")
 	MlirListDestined(MlirFlats.Made.function, 0).IsCollected("listResult0") is false
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	for steps
-		let isLoaded = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
-		let built = isLoaded and index + 1 < steps.Length then index + 1 else -1
+		isLoaded = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
+		built = isLoaded and index + 1 < steps.Length then index + 1 else -1
 		if built > 0 and MlirFlats(function, built).Constructing(steps(built), value.payload(0)) > 0
 			return Collected(built)
 	false
@@ -138,14 +138,14 @@ Collected(at Number) Boolean
 	Lined.Collected(9)
 	Checked.Collected(9)
 	Lined.Collected(8) is false
-	let checkedAt = MlirDestined(function, at).CheckedAt
-	let checked = function.method.instructions(checkedAt)
-	let written = MlirDestined(function, checkedAt).Next(checked)
-	let isWrite = written.kind is InstructionType.InvokeWriteToList
+	checkedAt = MlirDestined(function, at).CheckedAt
+	checked = function.method.instructions(checkedAt)
+	written = MlirDestined(function, checkedAt).Next(checked)
+	isWrite = written.kind is InstructionType.InvokeWriteToList
 	isWrite and Text.Combine(written.texts) is "forResult" and written.payload(0) is checked.payload(0)
 Iterated Text
 	Remade.IsElement(InstructionEntry.Invoke(2, ("T", "Made", "T"), List(Number), -1)) is false
 	Remade.IsElement(InstructionEntry.Invoke(2, ("T", "Made", "T"), List(Number), 0)) is false
 	Copied.Iterated is "items"
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	Text.Combine(steps(MlirKinds(function).Writer(ResultLoop, steps(ResultLoop).payload(0))).texts)

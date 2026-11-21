@@ -39,11 +39,11 @@ constant HC26 = "DWORD exx=0;GetExitCodeProcess(x.hProcess,&exx);CloseHandle(x.h
 constant HC27 = "system(\"taskkill /F /IM ResidentCheck.exe\");return ok?0:8;}\nint main(int c,char**v){if(!strcmp(v[1],\"touch\")){touch(v[2],strtoll(v[3],0,10));return 0;}\nif(!strcmp(v[1],\"lock\"))return held_lock(v[2],v[3]);"
 constant HC28 = "if(!strcmp(v[1],\"held\"))return chk_held(v[2],v[3],v[4]);if(!strcmp(v[1],\"conc\"))return chk_conc(v[2],v[3],v[4],v[5]);if(!strcmp(v[1],\"res\"))return chk_res(v[2],v[3],v[4]);return 9;}"
 Run Number
-	let folder = "Examples/BuildCheck" + 1000000.Random.Floor
+	folder = "Examples/BuildCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let h = CompiledHelper(folder)
-	let err = h is Error then h else CheckHeadersAndTraits(folder, h)
+	h = CompiledHelper(folder)
+	err = h is Error then h else CheckHeadersAndTraits(folder, h)
 	Directory.Delete(folder)
 	if err is Error
 		return err
@@ -58,186 +58,186 @@ CompiledHelper(folder Text) Text
 	out = out + (HC17 + "\n" + HC18 + "\n" + HC19 + "\n" + HC20 + "\n" + HC21 + "\n" + HC22 + "\n" + HC23 + "\n" + HC24)
 	out = out + (HC25 + "\n" + HC26 + "\n" + HelperCMain)
 	File(folder + "/helper.c").Write(Text.Combine(out, "\n").Split("\n"))
-	let comp = Process.RunTool("clang", "-O2 \"" + folder + "/helper.c\" -o \"" + folder + "/helper.exe\"", ShortSeconds)
+	comp = Process.RunTool("clang", "-O2 \"" + folder + "/helper.c\" -o \"" + folder + "/helper.exe\"", ShortSeconds)
 	comp.exitCode is not 0 then Error("HelperCompileFailed: " + comp.Output + comp.error) else folder + "/helper.exe"
 CheckHeadersAndTraits(folder Text, helper Text) Boolean
 	if File("Compiler/Bootstrap.mlir").ReadText.IndexOf("@NativeCompiler_Checked_") < 0
 		return Error("BootstrapNotChecked")
 	for (TraitFilesA + "\n" + TraitFilesB).Split("\n")
 		File(folder + "/" + value.Split("|")(0)).Write(value.Split("|")(1).Split("\\n"))
-	let trait = Built(folder, "TraitCheck", TraitA + TraitB)
+	trait = Built(folder, "TraitCheck", TraitA + TraitB)
 	if trait is Error or Process.RunTool(trait, "", ShortSeconds).exitCode is not TraitExit
 		return Error("TraitCheckFailed")
 	File(folder + "/NativeChange.strict").Write(("has logger", "Run", "\tlogger.Log(Hmac.Sha256(\"key\", \"text\"))"))
 	CheckCleanup(folder, helper)
 CheckCleanup(folder Text, helper Text) Boolean
-	let src = folder + "/CleanupCheck.strict"
-	let locked = folder + "/Locked"
-	let call = "Intermediates(Logger).Removed(\"" + locked + "\") is Error then 1 else 0"
+	src = folder + "/CleanupCheck.strict"
+	locked = folder + "/Locked"
+	call = "Intermediates(Logger).Removed(\"" + locked + "\") is Error then 1 else 0"
 	File(src).Write(("has build Compiler/NativeBuild", "Run Number", "\t" + call))
-	let cmd = "\\\"" + Process.Current.executable + "\\\" \\\"" + src + "\\\""
-	let ran = Process.RunTool(helper, "lock \"" + locked + ".ll\" \"" + cmd + "\"", ShortSeconds)
+	cmd = "\\\"" + Process.Current.executable + "\\\" \\\"" + src + "\\\""
+	ran = Process.RunTool(helper, "lock \"" + locked + ".ll\" \"" + cmd + "\"", ShortSeconds)
 	if "Could not remove build intermediate: " + locked + ".ll" is not in ran.Output
 		return Error("CleanupLockMessageMissing: " + ran.Output)
-	let built = Built(folder, "CleanupCheck", "")
+	built = Built(folder, "CleanupCheck", "")
 	Directory.Create(folder + "/Content")
 	File(folder + "/Content/data.txt").Write("initial")
 	built is Error then built else CheckNestedAndCache(folder, helper)
 CheckNestedAndCache(folder Text, helper Text) Boolean
-	let nested = Built(folder, "NestedGpu", NestedA + NestedB)
+	nested = Built(folder, "NestedGpu", NestedA + NestedB)
 	if nested is Error
 		return nested
-	let mlir = Text.Combine(File(folder + "/obj/NestedGpu.mlir").ReadLines, "\n")
+	mlir = Text.Combine(File(folder + "/obj/NestedGpu.mlir").ReadLines, "\n")
 	if "func.call @strict_parallel(%t" is not in mlir or "func.call @strict_gpu_run(%t" is not in mlir
 		return Error("NestedCpuGpuMissing")
-	let ran = Process.RunTool("cmd", "/c set STRICT_THREADS=4&& set STRICT_GPU=all&& \"" + nested + "\"", ShortSeconds)
+	ran = Process.RunTool("cmd", "/c set STRICT_THREADS=4&& set STRICT_GPU=all&& \"" + nested + "\"", ShortSeconds)
 	if ran.exitCode is not 1 or "GpuLoopMustRunOnGpu" is not in ran.Output
 		return Error("ForcedGpuDidNotStop: " + ran.Output)
 	CheckProfileAndBuildCache(folder, helper)
 CheckProfileAndBuildCache(folder Text, helper Text) Boolean
-	let prof = Built(folder, "ProfileCheck", ProfCode)
-	let out = prof is Error then prof to Text else Process.RunTool(prof, "", ShortSeconds).Output
+	prof = Built(folder, "ProfileCheck", ProfCode)
+	out = prof is Error then prof to Text else Process.RunTool(prof, "", ShortSeconds).Output
 	if "Fast phase:" is in out or "Slow phase:" is not in out
 		return Error("DefaultProfileThresholdsBroken: " + out)
 	File(folder + "/BuildValue.strict").Write(("Result Number", "\t0"))
-	let src = folder + "/BuildCheck.strict"
+	src = folder + "/BuildCheck.strict"
 	File(src).Write(("Run Number", "\t1 is 2", "\tBuildValue.Result"))
-	let fail = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	fail = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
 	if fail.exitCode is 0 or File(folder + "/BuildCheck.exe").Exists
 		return Error("FailedUnitBuiltProgram")
 	File(src).Write(("Run Number", "\t1 is 1", "\tBuildValue.Result"))
 	CheckInc(folder, helper, src)
 CheckInc(folder Text, helper Text, src Text) Boolean
-	let exe = Built(folder, "BuildCheck", "")
+	exe = Built(folder, "BuildCheck", "")
 	if exe is Error or Process.RunTool(exe, "", ShortSeconds).exitCode is not 0
 		return Error("CleanBuildFailed")
-	let stamp = File(exe).Modified
+	stamp = File(exe).Modified
 	File(folder + "/obj/BuildCheck.mlir").Delete
-	let h = Process.RunTool(Process.Current.executable, "build " + src, ShortSeconds)
+	h = Process.RunTool(Process.Current.executable, "build " + src, ShortSeconds)
 	if "Up to date:" is not in h.Output or File(exe).Modified is not stamp
 		return Error("CacheHitFailed: " + h.Output)
 	File(folder + "/BuildValue.strict").Write(("Result Number", "\t1"))
-	let dep = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
-	let bad = dep.exitCode is not 0 or Process.RunTool(exe, "", ShortSeconds).exitCode is not 1
+	dep = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	bad = dep.exitCode is not 0 or Process.RunTool(exe, "", ShortSeconds).exitCode is not 1
 	bad then Error("Dep") else CheckReleaseAndFiles(folder, helper)
 CheckReleaseAndFiles(folder Text, helper Text) Boolean
-	let b = folder + "/Built"
-	let r = folder + "/Release"
-	let h = "has release Compiler/Release\nRun Number slow\n\tReleaseCheck(Release(Logger, \"" + b + "\")).Retained"
-	let m = " is true\n\t0\nRetained Boolean\n\tFile(\"" + b + ".exe\").Write(\"built\")\n\t"
-	let m2 = "release.Refreshed(\"" + r + "\", \"\", \"" + b + "\", (\".exe\"))\n\tFile(\"" + b + ".exe\").Exists"
+	b = folder + "/Built"
+	r = folder + "/Release"
+	h = "has release Compiler/Release\nRun Number slow\n\tReleaseCheck(Release(Logger, \"" + b + "\")).Retained"
+	m = " is true\n\t0\nRetained Boolean\n\tFile(\"" + b + ".exe\").Write(\"built\")\n\t"
+	m2 = "release.Refreshed(\"" + r + "\", \"\", \"" + b + "\", (\".exe\"))\n\tFile(\"" + b + ".exe\").Exists"
 	File(folder + "/ReleaseCheck.strict").Write((h + m + m2).Split("\n"))
-	let rt = Process.RunTool(Process.Current.executable, "test " + folder + "/ReleaseCheck.strict native", ToolSeconds)
+	rt = Process.RunTool(Process.Current.executable, "test " + folder + "/ReleaseCheck.strict native", ToolSeconds)
 	if rt.exitCode is not 0 or Text.Combine(File(r + "/Built.exe").ReadLines, "") is not "built"
 		return Error("ReleaseCheckFailed")
 	CheckNativeTestCache(folder, helper)
 CheckNativeTestCache(folder Text, helper Text) Boolean
-	let src = folder + "/CachedTests.strict"
-	let mrk = folder + "/Ran.exe"
-	let l = ("Run Number", "\tTouched is true", "\t0", "Touched Boolean", "\tFile(\"" + mrk + "\").Write(\"t\")", "\ttrue")
+	src = folder + "/CachedTests.strict"
+	mrk = folder + "/Ran.exe"
+	l = ("Run Number", "\tTouched is true", "\t0", "Touched Boolean", "\tFile(\"" + mrk + "\").Write(\"t\")", "\ttrue")
 	File(src).Write(l)
-	let t1 = Process.RunTool(Process.Current.executable, "test " + src + " native unit", ToolSeconds)
+	t1 = Process.RunTool(Process.Current.executable, "test " + src + " native unit", ToolSeconds)
 	if t1.exitCode is not 0 or not File(mrk).Exists
 		return Error("InitialNativeTestFailed")
 	File(mrk).Delete
 	File(folder + "/obj/CachedTests.test.mlir").Delete
-	let t2 = Process.RunTool(Process.Current.executable, "test " + src + " native unit", ShortSeconds)
-	let miss = t2.exitCode is not 0 or File(mrk).Exists or File(folder + "/obj/CachedTests.test.mlir").Exists
+	t2 = Process.RunTool(Process.Current.executable, "test " + src + " native unit", ShortSeconds)
+	miss = t2.exitCode is not 0 or File(mrk).Exists or File(folder + "/obj/CachedTests.test.mlir").Exists
 	miss then Error("NativeTestCacheMiss") else CheckGpuCacheEntry(folder, helper)
 CheckGpuCacheEntry(folder Text, helper Text) Boolean
 	File(folder + "/OldGpu.kernels.mlir").Write("module {\n}")
 	File(folder + "/OldGpu.ptx").Write("// cached")
-	let l1 = "has cache Compiler/PtxCache\nRun Number\n\tGpuCacheCheck(PtxCache(\"" + folder + "/OldGpu\")).Previous is 1"
-	let c = (l1, "\t0", "Previous Number", "\tcache.Previous(\"module {\\n}\", false)")
+	l1 = "has cache Compiler/PtxCache\nRun Number\n\tGpuCacheCheck(PtxCache(\"" + folder + "/OldGpu\")).Previous is 1"
+	c = (l1, "\t0", "Previous Number", "\tcache.Previous(\"module {\\n}\", false)")
 	File(folder + "/GpuCacheCheck.strict").Write(c)
-	let g = Process.RunTool(Process.Current.executable, "test " + folder + "/GpuCacheCheck.strict", ShortSeconds)
+	g = Process.RunTool(Process.Current.executable, "test " + folder + "/GpuCacheCheck.strict", ShortSeconds)
 	if g.exitCode is not 0
 		return Error("GpuCacheCheckFailed: " + g.Output)
 	File(folder + "/GpuCacheCheck.strict").Delete
 	CheckReadTextAndLinks(folder, helper)
 CheckReadTextAndLinks(folder Text, helper Text) Boolean
 	File(folder + "/sample.txt").Write("one\r\ntwo\r".Bytes)
-	let rtSrc = folder + "/ReadTextCheck.strict"
-	let fnLine = "\tJoined(\"" + folder + "/sample.txt\") is \"one\\ntwo\""
+	rtSrc = folder + "/ReadTextCheck.strict"
+	fnLine = "\tJoined(\"" + folder + "/sample.txt\") is \"one\\ntwo\""
 	File(rtSrc).Write(("Joined(path Text) Text", fnLine, "\tText.Combine(File(path).ReadLines, \"\\n\")"))
-	let rt = Process.RunTool(Process.Current.executable, "test " + rtSrc + " native", ToolSeconds)
-	let mlir = Text.Combine(File(folder + "/obj/ReadTextCheck.test.mlir").ReadLines, "\n")
+	rt = Process.RunTool(Process.Current.executable, "test " + rtSrc + " native", ToolSeconds)
+	mlir = Text.Combine(File(folder + "/obj/ReadTextCheck.test.mlir").ReadLines, "\n")
 	if rt.exitCode is not 0 or "@strict_file_joined(" is not in mlir
 		return Error("ReadTextFusionFailed: " + rt.Output)
-	let cmd = "/c set STRICT_THREADS=1&& \"" + Process.Current.executable + "\" test " + LinkChainSrc + " native"
-	let l1 = Process.RunTool("cmd", cmd, ToolSeconds)
+	cmd = "/c set STRICT_THREADS=1&& \"" + Process.Current.executable + "\" test " + LinkChainSrc + " native"
+	l1 = Process.RunTool("cmd", cmd, ToolSeconds)
 	File(folder + "/NamedCheck.strict").Write(NamedCode.Split("\n"))
 	l1.exitCode is not 0 then Error("LinkChainFailed: " + l1.Output) else CheckNamedAndMoved(folder, helper)
 CheckNamedAndMoved(folder Text, helper Text) Boolean
-	let nr = Process.RunTool(Process.Current.executable, "build " + folder + "/NamedCheck.strict", ToolSeconds)
+	nr = Process.RunTool(Process.Current.executable, "build " + folder + "/NamedCheck.strict", ToolSeconds)
 	if nr.exitCode is 1 or "ResultMustBeUsed: Next(3)" is not in nr.Output
 		return Error("NamedFailureWrong: " + nr.Output)
-	let moved = Built(folder, "MovedCheck", MovedA + MovedB)
+	moved = Built(folder, "MovedCheck", MovedA + MovedB)
 	if moved is Error
 		return moved
-	let d = folder + "/elsewhere"
+	d = folder + "/elsewhere"
 	Directory.Create(d)
 	File(d + "/MovedCheck.exe").Write(File(moved).ReadBytes)
-	let mr = Process.RunTool("cmd", "/c cd /d \"" + d + "\" && MovedCheck.exe 32000", ShortSeconds)
-	let bad = mr.exitCode is not 1 or "is missing or empty" is not in mr.Output
+	mr = Process.RunTool("cmd", "/c cd /d \"" + d + "\" && MovedCheck.exe 32000", ShortSeconds)
+	bad = mr.exitCode is not 1 or "is missing or empty" is not in mr.Output
 	bad then Error("MovedPtx") else CheckNativeFolder(folder, helper)
 CheckNativeFolder(folder Text, helper Text) Boolean
-	let cmd = "/c cd /d Examples && \"" + Process.Current.executable + "\" test Fibonacci.strict"
-	let s1 = Process.RunTool(Process.Current.executable, "stop", ShortSeconds)
+	cmd = "/c cd /d Examples && \"" + Process.Current.executable + "\" test Fibonacci.strict"
+	s1 = Process.RunTool(Process.Current.executable, "stop", ShortSeconds)
 	if s1.exitCode < 0 or Process.RunTool("cmd", cmd, ToolSeconds).exitCode is not 0
 		return Error("FibonacciFailed")
 	File("NeuralNetworks/obj/Layer.strictbinary").Delete
-	let r2 = Process.RunTool(Process.Current.executable, "test NeuralNetworks/Layer.strict", ToolSeconds)
+	r2 = Process.RunTool(Process.Current.executable, "test NeuralNetworks/Layer.strict", ToolSeconds)
 	if r2.exitCode is not 0 or "GgufFileNotReadable" is in r2.Output
 		return Error("LayerRelativePathFailed: " + r2.Output)
 	File(folder + "/MovingCheck.strict").Write(("Moved Number", "\tDirectory.Change(\"Math\") is not Error", "\t1"))
-	let mv = Process.RunTool(Process.Current.executable, "build " + folder + "/MovingCheck.strict", ToolSeconds)
-	let ok = Process.RunTool(Process.Current.executable, "stop", ShortSeconds).exitCode >= 0 and mv.exitCode is 0
+	mv = Process.RunTool(Process.Current.executable, "build " + folder + "/MovingCheck.strict", ToolSeconds)
+	ok = Process.RunTool(Process.Current.executable, "stop", ShortSeconds).exitCode >= 0 and mv.exitCode is 0
 	ok then CheckEnvAndConcurrency(folder, helper) else Error("MovingCheckFailed: " + mv.Output)
 CheckEnvAndConcurrency(folder Text, helper Text) Boolean
-	let src = folder + "/ConcurrentCheck.strict"
+	src = folder + "/ConcurrentCheck.strict"
 	File(src).Write(("Run Number", "\t1 is 1", "\t3"))
-	let lk = folder + "/obj/ConcurrentCheck.strict.lock"
-	let aC = "conc \"" + Process.Current.executable + "\" \"" + src + "\" \"" + lk + "\" \""
+	lk = folder + "/obj/ConcurrentCheck.strict.lock"
+	aC = "conc \"" + Process.Current.executable + "\" \"" + src + "\" \"" + lk + "\" \""
 	if Process.RunTool(helper, aC + folder + "/ConcurrentCheck.exe\"", ToolSeconds).exitCode is not 0
 		return Error("ConcurrentBuildFailed: " + helper)
-	let aH = "held \"" + Process.Current.executable + "\" \"" + folder + "/HeldCheck.strict\" \""
+	aH = "held \"" + Process.Current.executable + "\" \"" + folder + "/HeldCheck.strict\" \""
 	if Process.RunTool(helper, aH + folder + "/HeldCheck.exe\"", ToolSeconds).exitCode is not 0
 		return Error("HeldCopyFailed: " + helper)
-	let aR = "res \"" + Process.Current.executable + "\" \"" + folder + "/ResidentCheck.strict\" \""
-	let res = Process.RunTool(helper, aR + folder + "/ResidentCheck.exe\"", ToolSeconds)
+	aR = "res \"" + Process.Current.executable + "\" \"" + folder + "/ResidentCheck.strict\" \""
+	res = Process.RunTool(helper, aR + folder + "/ResidentCheck.exe\"", ToolSeconds)
 	res.exitCode is not 0 then Error("ResidentFail: " + res.Output) else CheckCompilerChange(folder, helper)
 CheckCompilerChange(folder Text, helper Text) Boolean
 	File(folder + "/CompilerUsed.strict").Write(("Doubled(number Number) Number", "\tDoubled(2) is 4", "\tnumber * 2"))
-	let src = folder + "/CompilerChange.strict"
+	src = folder + "/CompilerChange.strict"
 	File(src).Write(("Tripled(number Number) Number", "\tTripled(2) is 6", "\tCompilerUsed.Doubled(number) + number"))
-	let usedBin = folder + "/obj/CompilerUsed.strictbinary"
+	usedBin = folder + "/obj/CompilerUsed.strictbinary"
 	if Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds).exitCode is not 0
 		return Error("CompilerChangeInitFailed")
-	let stored = File(usedBin).Modified
-	let tc = Process.RunTool(helper, "touch \"" + src + "\" 0", ShortSeconds)
-	let t1 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
+	stored = File(usedBin).Modified
+	tc = Process.RunTool(helper, "touch \"" + src + "\" 0", ShortSeconds)
+	t1 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
 	if tc.exitCode is not 0 or t1.exitCode is not 0 or File(usedBin).Modified is not stored
 		return Error("UnchangedCompiler")
 	CheckCompilerTouch(folder, helper, src, usedBin, stored)
 CheckCompilerTouch(folder Text, helper Text, src Text, usedBin Text, stored Number) Boolean
-	let tA = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" 1000000000", ShortSeconds)
-	let t2 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
-	let tB = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" -1000000000", ShortSeconds)
+	tA = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" 1000000000", ShortSeconds)
+	t2 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
+	tB = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" -1000000000", ShortSeconds)
 	if tA.exitCode is not 0 or tB.exitCode is not 0 or t2.exitCode is not 0 or File(usedBin).Modified is stored
 		return Error("ChangedCompilerReusedOldBytecode: " + usedBin)
 	if Built(folder, "NativeChange", "") is Error
 		return Error("NativeChangeInitFailed")
 	for ("Networking/native/Hmac.c", "Networking/Hmac.strict")
-		let tch = Process.RunTool(helper, "touch \"" + value + "\" 0", ShortSeconds)
+		tch = Process.RunTool(helper, "touch \"" + value + "\" 0", ShortSeconds)
 		if tch.exitCode is not 0 or Built(folder, "NativeChange", "") is Error
 			return Error("NativeBuildFailed: " + value)
 	true
 Built(folder Text, name Text, code Text) Text
-	let src = folder + "/" + name + ".strict"
+	src = folder + "/" + name + ".strict"
 	if code is not ""
 		File(src).Write(code.Split("\n"))
-	let res = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	res = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
 	res.exitCode is not 0 then Error("BuildFail " + name + ": " + res.Output) else folder + "/" + name + ".exe"
 HelperCMain Text
 	mutable out = List(Text)

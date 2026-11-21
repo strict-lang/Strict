@@ -33,14 +33,14 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	Naming.Issue(Joined, Named, Lines).StartsWith("ReturnTypeMismatch: a Text is returned for Texts")
 	(Naming.Issue(Splitted, Named, Lines) + Naming.Issue(ScopedStatement(Joined.statement, Named, 2), Named, Looped)) is ""
 	constant hint = ", brackets around an operator only group, List(Text) + value is a list of one"
-	let node = scoped.statement
+	node = scoped.statement
 	if IsTail(scoped, lines) is false or node.HasBody or node.Kind is in ("Declaration", "Reassignment", "Return")
 		return Split(scoped, current, lines)
-	let declared = Declared(lines, scoped.line)
-	let type = inference.TypeOf(node, scoped.scope, current)
-	let isSingle = inference.types.IsPlural(declared) and inference.types.ElementType(declared) is type
-	let isOpen = node.text is in ("then", "else") or "or" is in Header(lines, scoped.line).tokens
-	let other = isOpen then "" else Other(type, declared)
+	declared = Declared(lines, scoped.line)
+	type = inference.TypeOf(node, scoped.scope, current)
+	isSingle = inference.types.IsPlural(declared) and inference.types.ElementType(declared) is type
+	isOpen = node.text is in ("then", "else") or "or" is in Header(lines, scoped.line).tokens
+	other = isOpen then "" else Other(type, declared)
 	isSingle then "ReturnTypeMismatch: a " + type + " is returned for " + declared + hint else other
 Other(type Text, declared Text) Text
 	Naming.Other("Text", "Number") is "ReturnTypeMismatch: a Text is returned for Number"
@@ -48,25 +48,25 @@ Other(type Text, declared Text) Text
 	(Naming.Other("Number", "Number") + Naming.Other("Text", "None") + Naming.Other("Count", "Count")) is ""
 	(Naming.Other("Texts", "Texts") + Naming.Other("Unknown", "Number") + Naming.Other("Error", "Numbers")) is ""
 	Naming.Other("Characters", "Text") is ""
-	let types = inference.types
-	let isRecord = TypeEntry.IsBaseName(type) is false and types.MembersOf(type).names.Length > 0
-	let isUnlisted = types.IsPlural(declared) and isRecord and ListFits(types).IsList(type) is false
-	let isSpelled = types.IsPlural(type) and types.ElementType(type) is types.ElementType(declared)
-	let isBase = ArgumentTypes(inference).IsBaseMismatch(type, declared) and isSpelled is false
-	let isWrong = type is not "Error" and declared is not "None" and (isBase or isUnlisted)
+	types = inference.types
+	isRecord = TypeEntry.IsBaseName(type) is false and types.MembersOf(type).names.Length > 0
+	isUnlisted = types.IsPlural(declared) and isRecord and ListFits(types).IsList(type) is false
+	isSpelled = types.IsPlural(type) and types.ElementType(type) is types.ElementType(declared)
+	isBase = ArgumentTypes(inference).IsBaseMismatch(type, declared) and isSpelled is false
+	isWrong = type is not "Error" and declared is not "None" and (isBase or isUnlisted)
 	isWrong then "ReturnTypeMismatch: a " + type + " is returned for " + declared else ""
 Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	Coupling.Split(Early, Finals, Making).EndsWith(" gives a Couple(Number, Number) or a Couple(Text, Number)")
 	Coupling.Split(Early, Scope(Finals.names, List(Text) + "Couple(Number, Number)"), Making) is ""
 	Coupling.Split(Early, Finals, Making).StartsWith("ConditionalBranchesMustHaveOneType: return Couple(1, 2) gives a ")
 	(Coupling.Split(Unreturned, Finals, Making) + Coupling.Split(Bare, Finals, Making)) is ""
-	let node = scoped.statement
+	node = scoped.statement
 	if node.Kind is not "Return" or node.HasValue is false
 		return ""
-	let type = inference.TypeOf(node.children(0), scoped.scope, current)
-	let name = Header(lines, scoped.line).tokens.First
-	let final = current.TypeAt(name, TypeShape(lines).Overload(name, scoped.line))
-	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + type + " or a " + final
+	type = inference.TypeOf(node.children(0), scoped.scope, current)
+	name = Header(lines, scoped.line).tokens.First
+	final = current.TypeAt(name, TypeShape(lines).Overload(name, scoped.line))
+	message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + type + " or a " + final
 	BranchTypes(inference).IsSplit(type, final) then message else ""
 Declared(lines Texts, line Number) Text
 	Naming.Declared(Lines, 1) is "Texts"
@@ -92,15 +92,15 @@ Unresulted(scoped ScopedStatement, current Scope, lines Texts) Text
 	(Naming.Unresulted(Tail, Drawers, Running) + Naming.Unresulted(Compared, Drawers, Counting)) is ""
 	Naming.Unresulted(Unreturning, Drawers, Running) is ""
 	Naming.Unresulted(ScopedStatement(Tail.statement, Dropped, 1), Drawers, Counting) is ""
-	let isReturning = Declared(lines, scoped.line) is not "None"
-	let isValue = isReturning and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
-	let names = Resultless(scoped.statement, isValue, scoped.scope, current)
+	isReturning = Declared(lines, scoped.line) is not "None"
+	isValue = isReturning and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
+	names = Resultless(scoped.statement, isValue, scoped.scope, current)
 	names.Length is 0 then "" else "ReturnTypeMismatch: " + names.First + " has no return type, its call gives no value"
 Resultless(node SyntaxNode, isValue Boolean, scope Scope, current Scope) Texts
 	Naming.Resultless(Branched.statement, false, Named, Drawers) is (List(Text) + "Drawn")
 	(Naming.Resultless(Valued, true, Named, Drawers) + Naming.Resultless(Ignored, false, Named, Drawers)).Length is 0
 	Naming.Resultless(SyntaxParser(Tokenizer("Drawn(1) + 1").Tokens).Parse, true, Named, Drawers) is (List(Text) + "Drawn")
-	let isCall = node.Kind is in Calls and scope.TypeOf(node.text) is ""
+	isCall = node.Kind is in Calls and scope.TypeOf(node.text) is ""
 	if isValue and isCall and inference.TypeOf(node, scope, current) is "None"
 		return List(Text) + node.text
 	if node.text.StartsWith("is") or node.Kind is "Body"

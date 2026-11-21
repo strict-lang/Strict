@@ -44,8 +44,8 @@ Ordered(isLess Boolean, left VmValue, right VmValue) Boolean
 	Ordered(false, VmValue.OfNumber(1), VmValue.OfNumber(2)) is false
 	if left.kind is "Text"
 		return isLess then left.text < right.text else right.text < left.text
-	let leftNumber = left.items.Length is 0 then left.number else Comparable(left).number
-	let rightNumber = right.items.Length is 0 then right.number else Comparable(right).number
+	leftNumber = left.items.Length is 0 then left.number else Comparable(left).number
+	rightNumber = right.items.Length is 0 then right.number else Comparable(right).number
 	isLess then leftNumber < rightNumber else leftNumber > rightNumber
 KindName(kind Text) Text
 	KindName("Strict/List(Number)") is "List" and KindName("Number") is "Number"
@@ -59,11 +59,11 @@ IsSame(left VmValue, right VmValue) Boolean
 	IsSame(EmptyTextList, DimensionError) is false and IsSame(DimensionError, EmptyTextList) is false
 	if left.kind is right.kind and left.kind is in ("Number", "Text", "Boolean", "None")
 		return left.kind is "Text" then left.text is right.text else left.number is right.number
-	let compared = Comparable(left)
-	let other = Comparable(right)
-	let isError = compared.kind is "Strict/Error" and other.kind is "Strict/Error"
-	let isLeftAny = compared.items.Length > 0 and compared.items.First.text is ""
-	let isAny = isLeftAny or other.items.Length > 0 and other.items.First.text is ""
+	compared = Comparable(left)
+	other = Comparable(right)
+	isError = compared.kind is "Strict/Error" and other.kind is "Strict/Error"
+	isLeftAny = compared.items.Length > 0 and compared.items.First.text is ""
+	isAny = isLeftAny or other.items.Length > 0 and other.items.First.text is ""
 	isError and isAny or compared is other
 Comparable(operand VmValue) VmValue
 	Comparable(Detailed) is DimensionError
@@ -71,12 +71,12 @@ Comparable(operand VmValue) VmValue
 	Comparable(VmValue("Strict/Degree", 0, "", List(VmValue) + VmValue.OfNumber(7))) is VmValue.OfNumber(7)
 	Comparable(VmValue("Strict/Pair(Number)", 0, "", OneTwo.items)).kind is "Strict/Pair"
 	Comparable(Wrapped).kind is "List" and Comparable(VmValue("A(B)", 0, "", List(VmValue))).kind is "A(B)"
-	let compared = operand.kind is "Strict/ErrorWithValue" then operand.items.First else operand
+	compared = operand.kind is "Strict/ErrorWithValue" then operand.items.First else operand
 	if compared.kind is "Strict/Error"
 		return VmValue.OfError(compared.items.First.text)
 	if compared.items.Length is 1 and compared.kind is not in ("List", "Text", "Number", "Boolean", "None")
 		return Comparable(compared.items.First)
-	let open = compared.items.Length is 0 then -1 else compared.kind.IndexOf("(")
+	open = compared.items.Length is 0 then -1 else compared.kind.IndexOf("(")
 	open > 0 then VmValue(compared.kind.Substring(0, open), compared.number, compared.text, compared.items) else compared
 Calculated(kind Number, left VmValue, right VmValue) VmValue
 	Calculated(InstructionType.Modulo, VmValue.OfNumber(7), VmValue.OfNumber(4)).number is 3
@@ -100,7 +100,7 @@ Mixed(kind Number, left VmValue, right VmValue) VmValue
 	Mixed(InstructionType.Add, VmValue.OfNumber(1), VmValue.OfNumber(2)).number is 3
 	Mixed(InstructionType.Multiply, VmValue.OfNumber(2), VmValue.OfNumber(3)).number is 6
 	Mixed(InstructionType.Subtract, OneTwo, VmValue.OfNumber(1)).Length is 1
-	let isValue = left.kind is not in ("Text", "List") and right.kind is not in ("Text", "List")
+	isValue = left.kind is not in ("Text", "List") and right.kind is not in ("Text", "List")
 	if isValue and (left.kind is "Strict/Error" or right.kind is "Strict/Error")
 		return left.kind is "Strict/Error" then left else right
 	if kind is InstructionType.Add
@@ -110,7 +110,7 @@ Mixed(kind Number, left VmValue, right VmValue) VmValue
 	Computed(kind, left.number, right.number)
 Computed(kind Number, left Number, right Number) VmValue
 	Computed(InstructionType.Divide, 6, 4).number is 1.5
-	let number = Numeric(kind, left, right)
+	number = Numeric(kind, left, right)
 	number is Error then VmValue.OfError(number.Name.text) else VmValue.OfNumber(number)
 Numeric(kind Number, left Number, right Number) Number
 	Numeric(InstructionType.Modulo, 7, 4) is 3
@@ -141,7 +141,7 @@ Added(left VmValue, right VmValue) VmValue
 Removed(elements VmValue, element VmValue) VmValue
 	Removed(OneTwo, VmValue.OfNumber(1)).items.First.number is 2
 	Removed(OneTwo, OneTwo).Length is 0
-	let unwanted = element.kind is "List" then element.items else List(VmValue) + element
+	unwanted = element.kind is "List" then element.items else List(VmValue) + element
 	mutable remaining = List(Mutable(VmValue))
 	for elements.items
 		if value is not in unwanted
@@ -168,11 +168,11 @@ Zipped(kind Number, left VmValue, right VmValue) VmValue
 	Zipped(InstructionType.Multiply, OneTwo, OneTwo).items.Last.number is 4
 	Zipped(InstructionType.Multiply, VmValue.OfList(List(VmValue)), VmValue.OfNumber(0.5)).items.Length is 0
 	Zipped(InstructionType.Multiply, OneTwo, VmValue.OfList(List(VmValue) + VmValue.OfNumber(1))) is DimensionError
-	let others = right.kind is "List" then right.items else List(VmValue) + right
-	let spreads = kind is InstructionType.Divide or right.kind is not "List"
+	others = right.kind is "List" then right.items else List(VmValue) + right
+	spreads = kind is InstructionType.Divide or right.kind is not "List"
 	if left.items.Length is not others.Length and (spreads and 1 is in (left.items.Length, others.Length)) is false
 		return DimensionError
-	let length = left.items.Length is 0 or left.items.Length > others.Length then left.items.Length else others.Length
+	length = left.items.Length is 0 or left.items.Length > others.Length then left.items.Length else others.Length
 	mutable results = List(Mutable(VmValue))
 	for length
 		results.Add(Computed(kind, Element(left.items, index).number, Element(others, index).number))

@@ -11,5 +11,5 @@ Square(number Number) Number
 	Squares.Square(3) is 9
 	number * number
 Run
-	let squared = Squared(Counted(1000000))
+	squared = Squared(Counted(1000000))
 	logger.Log("Sum of squares " + squared.Sum + ", the last is " + squared.Last)

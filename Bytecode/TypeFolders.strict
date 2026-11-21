@@ -6,10 +6,10 @@ constant Mathematics = TypeFolders(Dictionary(("Vector2", "./Math")), Dictionary
 Of(root Text) TypeFolders
 	"Vector2" is in TypeFolders.Of(".").locals and TypeFolders.Of(".").folders.Length >= TypeFolders.Of(".").locals.Length
 	None.Indexed(List(Text) + ".", Single).Length > Single.Length
-	let local = Indexed(List(Text) + root, Dictionary(Text, Text))
+	local = Indexed(List(Text) + root, Dictionary(Text, Text))
 	mutable parents = List(Text)
 	for Directory.Directories("..")
-		let project = Path(value.Replace("\\", "/")).FileName.text
+		project = Path(value.Replace("\\", "/")).FileName.text
 		if project(0) is project(0).Upper and project(0) is not project(0).Lower
 			parents = parents + ("../" + project)
 	TypeFolders(local, parents.Length is 0 then local else Indexed(parents, local))
@@ -18,18 +18,18 @@ Indexed(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
 	None.Indexed(List(Text) + "./Missing", Single).Length is 1
 	mutable map = known
 	for parents
-		let parent = value
+		parent = value
 		for Directory.Directories(parent)
-			let folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
+			folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
 			for Directory.Files(folder, "*.strict")
-				let name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
+				name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
 				if name is not in map
 					map(name) = folder
 	map
 Files(types Texts) Texts
 	TypeFolders.Of(".").Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	None.Files(List(Text) + "Vector2").Length is 0
-	let local = Matched(locals, types)
+	local = Matched(locals, types)
 	mutable files = List(Mutable(Text))
 	for local.Length < types.Length then Matched(folders, types) else local
 		files = files + Directory.Files(value, "*.strict")

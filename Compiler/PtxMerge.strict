@@ -22,6 +22,6 @@ Merged(fresh List(PtxFunction)) List(PtxFunction)
 	Latest(fresh) + PtxMerge(fresh).Other(Titles)
 Latest(fresh List(PtxFunction)) List(PtxFunction)
 	Both.Latest(List(PtxFunction)).Length is 2
-	let names = PtxMerge(fresh).Titles
+	names = PtxMerge(fresh).Titles
 	for functions
 		value.name is in names then fresh(names.Index(value.name)) else value

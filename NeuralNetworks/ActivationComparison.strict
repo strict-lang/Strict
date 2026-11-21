@@ -1,4 +1,4 @@
 Run
-	let data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3)
+	data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3)
 	for Activation.Names
 		logger.Log(data.Evaluated("Iris with " + value, (4, 8, 3), Dataset.Epochs, Activation(index)))

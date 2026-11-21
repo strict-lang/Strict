@@ -16,17 +16,17 @@ Kinds(position Number) Numbers
 	Calling.Kinds(0) is (1) and Defaulting.Kinds(0) is (0) and Erring.Kinds(0) is (0, 1)
 	if IsShortcut(position)
 		return List(Number) + 0
-	let ends = Ends(position)
-	let chosen = ends.Length is 2 then Weight(position + 2, ends(0)) else 0
-	let other = ends.Length is 2 then Weight(ends(0) + 2, ends(1)) else 0
+	ends = Ends(position)
+	chosen = ends.Length is 2 then Weight(position + 2, ends(0)) else 0
+	other = ends.Length is 2 then Weight(ends(0) + 2, ends(1)) else 0
 	chosen < 0 or other < 0 or chosen is other then (0, 1) else List(Number) + (chosen > other then 1 else 0)
 Ends(position Number) Numbers
 	Calling.Ends(0) is (3, 6) and Returning.Ends(0).Length is 0 and Calling.Ends(4).Length is 0
-	let instructions = method.instructions
-	let jump = position + 1 < instructions.Length then instructions(position + 1) else MutationKinds.Returned
-	let middle = jump.kind is InstructionType.JumpToIdIfFalse then Ending(position + 2, jump.payload(0)) else -1
-	let next = middle > 0 and middle + 1 < instructions.Length then instructions(middle + 1) else MutationKinds.Returned
-	let other = next.kind is InstructionType.JumpToIdIfTrue then Ending(middle + 2, next.payload(0)) else -1
+	instructions = method.instructions
+	jump = position + 1 < instructions.Length then instructions(position + 1) else MutationKinds.Returned
+	middle = jump.kind is InstructionType.JumpToIdIfFalse then Ending(position + 2, jump.payload(0)) else -1
+	next = middle > 0 and middle + 1 < instructions.Length then instructions(middle + 1) else MutationKinds.Returned
+	other = next.kind is InstructionType.JumpToIdIfTrue then Ending(middle + 2, next.payload(0)) else -1
 	other > 0 then (middle, other) else List(Number)
 Ending(start Number, id Number) Number
 	Calling.Ending(2, 0) is 3 and Calling.Ending(2, 1) is 6 and Calling.Ending(4, 0) is -1
@@ -38,15 +38,15 @@ Weight(start Number, end Number) Number
 	Calling.Weight(2, 3) is 1 and Calling.Weight(5, 6) is 0 and Erring.Weight(2, 6) is -1
 	mutable weight = 0
 	for Range(start, end)
-		let entry = method.instructions(value)
+		entry = method.instructions(value)
 		if entry.kind is InstructionType.Invoke
 			weight = "Strict/Error" is in entry.texts or weight < 0 then -1 else 1
 	weight
 IsGuarding(position Number) Boolean
 	Searching.IsGuarding(0) and Searching.IsGuarding(4) is false and Returning.IsGuarding(2) is false
-	let line = method.instructions(position).line
+	line = method.instructions(position).line
 	for Range(position + 1, method.instructions.Length)
-		let entry = method.instructions(value)
+		entry = method.instructions(value)
 		if entry.kind is in Jumps or entry.line is not line
 			return false
 		if entry.kind is in MutationKinds.Comparisons
@@ -54,17 +54,17 @@ IsGuarding(position Number) Boolean
 	false
 IsShortcut(position Number) Boolean
 	Returning.IsShortcut(0) and Guarding.IsShortcut(0) is false and Calling.IsShortcut(0) is false
-	let instructions = method.instructions
+	instructions = method.instructions
 	mutable start = position + 1
 	for as long as start < instructions.Length then instructions(start).line is instructions(position).line else false
 		start = start + 1
-	let jump = start < instructions.Length then instructions(start - 1) else MutationKinds.Returned
+	jump = start < instructions.Length then instructions(start - 1) else MutationKinds.Returned
 	jump.kind is InstructionType.JumpToIdIfFalse then IsReturning(start, jump.payload(0)) else false
 IsReturning(start Number, id Number) Boolean
 	Returning.IsReturning(2, 0) and Guarding.IsReturning(2, 0) is false
 	mutable isError = false
 	for Range(start, method.instructions.Length)
-		let entry = method.instructions(value)
+		entry = method.instructions(value)
 		isError = isError or entry.kind is InstructionType.Invoke and "Strict/Error" is in entry.texts
 		if entry.kind is InstructionType.JumpEnd and entry.payload(0) is id
 			return method.instructions(value - 1).kind is InstructionType.Return and isError is false

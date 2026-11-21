@@ -3,20 +3,20 @@ constant SourceLoop = ("	for 10000", "		let slots = Frame.Doubling.Bound(Machine
 constant SourceCheck = ("		if (slots.Length is not 32) or (slots.First.number is not index)", "			return 1", "	let elapsed = Process.Elapsed - started")
 constant SourceTail = ("	logger.Log(\"Initialized 10,000 frames in \" + elapsed * 1000 + \" ms\")", "	elapsed < 0.02 then 0 else 2")
 Run Number
-	let folder = "Examples/FrameCheck" + 1000000.Random.Floor
-	let result = Checked(folder)
+	folder = "Examples/FrameCheck" + 1000000.Random.Floor
+	result = Checked(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Checked(folder Text)
-	let source = folder + "/FrameBudget.strict"
-	let extension = Process.OperatingSystem is "Windows" then ".exe" else ""
+	source = folder + "/FrameBudget.strict"
+	extension = Process.OperatingSystem is "Windows" then ".exe" else ""
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	File(source).Write(SourceHead + SourceLoop + SourceCheck + SourceTail)
-	let built = Process.RunTool("strict", "build " + source)
+	built = Process.RunTool("strict", "build " + source)
 	if built.exitCode is not 0
 		return Error(built.Output + built.error)
-	let ran = Process.RunTool(folder + "/FrameBudget" + extension, "")
+	ran = Process.RunTool(folder + "/FrameBudget" + extension, "")
 	logger.Log(ran.Output.Trim)
 	if ran.exitCode is not 0
 		return Error("FrameBudgetFailed: " + ran.exitCode + "\n" + ran.Output + ran.error)

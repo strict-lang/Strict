@@ -18,13 +18,13 @@ Spliced List(InstructionEntry)
 	Sample.Spliced.Length is 3
 	Sample.Spliced(2).texts.First is "inline2_elements"
 	Changing.Spliced.Last is InstructionEntry.Named(InstructionType.LoadVariableToRegister, 5, "inline4_changed_instance")
-	let returned = callee.instructions.Last.payload(0) + base
+	returned = callee.instructions.Last.payload(0) + base
 	mutable result = Prologue
 	for callee.instructions
 		if index < callee.instructions.Length - (IsChecked then 2 else 1)
 			result = result + Moved(value, returned)
-	let instance = Prefix + ChangedInstance.Name
-	let changed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, call.payload(0) + 1, instance)
+	instance = Prefix + ChangedInstance.Name
+	changed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, call.payload(0) + 1, instance)
 	IsChanging then result + changed else result
 IsChanging Boolean
 	Changing.IsChanging and Sample.IsChanging is false
@@ -40,36 +40,36 @@ Prologue List(InstructionEntry)
 	Sample.Prologue.First.texts.First is "inline2_elements"
 	Owning.Prologue.Length is 0
 	Valued.Prologue.Length is 2 and Valued.Prologue.Last.texts is ("inline2_value")
-	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable lines = List(Mutable(InstructionEntry))
 	for callee.parameters
 		lines.Add(Stored(call.payload(reads(index)), value.Name))
 	if member is ""
 		return lines + Fielded(reads)
-	let instance = call.payload(reads.Last)
+	instance = call.payload(reads.Last)
 	IsValued then lines + (Stored(instance, member), Stored(instance, "value")) else lines + Stored(instance, member)
 Moved(entry InstructionEntry, returned Number) InstructionEntry
 	Sample.Moved(Inliner.First.instructions(1), 3).payload is (1, 2, -1)
 	Sample.Moved(Inliner.First.instructions(1), 3).line is Inliner.Calling.instructions(1).line
 	Sample.Moved(InstructionEntry.Jump(InstructionType.JumpEnd, 2), 3).payload is (186, 23)
 	Owning.Moved(StructLanes.Squared.instructions(0), 3).texts is ("real")
-	let rebased = LoadReuse(List(InstructionEntry)).Rebased(entry, base)
-	let isNamed = entry.kind is in Inliner.Renamed and entry.texts.First is not in kept
-	let texts = isNamed then List(Text) + (Prefix + entry.texts.First) else entry.texts
-	let payload = entry.kind is in Jumps then Jumped(entry) else Registered(rebased, returned, call.payload(0))
+	rebased = LoadReuse(List(InstructionEntry)).Rebased(entry, base)
+	isNamed = entry.kind is in Inliner.Renamed and entry.texts.First is not in kept
+	texts = isNamed then List(Text) + (Prefix + entry.texts.First) else entry.texts
+	payload = entry.kind is in Jumps then Jumped(entry) else Registered(rebased, returned, call.payload(0))
 	InstructionEntry(entry.kind, texts, payload, call.line)
 Registered(entry InstructionEntry, source Number, target Number) Numbers
 	Sample.Registered(InstructionEntry.Return(5), 5, 9) is (9)
 	Sample.Registered(InstructionEntry.LoadNumber(0, 5), 5, 9) is (0, 1, 5)
-	let reuse = LoadReuse(List(InstructionEntry))
-	let positions = reuse.ReadPositions(entry) + reuse.WritePosition(entry)
+	reuse = LoadReuse(List(InstructionEntry))
+	positions = reuse.ReadPositions(entry) + reuse.WritePosition(entry)
 	for entry.payload
 		index is in positions and value is source then target else value
 IsChecked Boolean
 	Sample.IsChecked
 	Valued.IsChecked is false
-	let instructions = callee.instructions
-	let last = instructions.Length > 1 then instructions(instructions.Length - 2) else instructions.Last
+	instructions = callee.instructions
+	last = instructions.Length > 1 then instructions(instructions.Length - 2) else instructions.Last
 	last.kind is InstructionType.CheckError and last.payload(0) is instructions.Last.payload(0)
 Stored(register Number, name Text) InstructionEntry
 	Sample.Stored(4, "a").line is Inliner.Calling.instructions(1).line
@@ -98,7 +98,7 @@ Fielded(reads Numbers) List(InstructionEntry)
 Field(name Text, instance Number) InstructionEntry
 	Squaring.Field("imaginary", 2).texts is ("imaginary", "Pair")
 	Squaring.Field("imaginary", 2).payload is (18, 2, -1, -2)
-	let owner = TypeEntry.ShortName(call.texts(0))
+	owner = TypeEntry.ShortName(call.texts(0))
 	InstructionEntry(InstructionType.FieldLoad, (name, owner), (scratch, instance, -1, -2), call.line)
 Jumped(entry InstructionEntry) Numbers
 	Sample.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 300)) is (228, 25)

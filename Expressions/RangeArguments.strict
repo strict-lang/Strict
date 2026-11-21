@@ -9,9 +9,9 @@ Issue(call SyntaxNode, name Text, types Texts) Text
 	RangeArguments.Issue(Called, "A.Wrapped", "Numbers") is Rejected
 	RangeArguments.Issue(Short, "A.Wrapped", "Numbers") + RangeArguments.Issue(Long, "A.Wrapped", List(Text)) is ""
 	RangeArguments.Issue(Long, "A.Wrapped", "Range") is ""
-	let start = call.Kind is "MethodCall" then 1 else 0
+	start = call.Kind is "MethodCall" then 1 else 0
 	for Range(start, call.children.Length)
-		let at = value - start
+		at = value - start
 		if at < types.Length and types(at) is in ("Numbers", "List(Number)") and Length(call.children(value)) > Limit
 			return "RangeArgumentTooLong: " + name + " got " + call.children(value) + " for a " + types(at) + Hint
 	""

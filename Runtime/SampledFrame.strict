@@ -11,7 +11,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	for Invocation.MaxSteps
 		if position >= frame.method.instructions.Length
 			return frame.Ended(slots)
-		let entry = frame.method.instructions(position)
+		entry = frame.method.instructions(position)
 		slots(entry.Target) = frame.Value(entry, position, slots)
 		slots = Stepped(entry, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)

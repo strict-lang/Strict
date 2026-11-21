@@ -14,9 +14,9 @@ Laid MlirParts
 	Sample.owners is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)), MlirSplit.Sample.Owner(MlirSplit.Sample.lines(7)))
 	Sample.shared.Length is 2
 	Sample.placed.Length is 2
-	let lines = split.Starts
-	let common = split.Shared
-	let laid = MlirParts(split, lines, split.Declarations(lines), Owners(lines))
+	lines = split.Starts
+	common = split.Shared
+	laid = MlirParts(split, lines, split.Declarations(lines), Owners(lines))
 	MlirParts(laid, shared = common, placed = split.Placed(common))
 Owners(lines Numbers) Numbers
 	MlirParts(MlirSplit.Sample).Owners(3) is (MlirSplit.Sample.Owner(MlirSplit.Sample.lines(3)))
@@ -29,8 +29,8 @@ Part(index Number, data Texts, owned Texts) Text
 	Second.StartsWith("module {\n")
 	Second.EndsWith("\n}")
 	Second.IndexOf("module {\n" + MlirSplit.Tricky + "\n") is 0
-	let used = Used(data + owned)
-	let declared = split.Externals(index, shared, placed, used) + split.Others(declarations, owners, index, used)
+	used = Used(data + owned)
+	declared = split.Externals(index, shared, placed, used) + split.Others(declarations, owners, index, used)
 	Text.Combine((List(Text) + "module {") + data + declared + owned + "}", "\n")
 Used(texts Texts) Dictionary(Text, Number)
 	"x_1" is in Sample.Used(("    %a = llvm.mlir.addressof @x_10 : !llvm.ptr", "  call @x_1(%a)"))
@@ -53,7 +53,7 @@ Changed(base Text, flags Text) Numbers
 	File("Compiler/output/Unsplit-0").Exists is false
 	mutable changed = List(Mutable(Number))
 	for Range(0, Toolchain.Parts)
-		let part = base + "-" + value
+		part = base + "-" + value
 		File(part).Delete
 		if Refreshed(part, flags, value)
 			changed.Add(value)
@@ -61,8 +61,8 @@ Changed(base Text, flags Text) Numbers
 Refreshed(part Text, flags Text, index Number) Boolean
 	Sample.Refreshed("Compiler/output/Refreshed", "a", Sample.owners.First)
 	File("Compiler/output/Refreshed.mlir").ReadLines.Length > 4
-	let data = split.Data(index, shared, placed)
-	let owned = split.Owned(starts, owners, index)
+	data = split.Data(index, shared, placed)
+	owned = split.Owned(starts, owners, index)
 	if Written(part, flags, Text.Combine(data + owned, "\n")) is false
 		return false
 	File(part + ".mlir").Write(Part(index, data, owned))
@@ -91,11 +91,11 @@ Lowered(base Text, tools Toolchain) Text
 	mutable optimizing = List(Text)
 	mutable translating = List(Text)
 	for Changed(base, MlirSplit.Single + tools.Bitcode(""))
-		let part = base + "-" + value
+		part = base + "-" + value
 		optimizing = optimizing + ("\"" + part + ".mlir\"" + MlirSplit.Single + part + ".llvm.mlir\"")
 		translating = translating + (MlirSplit.Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")
 	File(base + ".ll").Delete
-	let lowered = Ran("mlir-opt", optimizing, tools)
+	lowered = Ran("mlir-opt", optimizing, tools)
 	lowered is "" then Ran("mlir-translate", translating, tools) else lowered
 Ran(tool Text, arguments Texts, tools Toolchain) Text
 	Sample.Ran("noSuchStrictTool", List(Text) + "", Toolchain.OnWindows).StartsWith("noSuchStrictTool failed")

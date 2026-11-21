@@ -12,14 +12,14 @@ Prologue Texts
 Fields(input Number) Texts
 	Fits.Fields(1).First is "    %selfwidth = llvm.getelementptr %p1[0] : (!llvm.ptr) -> !llvm.ptr, f64"
 	Sized.Fields(0).First is "    %v_grid_cells = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr"
-	let isSelf = input >= function.method.parameters.Length
-	let owner = isSelf then function.type.Name else function.method.parameters(input).typeName
-	let prefix = isSelf then "self" else function.method.parameters(input).Name
+	isSelf = input >= function.method.parameters.Length
+	owner = isSelf then function.type.Name else function.method.parameters(input).typeName
+	prefix = isSelf then "self" else function.method.parameters(input).Name
 	mutable lines = List(Mutable(Text))
 	for MlirWholeInstance(function).Members(input)
-		let kind = MlirWholeInstance(function).MemberKind(owner, value)
-		let name = isSelf then value else prefix + "_" + value
-		let read = Field("%p" + input, SlotOf(owner, value), "%" + prefix + value, kind)
+		kind = MlirWholeInstance(function).MemberKind(owner, value)
+		name = isSelf then value else prefix + "_" + value
+		read = Field("%p" + input, SlotOf(owner, value), "%" + prefix + value, kind)
 		lines = lines + Slot(name, kind, isSelf) + read + Stored("%" + prefix + value + kind, kind, name)
 	lines
 SlotOf(owner Text, member Text) Number
@@ -29,14 +29,14 @@ SlotOf(owner Text, member Text) Number
 Slot(name Text, kind Text, isSelf Boolean) Texts
 	Fits.Slot("width", "i", true).Length is 0
 	Sized.Slot("grid_cells", "d", false).First.StartsWith("    %v_grid_cells = llvm.alloca %one x !llvm.ptr")
-	let slot = "    %v_" + name + " = llvm.alloca %one x " + MlirWholeValues(0).Typed(kind) + " : (i64) -> !llvm.ptr"
+	slot = "    %v_" + name + " = llvm.alloca %one x " + MlirWholeValues(0).Typed(kind) + " : (i64) -> !llvm.ptr"
 	isSelf then List(Text) else List(Text) + slot
 Field(instance Text, slot Number, target Text, kind Text) Texts
 	Fits.Field("%p1", 0, "%a", "i").Last is "    %ai = arith.fptosi %av : f64 to i64"
 	Read(instance, slot, target) + Converted(target + "v", kind, target + kind)
 Read(instance Text, slot Number, target Text) Texts
 	Fits.Read("%p1", 0, "%a").Last is "    %av = llvm.load %a : !llvm.ptr -> f64"
-	let address = "    " + target + " = llvm.getelementptr " + instance + "[" + slot + "] : (!llvm.ptr) -> !llvm.ptr, f64"
+	address = "    " + target + " = llvm.getelementptr " + instance + "[" + slot + "] : (!llvm.ptr) -> !llvm.ptr, f64"
 	(address, "    " + target + "v = llvm.load " + target + " : !llvm.ptr -> f64")
 Stored(source Text, kind Text, name Text) Text
 	Fits.Stored("%a", "i", "width") is "    llvm.store %a, %v_width : i64, !llvm.ptr"
@@ -46,7 +46,7 @@ Converted(source Text, kind Text, target Text) Texts
 	Sized.Converted("%v", "d", "%w") is ("    %w = func.call @strict_list_lanes(%v) : (f64) -> !llvm.ptr")
 	Sized.Converted("%v", "c", "%w") is ("    %w = arith.bitcast %v : f64 to i64")
 	if kind is in ("i", "c")
-		let operation = kind is "i" then " = arith.fptosi " else " = arith.bitcast "
+		operation = kind is "i" then " = arith.fptosi " else " = arith.bitcast "
 		return List(Text) + ("    " + target + operation + source + " : f64 to i64")
-	let helper = kind is "d" then "strict_list_lanes" else "strict_list_bytes"
+	helper = kind is "d" then "strict_list_lanes" else "strict_list_bytes"
 	List(Text) + ("    " + target + " = func.call @" + helper + "(" + source + ") : (f64) -> !llvm.ptr")

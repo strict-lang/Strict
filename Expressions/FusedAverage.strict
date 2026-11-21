@@ -6,12 +6,12 @@ Lines Texts
 	Ones.Lines.Last is "\tfusedSum / fusedCount"
 	Grays.Lines(6) is "\tfor count"
 	Grays.Lines(8) is "\t\tfusedRed = fusedRed + fused.Red"
-	let lines = fusion.lines
-	let ending = fusion.Ending(fusion.Header(name))
-	let last = lines(ending - 1)
-	let tabs = last.Substring(0, BodyParser.Indent(last))
-	let start = Statements(ending)
-	let body = lines.Slice(start, ending - start - 1) + (tabs + "let fused = " + last.TrimStart)
+	lines = fusion.lines
+	ending = fusion.Ending(fusion.Header(name))
+	last = lines(ending - 1)
+	tabs = last.Substring(0, BodyParser.Indent(last))
+	start = Statements(ending)
+	body = lines.Slice(start, ending - start - 1) + (tabs + "fused = " + last.TrimStart)
 	Signature + body + Accumulated(tabs) + Result
 Element Text
 	Grays.Element is "Color"
@@ -22,8 +22,8 @@ Members Texts
 Signature Texts
 	Grays.Signature(0) is "GraysAveraged(count Number) Color"
 	Grays.Signature(2) is "\tmutable fusedRed = 0"
-	let header = fusion.lines(fusion.Header(name))
-	let parameters = header.Substring(name.Length, header.LastIndexOf(" ") - name.Length)
+	header = fusion.lines(fusion.Header(name))
+	parameters = header.Substring(name.Length, header.LastIndexOf(" ") - name.Length)
 	mutable result = List(Text) + (name + "Averaged" + parameters + " " + Element)
 	for List(Text) + "Count" + Members
 		result = result + ("\tmutable fused" + value + " = 0")
@@ -40,15 +40,17 @@ Result Text
 	Grays.Result.StartsWith("\tColor(Byte(fusedRed / fusedCount), Byte(fusedGreen / fusedCount), ")
 	if Element is "Number"
 		return "\tfusedSum / fusedCount"
-	let types = fusion.MemberScope(Element).types
+	types = fusion.MemberScope(Element).types
 	mutable averages = List(Mutable(Text))
 	for Members
-		let average = "fused" + value + " / fusedCount"
+		average = "fused" + value + " / fusedCount"
 		averages.Add(types(index) is "Number" then average else types(index) + "(" + average + ")")
 	"\t" + Element + "(" + Text.Combine(averages) + ")"
 Statements(ending Number) Number
 	Ones.Statements(6) is 4
 	for Range(fusion.Header(name) + 1, ending)
-		if Tokenizer(fusion.lines(value).TrimStart).Tokens.First is in ("for", "let", "mutable", "if", "return")
+		tokens = Tokenizer(fusion.lines(value).TrimStart).Tokens
+		isAssigned = tokens.Length > 1 and tokens(1) is "="
+		if tokens.First is in ("for", "let", "mutable", "if", "return") or isAssigned
 			return value
 	ending

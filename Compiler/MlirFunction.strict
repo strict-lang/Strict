@@ -25,11 +25,11 @@ Symbol Text
 	MlirFunction(Counter.types, Shape, MethodEntry(Counter.method, Name = "<")).Symbol is "Shape_Less_0"
 	if MlirForeign(value).IsForeign
 		return MlirForeign(value).Wrapper
-	let symbols = MlirEquality(value, 0)
-	let name = symbols.Symbol(type.JustName)
-	let conversion = method.Name is "to" then "_" + symbols.Symbol(TypeEntry.ShortName(method.returnType)) else ""
-	let plain = symbols.Symbol(method.Name)
-	let spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else plain
+	symbols = MlirEquality(value, 0)
+	name = symbols.Symbol(type.JustName)
+	conversion = method.Name is "to" then "_" + symbols.Symbol(TypeEntry.ShortName(method.returnType)) else ""
+	plain = symbols.Symbol(method.Name)
+	spelled = method.Name is in OperatorNames then OperatorWords(OperatorNames.Index(method.Name)) else plain
 	name + "_" + spelled + "_" + method.parameters.Length + conversion + type.OverloadSuffix(method)
 Variant Text
 	Counter.Variant is ""
@@ -57,7 +57,7 @@ Named Texts
 	constant loaded = (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
 	constant written = (InstructionType.InvokeWriteToList, InstructionType.IndexCall)
 	for method.instructions
-		let isNamed = (value.kind is in loaded or value.kind is in written) and value.texts(0).IndexOf("(") < 0
+		isNamed = (value.kind is in loaded or value.kind is in written) and value.texts(0).IndexOf("(") < 0
 		value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else (isNamed then value.texts(0) else "")
 TypeOf(name Text, isKind = false) TypeEntry
 	Counter.TypeOf("Strict/Other").members.Length is 0
@@ -66,10 +66,10 @@ TypeOf(name Text, isKind = false) TypeEntry
 	MlirFlats.Looked.function.TypeOf("Strict/Text", true).Name is "Text"
 	MlirFlats.Looked.function.TypeOf("Other/Tripling").Name is "Strict/Math/Tripling"
 	MlirFlats.Sample.function.TypeOf("Tripling", true).Name is "Strict/Math/Tripling"
-	let short = isKind and name is not in typeIndex then TypeEntry.ShortName(name) else name
+	short = isKind and name is not in typeIndex then TypeEntry.ShortName(name) else name
 	if short is in typeIndex
 		return types(typeIndex(short))
-	let isUnknown = isKind and typeIndex.Length > 0
+	isUnknown = isKind and typeIndex.Length > 0
 	isUnknown then TypeEntry(short, List(MemberEntry), List(MethodEntry)) else Natives(types).TypeOf(short)
 Load(target Text, slot Text) Text
 	MlirFunction(Counter, method = MlirParallel.Doubled).Named(4) is ""
@@ -87,9 +87,9 @@ Store(stored Text, slot Text) Text
 	MlirFunction(Counter, Float = "f32").Store("%a", "%v_b").StartsWith("    llvm.store %a, %v_b : f32, !llvm.ptr\n    %a")
 	Counter.Store("%a", "%r0") is "    llvm.store %a, %r0 : f64, !llvm.ptr"
 	MlirFunction(Counter, Float = "f32").Store("%a", "%r0").EndsWith("llvm.store %a_r0_q, %r0_q : i64, !llvm.ptr")
-	let line = "    llvm.store " + stored + ", " + slot + " : " + Float + ", !llvm.ptr"
-	let isNumber = slot.StartsWith("%r") or slot.StartsWith("%v_")
-	let exact = MlirExact(value, 0).Converted(stored, Float, slot)
+	line = "    llvm.store " + stored + ", " + slot + " : " + Float + ", !llvm.ptr"
+	isNumber = slot.StartsWith("%r") or slot.StartsWith("%v_")
+	exact = MlirExact(value, 0).Converted(stored, Float, slot)
 	isNumber and exact.Length > 0 then outer.Text.Combine((List(Text) + line) + exact, "\n") else line
 Copied(source Text, destination Text, temp Text) Texts
 	MlirFiltering.Filtering.function.Label(8) is ("    cf.br ^bb8", "  ^bb8:")
@@ -109,9 +109,9 @@ Text Text
 	mutable signature = List(Mutable(Text))
 	for Parameters
 		signature.Add("%p" + index + ": f64")
-	let signed = "(" + outer.Text.Combine(signature, ", ") + ") -> f64"
-	let header = "  func.func private @" + Symbol + signed + " attributes {llvm.linkage = #llvm.linkage<internal>} {"
-	let outlined = MlirParallel(value, 0).Outlined + MlirCached(value).Wrapper
+	signed = "(" + outer.Text.Combine(signature, ", ") + ") -> f64"
+	header = "  func.func private @" + Symbol + signed + " attributes {llvm.linkage = #llvm.linkage<internal>} {"
+	outlined = MlirParallel(value, 0).Outlined + MlirCached(value).Wrapper
 	outer.Text.Combine(List(Text) + header + Slots + MlirTensors(value).Prologue + Body + "  }" + outlined, "\n")
 Slots Texts
 	Counter.Slots.Length is 17
@@ -135,12 +135,12 @@ Entry Texts
 	"  ^tailed:" is in MlirTails.Sample.function.Entry
 	"    %self = llvm.load %instance : !llvm.ptr -> f64" is in MlirInstances.Looping.Entry
 	"    %q_numbers = llvm.load %v_numbers : !llvm.ptr -> f64" is in MlirParameters.Membered.function.Entry
-	let checked = IsRecursive and method.Invoked.Length > 0 then MlirRecursion.StackChecked else List(Text)
+	checked = IsRecursive and method.Invoked.Length > 0 then MlirRecursion.StackChecked else List(Text)
 	mutable lines = Slot("%instance") + Store("%p0", "%instance") + checked
 	for Parameters
 		lines = lines + Store("%p" + index, "%v_" + value)
-	let lists = MlirParameters(value)
-	let unpacked = lists.Hoisted(method.parameters) + MlirInstances(value, 0).Unpacked + lists.Hoisted(lists.Indexed)
+	lists = MlirParameters(value)
+	unpacked = lists.Hoisted(method.parameters) + MlirInstances(value, 0).Unpacked + lists.Hoisted(lists.Indexed)
 	lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart + unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0")(1) is "    llvm.store %zero, %r0 : f64, !llvm.ptr"
@@ -160,11 +160,11 @@ Body Texts
 	Counter.Body.Last is "    return %zero : f64"
 	MlirLines.Lined.Body.Length > MlirLines.Unlined.Body.Length
 	outer.Text.Combine(MlirPacking.Listing.function.Body).IndexOf("@strict_two_list(") > 0
-	let counter = MlirLines(value)
+	counter = MlirLines(value)
 	mutable lines = List(Mutable(Text))
 	for method.instructions
 		lines = lines + Label(index) + counter.At(index, "%line") + Emitted(index)
-	let isReturning = method.instructions.Length > 0 and method.instructions.Last.kind is InstructionType.Return
+	isReturning = method.instructions.Length > 0 and method.instructions.Last.kind is InstructionType.Return
 	isReturning then lines else lines + counter.End + MlirLayout(value).Returned(-2)
 Label(position Number) Texts
 	Counter.Label(0).Length is 0
@@ -172,23 +172,23 @@ Label(position Number) Texts
 	constant terminators = (InstructionType.Return, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 	if position is 0
 		return List(Text)
-	let previous = method.instructions(position - 1).kind
-	let afterTerminator = previous is in terminators or previous is InstructionType.CheckError
-	let isJumped = method.instructions(position).kind is InstructionType.JumpEnd
+	previous = method.instructions(position - 1).kind
+	afterTerminator = previous is in terminators or previous is InstructionType.CheckError
+	isJumped = method.instructions(position).kind is InstructionType.JumpEnd
 	if isJumped is false and (afterTerminator is false or previous is InstructionType.Return)
 		return List(Text)
-	let label = "  ^bb" + position + ":"
+	label = "  ^bb" + position + ":"
 	afterTerminator then List(Text) + label else ("    cf.br ^bb" + position, label)
 Emitted(position Number) Texts
 	Counter.Emitted(0).Length is 19
-	let kind = method.instructions(position).kind
+	kind = method.instructions(position).kind
 	if kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return kind is InstructionType.LoopBegin then MlirLoops(value, position).Begin else MlirLoops(value, position).End
-	let statements = MlirStatements(value, position)
+	statements = MlirStatements(value, position)
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return statements.Binary(method.instructions(position))
-	let isCall = kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
-	let lists = MlirLists(value, position)
-	let isList = kind is in MlirStatements.ListKinds or lists.IsElementStore
-	let emitted = isCall then MlirCalls(value, position).Emitted else isList then lists.Emitted else statements.Emitted
+	isCall = kind is in (InstructionType.Invoke, InstructionType.Print, InstructionType.FieldLoad)
+	lists = MlirLists(value, position)
+	isList = kind is in MlirStatements.ListKinds or lists.IsElementStore
+	emitted = isCall then MlirCalls(value, position).Emitted else isList then lists.Emitted else statements.Emitted
 	MlirHanded(value, position).Wrapped(MlirChanged(value, position).With(emitted) + MlirPacking(value, position).Repacked)

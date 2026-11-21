@@ -11,22 +11,22 @@ Parameters Scope
 	Defaulting.Parameters.TypeOf("Add z default") is "Basis . None"
 	HeaderEntries(HeaderTokens(Tokenizer("B(a Number with Step 0.5)").Tokens)).Parameters.TypeOf("B a step") is "0.5"
 	HeaderEntries(HeaderTokens(Tokenizer("T(a Number) Number with Step 0.5").Tokens)).Parameters.TypeOf("T step") is "0.5"
-	let steps = Steps(header.tokens).Entries(header)
+	steps = Steps(header.tokens).Entries(header)
 	WithModifiers(Summary.WithAll(steps.names, steps.types))
 Summary Scope
 	Adding.Summary.TypeOf("Add required") is "1" and Defaulting.Summary.TypeOf("Add z default") is "Basis . None"
 	Defaulting.Summary.TypeOf("Add required") is "1"
-	let name = header.tokens(0)
-	let names = header.ParameterNames
-	let hasDefaults = "=" is in header.tokens
-	let key = (name, name + " types", name + " required")
-	let entries = Scope(key, (Text.Combine(names, ","), Text.Combine(ParameterTypes, ","), Required to Text))
+	name = header.tokens(0)
+	names = header.ParameterNames
+	hasDefaults = "=" is in header.tokens
+	key = (name, name + " types", name + " required")
+	entries = Scope(key, (Text.Combine(names, ","), Text.Combine(ParameterTypes, ","), Required to Text))
 	hasDefaults then Defaults(entries) else entries
 WithModifiers(entries Scope) Scope
 	Adding.WithModifiers(KnownTypes.NoMembers).names.Length is 0
 	Mutating.WithModifiers(KnownTypes.NoMembers).TypeOf("Add mutable") is "Mutable"
-	let name = header.tokens(0)
-	let marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
+	name = header.tokens(0)
+	marked = header.ReturnsSlow then entries.With(name + " slow", "Slow") else entries
 	header.ReturnsMutable then marked.With(name + " mutable", "Mutable") else marked
 ParameterTypes Texts
 	HeaderEntries(HeaderTokens(Tokenizer("A(x o, y = o)").Tokens), Scope("o", "N")).ParameterTypes is ("o", "N")
@@ -35,8 +35,8 @@ ParameterTypes Texts
 	HeaderEntries(HeaderTokens(Tokenizer("A(x = Range(0, 2))").Tokens)).Default(2) is ("Range", "(", "0", ",", "2", ")")
 	HeaderEntries(HeaderTokens(Tokenizer("A(x B(c = 1) = d)").Tokens)).Default(2) is ("d")
 	for header.ParameterTypes
-		let position = header.ParameterPosition(header.ParameterNames(index))
-		let inferred = header.tokens(position + 1) is "=" then methods.TypeOf(value) else ""
+		position = header.ParameterPosition(header.ParameterNames(index))
+		inferred = header.tokens(position + 1) is "=" then methods.TypeOf(value) else ""
 		inferred is "" then value else inferred
 Required Number
 	HeaderEntries(HeaderTokens(Tokenizer("Add(x Number, y = 1, z Number with value > 0)").Tokens)).Required is 2
@@ -55,7 +55,7 @@ Defaults(scope Scope) Scope
 	mutable values = List(Mutable(Text))
 	for header.ParametersEnd
 		if header.IsParameterStart(index)
-			let tokens = Default(index)
+			tokens = Default(index)
 			if tokens.Length > 0
 				names.Add(header.tokens(0) + " " + header.tokens(index) + " default")
 				values.Add(Text.Combine(tokens, " "))

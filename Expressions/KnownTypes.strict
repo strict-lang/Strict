@@ -64,7 +64,7 @@ BaseName(typeName Text) Text
 	Sample.BaseName("Counts") is "List"
 	Sample.BaseName("Count(Number)") is "Count"
 	Sample.BaseName("Count") is "Count"
-	let open = typeName.IndexOf("(")
+	open = typeName.IndexOf("(")
 	if open > 0
 		return typeName.Substring(0, open)
 	typeName.EndsWith("s") then (IsPlural(typeName) then "List" else typeName) else typeName
@@ -77,7 +77,7 @@ MembersOf(typeName Text) Scope
 	KnownTypes("A", CountMembers, CountMethods, CountParameters).ParameterScope("B").names.Length is 0
 	Measured.ValueOf("F") is "Length"
 	Sample.MembersOf("Count").TypeOf("number") is "Number"
-	let index = Index(BaseName(typeName))
+	index = Index(BaseName(typeName))
 	index is -1 then NoMembers else members(index)
 MethodsOf(typeName Text) Scope
 	KnownTypes("Map", NoMembers, Scope("get", "Number"), NoMembers).ElementType("Map") is "Number"
@@ -86,13 +86,13 @@ MethodsOf(typeName Text) Scope
 	KnownTypes("List", Lengths, Scope(("x", "y"), ("Generic", "List")), Lengths).MemberMethodType("T", "y", 1) is ""
 	Sample.MethodsOf("Count").TypeOf("Increment") is "Count"
 	Sample.MethodsOf("Count(Number)").TypeOf("Increment") is "Count"
-	let index = Index(BaseName(typeName))
+	index = Index(BaseName(typeName))
 	index is -1 then NoMembers else methods(index)
 ParametersOf(typeName Text, method Text, arguments Number) Texts
 	Sample.ParametersOf("Count", "Twice", 2) is ("times", "offset")
 	Sample.ParametersOf("Count", "Twice", 1) is ("times")
 	Sample.ParametersOf("Count", "Increment", 0).Length is 0
-	let scope = ParameterScope(typeName)
+	scope = ParameterScope(typeName)
 	for scope.names
 		if value is method and ParameterNames(scope.types(index)).Length is arguments
 			return ParameterNames(scope.types(index))
@@ -105,7 +105,7 @@ ParameterScope(typeName Text) Scope
 	Sample.MemberType("List(Text, Number)", "Length") is "Unknown"
 	KnownTypes("T", Lengths, Lengths, Scope(("B", "A", "A"), ("z,y", "x,y", ""))).ParametersOf("T", "A", 1)(0) is "x"
 	Sample.ParameterScope("Count").TypeOf("Twice types") is "Number"
-	let position = Index(BaseName(typeName))
+	position = Index(BaseName(typeName))
 	position is -1 then NoMembers else parameters(position)
 ParameterNames(joined Text) Texts
 	Sample.ParameterNames("a,b") is ("a", "b")
@@ -131,10 +131,10 @@ ElementType(typeName Text) Text
 	Sample.ElementType("List(Number or Text)") is "Number or Text"
 	if typeName is in ("Number", "Range", "Text", "List")
 		return typeName is "Text" then "Character" else typeName is "List" then "Generics" else "Number"
-	let isListed = typeName.StartsWith("List(") then Instantiation(value).Arguments(typeName).Length is 1 else false
+	isListed = typeName.StartsWith("List(") then Instantiation(value).Arguments(typeName).Length is 1 else false
 	if typeName.StartsWith("Iterator(") or typeName.StartsWith("Dictionary(") or isListed
 		return Instantiation(value).Arguments(typeName).Last
-	let keyed = MethodsOf(typeName).TypeOf("get")
+	keyed = MethodsOf(typeName).TypeOf("get")
 	IsPlural(typeName) then typeName.Substring(0, typeName.Length - 1) else keyed is "" then "Unknown" else keyed
 MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("Count", "Increment") is "Count"
@@ -145,40 +145,40 @@ MemberType(instanceType Text, name Text) Text
 	Sample.MemberType("List(Text, Number)", "Value") is "Number"
 	if instanceType is "outer" and IsKnown(name)
 		return name
-	let pair = MethodBodies.Pair(instanceType)
+	pair = MethodBodies.Pair(instanceType)
 	if pair.Length is 0 or name is not in ("Key", "Value")
 		return ResolvedType(instanceType, name, 3)
 	name is "Key" then pair(0) else pair(1)
 ResolvedType(instanceType Text, name Text, depth Number) Text
 	Sample.ResolvedType("Count", "Twice", 1) is "Count"
 	Sample.ResolvedType("Count(Number)", "Twice", 1) is "Count(Number)"
-	let type = DeclaredType(instanceType, name, depth)
+	type = DeclaredType(instanceType, name, depth)
 	if type is ""
 		return "Unknown"
 	if type is "Generic"
 		return Instantiation(value).Argument(instanceType, name)
 	if type.IndexOf("(") > 0 and BaseName(type) is BaseName(instanceType)
 		return Instantiation(value).Substituted(instanceType, type)
-	let isInherited = MembersOf(instanceType).TypeOf(name) is "" and MethodsOf(instanceType).TypeOf(name) is ""
-	let isOwn = type is in ("List", BaseName(instanceType)) or isInherited and MethodsOf("Any").TypeOf(name) is "Any"
+	isInherited = MembersOf(instanceType).TypeOf(name) is "" and MethodsOf(instanceType).TypeOf(name) is ""
+	isOwn = type is in ("List", BaseName(instanceType)) or isInherited and MethodsOf("Any").TypeOf(name) is "Any"
 	isOwn or isInherited and type is ValueOf(instanceType) then instanceType else type
 ValueOf(typeName Text) Text
 	Sample.ValueOf("Text") is ""
 	Sourced.ResolvedType("A", "from", 1) is "Number" and Sourced.ResolvedType("A", "Copy", 1) is "A"
-	let typeMembers = MembersOf(typeName)
+	typeMembers = MembersOf(typeName)
 	typeMembers.types.Length is 1 then typeMembers.types(0) else ""
 DeclaredType(typeName Text, name Text, depth Number) Text
 	Sample.DeclaredType("Count", "number", 0) is "Number"
 	Options.DeclaredType("Text", "Parsed", 3) is ""
 	Options.DeclaredType("Settings", "Parsed", 3) is "Any"
 	Options.DeclaredType("Text", "to", 3) is "Text"
-	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
-	let member = typeMembers.TypeOf(name)
+	typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
+	member = typeMembers.TypeOf(name)
 	if member is not "" and (member is not name or MethodsOf(member).TypeOf(name) is "")
 		return member
 	if MethodsOf(typeName).TypeOf(name) is not "" or depth is 0
 		return MethodsOf(typeName).TypeOf(name)
-	let holder = Holder(typeName, name, depth)
+	holder = Holder(typeName, name, depth)
 	holder is "" then Inherited(typeName, name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)
 Inherited(typeName Text, name Text) Text
 	Options.Inherited("Settings", "Usage") is "Text"
@@ -198,7 +198,7 @@ Holder(typeName Text, name Text, depth Number) Text
 	Layered.DeclaredType("A", "Weight", 2) is "Number"
 	if MethodsOf(typeName).TypeOf(name) is not ""
 		return ""
-	let typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
+	typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
 	for typeMembers.types
 		if MemberMethodType(value, name, depth - 1) is not ""
 			return typeMembers.names(index)
@@ -206,7 +206,7 @@ Holder(typeName Text, name Text, depth Number) Text
 MemberMethodType(memberType Text, name Text, depth Number) Text
 	Sample.MemberMethodType("Texts", "Missing", 1) is ""
 	if IsKnown(memberType)
-		let type = ResolvedType(memberType, name, depth)
+		type = ResolvedType(memberType, name, depth)
 		return type is "Unknown" then "" else type
-	let listType = IsPlural(memberType) then MethodsOf("List").TypeOf(name) else ""
+	listType = IsPlural(memberType) then MethodsOf("List").TypeOf(name) else ""
 	listType is "Generic" then ElementType(memberType) else listType is "List" then memberType else listType

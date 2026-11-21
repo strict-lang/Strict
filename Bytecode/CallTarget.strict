@@ -67,8 +67,8 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Counting.ParameterTypes("Twice", "Count", List(Text) + "Number") is ("Number")
 	Optioned.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
 	OwnOptions.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
-	let declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
-	let isUndeclared = type is TypeName then Header(name).tokens.Length is 0 else declared.Length is 0
+	declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
+	isUndeclared = type is TypeName then Header(name).tokens.Length is 0 else declared.Length is 0
 	if name is not type and isUndeclared and types.Inherited(type, name) is not ""
 		return Declared("Any", name, argumentTypes, " types")
 	if type is TypeName and (name is not type or Header(name).tokens.Length > 0)
@@ -87,18 +87,18 @@ FromNames(type Text, argumentTypes Texts = List(Text)) Texts
 		return type is TypeName then shape.MemberScope.names else List(Text)
 	if argumentTypes.Length is 0
 		return types.ParametersOf(type, "from", -1)
-	let isCopy = types.BaseName(argumentTypes.First) is types.BaseName(type)
+	isCopy = types.BaseName(argumentTypes.First) is types.BaseName(type)
 	isCopy then types.MembersOf(type).names else Declared(type, "from", argumentTypes, "")
 Chosen(name Text, argumentTypes Texts) HeaderTokens
 	Overloaded.Chosen("Members", List(Text) + "Number").ParameterNames is ("lines")
 	Overloaded.Chosen("Members", List(Text)).ParameterNames.Length is 0
 	Plain.Chosen("Gree", List(Text)).tokens.Length is 0 and Plain.Chosen("has", List(Text)).tokens.Length is 0
-	let ordinal = Overloads(types).Chosen(TypeName, name, argumentTypes)
+	ordinal = Overloads(types).Chosen(TypeName, name, argumentTypes)
 	mutable seen = -1
 	for shape.lines
 		if value.StartsWith(name) and shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is name
 			seen = seen + 1
-			let header = HeaderTokens(Tokenizer(value).Tokens)
+			header = HeaderTokens(Tokenizer(value).Tokens)
 			if seen is ordinal or ordinal < 0 and header.ParameterNames.Length is argumentTypes.Length
 				return header
 	Header(name)
@@ -108,8 +108,8 @@ IsOverloaded(name Text, type Text) Boolean
 	types.ParameterScope(type).Count(name) > 1
 Declared(type Text, name Text, argumentTypes Texts, suffix Text) Texts
 	Counting.Declared("Count", "Twice", List(Text) + "Number", " types") is ("Number")
-	let scope = types.ParameterScope(type)
-	let ordinal = Overloads(types).Chosen(type, name, argumentTypes)
+	scope = types.ParameterScope(type)
+	ordinal = Overloads(types).Chosen(type, name, argumentTypes)
 	if ordinal < 0
 		return types.ParametersOf(type, name + suffix, argumentTypes.Length)
 	types.ParameterNames(scope.TypeAt(name + suffix, ordinal))
@@ -152,7 +152,7 @@ IsLoopMember(type Text, name Text) Boolean
 	Iterated.IsLoopMember("Range", "Length")
 	Iterated.IsLoopMember("One", "Length")
 	Iterated.IsLoopMember("Number", "Code")
-	let names = types.MembersOf(type).names
+	names = types.MembersOf(type).names
 	if names.Length is 1 and names.First is "iterator"
 		return types.MethodsOf(type).TypeOf(name) is not "" or types.MethodsOf("Any").TypeOf(name) is not ""
 	types.MemberType(type, name) is not "Unknown"
@@ -163,7 +163,7 @@ IsMember(type Text, name Text) Boolean
 	Counting.IsMember("Count", "number")
 	CallTarget(KnownTypes.Sample, TypeShape("has Twice Count"), "Strict/C", List(Text)).IsMember("C", "Twice")
 	CallTarget(NoTypes, TypeShape("has x x"), "Strict/C", List(Text)).IsMember("C", "x")
-	let member = type is TypeName then shape.MemberScope.TypeOf(name) else types.MembersOf(type).TypeOf(name)
+	member = type is TypeName then shape.MemberScope.TypeOf(name) else types.MembersOf(type).TypeOf(name)
 	member is not "" and (member is not name or types.MethodsOf(member).TypeOf(name) is "")
 Holding(type Text, name Text) Text
 	CallTarget(NoTypes, TypeShape("has a A"), "Strict/C", List(Text)).Holding("C", "x") is "a"
@@ -172,18 +172,18 @@ Holding(type Text, name Text) Text
 	Boxed.Holding("Box", "Depth") is "" and Widened.Holding("Box", "Width") is "" 
 	Boxed.Holding("List(Box)", "Width") is "" and Selfish.Holding("Box", "Width") is ""
 	Anything.Holding("Box", "Area") is "" and Anything.Holding("Box", "Width") is "Size"
-	let isComposite = type is TypeName or types.IsKnown(type) and types.IsPlural(type) is false and type.IndexOf("(") < 0
-	let isInherited = types.MethodsOf(type).TypeOf(name) is not "" or types.MethodsOf("Any").TypeOf(name) is not ""
-	let isOwn = IsMember(type, name) or isInherited
+	isComposite = type is TypeName or types.IsKnown(type) and types.IsPlural(type) is false and type.IndexOf("(") < 0
+	isInherited = types.MethodsOf(type).TypeOf(name) is not "" or types.MethodsOf("Any").TypeOf(name) is not ""
+	isOwn = IsMember(type, name) or isInherited
 	isComposite and isOwn is false then Holder(type, name) else ""
 Holder(type Text, name Text) Text
 	Boxed.Holder("Box", "Width") is "Size" and Selfish.Holder("Box", "Width") is ""
 	Reading.Holder("Disk", "ReadBytes") is ""
 	Treed.Holder("Tree", "First") is "children"
-	let members = type is TypeName then shape.MemberScope else types.MembersOf(type)
+	members = type is TypeName then shape.MemberScope else types.MembersOf(type)
 	for members.names
-		let fields = types.MembersOf(members.types(index))
-		let provides = types.MethodsOf(members.types(index)).TypeOf(name) is not "" or fields.TypeOf(name) is not ""
+		fields = types.MembersOf(members.types(index))
+		provides = types.MethodsOf(members.types(index)).TypeOf(name) is not "" or fields.TypeOf(name) is not ""
 		if provides and fields.names.Length > 0 and IsMember(type, value)
 			return value
 	""
@@ -197,16 +197,16 @@ FullName(type Text) Text
 	CallTarget(NoTypes, Greeter, "Strict/List(Number)", List(Text)).FullName("List(Generic)") is "Strict/List(Number)"
 	if type is in ("None", "Other", TypeName)
 		return type is "None" then type else fullName
-	let filled = Instantiation(types).Filled(fullName, type)
-	let plural = types.IsPlural(filled) then "Strict/List(" + types.ElementType(filled) + ")" else ""
+	filled = Instantiation(types).Filled(fullName, type)
+	plural = types.IsPlural(filled) then "Strict/List(" + types.ElementType(filled) + ")" else ""
 	plural is "" then (PackageType(filled) is "" then "Strict/" + filled else PackageType(filled)) else plural
 PackageType(type Text) Text
 	Plain.PackageType("Helper") is "Strict/Examples/Helper"
 	Plain.PackageType("Number") is ""
 	Plain.PackageType("Helper(Number, Text)") is "Strict/Examples/Helper(Number, Text)"
-	let base = types.BaseName(type)
-	let arguments = type.Substring(base.Length, type.Length - base.Length)
-	let local = fullName.Substring(0, fullName.LastIndexOf("/") + 1) + base
+	base = types.BaseName(type)
+	arguments = type.Substring(base.Length, type.Length - base.Length)
+	local = fullName.Substring(0, fullName.LastIndexOf("/") + 1) + base
 	if local is in typeNames
 		return local + arguments
 	for typeNames

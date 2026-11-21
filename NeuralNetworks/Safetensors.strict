@@ -27,7 +27,7 @@ Entry(name Text) Text slow
 Bracketed(entry Text, key Text) Numbers
 	Tiny.Bracketed(Tiny.Entry("a"), "shape") is (2, 3)
 	Tiny.Bracketed(Tiny.Entry("b"), "data_offsets") is (24, 36)
-	let start = entry.IndexOf("\"" + key + "\":[") + key.Length + 4
+	start = entry.IndexOf("\"" + key + "\":[") + key.Length + 4
 	for entry.Substring(start, entry.IndexOf("]", start) - start).Split(",")
 		value to Number
 Shape(name Text) Numbers
@@ -61,9 +61,9 @@ Quantized(name Text, tokenBits = 8) List(Numbers)
 	Bytes.Quantized("a", 32) is Bytes.Quantized("a")
 	Fours.Quantized("a")(33)(17).IsNearlyEqual(0.175519, 0.00001)
 	Fours.Quantized("a")(130)(70).IsNearlyEqual(3.259026, 0.00001)
-	let weight = Entry(name + ".weight")
-	let scales = Entry(name + ".weight_scale")
-	let scale = Entry(name + ".weight_scale_2")
+	weight = Entry(name + ".weight")
+	scales = Entry(name + ".weight_scale")
+	scale = Entry(name + ".weight_scale_2")
 	if scale is ""
 		return TensorFile.Quantized(path, weight, scales, tokenBits)
 	TensorFile.Fours(path, weight, scales, scale, Entry(name + ".pre_quant_scale"), "", tokenBits)
@@ -76,20 +76,20 @@ Folded(name Text, rowFactors Text, tokenBits = 8) List(Numbers)
 	Fours.Folded("a", "", 32)(33)(17).IsNearlyEqual(0.183465, 0.00001)
 	Fours.Folded("a", "", 32)(130)(70).IsNearlyEqual(2.709632, 0.00001)
 	Fours.Folded("a", Fours.Entry("a.pre_quant_scale")) is Error("OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported")
-	let weight = Entry(name + ".weight")
-	let scale = Entry(name + ".weight_scale_2")
+	weight = Entry(name + ".weight")
+	scale = Entry(name + ".weight_scale_2")
 	TensorFile.Fours(path, weight, Entry(name + ".weight_scale"), scale, "", rowFactors, tokenBits)
 Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
 	Bytes.Hosted("a") is Bytes.Quantized("a")
 	Bytes.Hosted("a", List(Number), 3)(3) is Bytes.Quantized("a")(3)
 	Bytes.Hosted("a", 2)(2) is Bytes.Quantized("a")(2)
 	Bytes.Hosted("a", 2)(1).Length is 0
-	let weight = Entry(name + ".weight")
-	let scales = Entry(name + ".weight_scale")
-	let size = picked.Length is 0 then part else 1
+	weight = Entry(name + ".weight")
+	scales = Entry(name + ".weight_scale")
+	size = picked.Length is 0 then part else 1
 	mutable rows = List(Mutable(Numbers))
 	for ((Shape(name + ".weight").First + size - 1) / size).Floor
-		let isRead = picked.Length is 0 or index is in picked
+		isRead = picked.Length is 0 or index is in picked
 		rows = rows + (isRead then TensorFile.HostedPart(path, weight, scales, index * size, size) else (List(Number)))
 	rows
 Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers) slow
@@ -100,7 +100,7 @@ Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers) slow
 	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
 	Bytes.Tuned("a", FarDowns, FarUps, FarScales)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
 	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
-	let merged = scales.Length is 0 then Quantized(name) else GpuMemory.Tuned(Quantized(name), downs, ups, scales)
+	merged = scales.Length is 0 then Quantized(name) else GpuMemory.Tuned(Quantized(name), downs, ups, scales)
 	if merged.Length > 0
 		return merged
 	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
@@ -126,8 +126,8 @@ Header(names Texts, lists List(Numbers)) Text
 Entries(names Texts, counts Numbers) Texts
 	Tiny.Entries(List(Text) + "x", List(Number) + 2) is List(Text) + Single
 	for names
-		let start = 4 * counts.Slice(0, index).Sum
-		let offsets = "[" + start + "," + (start + 4 * counts(index)) + "]"
+		start = 4 * counts.Slice(0, index).Sum
+		offsets = "[" + start + "," + (start + 4 * counts(index)) + "]"
 		"\"" + prefix + value + "\":{\"dtype\":\"F32\",\"shape\":[" + counts(index) + "],\"data_offsets\":" + offsets + "}"
 Counts(lists List(Numbers)) Numbers
 	Tiny.Counts(((1, 2), List(Number) + 3)) is (2, 1)

@@ -26,7 +26,7 @@ Hoisted(body SyntaxNode, block CodeBlock) SyntaxNode
 	SyntaxNode("Body", body.text, statements, body.line)
 Lifted(loop SyntaxNode, block CodeBlock) SyntaxNodes
 	Hoisting.Lifted(Looping.children(0), Bag).Length is 2
-	let declared = Declared(loop)
+	declared = Declared(loop)
 	mutable reads = List(Mutable(SyntaxNode))
 	for Reads(loop, block)
 		if value.children(0).text is not in declared and value is not in reads
@@ -42,9 +42,9 @@ Invariant(loop SyntaxNode, block CodeBlock) SyntaxNodes
 	Scaled(0) to Text is "let invariant2x0 = 1000 / steps"
 	Scaled(1).children.Last.Lines("") is ("index * invariant2x0", "index + values(0) * steps")
 	Hoisting.Invariant(Rows.children(0), Bag).Last.children.Last.children(1) to Text is "let invariant4x0 = row * steps"
-	let found = Found(loop.children.Last, LoopNames.Of(loop, Prefixed("constant "), Prefixed("mutable ")))
-	let body = Hoisted(Substituted(loop.children.Last, found, loop.line), block)
-	let nested = SyntaxNode("For", loop.text, loop.children.Slice(0, loop.children.Length - 1) + body, loop.line)
+	found = Found(loop.children.Last, LoopNames.Of(loop, Prefixed("constant "), Prefixed("mutable ")))
+	body = Hoisted(Substituted(loop.children.Last, found, loop.line), block)
+	nested = SyntaxNode("For", loop.text, loop.children.Slice(0, loop.children.Length - 1) + body, loop.line)
 	mutable declared = List(Mutable(SyntaxNode))
 	for found
 		declared.Add(SyntaxNode("Declaration", "let " + Invariable(loop.line, index), List(SyntaxNode) + value))
@@ -54,7 +54,7 @@ Found(node SyntaxNode, names LoopNames) SyntaxNodes
 	Hoisting.Found(StatementParser(Tokenizer("-steps").Tokens).ParseStatement, LoopNames.Steps).Length is 0
 	Hoisting.Found(StatementParser(Tokenizer("steps * outer").Tokens).ParseStatement, LoopNames.Steps).Length is 0
 	Hoisting.Found(Scaling.children(0).children.Last, LoopNames.Steps).Length is 1
-	let isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
+	isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
 	if isArithmetic and names.IsInvariant(node) and LoopNames.HasName(node) and IsSafe(node)
 		return List(SyntaxNode) + node
 	mutable found = List(Mutable(SyntaxNode))
@@ -77,7 +77,7 @@ IsSafe(node SyntaxNode) Boolean
 	true
 Substituted(node SyntaxNode, found SyntaxNodes, line Number) SyntaxNode
 	Hoisting.Substituted(MethodCodegen.One, List(SyntaxNode) + MethodCodegen.One, 2) to Text is "invariant2x0"
-	let at = found.Index(node)
+	at = found.Index(node)
 	if at >= 0
 		return SyntaxNode("Identifier", Invariable(line, at))
 	mutable children = List(Mutable(SyntaxNode))
@@ -114,13 +114,13 @@ IsHoistable(node SyntaxNode, block CodeBlock) Boolean
 	Hoisting.IsHoistable(Looping.children(0).children(1).children(0).children(0), CodeBlock.Empty) is false
 	if node.Kind is not "MethodCall" or node.children.Length is not 2 or node.children(0).Kind is not "Identifier"
 		return false
-	let root = node.children(0).text
-	let own = values.target.shape.MemberScope.TypeOf(root)
-	let type = block.scope.TypeOf(root) is "" then own else block.scope.TypeOf(root)
+	root = node.children(0).text
+	own = values.target.shape.MemberScope.TypeOf(root)
+	type = block.scope.TypeOf(root) is "" then own else block.scope.TypeOf(root)
 	root is not in ("value", "index", "outer") and type is not "" and values.target.IsMember(type, node.text)
 Replaced(node SyntaxNode, reads SyntaxNodes) SyntaxNode
 	Hoisting.Replaced(Looping.children(0), Hoisting.Reads(Looping, Bag)) to Text is "for 3"
-	let member = node.children.Length is 2 then Member(node) else node
+	member = node.children.Length is 2 then Member(node) else node
 	if node.Kind is "MethodCall" and member is in reads
 		return SyntaxNode("Call", Name(member), List(SyntaxNode) + Replaced(node.children(1), reads))
 	mutable children = List(Mutable(SyntaxNode))
@@ -148,7 +148,7 @@ Name(member SyntaxNode) Text
 	Hoisting.IsHoistable(StatementParser(Tokenizer("bags.values(0)").Tokens).ParseStatement, CodeBlock.Empty)
 	Hoisting.IsHoistable(StatementParser(Tokenizer("bags.values(0, 1)").Tokens).ParseStatement, Bag) is false
 	Hoisting.Name(SyntaxNode("Member", "values", List(SyntaxNode) + SyntaxNode("Identifier", "bag"))) is "bagValues"
-	let rest = member.text.Substring(1, member.text.Length - 1)
+	rest = member.text.Substring(1, member.text.Length - 1)
 	member.children(0).text + member.text(0).Upper + rest
 Declared(node SyntaxNode) Texts
 	Hoisting.Declared(Shadowing.children(0)) is ("bag")

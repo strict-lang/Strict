@@ -11,8 +11,8 @@ Walk List(Numbers)
 	mutable steps = List(Mutable(Numbers))
 	mutable state = 0
 	for 1000
-		let edge = edges(state)
-		let choice = 1.Random < 0.5 then 0 else 2
+		edge = edges(state)
+		choice = 1.Random < 0.5 then 0 else 2
 		steps.Add((edge(choice), edge(choice + 1)))
 		state = edge(choice + 1)
 		if state is end
@@ -33,7 +33,7 @@ Allowed(state Number) Numbers
 	Simple.Allowed(2) is (0, 0, 0, 1, 1, 0, 0)
 	Embedded.Allowed(9) is (0, 1, 0, 0, 0, 0, 0)
 	Embedded.Allowed(17) is (0, 0, 1, 0, 0, 0, 0)
-	let edge = edges(state)
+	edge = edges(state)
 	for Symbols
 		index is edge(0) or index is edge(2) then 1 else 0
 Text(steps List(Numbers)) Text

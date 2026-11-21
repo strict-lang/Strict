@@ -10,7 +10,7 @@ from(unrounded Number)
 	Float8(1.1875) is 1.25
 	Float8(0) is 0
 	Float8(1 / 0) is 448
-	let step = 2 ^ ((unrounded.Absolute.Logarithm / 2.Logarithm).Floor.Clamp(-6, 8) - 3)
+	step = 2 ^ ((unrounded.Absolute.Logarithm / 2.Logarithm).Floor.Clamp(-6, 8) - 3)
 	(unrounded.Clamp(-Largest, Largest) / step).Counted("Even") * step
 Packed(numbers Numbers) Float8s
 	Float8.Packed((0.5, 1.125, -3.25)) is (0.5, 1.125, -3.25)

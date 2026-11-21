@@ -36,8 +36,8 @@ IsSafeDivision(type Text, node SyntaxNode) Boolean
 	Limited.IsSafeDivision("A", SyntaxNode("Text", "/")) is false
 	if node.Kind is not "Binary" or node.text is not in ("/", "%")
 		return false
-	let divisor = node.children(1)
-	let owner = divisor.Kind is "Member" then divisor.children(0).text else type
+	divisor = node.children(1)
+	owner = divisor.Kind is "Member" then divisor.children(0).text else type
 	divisor.Kind is "Number" then divisor.text is not "0" else inference.ConstantOf(owner, divisor.text) is not ""
 IsOwn(type Text, node SyntaxNode, scope Scope) Boolean
 	Limited.IsOwn("Count", SyntaxNode("Identifier", "Increment"), Numbered)
@@ -54,6 +54,6 @@ Keyed(receiver SyntaxNode, name Text, scope Scope, methods Scope) Texts
 	Limited.Keyed(SyntaxNode("Type", "Count"), "Increment", Numbered, Numbered) is ("Count.Increment")
 	Fielded.Keyed(SyntaxNode("Type", "Count"), "low", Numbered, Numbered).Length is 0
 	Fielded.Keyed(SyntaxNode("Type", "Count"), "ReadLines", Numbered, Numbered) is ("Count.ReadLines")
-	let base = inference.types.BaseName(inference.TypeOf(receiver, scope, methods))
-	let isField = inference.types.MembersOf(base).TypeOf(name) is not "" or inference.ConstantOf(base, name) is not ""
+	base = inference.types.BaseName(inference.TypeOf(receiver, scope, methods))
+	isField = inference.types.MembersOf(base).TypeOf(name) is not "" or inference.ConstantOf(base, name) is not ""
 	isField then List(Text) else List(Text) + (base + "." + name)

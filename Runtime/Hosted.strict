@@ -43,12 +43,12 @@ IsHosted Boolean
 	Hosted(Releasing).IsHosted
 	Hosted(HostedJson.Getting).IsHosted
 	Hosted(HostedRegex.Matching).IsHosted and Hosted(HostedTokenizer.Tokening).IsHosted
-	let name = TypeEntry.ShortName(call.TypeName) + "." + call.MethodName
+	name = TypeEntry.ShortName(call.TypeName) + "." + call.MethodName
 	name is in Methods or HostedJson(call).IsHosted or HostedRegex(call).IsHosted or HostedTokenizer(call).IsHosted
 Result VmValue
 	Hosted(SystemCall).Result.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	Hosted(Existing).Result.IsTrue and Hosted(Timing).Result.number > 0 and Hosted(Releasing).Result.kind is "None"
-	let type = TypeEntry.ShortName(call.TypeName)
+	type = TypeEntry.ShortName(call.TypeName)
 	if call.MethodName is in ("Input", "InputLine") or type is "Directory" and call.MethodName is "Current"
 		return VmValue.OfText(Read(call.MethodName))
 	if type is in ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots")
@@ -62,28 +62,28 @@ Packaged VmValue
 	Hosted(HostedRegex.Replacing).Packaged.text is "a#b#"
 	Hosted(HostedJson.Getting).Packaged.text is "[1, 2.5]"
 	Hosted(HostedTokenizer.Tokening).Packaged.items.Length is 3
-	let type = TypeEntry.ShortName(call.TypeName)
+	type = TypeEntry.ShortName(call.TypeName)
 	if type is "Tokenizer"
 		return HostedTokenizer(call).Result
 	type is "Json" then HostedJson(call).Result else HostedRegex(call).Result
 Contained VmValue
 	Hosted(HostedJson.Unnumbered).Contained.kind is "Strict/Error"
 	Hosted(SystemCall).Contained.text is Hosted(SystemCall).Result.text
-	let result = Result
+	result = Result
 	result is Error then VmValue.OfError(result.Name.text) else result
 Read(name Text) Text
 	Hosted(SystemCall).Read("Current") is Directory.Current
 	name is "Input" then Process.Input else name is "InputLine" then Process.InputLine else Directory.Current
 Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
-	let name = call.MethodName
+	name = call.MethodName
 	if name is "Detailed"
 		return VmValue.OfBoolean(BuildProfile.Detailed)
 	if name is in ("Elapsed", "FilesRead", "Executed", "MemoryUsed", "Id")
 		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Reported(name)
 	if name is in ("OperatingSystem", "Built", "Variable")
 		return VmValue.OfText(HostedProcess(call).Texted)
-	let first = name is "Current" then Process.Current.executable else call.Arguments.First.text
+	first = name is "Current" then Process.Current.executable else call.Arguments.First.text
 	if name is in ("Find", "Current")
 		return VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(Process.Find(first).executable))
 	HostedProcess(call).Resulted(Process.RunTool(first, call.Arguments(1).text, HostedProcess(call).Seconds))
@@ -122,7 +122,7 @@ Answered(path Text) VmValue
 		return VmValue.OfBoolean(File(path).Locked)
 	if call.MethodName is in ("Modified", "Length")
 		return VmValue.OfNumber(call.MethodName is "Length" then File(path).Length else Dated(path))
-	let exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists
+	exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists
 	call.MethodName is "Exists" then VmValue.OfBoolean(exists) else VmValue.None
 Dated(path Text) Number
 	Hosted(Dating).Dated("Any.strict") is File("Any.strict").Modified
@@ -132,12 +132,12 @@ Dated(path Text) Number
 Entries VmValue slow
 	Hosted(Listing).Entries.Length > 0
 	Hosted(Reading).Entries.items.First.number is 102
-	let path = Location
+	path = Location
 	if call.MethodName is "ReadLines"
 		return Values(File(path).ReadLines)
 	if call.MethodName is "ReadBytes"
 		return ByteValues(File(path).ReadBytes)
-	let pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
+	pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
 	Values(call.MethodName is "Files" then Directory.Files(path, pattern) else Directory.Directories(path))
 Reported(name Text) VmValue
 	Hosted(SystemCall).Reported("Executed").items(5).number > 0

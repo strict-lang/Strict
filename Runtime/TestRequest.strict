@@ -61,19 +61,19 @@ IsWhole Boolean
 Message Text
 	TestRequest(("a.strict", ".", "mutations")).Message is ""
 	TestRequest((".", ".", "native", "--no-recursive")).Message is ""
-	let methods = Methods
+	methods = Methods
 	if methods.Length > 1
 		return "Only one test file or method can be selected"
 	if methods.Length is 0
 		return ""
 	if Directory.Exists(rest(0)) or "unit" is in Options
 		return "A functional test method requires one explicit file"
-	let names = TypeShape(File(rest(0)).ReadLines).MethodScope.names
+	names = TypeShape(File(rest(0)).ReadLines).MethodScope.names
 	methods.First is in names then "" else "MethodNotFound: " + methods.First + " in " + rest(0)
 IsInternal Boolean
 	Seeded.IsInternal and Seeded.Selection is TestCodegen.Unmarked
 	(TestRequest(("Number.strict", ".", "unit")).IsInternal or TestRequest(("Compiler", ".", "unit")).IsInternal) is false
-	let name = FileCompiler.FullName(FileCompiler.Normalized(rest(0)), rest(1))
+	name = FileCompiler.FullName(FileCompiler.Normalized(rest(0)), rest(1))
 	Directory.Exists(rest(0)) is false and TypeSource.IsInternal(name)
 Executing(logger Logger, known Dictionary(Text, TypeEntry), kept InferenceCache) Execute
 	Shown.Executing(Logger, Dictionary(Text, TypeEntry), InferenceCache.None).selection is "*"

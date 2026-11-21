@@ -33,8 +33,8 @@ IsPacked(kind Text) Boolean
 	Sample.IsPacked("Rgb")
 	Sample.IsPacked("Strict/Rgb")
 	Sample.IsPacked("Byte") is false
-	let couples = MlirCouples(function, 0)
-	let layout = MlirLayout(function)
+	couples = MlirCouples(function, 0)
+	layout = MlirLayout(function)
 	mutable parts = 0
 	for function.TypeOf(kind, true).members
 		if couples.IsPart(value)
@@ -52,41 +52,41 @@ Members(kind Text) Texts
 Constructed(entry InstructionEntry, typeName Text) Texts
 	Sample.Constructed(Made, "Rgb")(2) is "    %t3b0 = func.call @strict_byte_lane(%t3a0, %t3s0) : (f64, i64) -> i64"
 	Sample.Constructed(Made, "Rgb").Last is "    llvm.store %t3f, %r3 : f64, !llvm.ptr"
-	let temp = "%t" + position
-	let members = Members(typeName)
+	temp = "%t" + position
+	members = Members(typeName)
 	mutable lines = List(Text)
 	for members
 		lines = lines + Lane(entry, value, index)
 	for Range(1, members.Length)
-		let previous = value is 1 then temp + "b0" else temp + "o" + (value - 1)
+		previous = value is 1 then temp + "b0" else temp + "o" + (value - 1)
 		lines = lines + ("    " + temp + "o" + value + " = arith.ori " + previous + ", " + temp + "b" + value + " : i64")
-	let packed = "    " + temp + "f = arith.sitofp " + temp + "o" + (members.Length - 1) + " : i64 to f64"
+	packed = "    " + temp + "f = arith.sitofp " + temp + "o" + (members.Length - 1) + " : i64 to f64"
 	lines + packed + function.Store(temp + "f", "%r" + entry.payload(0))
 Lane(entry InstructionEntry, name Text, lane Number) Texts
 	Sample.Lane(Made, "green", 1)(1) is "    %t3s1 = arith.constant 8 : i64"
 	Sample.Lane(Tinted, "alpha", 3)(0) is "    %t3a3 = arith.constant 0x406FE00000000000 : f64"
 	Sample.Lane(Painted, "alpha", 3)(0).EndsWith("0x406FE00000000000 : f64")
-	let temp = "%t" + position
-	let shift = "    " + temp + "s" + lane + " = arith.constant " + (lane * 8) + " : i64"
-	let operands = "(" + temp + "a" + lane + ", " + temp + "s" + lane + ") : (f64, i64) -> i64"
-	let call = "    " + temp + "b" + lane + " = func.call @strict_byte_lane" + operands
-	let passed = Passed(entry, name)
-	let target = temp + "a" + lane
+	temp = "%t" + position
+	shift = "    " + temp + "s" + lane + " = arith.constant " + (lane * 8) + " : i64"
+	operands = "(" + temp + "a" + lane + ", " + temp + "s" + lane + ") : (f64, i64) -> i64"
+	call = "    " + temp + "b" + lane + " = func.call @strict_byte_lane" + operands
+	passed = Passed(entry, name)
+	target = temp + "a" + lane
 	((passed >= 0 then function.Load(target, "%r" + passed) else Default(entry, name, target)), shift, call)
 Passed(entry InstructionEntry, name Text) Number
 	Sample.Passed(Made, "green") is 1
 	Sample.Passed(Tinted, "alpha") is -1
 	Sample.Passed(Painted, "alpha") is -1
-	let named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
-	let decoder = PayloadDecoder(entry)
+	named = Invocation(entry, List(VmValue), VmValue.None).ParameterNames.Index(name)
+	decoder = PayloadDecoder(entry)
 	named >= 0 and named < decoder.ArgumentCount then decoder.Arguments(named) else Number.NotFound
 Read(entry InstructionEntry, kind Text) Texts
 	MlirLanes(Sample.function, 4).Read(Greens, "Rgb")(2).EndsWith("@strict_byte_of(%t4p, %t4s) : (f64, i64) -> f64")
 	MlirKinds(Sample.function).KindOf(5, 4) is "Byte"
 	MlirLanes(Sample.function, 4).Read(Greens, "Rgb") is Reading
-	let temp = "%t" + position
-	let shift = "    " + temp + "s = arith.constant " + (Members(kind).Index(entry.texts(0)) * 8) + " : i64"
-	let call = "    " + temp + "v = func.call @strict_byte_of(" + temp + "p, " + temp + "s) : (f64, i64) -> f64"
+	temp = "%t" + position
+	shift = "    " + temp + "s = arith.constant " + (Members(kind).Index(entry.texts(0)) * 8) + " : i64"
+	call = "    " + temp + "v = func.call @strict_byte_of(" + temp + "p, " + temp + "s) : (f64, i64) -> f64"
 	(function.Load(temp + "p", "%r" + entry.payload(1)), shift, call, function.Store(temp + "v", "%r" + entry.payload(0)))
 Unpacked Texts
 	MlirLanes(Sample.function, 0).Unpacked.Last is "    llvm.store %tbyte2, %v_blue : f64, !llvm.ptr"
@@ -96,15 +96,15 @@ Unpacked Texts
 	mutable lines = List(Text) + function.Load("%tbyte", "%instance")
 	for Members(function.type.Name)
 		if value is not in function.method.ParameterNames
-			let shift = "    %tbyte" + index + "s = arith.constant " + (index * 8) + " : i64"
-			let read = "    %tbyte" + index + " = func.call @strict_byte_of(%tbyte, %tbyte" + index + "s) : (f64, i64) -> f64"
+			shift = "    %tbyte" + index + "s = arith.constant " + (index * 8) + " : i64"
+			read = "    %tbyte" + index + " = func.call @strict_byte_of(%tbyte, %tbyte" + index + "s) : (f64, i64) -> f64"
 			lines = lines + shift + read + function.Store("%tbyte" + index, "%v_" + value)
 	lines
 Built(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
 	Sample.Built(Made, "Rgb", MlirInstances(Sample.function, 3)).Last is "    llvm.store %t3f, %r3 : f64, !llvm.ptr"
 	Sample.Built(Made, "Rgb", MlirInstances(Sample.function, 3)) is Packing
 	Sizes.Built(MlirCouples.Sized, "Sizing", MlirCouples.Instances).First is "    %t2cx = llvm.load %r0 : !llvm.ptr -> f64"
-	let couples = MlirCouples(function, position)
+	couples = MlirCouples(function, position)
 	IsPacked(typeName) then Constructed(entry, typeName) else couples.Constructed(entry, typeName, instances)
 Aliased(entry InstructionEntry, kind Text) Texts
 	MlirLanes(Sample.function, 4).Aliased(Greens, "Rgb").Length is 4
@@ -129,15 +129,15 @@ IsLaneEntry(at Number) Boolean
 	MlirLanes(Sample.function, 0).IsLaneEntry(0) is false
 	MlirLanes(Sample.function, 0).IsLaneEntry(4)
 	Sizes.IsLaneEntry(2) is false
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.IndexCall
 		return IsPacked(MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(at, entry.texts(0))))
-	let isNamed = entry.kind is in (InstructionType.FieldLoad, InstructionType.Invoke)
+	isNamed = entry.kind is in (InstructionType.FieldLoad, InstructionType.Invoke)
 	isNamed and IsPacked(entry.texts(entry.kind is InstructionType.FieldLoad then 1 else 0))
 IsTouched Boolean
 	MlirLanes(Collecting, 2).IsTouched
 	MlirLanes(MlirLoops.Listing.function, 1).IsTouched is false
-	let kinds = MlirKinds(function)
+	kinds = MlirKinds(function)
 	if IsPacked(kinds.ElementKind(kinds.KindOf(position, function.method.instructions(position).payload(0))))
 		return true
 	for Range(position + 1, function.method.LoopEndOf(position))

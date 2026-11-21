@@ -11,7 +11,7 @@ Basis(coord Number) Numbers
 	mutable previous = 1
 	mutable current = coord
 	for degree + 1
-		let next = index is 0 then 1 else (index is 1 then coord else 2 * coord * current - previous)
+		next = index is 0 then 1 else (index is 1 then coord else 2 * coord * current - previous)
 		previous = current
 		current = next
 		next
@@ -21,8 +21,8 @@ Weights(coords Numbers, target Number) Numbers
 	Line.Weights((-1, 0), 1) is (-1, 2)
 	if coords.Length < degree + 1 or IsValid is false or target.IsFinite is false
 		return Error("Invalid spectral fit")
-	let design = Design(coords)
-	let solved = SpectralSolve(Gram(design), Basis(target)).Solved
+	design = Design(coords)
+	solved = SpectralSolve(Gram(design), Basis(target)).Solved
 	for coords.Length
 		blend * Softmax.Weighted(design(index), 0, degree + 1, solved, 0, 1) + (1 - blend) * Linear(coords, target, index)
 IsValid Boolean
@@ -34,15 +34,15 @@ IsValid Boolean
 	SpectralFit(1, 0, -0.5).IsValid is false and SpectralFit(1, 0, 1.5).IsValid is false
 	SpectralFit(1, 0.1, 1).Weights(0, 1) is Error and SpectralFit(1, 0, 2).Weights((-1, 0), 1) is Error
 	Line.Weights((-1, 0), 1 / 0) is Error
-	let order = degree >= 0 and degree <= 4 and degree.Floor is degree
+	order = degree >= 0 and degree <= 4 and degree.Floor is degree
 	order and ridge >= 0 and ridge.IsFinite and blend >= 0 and blend <= 1
 Design(coords Numbers) List(Numbers)
 	for coords
 		Basis(value)
 Gram(design List(Numbers)) Numbers
 	for (degree + 1) * (degree + 1)
-		let row = (index / (degree + 1)).Floor
-		let column = index % (degree + 1)
+		row = (index / (degree + 1)).Floor
+		column = index % (degree + 1)
 		Cell(design, row, column) + (row is column then ridge else 0)
 Cell(design List(Numbers), row Number, column Number) Number
 	mutable sum = 0
@@ -56,6 +56,6 @@ Linear(coords Numbers, target Number, at Number) Number
 		return 1
 	if at < coords.Length - 2
 		return 0
-	let spacing = coords.Last - coords(coords.Length - 2)
-	let ratio = spacing.Absolute < 0.000000000001 then 0 else (target - coords.Last) / spacing
+	spacing = coords.Last - coords(coords.Length - 2)
+	ratio = spacing.Absolute < 0.000000000001 then 0 else (target - coords.Last) / spacing
 	at is coords.Length - 1 then 1 + ratio else -ratio

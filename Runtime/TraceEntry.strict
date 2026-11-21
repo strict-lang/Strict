@@ -13,7 +13,7 @@ Called(rest List(VmValue)) Text
 	Shifting.Called(List(VmValue)) is "Doubler.Shifted"
 	TraceEntry(Shifting.method, Shifting.owner, -1).Called((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted"
 	Member.Called((VmValue.OfNumber(7), VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
-	let name = TypeEntry.ShortName(owner) + "." + method.Name
+	name = TypeEntry.ShortName(owner) + "." + method.Name
 	if start < 0 or method.parameters.Length is 0 or rest.Length < start + method.parameters.Length
 		return name
 	mutable shown = List(Mutable(Text))

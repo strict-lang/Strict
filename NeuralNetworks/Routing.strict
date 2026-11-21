@@ -25,7 +25,7 @@ Next(first Number, limit Number, previous Number) Number
 	mutable best = -1
 	mutable top = 0
 	for experts
-		let score = scores(first + index)
+		score = scores(first + index)
 		if (score < limit or score is limit and index > previous) and (best < 0 or score > top)
 			best = index
 			top = score

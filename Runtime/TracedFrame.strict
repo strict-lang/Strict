@@ -25,9 +25,9 @@ Finished(arguments List(VmValue)) List(VmValue)
 	mutable slots = List(VmValue) + arguments
 	mutable position = 0
 	mutable isReporting = false
-	let untraced = Frame(Machine(frame.machine, isTracing = false), frame.method, frame.owner, frame.depth)
+	untraced = Frame(Machine(frame.machine, isTracing = false), frame.method, frame.owner, frame.depth)
 	for as long as position < frame.method.instructions.Length
-		let entry = frame.method.instructions(position)
+		entry = frame.method.instructions(position)
 		isReporting = IsReporting(entry, isReporting)
 		slots(entry.Target) = (isReporting then untraced else frame).Value(entry, position, slots)
 		Logged(position, slots)
@@ -55,23 +55,23 @@ Logs(position Number, slots List(VmValue)) Texts
 	Ending.Logs(4, Frame.Listed).Last is "$Result Strict/Doubler|7|true"
 	if frame.method.Name is TestCodegen.Runner
 		return List(Text)
-	let entry = frame.method.instructions(position)
-	let loop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
-	let branch = entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
-	let slot = entry.kind is InstructionType.CheckError then entry.payload(0) else entry.Target
+	entry = frame.method.instructions(position)
+	loop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
+	branch = entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
+	slot = entry.kind is InstructionType.CheckError then entry.payload(0) else entry.Target
 	loop then Iteration(position, slots) else Events(position, slots(branch then Frame.FlagSlot else slot))
 Events(position Number, result VmValue) Texts
 	Lined.Events(0, Seven) is ("$Hit Strict/Doubler|2", "$Result Strict/Doubler|2|7")
 	Lined.Events(1, Seven) is ("$Hit Strict/Doubler|3", "$Set Strict/Doubler|3|a|7", "$Result Strict/Doubler|3|7")
 	Lined.Events(3, Seven) is ("$Hit Strict/Doubler|5", "$Use Strict/Doubler|5|a|7", "$Result Strict/Doubler|5|7")
-	let entry = frame.method.instructions(position)
-	let place = frame.owner + "|" + entry.line
+	entry = frame.method.instructions(position)
+	place = frame.owner + "|" + entry.line
 	if entry.line is 0
 		return List(Text)
-	let isStored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
-	let isUsed = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.FieldLoad)
-	let named = isStored then "$Set " else isUsed then "$Use " else ""
-	let set = named is "" then List(Text) else List(Text) + (named + place + "|" + entry.texts(0) + "|" + Shown(result))
+	isStored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+	isUsed = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.FieldLoad)
+	named = isStored then "$Set " else isUsed then "$Use " else ""
+	set = named is "" then List(Text) else List(Text) + (named + place + "|" + entry.texts(0) + "|" + Shown(result))
 	Hit(position) + set + Ended(position, place, result)
 Hit(position Number) Texts
 	Lined.Hit(0) is ("$Hit Strict/Doubler|2")
@@ -79,10 +79,10 @@ Hit(position Number) Texts
 	Same.Hit(0) is ("$Hit A|4")
 	Same.Hit(1).Length is 0
 	Same.Hit(2).Length is 0
-	let entry = frame.method.instructions(position)
-	let previous = position > 0 then frame.method.instructions(position - 1).line else 0
-	let isStart = entry.kind is not InstructionType.JumpEnd and entry.line is not previous
-	let hit = "$Hit " + frame.owner + "|" + entry.line
+	entry = frame.method.instructions(position)
+	previous = position > 0 then frame.method.instructions(position - 1).line else 0
+	isStart = entry.kind is not InstructionType.JumpEnd and entry.line is not previous
+	hit = "$Hit " + frame.owner + "|" + entry.line
 	isStart and IsLoopLine(entry.line) is false then List(Text) + hit else List(Text)
 IsLoopLine(line Number) Boolean
 	Reporting.Logs(0, Frame.Listed).Length is 0
@@ -100,10 +100,10 @@ Ended(position Number, place Text, result VmValue) Texts
 	Same.Ended(2, "A|3", Seven).Length is 0
 	Same.Ended(3, "A|4", Seven) is ("$Result A|4|7")
 	Lined.Ended(4, "A|0", Seven) is ("$Result A|0|7")
-	let instructions = frame.method.instructions
-	let entry = instructions(position)
-	let isLast = position + 1 is instructions.Length or instructions(position + 1).line is not entry.line
-	let isControl = entry.kind > InstructionType.Return and entry.kind <= InstructionType.JumpEnd
+	instructions = frame.method.instructions
+	entry = instructions(position)
+	isLast = position + 1 is instructions.Length or instructions(position + 1).line is not entry.line
+	isControl = entry.kind > InstructionType.Return and entry.kind <= InstructionType.JumpEnd
 	isLast and isControl is false then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
 Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Counted).Length is 0
@@ -111,12 +111,12 @@ Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Started).Last is "$Set Strict/Doubler|4|for|0"
 	Ending.Iteration(1, Started).Length is 2
 	Ending.Iteration(2, Started).Length is 0 and Lined.Iteration(2, Stopped).Length is 0
-	let entry = frame.method.instructions(position)
-	let begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
-	let state = slots(Frame.LoopSlot)
-	let isOwn = entry.line > 0 and state.items.Length > 0 and state.items(0).items(3).number is begin
-	let place = frame.owner + "|" + entry.line
-	let current = isOwn then Shown(Looping.Current(state, false, false, VmValue.None)) else ""
+	entry = frame.method.instructions(position)
+	begin = entry.kind is InstructionType.LoopBegin then position else entry.payload.Last
+	state = slots(Frame.LoopSlot)
+	isOwn = entry.line > 0 and state.items.Length > 0 and state.items(0).items(3).number is begin
+	place = frame.owner + "|" + entry.line
+	current = isOwn then Shown(Looping.Current(state, false, false, VmValue.None)) else ""
 	isOwn then ("$Hit " + place, "$Set " + place + "|for|" + current) else List(Text)
 Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfText("ab")) is "\"ab\""
@@ -126,10 +126,10 @@ Shown(result VmValue) Text
 	Lined.Shown(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
 	Lined.Shown(VmValue.OfError("x")) is ValueCode(VmValue.OfError("x")).Code
 	constant MaxShownLength = 80
-	let items = result.items
-	let elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")
-	let isRecord = result.items.Length > 0 and result.kind is not in ("List", "Strict/Error")
-	let code = result.kind is "List" then elements else isRecord then Named(result) else ValueCode(result).Code
+	items = result.items
+	elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")
+	isRecord = result.items.Length > 0 and result.kind is not in ("List", "Strict/Error")
+	code = result.kind is "List" then elements else isRecord then Named(result) else ValueCode(result).Code
 	code.Length > MaxShownLength then code.Substring(0, MaxShownLength) + "..." else code
 Named(record VmValue) Text
 	Pairs.Named(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0)))) is "Pair(b = 0)"
@@ -144,9 +144,9 @@ Members(record VmValue, isChanged Boolean) Texts
 	Pairs.Members(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0))), true).Length is 0
 	Pairs.Members(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2))), true) is ("b = 2")
 	Sevens.Members(VmValue("Strict/Seven", 0, "", List(VmValue) + VmValue.OfNumber(8)), true).Length is 0
-	let natives = Natives(frame.machine.types)
+	natives = Natives(frame.machine.types)
 	for natives.TypeOf(record.kind).members
-		let item = index < record.items.Length then record.items(index) else VmValue.None
+		item = index < record.items.Length then record.items(index) else VmValue.None
 		if value.IsConstant is false and item.kind is not "None" and item is natives.Initial(value) is not isChanged
 			value.Name + " = " + ValueCode(item).Code
 Elements(items List(VmValue)) Texts

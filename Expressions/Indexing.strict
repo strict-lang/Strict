@@ -13,6 +13,6 @@ IsIndexed(typeName Text, name Text, arguments Number) Boolean
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "Twice", 1) is false
 	if types.MembersOf(typeName).TypeOf(name) is not ""
 		return true
-	let returned = types.MethodsOf(typeName).TypeOf(name)
-	let isList = returned is not "" and types.ElementType(returned) is not returned
+	returned = types.MethodsOf(typeName).TypeOf(name)
+	isList = returned is not "" and types.ElementType(returned) is not returned
 	isList and arguments is 1 and types.ParametersOf(typeName, name, 1).Length is 0

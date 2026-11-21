@@ -12,7 +12,7 @@ constant Nested = Closeness(KnownTypes(("Outer", "Inner", "Counter", "Walker"), 
 Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Texts) Texts
 	Plain.Lines("left", "right", ("Number", "Number"), "0", true, List(Text)).Last is "let testEqual0 = left is right"
 	Nested.Lines("a", "b", ("Inner", "Inner"), "1", false, List(Text) + "Outer") is ("let testEqual1 = a.IsNearlyEqual(b)")
-	let same = List(Text) + ("let testEqual" + slot + " = " + left + " is " + right)
+	same = List(Text) + ("let testEqual" + slot + " = " + left + " is " + right)
 	if exact or kinds.First is not kinds.Last
 		return same
 	if kinds.First is "Number"
@@ -33,7 +33,7 @@ IsCalled(kind Text, expanded Texts) Boolean
 	Nested.IsCalled("Number", List(Text) + "Number")
 	Nested.Lines("a", "b", ("Inners", "Inners"), "0", false, List(Text)).Length is 7
 	Nested.Lines("a", "b", ("Outer", "Outer"), "0", false, List(Text)).Length is 3
-	let isGeneric = kind.IndexOf("(") >= 0 or "Generic" is in types.ParameterScope(kind).types
+	isGeneric = kind.IndexOf("(") >= 0 or "Generic" is in types.ParameterScope(kind).types
 	kind is in expanded or expanded.Length > 0 and IsRecord(kind) and isGeneric is false
 Repeated(left Text, right Text, kind Text, slot Text) Texts
 	Plain.Repeated("left", "right", "Number", "0") is ("let testEqual0 = left is right")
@@ -45,7 +45,7 @@ Repeated(left Text, right Text, kind Text, slot Text) Texts
 	Plain.Lines("a", "b", ("Number", "Text"), "0", false, List(Text)) is ("let testEqual0 = a is b")
 	Plain.Lines("a", "b", ("Number", "Number"), "0", false, List(Text)) is ("let testEqual0 = a.IsNearlyEqual(b)")
 	Plain.Lines("a", "b", ("Text", "Text"), "0", false, List(Text)) is ("let testEqual0 = a is b")
-	let compared = IsRecord(kind) then left + ".IsNearlyEqual(" + right + ")" else left + " is " + right
+	compared = IsRecord(kind) then left + ".IsNearlyEqual(" + right + ")" else left + " is " + right
 	List(Text) + ("let testEqual" + slot + " = " + compared)
 IsRecord(kind Text) Boolean
 	Plain.IsRecord("Number") is false
@@ -54,31 +54,31 @@ IsRecord(kind Text) Boolean
 	Nested.Fields("a", "b", "Inner", "0", List(Text)).Last is "testEqual0 = testEqual0 and testEqual0x0"
 	Listed.IsRecord("List") is false and Listed.IsRecord("Text") is false
 	Nested.IsRecord("Walker")
-	let base = types.BaseName(kind)
-	let isTrait = types.ParameterScope(base).TypeOf(" trait") is "true"
+	base = types.BaseName(kind)
+	isTrait = types.ParameterScope(base).TypeOf(" trait") is "true"
 	types.MembersOf(kind).names.Length > 0 and base is not in Scalars and base is not "List" and isTrait is false
 Elements(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
 	Text.Combine(Plain.Elements("left", "right", Deep, "0", List(Text))).IndexOf("IsNearlyEqual") > 0
-	let same = "testEqual" + slot
-	let child = slot + "x"
-	let item = types.ElementType(kind)
-	let head = "mutable " + same + " = " + left + ".Length is " + right + ".Length"
+	same = "testEqual" + slot
+	child = slot + "x"
+	item = types.ElementType(kind)
+	head = "mutable " + same + " = " + left + ".Length is " + right + ".Length"
 	mutable lines = (head, "if " + same, "\tfor " + left + ".Length")
-	let first = "testLeft" + child
-	let second = "testRight" + child
+	first = "testLeft" + child
+	second = "testRight" + child
 	lines = lines + ("\t\tlet " + first + " = " + left + "(index)", "\t\tlet " + second + " = " + right + "(index)")
 	for Lines(first, second, (item, item), child, false, expanded)
 		lines = lines + ("\t\t" + value)
 	lines + ("\t\t" + same + " = " + same + " and testEqual" + child)
 Fields(left Text, right Text, kind Text, slot Text, expanded Texts) Texts
 	Plain.Fields("", "other", "Greet", "0", List(Text)).Length is 1
-	let members = types.MembersOf(kind)
+	members = types.MembersOf(kind)
 	mutable lines = List(Text) + ("mutable testEqual" + slot + " = true")
 	for members.names
-		let child = slot + "x" + index
-		let type = members.types(index)
-		let step = types.ParameterScope(kind).TypeOf(value + " step")
-		let own = left is "" then value else left + "." + value
-		let nested = Lines(own, right + "." + value, (type, type), child, step is not "", expanded)
+		child = slot + "x" + index
+		type = members.types(index)
+		step = types.ParameterScope(kind).TypeOf(value + " step")
+		own = left is "" then value else left + "." + value
+		nested = Lines(own, right + "." + value, (type, type), child, step is not "", expanded)
 		lines = lines + nested + ("testEqual" + slot + " = testEqual" + slot + " and testEqual" + child)
 	lines

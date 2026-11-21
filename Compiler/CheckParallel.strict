@@ -43,7 +43,7 @@ Run Number
 	if Directory.Create(OutputFolder) is Error
 		return Error("DirectoryNotCreated")
 	File(OutputFolder + "/driver.c").Write(DriverSrc.Split("\n"))
-	let result = BuiltAndChecked(OutputFolder)
+	result = BuiltAndChecked(OutputFolder)
 	Directory.Delete(OutputFolder)
 	if result is Error
 		return result
@@ -52,86 +52,86 @@ Run Number
 BuiltAndChecked(folder Text) Boolean
 	if BuiltPoolMlir(folder) is Error
 		return Error("BuiltPoolMlirFailed")
-	let oArgs = "\"" + folder + "/pool.mlir\" --symbol-privatize=exclude=" + (ExA + ExB + ExC) + " " + OptFlags
-	let opt = Process.RunTool("C:/msys64/ucrt64/bin/mlir-opt.exe", oArgs + " -o \"" + folder + "/pool.1\"", ToolSeconds)
+	oArgs = "\"" + folder + "/pool.mlir\" --symbol-privatize=exclude=" + (ExA + ExB + ExC) + " " + OptFlags
+	opt = Process.RunTool("C:/msys64/ucrt64/bin/mlir-opt.exe", oArgs + " -o \"" + folder + "/pool.1\"", ToolSeconds)
 	if opt.exitCode is not 0
 		return Error("OptFailed: " + opt.Output + opt.error)
-	let trArgs = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/pool.1\" -o \"" + folder + "/pool.ll\""
+	trArgs = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/pool.1\" -o \"" + folder + "/pool.ll\""
 	if Process.RunTool("C:/msys64/ucrt64/bin/mlir-translate.exe", trArgs, ToolSeconds).exitCode is not 0
 		return Error("TranslateFailed")
-	let cOut = "\"" + folder + "/pool.ll\" \"" + folder + "/driver.c\" " + ClangFlags + " -o \"" + folder + "/check.exe\""
-	let cc = Process.RunTool("C:/Program Files/LLVM/bin/clang.exe", cOut, ToolSeconds)
+	cOut = "\"" + folder + "/pool.ll\" \"" + folder + "/driver.c\" " + ClangFlags + " -o \"" + folder + "/check.exe\""
+	cc = Process.RunTool("C:/Program Files/LLVM/bin/clang.exe", cOut, ToolSeconds)
 	cc.exitCode is not 0 then Error("BuildCheckExeFailed: " + cc.Output) else RanModes(folder, folder + "/check.exe")
 BuiltPoolMlir(folder Text) Boolean
-	let rt = PatchedRuntime
+	rt = PatchedRuntime
 	if rt is Error
 		return rt
-	let dec = MlirConst("Compiler/MlirTexts.strict", "Declarations")
-	let chk = MlirConst("Compiler/MlirCached.strict", "Checked")
-	let sto = MlirConst("Compiler/MlirCached.strict", "Stored")
-	let c1 = CachedFn("test_cached", "test_compute", chk, sto) + CachedFn("test_first", "test_first_compute", chk, sto)
-	let caches = c1 + CachedFn("test_second", "test_second_compute", chk, sto)
-	let win = Text.Combine(File("Compiler/NativeRuntimeWindows.mlir").ReadLines, "\n")
-	let hdr = "module {\n  llvm.func @printf(!llvm.ptr, ...) -> i32\n" + dec + "\n" + rt + win
+	dec = MlirConst("Compiler/MlirTexts.strict", "Declarations")
+	chk = MlirConst("Compiler/MlirCached.strict", "Checked")
+	sto = MlirConst("Compiler/MlirCached.strict", "Stored")
+	c1 = CachedFn("test_cached", "test_compute", chk, sto) + CachedFn("test_first", "test_first_compute", chk, sto)
+	caches = c1 + CachedFn("test_second", "test_second_compute", chk, sto)
+	win = Text.Combine(File("Compiler/NativeRuntimeWindows.mlir").ReadLines, "\n")
+	hdr = "module {\n  llvm.func @printf(!llvm.ptr, ...) -> i32\n" + dec + "\n" + rt + win
 	File(folder + "/pool.mlir").Write((hdr + CheckParallelMlir.All + caches + "\n}").Split("\n"))
 	true
 PatchedRuntime Text
-	let raw = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	raw = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	if "func.call @strict_rc_pin_in(" is not in raw.Split("func.func private @strict_rc_pin(")(1).Split("\n  }")(0)
 		return Error("Missing strict_rc_pin_in")
-	let s1 = raw.IndexOf("  func.func private @strict_parallel_from(")
-	let e1 = raw.IndexOf("  func.func private @strict_pool_started()", s1)
-	let sub = raw.Substring(s1, e1 - s1)
-	let p1 = sub.Replace(PublishLine, PublishLine + "\n    llvm.call @test_publishing(%count) : (i64) -> ()")
+	s1 = raw.IndexOf("  func.func private @strict_parallel_from(")
+	e1 = raw.IndexOf("  func.func private @strict_pool_started()", s1)
+	sub = raw.Substring(s1, e1 - s1)
+	p1 = sub.Replace(PublishLine, PublishLine + "\n    llvm.call @test_publishing(%count) : (i64) -> ()")
 	PatchedPoolRun(raw.Substring(0, s1) + p1 + raw.Substring(e1))
 PatchedPoolRun(runtime Text) Text
-	let s2 = runtime.IndexOf("  llvm.func @strict_pool_run(")
-	let e2 = runtime.IndexOf("  llvm.func @strict_pool_chunk_run(", s2)
+	s2 = runtime.IndexOf("  llvm.func @strict_pool_run(")
+	e2 = runtime.IndexOf("  llvm.func @strict_pool_chunk_run(", s2)
 	mutable sub = runtime.Substring(s2, e2 - s2)
 	sub = sub.Replace("  ^look:\n", "  ^look:\n    llvm.call @test_claiming(%job) : (i64) -> ()\n")
 	sub = sub.Replace("  ^leave:\n", "  ^leave:\n    llvm.call @test_retired(%job) : (i64) -> ()\n")
 	runtime.Substring(0, s2) + sub + runtime.Substring(e2)
 MlirConst(path Text, name Text) Text
-	let prefix = "constant " + name + " = "
+	prefix = "constant " + name + " = "
 	mutable resolved = ""
 	for File(path).ReadLines
 		if value.StartsWith(prefix)
-			let rhs = value.Substring(prefix.Length, value.Length - prefix.Length)
+			rhs = value.Substring(prefix.Length, value.Length - prefix.Length)
 			for Regex("\"((?:[^\"\\\\]|\\\\.)*)\"|([A-Za-z_][A-Za-z0-9_]*)").FindAll(rhs)
 				resolved = resolved + (value.StartsWith("\"") then Unescaped(value) else MlirConst(path, value)) + "\n"
 	resolved
 Unescaped(quoted Text) Text
 	quoted.Substring(1, quoted.Length - 2).Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\\\", "\\")
 CachedFn(name Text, compute Text, chk Text, sto Text) Text
-	let h1 = "  llvm.func @" + compute + "() -> f64\n  llvm.mlir.global internal @" + name + "_cache(0.0 : f64) : f64\n"
-	let h2 = "  llvm.mlir.global internal @" + name + "_set(0 : i64) : i64\n  func.func @" + name + "() -> f64 {\n"
-	let h3 = "    %cache = llvm.mlir.addressof @" + name + "_cache : !llvm.ptr\n"
-	let h4 = "    %set = llvm.mlir.addressof @" + name + "_set : !llvm.ptr\n"
+	h1 = "  llvm.func @" + compute + "() -> f64\n  llvm.mlir.global internal @" + name + "_cache(0.0 : f64) : f64\n"
+	h2 = "  llvm.mlir.global internal @" + name + "_set(0 : i64) : i64\n  func.func @" + name + "() -> f64 {\n"
+	h3 = "    %cache = llvm.mlir.addressof @" + name + "_cache : !llvm.ptr\n"
+	h4 = "    %set = llvm.mlir.addressof @" + name + "_set : !llvm.ptr\n"
 	h1 + h2 + h3 + h4 + chk + "\n    %computed = llvm.call @" + compute + "() : () -> f64\n" + sto
 RanModes(folder Text, exe Text) Boolean
-	let freed = "/c set STRICT_YOUNG=0&& " + exe.Replace("/", "\\") + " freed"
+	freed = "/c set STRICT_YOUNG=0&& " + exe.Replace("/", "\\") + " freed"
 	for "updated memory owned big freed published literal j k xcycle gpu rsame rdifferent scan".Split(" ")
-		let isFreed = value is "freed"
-		let res = Process.RunTool(isFreed then "cmd" else exe, isFreed then freed else value, ShortSeconds)
+		isFreed = value is "freed"
+		res = Process.RunTool(isFreed then "cmd" else exe, isFreed then freed else value, ShortSeconds)
 		if res.exitCode is not 0
 			return Error("ModeFailed " + value + ": " + res.Output + res.error)
 	RanPostModes(folder, exe)
 RanPostModes(folder Text, exe Text) Boolean
 	for ("", "carried", "wake", "await")
-		let res = Process.RunTool(exe, value, ShortSeconds)
+		res = Process.RunTool(exe, value, ShortSeconds)
 		if res.exitCode is not 0
 			return Error("PostModeFailed " + value + ": " + res.Output + res.error)
-	let chk = Process.RunTool(exe, "checked", ShortSeconds)
-	let ok = chk.exitCode is 0 and "Reference counts checked: 0 too low" is in chk.Output
-	let shareOk = CheckedToolShares(folder, exe)
+	chk = Process.RunTool(exe, "checked", ShortSeconds)
+	ok = chk.exitCode is 0 and "Reference counts checked: 0 too low" is in chk.Output
+	shareOk = CheckedToolShares(folder, exe)
 	ok then (shareOk is Error then shareOk else CheckedPoolFailure(folder)) else Error("Checked")
 CheckedToolShares(folder Text, exe Text) Boolean
-	let shares = folder + "/ToolShares"
+	shares = folder + "/ToolShares"
 	for ("", "7")
 		Directory.Delete(shares)
 		Directory.Create(shares)
-		let cmd = "/c set STRICT_THREADS=7&& " + exe.Replace("/", "\\") + " tools " + shares
-		let res = Process.RunTool(value is "" then exe else "cmd", value is "" then "tools " + shares else cmd, ShortSeconds)
+		cmd = "/c set STRICT_THREADS=7&& " + exe.Replace("/", "\\") + " tools " + shares
+		res = Process.RunTool(value is "" then exe else "cmd", value is "" then "tools " + shares else cmd, ShortSeconds)
 		if res.exitCode is not 0
 			return Error("ToolsShareFailed: " + res.Output)
 		if CheckedBatch(shares, "slow", BatchSlowCount, value) is Error or CheckedBatch(shares, "quick", 2, value) is Error
@@ -140,7 +140,7 @@ CheckedToolShares(folder Text, exe Text) Boolean
 CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
 	mutable first = ""
 	for count
-		let txt = Text.Combine(File(shares + "/" + kind + value + ".txt").ReadLines, "").Trim
+		txt = Text.Combine(File(shares + "/" + kind + value + ".txt").ReadLines, "").Trim
 		if txt is "" or not Regex("^\\d+$").IsMatch(txt) or expected is not "" and txt is not expected
 			return Error("MissingOrWrongThreadShare: " + txt + " expected " + expected)
 		if first is ""
@@ -149,20 +149,20 @@ CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
 			return Error("BatchThreadShareChanged")
 	true
 CheckedPoolFailure(folder Text) Boolean
-	let src = folder + "/PoolFailure.strict"
+	src = folder + "/PoolFailure.strict"
 	File(src).Write((PfA + PfB + PfC).Split("\n"))
-	let built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("PoolFailureBuildFailed: " + built.Output + built.error)
 	for FailAttempts
-		let res = Process.RunTool(folder + "/PoolFailure.exe", "", ShortSeconds)
+		res = Process.RunTool(folder + "/PoolFailure.exe", "", ShortSeconds)
 		if not res.Output.StartsWith("Error: IndexOutOfRange")
 			return Error("NestedParallelErrorLost: " + res.Output + res.error)
 	true
 DriverSrc Text
-	let head = D01 + "\n" + D02 + "\n" + D03 + "\n" + D04 + "\n" + D05 + "\n" + D06 + "\n" + D07 + "\n" + D08 + "\n" + D09
-	let mid = D10 + "\n" + D11 + "\n" + D12 + "\n" + D13 + "\n" + D14 + "\n" + D15 + "\n" + D16 + "\n" + D17 + "\n" + D18
-	let tail = D19 + "\n" + D20 + "\n" + D21 + "\n" + D22 + "\n" + D23 + "\n" + D24 + "\n" + D25 + "\n" + DriverTail
+	head = D01 + "\n" + D02 + "\n" + D03 + "\n" + D04 + "\n" + D05 + "\n" + D06 + "\n" + D07 + "\n" + D08 + "\n" + D09
+	mid = D10 + "\n" + D11 + "\n" + D12 + "\n" + D13 + "\n" + D14 + "\n" + D15 + "\n" + D16 + "\n" + D17 + "\n" + D18
+	tail = D19 + "\n" + D20 + "\n" + D21 + "\n" + D22 + "\n" + D23 + "\n" + D24 + "\n" + D25 + "\n" + DriverTail
 	head + "\n" + mid + "\n" + tail
 DriverTail Text
 	constant threads = "HANDLE t[2]={CreateThread(0,0,cf,0,0,0),CreateThread(0,0,cs,0,0,0)};"

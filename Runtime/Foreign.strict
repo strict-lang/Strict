@@ -15,25 +15,25 @@ constant Counting = Foreign(Invocation(InstructionEntry.Invoke(1, (Counter.Name,
 Called VmValue
 	Foreign(Invocation.AddCall, List(TypeEntry)).Called.items.First.text is "Unsupported native call T.Add"
 	Framed.Called.items.First.text.StartsWith("TraitHasNoImplementation")
-	let type = Natives(types).TypeOf(call.TypeName)
-	let built = IsForeign(type) then Built(type) else "Unsupported native call " + call.TypeName + "." + call.MethodName
+	type = Natives(types).TypeOf(call.TypeName)
+	built = IsForeign(type) then Built(type) else "Unsupported native call " + call.TypeName + "." + call.MethodName
 	if built.StartsWith("Built ") is false
 		return VmValue.OfError(built)
-	let library = Library(built.Substring(6, built.Length - 6))
-	let method = Method(type)
-	let bits = library.Call(type.JustName + "_" + call.MethodName, Arguments(library, method))
-	let failure = library.Failure(bits)
+	library = Library(built.Substring(6, built.Length - 6))
+	method = Method(type)
+	bits = library.Call(type.JustName + "_" + call.MethodName, Arguments(library, method))
+	failure = library.Failure(bits)
 	failure is "" then Converted(library, method.returnType, bits) else VmValue.OfError(failure)
 Constructed(type TypeEntry) VmValue
 	Adding.Constructed(Adder) is Adding.Called
 	IsForeign(type) then Called else Rounding.Single.Built(type, call, Natives(types, folder), type.IsStruct)
 Built(type TypeEntry) Text
 	Adding.Built(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")
-	let native = Folder(type)
+	native = Folder(type)
 	if Directory.Exists(native) is false
 		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
-	let entered = TestBudget.Entered
-	let library = NativeLibrary(NativeSources(List(Text) + native)).Built(Platform.Current, TypeSource.Root)
+	entered = TestBudget.Entered
+	library = NativeLibrary(NativeSources(List(Text) + native)).Built(Platform.Current, TypeSource.Root)
 	TestBudget.Left(entered)
 	library
 IsForeign(type TypeEntry) Boolean
@@ -59,9 +59,9 @@ Arguments(library Library, method MethodEntry) Numbers
 	Adding.Arguments(Library("missing.dll"), Defaulted) is (0, 1, 2, 7)
 	mutable arguments = List(Number) + (call.entry.payload(call.Flag) is 1 then call.Instance.number else 0)
 	for method.parameters
-		let given = index < call.Arguments.Length then call.Arguments(index) else Natives(types).Initial(value)
-		let kind = value.typeName
-		let number = kind.EndsWith("Text") then library.TextSlot(given.text) else given.number
+		given = index < call.Arguments.Length then call.Arguments(index) else Natives(types).Initial(value)
+		kind = value.typeName
+		number = kind.EndsWith("Text") then library.TextSlot(given.text) else given.number
 		arguments = arguments + (MlirForeign.IsNumbers(kind) then library.NumbersSlot(Numbers(given.items)) else number)
 	arguments
 Converted(library Library, returnType Text, bits Number) VmValue
@@ -98,8 +98,8 @@ Elements(numbers Numbers) VmValue
 Folder(type TypeEntry) Text
 	Adding.Folder(Adder) is "Examples/NativeAdd/native"
 	Foreign(Invocation.AddCall, List(TypeEntry), "Examples/NativeAdd").Folder(Shorter) is "Examples/NativeAdd/native"
-	let parent = Path(type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source).PathOnly.text
-	let native = parent is "" then "native" else parent + "/native"
+	parent = Path(type.Name.IndexOf("/") < 0 then folder + "/" + type.Source else type.Source).PathOnly.text
+	native = parent is "" then "native" else parent + "/native"
 	Directory.Exists(native) or TypeSource.Root is "." then native else TypeSource.Root + "/" + native
 Numbers(values List(VmValue)) Numbers
 	Adding.Numbers((VmValue.OfNumber(1), VmValue.OfNumber(2))) is (1, 2)
@@ -114,15 +114,15 @@ Numbers(values List(VmValue)) Numbers
 Hosted VmValue
 	Calling.Hosted.number is not 3
 	Calling.Hosted.kind is "Strict/Error"
-	let library = Library(call.Instance.Member(0).text)
-	let name = call.MethodName
+	library = Library(call.Instance.Member(0).text)
+	name = call.MethodName
 	if name is not in ("Call", "TextSlot", "NumbersSlot")
 		return Copied(library, name, call.Arguments.First.number)
-	let result = Raw(library, name)
+	result = Raw(library, name)
 	result is Error then VmValue.OfError(result.Name.text) else VmValue.OfNumber(result)
 Raw(library Library, name Text) Number
 	Calling.Raw(Library("missing.dll"), "Call") is Error
-	let argument = call.Arguments.First
+	argument = call.Arguments.First
 	if name is "Call"
 		return library.Call(argument.text, Numbers(call.Arguments.Last.items))
 	name is "TextSlot" then library.TextSlot(argument.text) else library.NumbersSlot(Numbers(argument.items))

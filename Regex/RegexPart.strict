@@ -15,7 +15,7 @@ Star(isLazy Boolean) List(RegexStep)
 	Letter.Star(false)(0).Second is 3
 	Letter.Star(false)(2).First is -2
 	Letter.Star(true)(0).First is 3
-	let back = RegexStep(RegexStep.Jump, List(Number), false, -steps.Length - 1)
+	back = RegexStep(RegexStep.Jump, List(Number), false, -steps.Length - 1)
 	((List(RegexStep) + Branched(1, steps.Length + 2, isLazy)) + steps) + back
 Plus(isLazy Boolean) List(RegexStep)
 	Letter.Plus(false)(1).First is -1
@@ -41,6 +41,6 @@ Or(right RegexPart) RegexPart
 	Letter.Or(Letter).steps(0).Second is 3
 	Letter.Or(Letter).steps(2).First is 2
 	Letter.Or(RegexPart(Letter, groups = 2)).groups is 2
-	let skip = RegexStep(RegexStep.Jump, List(Number), false, right.steps.Length + 1)
-	let left = (List(RegexStep) + Branched(1, steps.Length + 2, false)) + steps
+	skip = RegexStep(RegexStep.Jump, List(Number), false, right.steps.Length + 1)
+	left = (List(RegexStep) + Branched(1, steps.Length + 2, false)) + steps
 	RegexPart((left + skip) + right.steps, right.next, right.groups)

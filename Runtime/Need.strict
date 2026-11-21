@@ -21,7 +21,7 @@ Parsed(words Texts) Need
 	Need.Parsed("need").job is ""
 	if words.Length < 9
 		return Need
-	let ram = (words(3) to Number, words(4) to Number)
-	let vram = (words(5) to Number, words(6) to Number)
-	let made = Need(job = words(1), label = words(2), minimumRam = ram(0), idealRam = ram(1))
+	ram = (words(3) to Number, words(4) to Number)
+	vram = (words(5) to Number, words(6) to Number)
+	made = Need(job = words(1), label = words(2), minimumRam = ram(0), idealRam = ram(1))
 	Need(made, minimumVram = vram(0), idealVram = vram(1), threads = words(7) to Number, mode = words(8))

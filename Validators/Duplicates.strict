@@ -12,8 +12,8 @@ Of(files Texts) Duplicates slow
 	mutable named = List(Mutable(Text))
 	mutable implementations = List(Mutable(Text))
 	for files
-		let lines = File(value).ReadLines
-		let typeName = Path(value).FileName.RemoveExtension.text
+		lines = File(value).ReadLines
+		typeName = Path(value).FileName.RemoveExtension.text
 		for lines
 			if TypeShape(lines).IsMethodHeader(value)
 				named.Add(typeName + "." + Tokenizer(value).Tokens.First)
@@ -22,10 +22,10 @@ Of(files Texts) Duplicates slow
 Issues(path Text, lines Texts) List(ValidationIssue)
 	Copies.Issues("B.strict", Copy).First to Text is "MethodAlreadyExists: A.Halve"
 	Copies.Issues("A.strict", Copy).Length is 0
-	let typeName = Path(path).FileName.RemoveExtension.text
+	typeName = Path(path).FileName.RemoveExtension.text
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
-			let other = Other(typeName, lines, index)
+			other = Other(typeName, lines, index)
 			if other is not ""
 				ValidationIssue("MethodAlreadyExists", other, index + 1)
 Other(typeName Text, lines Texts, header Number) Text
@@ -33,8 +33,8 @@ Other(typeName Text, lines Texts, header Number) Text
 	Evolving.Other("A", Looping, 2) is ""
 	Copies.Other("A", Copy, 0) is ""
 	Incrementing.Other("B", Looping, 0) is ""
-	let owner = typeName + "." + Tokenizer(lines(header)).Tokens.First
-	let body = Implementation(lines, header)
+	owner = typeName + "." + Tokenizer(lines(header)).Tokens.First
+	body = Implementation(lines, header)
 	if body.Length < MinBodyLength or CallsOwn(lines, body)
 		return ""
 	for bodies
@@ -55,7 +55,7 @@ Implementation(lines Texts, header Number) Text
 	Copies.Implementation(Copy, 0) is "let half = number / 2\nhalf < 0 then 0 - half else half\n"
 	Copies.Implementation(Asserting, 0) is "1 is 1\n"
 	Copies.Implementation(Asserting, 3) is "let two = 2\ntwo is 2\n2 is two\n"
-	let last = FileCheck.LastLine(lines, header)
+	last = FileCheck.LastLine(lines, header)
 	mutable result = ""
 	for Range(header + 1, last + 1)
 		if result is not "" or value is last or IsTest(lines(value).Trim) is false
@@ -69,9 +69,9 @@ IsTest(line Text) Boolean
 	Copies.IsTest("number is 2") and Copies.IsTest("number < 2") and Copies.IsTest("number > 2")
 	Copies.IsTest("number + 1") is false and Copies.IsTest("if number is 2") is false
 	Copies.IsTest("\"hello\".StartsWith(\"he\")")
-	let first = Tokenizer(line).Tokens.First
-	let isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
-	let isComparing = line.IndexOf(" is ") > 0 or line.IndexOf(" < ") > 0 or line.IndexOf(" > ") > 0
-	let start = first(0)
-	let isPlain = start.Lower is not start or start is in ("(", "\"") or Tokenizer.IsDigit(start)
+	first = Tokenizer(line).Tokens.First
+	isStatement = first is in ("let", "mutable", "constant", "if", "for", "return", "else")
+	isComparing = line.IndexOf(" is ") > 0 or line.IndexOf(" < ") > 0 or line.IndexOf(" > ") > 0
+	start = first(0)
+	isPlain = start.Lower is not start or start is in ("(", "\"") or Tokenizer.IsDigit(start)
 	isStatement is false and (isComparing or isPlain)

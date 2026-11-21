@@ -16,10 +16,10 @@ constant Rounded = Maximum.Round(MlirDeviceCalls(Choosing, 10, Chooser), "%d12",
 IsChoice Boolean
 	Maximum.IsChoice and Owned.IsChoice
 	Summing.IsChoice is false
-	let names = Chosen
+	names = Chosen
 	mutable loads = 0
 	for Range(at + 1, function.method.LoopEndOf(at))
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if entry.kind is InstructionType.LoopBegin or entry.kind is InstructionType.InvokeWriteToList
 			return false
 		if entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is in names
@@ -30,7 +30,7 @@ Chosen Texts
 	Summing.Chosen.Length is 0
 	mutable names = List(Mutable(Text))
 	for Range(at + 1, function.method.LoopEndOf(at))
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if entry.kind is InstructionType.StoreRegisterToVariable
 			if IsUpdate(value) is false
 				return List(Text)
@@ -39,27 +39,27 @@ Chosen Texts
 IsUpdate(store Number) Boolean
 	Maximum.IsUpdate(11)
 	Summing.IsUpdate(10) is false
-	let call = function.method.instructions(store - 1)
+	call = function.method.instructions(store - 1)
 	if call.kind is not InstructionType.Invoke or call.payload(0) is not function.method.instructions(store).payload(0)
 		return false
-	let callees = MlirModule(function.types, "").Called(function, store - 1)
-	let isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
+	callees = MlirModule(function.types, "").Called(function, store - 1)
+	isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
 	callees.Length is 1 and isPassed and IsChoosing(callees.First)
 IsPassed(call Number, name Text) Boolean
 	Maximum.IsPassed(10, "largest")
 	Maximum.IsPassed(10, "index") is false
-	let entry = function.method.instructions(call)
-	let instance = PayloadDecoder(entry).Instance
+	entry = function.method.instructions(call)
+	instance = PayloadDecoder(entry).Instance
 	for instance >= 0 then PayloadDecoder(entry).Arguments + instance else PayloadDecoder(entry).Arguments
-		let writer = MlirDeviceSums(function, at).Writer(call, value)
-		let loaded = writer >= 0 then function.method.instructions(writer) else entry
+		writer = MlirDeviceSums(function, at).Writer(call, value)
+		loaded = writer >= 0 then function.method.instructions(writer) else entry
 		if loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is name
 			return true
 	false
 IsChoosing(callee MlirFunction) Boolean
 	Maximum.IsChoosing(Chooser)
 	Maximum.IsChoosing(MlirGpuCheck.Absolute) is false
-	let sides = Sides(callee)
+	sides = Sides(callee)
 	if sides.Length is 0
 		return false
 	for callee.method.instructions
@@ -70,11 +70,11 @@ Sides(callee MlirFunction) Texts
 	Maximum.Sides(Chooser) is ("left", "right")
 	Maximum.Sides(Maximal) is ("value", "other")
 	Maximum.Sides(MlirFunction(Maximal, type = TypeEntry(GpuChoiceSamples.Numbered, Name = "Number"))).Length is 2
-	let parameters = callee.method.parameters
-	let numbers = parameters.Length > 0 then parameters(0).typeName is "Strict/Number" else false
+	parameters = callee.method.parameters
+	numbers = parameters.Length > 0 then parameters(0).typeName is "Strict/Number" else false
 	if numbers and parameters.Length is 1 and TypeEntry.ShortName(callee.type.Name) is "Number"
 		return ("value", parameters(0).Name)
-	let both = numbers and parameters.Length is 2 then parameters(1).typeName is "Strict/Number" else false
+	both = numbers and parameters.Length is 2 then parameters(1).typeName is "Strict/Number" else false
 	both then (parameters(0).Name, parameters(1).Name) else List(Text)
 IsPlain(entry InstructionEntry, sides Texts) Boolean
 	Maximum.IsPlain(GpuChoiceSamples.Larger.instructions(0), ("left", "right"))
@@ -83,7 +83,7 @@ IsPlain(entry InstructionEntry, sides Texts) Boolean
 		return PayloadDecoder(entry).Value(1).kind is "Boolean"
 	if entry.kind is not in Moves
 		return true
-	let name = entry.texts(0)
+	name = entry.texts(0)
 	name.StartsWith("conditional") or name is in sides
 IsCompared(callee MlirFunction, sides Texts) Boolean
 	Maximum.IsCompared(Chooser, ("left", "right"))
@@ -91,9 +91,9 @@ IsCompared(callee MlirFunction, sides Texts) Boolean
 	mutable compared = List(Mutable(Text))
 	for callee.method.instructions
 		if value.kind is InstructionType.LessThan or value.kind is InstructionType.GreaterThan
-			let position = index
+			position = index
 			for (value.payload(1), value.payload(2))
-				let writer = MlirDeviceSums(callee, -1).Writer(position, value)
+				writer = MlirDeviceSums(callee, -1).Writer(position, value)
 				compared.Add(writer >= 0 then callee.method.instructions(writer).texts(0) else "")
 	compared is sides or compared is sides.Reverse
 Reduced(end Number) Texts
@@ -102,17 +102,17 @@ Reduced(end Number) Texts
 	Maximum.Reduced(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for Range(at + 1, end)
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if entry.kind is InstructionType.StoreRegisterToVariable
 			lines = lines + Rounds(value - 1, "%d" + end, Chosen.Index(entry.texts(0)))
 	lines
 Rounds(call Number, prefix Text, number Number) Texts
 	Maximum.Rounds(10, "%d12", 0).Length is 23
 	Text.Combine(Owned.Rounds(10, "%d12", 0)).IndexOf("(%failed, %lane, %lanes, %d12c0r0, %d12s0r0)") > 0
-	let calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
-	let name = "%v_" + function.method.instructions(call + 1).texts(0)
-	let first = function.Load(prefix + "c" + number + "r0", name)
-	let instance = calls.Instance(function.method.instructions(call), prefix + "h" + number)
+	calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
+	name = "%v_" + function.method.instructions(call + 1).texts(0)
+	first = function.Load(prefix + "c" + number + "r0", name)
+	instance = calls.Instance(function.method.instructions(call), prefix + "h" + number)
 	mutable lines = ((List(Text) + first) + instance) + calls.MemberLoads
 	for Offsets
 		lines = lines + Round(calls, prefix, number, index)
@@ -120,13 +120,13 @@ Rounds(call Number, prefix Text, number Number) Texts
 Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
 	Rounded(2).IndexOf("(%failed, %lane, %lanes, %d12h0, %d12c0r4, %d12s0r4)") > 0
 	Rounded.Last.StartsWith("    %d12c0r5 = llvm.extractvalue %d12c0r5r[0]")
-	let current = prefix + "c" + number + "r" + round
-	let offset = prefix + "o" + number + "r" + round
-	let shuffled = prefix + "s" + number + "r" + round
-	let exact = MlirExact(function, at)
-	let held = calls.callee.method.parameters.Length is 1 then List(Text) else exact.Names(prefix + "h" + number)
-	let numbers = held + exact.Inexact(current) + exact.Inexact(shuffled)
-	let operands = "(" + Text.Combine(("%failed", "%lane", "%lanes") + numbers + calls.MemberArguments, ", ") + ")"
-	let invoked = MlirFeeding(function, at).Invoked(calls, prefix + "c" + number + "r" + (round + 1), operands)
-	let offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
+	current = prefix + "c" + number + "r" + round
+	offset = prefix + "o" + number + "r" + round
+	shuffled = prefix + "s" + number + "r" + round
+	exact = MlirExact(function, at)
+	held = calls.callee.method.parameters.Length is 1 then List(Text) else exact.Names(prefix + "h" + number)
+	numbers = held + exact.Inexact(current) + exact.Inexact(shuffled)
+	operands = "(" + Text.Combine(("%failed", "%lane", "%lanes") + numbers + calls.MemberArguments, ", ") + ")"
+	invoked = MlirFeeding(function, at).Invoked(calls, prefix + "c" + number + "r" + (round + 1), operands)
+	offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
 	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked

@@ -20,16 +20,16 @@ Bits(pointer Text, suffix Text) Texts
 Boxed(pointer Text, suffix Text, typeName Text) Texts
 	Sample.Boxed("%p", "a", "Strict/Error").First is "    %t3afe = func.call @strict_error_bits(%p) : (!llvm.ptr) -> f64"
 	Sample.Boxed("%p", "a", "Strict/Error").Last.StartsWith("    %t3af = func.call @strict_trace(%t3afe,")
-	let short = TypeEntry.ShortName(typeName)
+	short = TypeEntry.ShortName(typeName)
 	if short is "Error"
-		let tagged = "    " + Temp(suffix + "fe") + " = func.call @strict_error_bits(" + pointer + ") : (!llvm.ptr) -> f64"
+		tagged = "    " + Temp(suffix + "fe") + " = func.call @strict_error_bits(" + pointer + ") : (!llvm.ptr) -> f64"
 		return List(Text) + tagged + Traced(Temp(suffix + "fe"), Temp(suffix + "f"), "strict_trace")
-	let helper = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
+	helper = short is "ErrorWithValue" then "strict_error_value_bits" else "strict_bits"
 	List(Text) + ("    " + Temp(suffix + "f") + " = func.call @" + helper + "(" + pointer + ") : (!llvm.ptr) -> f64")
 Allocated(slots Number, suffix Text) Texts
 	Sample.Allocated(2, "o").First is "    %t3oz = arith.constant 16 : i64"
 	Sample.Allocated(2, "o").Last is "    %t3op = func.call @strict_alloc(%t3oz) : (i64) -> !llvm.ptr"
-	let size = "    " + Temp(suffix + "z") + " = arith.constant " + (slots < 1 then 8 else slots * 8) + " : i64"
+	size = "    " + Temp(suffix + "z") + " = arith.constant " + (slots < 1 then 8 else slots * 8) + " : i64"
 	(size, "    " + Temp(suffix + "p") + " = func.call @strict_alloc(" + Temp(suffix + "z") + ") : (i64) -> !llvm.ptr")
 Slot(base Text, index Number, suffix Text) Text
 	Sample.Slot("%b", 2, "s") is "    %t3s = llvm.getelementptr %b[2] : (!llvm.ptr) -> !llvm.ptr, f64"
@@ -39,11 +39,11 @@ Loaded(base Text, index Number, suffix Text) Texts
 	(Slot(base, index, suffix), function.Load(Temp(suffix + "v"), Temp(suffix)))
 Addressed(base Text, index Number, suffix Text) Texts
 	Sample.Addressed("%b", 1, "m").Last is "    %t3mv = func.call @strict_bits(%t3m) : (!llvm.ptr) -> f64"
-	let bits = " = func.call @strict_bits(" + Temp(suffix) + ") : (!llvm.ptr) -> f64"
+	bits = " = func.call @strict_bits(" + Temp(suffix) + ") : (!llvm.ptr) -> f64"
 	(Slot(base, index, suffix), "    " + Temp(suffix + "v") + bits)
 Called(result Text, name Text, operands Texts) Text
 	Sample.Called("%r", "add", ("%a", "%b")) is "    %r = func.call @add(%a, %b) : (f64, f64) -> f64"
-	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
+	types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
 	"    " + result + " = func.call @" + name + "(" + Text.Combine(operands, ", ") + ") : (" + types + ") -> f64"
 Passed(result Text, helper Text, operands Texts, element Text) Texts
 	Sample.Passed("%r", "f", ("%a", "%b"), "Number") is List(Text) + "    %r = func.call @f(%a, %b) : (f64, f64) -> f64"
@@ -51,42 +51,42 @@ Passed(result Text, helper Text, operands Texts, element Text) Texts
 	Sample.Passed("%r", "strict_list_has", List(Text) + "%a", "Number").Last.EndsWith(Comparing + ") -> f64")
 	if helper is not in Equated
 		return List(Text) + Called(result, helper, operands)
-	let equal = Constant(Temp("q"), MlirEquality(function, position).Helper(element), Comparing)
-	let types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length) + Comparing, ", ")
-	let arguments = Text.Combine(operands + Temp("q"), ", ")
+	equal = Constant(Temp("q"), MlirEquality(function, position).Helper(element), Comparing)
+	types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length) + Comparing, ", ")
+	arguments = Text.Combine(operands + Temp("q"), ", ")
 	(equal, "    " + result + " = func.call @" + helper + "(" + arguments + ") : (" + types + ") -> f64")
 Traced(operand Text, result Text, helper Text) Texts
 	Sample.Traced("%r", "%x", "f").Last is "    %x = func.call @f(%r, %t3tw, %t3twl)" + MlirChecks.Tracing
-	let instructions = function.method.instructions
-	let line = position < instructions.Length then instructions(position).line else 0
-	let address = "    " + Temp("tw") + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
-	let valued = MlirValued(function)
-	let operands = operand + ", " + Temp("tw") + ", " + Temp("twl") + valued.Operands
-	let call = "    " + result + " = func.call @" + valued.Helper(helper) + "(" + operands + ")"
-	let number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
+	instructions = function.method.instructions
+	line = position < instructions.Length then instructions(position).line else 0
+	address = "    " + Temp("tw") + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
+	valued = MlirValued(function)
+	operands = operand + ", " + Temp("tw") + ", " + Temp("twl") + valued.Operands
+	call = "    " + result + " = func.call @" + valued.Helper(helper) + "(" + operands + ")"
+	number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
 	(address, number, call + " : (f64, !llvm.ptr, i64" + valued.Types + ") -> f64")
 Member(path Text) Numbers
 	Pairing.Member("pair.rest") is (1, 2)
-	let dot = path.IndexOf(".")
-	let ownerType = function.TypeOf(MlirKinds(function).VariableKind(position, path.Substring(0, dot)))
-	let names = MlirInstances(function, position).StoredNames(ownerType)
+	dot = path.IndexOf(".")
+	ownerType = function.TypeOf(MlirKinds(function).VariableKind(position, path.Substring(0, dot)))
+	names = MlirInstances(function, position).StoredNames(ownerType)
 	(names.Index(path.Substring(dot + 1, path.Length - dot - 1)), names.Length)
 Changed(path Text, element Text, result Text) Texts
 	Pairing.Changed("pair.rest", "%c", "%r").Last.IndexOf("@strict_instance_with(%t0o, %t0ms, %c, %t0mc)") > 0
-	let member = Member(path)
-	let slot = "    " + Temp("ms") + " = arith.constant " + member.First + ".0 : f64"
-	let count = "    " + Temp("mc") + " = arith.constant " + member.Last + ".0 : f64"
+	member = Member(path)
+	slot = "    " + Temp("ms") + " = arith.constant " + member.First + ".0 : f64"
+	count = "    " + Temp("mc") + " = arith.constant " + member.Last + ".0 : f64"
 	(slot, count, Called(result, "strict_instance_with", (Temp("o"), Temp("ms"), element, Temp("mc"))))
 Unwrapped(path Text) Text
 	Pairing.Unwrapped("pair.rest") is "pair.rest"
 	Boxing.Unwrapped("box.values") is "box"
 	Pairing.Unwrapped("numbers") is "numbers"
-	let dot = path.IndexOf(".")
+	dot = path.IndexOf(".")
 	dot < 0 then path else Member(path).Last is 1 then path.Substring(0, dot) else path
 Constant(target Text, symbol Text, signature Text) Text
 	Sample.Constant("%e", "f", "(f64) -> f64") is "    %e = func.constant @f : (f64) -> f64"
 	"    " + target + " = func.constant @" + symbol + " : " + signature
 Converting(result Text, converter Text, operand Text) Texts
 	Sample.Converting("%x", "f", "%v").Last.IndexOf("@strict_converted(%v, %xc)") > 0
-	let call = "    " + result + " = func.call @strict_converted(" + operand + ", " + result + "c)"
+	call = "    " + result + " = func.call @strict_converted(" + operand + ", " + result + "c)"
 	(Constant(result + "c", converter, "(f64) -> f64"), call + " : (f64, (f64) -> f64) -> f64")

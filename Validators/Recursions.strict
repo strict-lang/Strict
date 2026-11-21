@@ -26,8 +26,8 @@ Endless List(ValidationIssue)
 	Recursions(("", "\tx"), "R").Endless.Length is 0 and Recursions(("", "\tx"), "R").Deep.Length is 0
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and FileCheck.LastLine(lines, index) is index + 1
-			let method = Tokenizer(value).Tokens.First
-			let only = Tokenizer(lines(index + 1).Trim).Tokens
+			method = Tokenizer(value).Tokens.First
+			only = Tokenizer(lines(index + 1).Trim).Tokens
 			if method(0).Lower is not method(0) and method is in Called(only) and "then" is not in only
 				ValidationIssue("OnlyLineCallsItself", method + Hint, index + 2)
 Deep List(ValidationIssue)
@@ -37,9 +37,9 @@ Deep List(ValidationIssue)
 	Halving.Deep.First to Text is "DeepRecursion: Count nests 2500 calls" + DeepHint
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
-			let method = Tokenizer(value).Tokens.First
-			let step = Step(method, Tokenizer(Duplicates.Implementation(lines, index)).Tokens)
-			let depth = step > 0 then Deepest(method) / step else 0
+			method = Tokenizer(value).Tokens.First
+			step = Step(method, Tokenizer(Duplicates.Implementation(lines, index)).Tokens)
+			depth = step > 0 then Deepest(method) / step else 0
 			if depth > 1000
 				ValidationIssue("DeepRecursion", method + " nests " + depth + " calls" + DeepHint, index + 1)
 Step(method Text, tokens Texts) Number
@@ -49,9 +49,9 @@ Step(method Text, tokens Texts) Number
 	Counting.Step("Count", ("1", "+", "Count", "(", "number", "/", "2", ")")) is 0
 	Counting.Step("C", ("C", "(", "x", "-", "5", "+", "O", "(", "x", "-", "6", "+", "C", "[", "x", "-", "7", "+")) is 0
 	for tokens
-		let isNested = index > 0 and tokens(index - 1) is in Operators
-		let isCall = index + 4 < tokens.Length and tokens(index + 1) is "("
-		let isStepping = isNested and isCall and tokens(index + 3) is "-"
+		isNested = index > 0 and tokens(index - 1) is in Operators
+		isCall = index + 4 < tokens.Length and tokens(index + 1) is "("
+		isStepping = isNested and isCall and tokens(index + 3) is "-"
 		if value is method and isStepping and Tokenizer.IsDigit(tokens(index + 4)(0))
 			return tokens(index + 4) to Number
 	0
@@ -60,7 +60,7 @@ Deepest(method Text) Number
 	Counting.Deepest("Other") is 0
 	mutable deepest = 0
 	for lines
-		let argument = Argument(method, Tokenizer(value.Trim).Tokens)
+		argument = Argument(method, Tokenizer(value.Trim).Tokens)
 		if argument > deepest
 			deepest = argument
 	deepest
@@ -73,7 +73,7 @@ Argument(method Text, tokens Texts) Number
 	Counting.Argument("Count", ("+", "Count", "[", "800", ")")) is 0
 	Counting.Argument("Count", ("+", "Count", "(", "800", "]")) is 0
 	for tokens
-		let isLiteral = index + 3 < tokens.Length and tokens(index + 1) is "(" and tokens(index + 3) is ")"
+		isLiteral = index + 3 < tokens.Length and tokens(index + 1) is "(" and tokens(index + 3) is ")"
 		if value is method and isLiteral and Tokenizer.IsDigit(tokens(index + 2)(0))
 			return tokens(index + 2) to Number
 	0
@@ -84,8 +84,8 @@ Constants List(ValidationIssue)
 	Measuring.Constants.Length is 0
 	for lines
 		if value.StartsWith("constant ")
-			let tokens = Tokenizer(value).Tokens
-			let user = Using(tokens(1), tokens, List(Text))
+			tokens = Tokenizer(value).Tokens
+			user = Using(tokens(1), tokens, List(Text))
 			if user is not ""
 				ValidationIssue("ConstantUsesItself", tokens(1) + " calls " + user + ", which uses " + tokens(1), index + 1)
 Using(name Text, tokens Texts, visited Texts) Text
@@ -93,11 +93,11 @@ Using(name Text, tokens Texts, visited Texts) Text
 	Looping.Using("Blood", List(Text) + "name", List(Text)) is ""
 	Looping.Using("Blood", ("Other", ".", "Parsed"), List(Text)) is ""
 	Looping.Using("Other", ParsedCall, List(Text)) is "" and Looping.Using("Blood", ParsedCall, ParsedCall) is ""
-	let called = Called(tokens)
+	called = Called(tokens)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and Tokenizer(value).Tokens.First is in called
-			let method = Tokenizer(value).Tokens.First
-			let body = Tokenizer(Duplicates.Implementation(lines, index)).Tokens
+			method = Tokenizer(value).Tokens.First
+			body = Tokenizer(Duplicates.Implementation(lines, index)).Tokens
 			if method is not in visited and (name is in Called(body) or Using(name, body, visited + method) is not "")
 				return method
 	""
@@ -118,10 +118,10 @@ IsOwn(tokens Texts, position Number) Boolean
 	Looping.IsOwn(("Other", "(", "Blood", ")"), 2)
 	Looping.IsOwn(("Other", "to", "Text"), 1) is false
 	Looping.IsOwn(("Splash", "to", "Text"), 1)
-	let isConverted = position > 0 and tokens(position) is "to"
+	isConverted = position > 0 and tokens(position) is "to"
 	if isConverted is false and (position is 0 or tokens(position - 1) is not ".")
 		return true
-	let instance = tokens(position - (isConverted then 1 else 2))
+	instance = tokens(position - (isConverted then 1 else 2))
 	instance is typeName or instance is ")" and tokens.First is typeName
 Lets List(ValidationIssue)
 	Measuring.Lets.First to Text is "LetCallsItself: Area" + LetHint
@@ -133,7 +133,10 @@ Lets List(ValidationIssue)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
 			method = Tokenizer(value).Tokens.First
-		if value.Trim.StartsWith("let ") and IsThroughSample(value, method)
+		trimmed = value.Trim
+		tokens = Tokenizer(trimmed).Tokens
+		isLet = trimmed.StartsWith("let ") or tokens.Length > 1 and tokens(1) is "="
+		if isLet and IsThroughSample(value, method)
 			issues.Add(ValidationIssue("LetCallsItself", method + LetHint, index + 1))
 	issues
 IsThroughSample(line Text, method Text) Boolean
@@ -143,9 +146,9 @@ IsThroughSample(line Text, method Text) Boolean
 	Measuring.IsThroughSample("Sample.Area is 3", "Area") and Measuring.IsThroughSample("Sample.Area.", "Area")
 	Measuring.IsThroughSample("let area = Sample.Other", "Area") is false
 	(Measuring.IsThroughSample("let area = Sample+Area", "Area") or Measuring.IsThroughSample("A Sample.", "A")) is false
-	let tokens = Tokenizer(line.Trim).Tokens
+	tokens = Tokenizer(line.Trim).Tokens
 	for tokens
-		let isOwn = index > 1 and tokens(index - 2) is in Samples and (index < 3 or tokens(index - 3) is not ".")
+		isOwn = index > 1 and tokens(index - 2) is in Samples and (index < 3 or tokens(index - 3) is not ".")
 		if value is method and isOwn and tokens(index - 1) is "."
 			return true
 	false

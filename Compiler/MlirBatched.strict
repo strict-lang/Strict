@@ -36,7 +36,7 @@ Slots Texts
 	MlirBatched(MlirGroupBatched.Sample.function, 2).Slots.Length is 7
 	if (IsUsed or MlirGroupBatched(function, position).IsUsed) is false
 		return List(Text)
-	let batch = List(Text) + MlirTyped.Integer.Constant("%batchSize", "4")
+	batch = List(Text) + MlirTyped.Integer.Constant("%batchSize", "4")
 	function.Float is "f32" then batch + MlirBatchReads(function, position).Slots else batch
 Indexed Texts
 	Paired.Indexed is Setup
@@ -50,12 +50,12 @@ Body Texts
 	Paired.Body(1) is "    cf.br ^computeEntry" and Paired.Body(2) is "  ^computeEntry:"
 	Gathered.Body.Length is 72 and MlirBatched(Single.function, 2).Body(1) is "    %linearBase = arith.constant true"
 	MlirBatched(MlirGroupBatched.Sample.function, 2).Body.Length is 400
-	let device = MlirDevice(function, position)
-	let grouped = MlirGroupBatched(function, position)
+	device = MlirDevice(function, position)
+	grouped = MlirGroupBatched(function, position)
 	if IsUsed is false
-		let scalar = device.Started + device.Emitted(position + 1, function.method.LoopEndOf(position))
+		scalar = device.Started + device.Emitted(position + 1, function.method.LoopEndOf(position))
 		return grouped.IsUsed then grouped.Body + scalar else scalar
-	let loaded = function.Float is "f32" then Prefetched else List(Text) + "  ^loadStart:"
+	loaded = function.Float is "f32" then Prefetched else List(Text) + "  ^loadStart:"
 	loaded + "    cf.br ^computeEntry" + "  ^computeEntry:" + Computing + Computed(device.Started + Emitted(false))
 Prefetched Texts
 	Paired.Prefetched.Length is 43 and Paired.Prefetched(34) is "  ^loaded:"
@@ -63,15 +63,15 @@ Prefetched Texts
 	Paired.Prefetched(31) is "    %loadIndex = arith.addi %batchIndex, %one : i64"
 	Paired.Prefetched(33).IndexOf("^load(%loadNext, %loadIndex : i64, i64), ^loaded {") > 0
 	MlirBatched(Single.function, 2).Prefetched.Length is 212
-	let body = MlirDevice(function, position).Started + Emitted(true)
-	let next = Advanced("load", "batchIndex", "at", "loaded")
+	body = MlirDevice(function, position).Started + Emitted(true)
+	next = Advanced("load", "batchIndex", "at", "loaded")
 	Linear + LoadStart + body + next + "  ^loaded:" + MlirBatchReads(function, position).Loaded
 Emitted(loading Boolean, linear Boolean = false) Texts
 	MlirBatched(Single.function, 2).Emitted(true).Length is 63
 	MlirBatched(Single.function, 2).Emitted(true, true).Length is 87
 	Paired.Emitted(false).Length is 67
 	mutable lines = List(Mutable(Text))
-	let reads = MlirBatchReads(function, position)
+	reads = MlirBatchReads(function, position)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if loading
 			lines = lines + (linear then reads.LinearPrefetched(value) else reads.Prefetched(value))
@@ -87,18 +87,18 @@ Ending Texts
 	Paired.Ending.Length is 11 and MlirBatched(Single.function, 2).Ending(7) is MlirBatchReads.Storing
 	if IsUsed is false
 		return MlirGrouped(function, position).Ending
-	let next = Advanced("compute", "compute_batchIndex", "compute_at", "stored")
-	let stored = function.Float is "f32" then MlirBatchReads(function, position).Stored else List(Text)
+	next = Advanced("compute", "compute_batchIndex", "compute_at", "stored")
+	stored = function.Float is "f32" then MlirBatchReads(function, position).Stored else List(Text)
 	next + "  ^stored:" + stored + MlirDevice.Ending
 Advanced(label Text, index Text, at Text, done Text) Texts
 	Paired.Advanced("l", "i", "a", "d").First is "    cf.br ^lNextBlock"
 	Paired.Advanced("l", "i", "a", "d").Last.StartsWith("    llvm.cond_br %lMore, ^l(%lNext, %lIndex : i64, i64), ^d {")
 	Paired.Ending(5).IndexOf("i64), ^stored {loop") > 0
-	let first = "    %" + label + "Next = arith.addi %" + at + ", %one : i64"
-	let last = "    %" + label + "Index = arith.addi %" + index + ", %one : i64"
-	let more = "    %" + label + "More = arith.cmpi ult, %" + label + "Index, %batchSize : i64"
-	let branch = "    llvm.cond_br %" + label + "More, ^" + label + "(%" + label + "Next, %" + label
-	let loop = branch + "Index : i64, i64), ^" + done
+	first = "    %" + label + "Next = arith.addi %" + at + ", %one : i64"
+	last = "    %" + label + "Index = arith.addi %" + index + ", %one : i64"
+	more = "    %" + label + "More = arith.cmpi ult, %" + label + "Index, %batchSize : i64"
+	branch = "    llvm.cond_br %" + label + "More, ^" + label + "(%" + label + "Next, %" + label
+	loop = branch + "Index : i64, i64), ^" + done
 	constant unrolled = " {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}"
 	("    cf.br ^" + label + "NextBlock", "  ^" + label + "NextBlock:", first, last, more, loop + unrolled)
 Computed(lines Texts, prefix Text = "compute") Texts
@@ -117,11 +117,11 @@ LoadStart Texts
 	Text.Combine(Loading, "\n").Replace("  ^loadStart:", "  ^scalarLoadStart:").Lines
 Linear Texts
 	MlirBatched(Single.function, 2).Linear.Length is 117
-	let linear = MlirBatchLinear(function, position)
+	linear = MlirBatchLinear(function, position)
 	if linear.IsLinear is false
 		return List(Text)
 	constant seed = ("    %at = arith.addi %batchFirst, %batchZero : i64", "    %batchIndex = arith.constant 0 : i64")
-	let started = seed + "    cf.br ^body" + MlirDevice(function, position).Started
-	let body = started + Emitted(true, true) + MlirBatchReads(function, position).Loaded
-	let heading = List(Text) + "  ^loadStart:" + linear.Guard + "  ^linearStart:"
+	started = seed + "    cf.br ^body" + MlirDevice(function, position).Started
+	body = started + Emitted(true, true) + MlirBatchReads(function, position).Loaded
+	heading = List(Text) + "  ^loadStart:" + linear.Guard + "  ^linearStart:"
 	heading + Computed(body, "linear") + "    cf.br ^computeEntry"

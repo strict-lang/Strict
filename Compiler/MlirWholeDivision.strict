@@ -11,20 +11,20 @@ Lines Texts
 	Floating.Lines.Length is 0
 	Remaining.Lines is Checked + Flagging
 	Adding.Lines.Length is 0
-	let isDivided = entry.kind is in (InstructionType.Divide, InstructionType.Modulo)
-	let isChecked = isDivided and statements.naturals(statements.position) is "i"
+	isDivided = entry.kind is in (InstructionType.Divide, InstructionType.Modulo)
+	isChecked = isDivided and statements.naturals(statements.position) is "i"
 	if isChecked is false or MlirWholeFunction(statements.function).IsSafeDivisor(entry.payload(2), statements.position)
 		return List(Text)
-	let values = MlirWholeValues(statements.position)
-	let constants = (values.Line("z", "arith.constant 0 : i64"), values.Line("o", "arith.constant 1 : i64"))
-	let safe = values.Line("s", "arith.select " + Temp("e") + ", " + Temp("o") + ", " + Temp("b") + " : i64")
+	values = MlirWholeValues(statements.position)
+	constants = (values.Line("z", "arith.constant 0 : i64"), values.Line("o", "arith.constant 1 : i64"))
+	safe = values.Line("s", "arith.select " + Temp("e") + ", " + Temp("o") + ", " + Temp("b") + " : i64")
 	constants + (statements.Operation("e", "arith.cmpi eq,", "b", "z"), safe) + Flagged
 Flagged Texts
 	Remaining.Flagged is Flagging
-	let values = MlirWholeValues(statements.position)
-	let widened = values.Line("x", "arith.extui " + Temp("e") + " : i1 to i64")
-	let loaded = values.Line("f", "llvm.load %failed : !llvm.ptr -> i64")
-	let stored = "    llvm.store " + Temp("n") + ", %failed : i64, !llvm.ptr"
+	values = MlirWholeValues(statements.position)
+	widened = values.Line("x", "arith.extui " + Temp("e") + " : i1 to i64")
+	loaded = values.Line("f", "llvm.load %failed : !llvm.ptr -> i64")
+	stored = "    llvm.store " + Temp("n") + ", %failed : i64, !llvm.ptr"
 	(loaded, widened, statements.Operation("n", "arith.ori", "f", "x"), stored)
 Temp(suffix Text) Text
 	Remaining.Temp("s") is "%t2s"

@@ -15,8 +15,8 @@ IsSingle(register Number) Boolean
 	MlirRounded(Sample.function, 4).IsSingle(2)
 	MlirRounded(Sample.function, 4).IsSingle(3) is false
 	Kept.IsSingle(5)
-	let writer = MlirKinds(function).Writer(position, register)
-	let entry = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
+	writer = MlirKinds(function).Writer(position, register)
+	entry = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
 	if entry.kind is InstructionType.IndexCall
 		return MlirCouples(function, writer).IsFlatRead(entry)
 	if entry.kind is InstructionType.LoadVariableToRegister
@@ -42,9 +42,9 @@ Stored(entry InstructionEntry) Texts
 	Sample.Stored(Squared) is Narrowed + "    llvm.store %t2cw, %r2 : f64, !llvm.ptr"
 	MlirRounded(Sample.function, 4).Stored(Shifted(1)) is List(Text) + "    llvm.store %t4c, %r4 : f64, !llvm.ptr"
 	Text.Combine(MlirStatements(Sample.function, 2).Calculated(Squared)).IndexOf("arith.truncf %t2c ") > 0
-	let result = "%t" + position + "c"
+	result = "%t" + position + "c"
 	if IsRounded(entry) is false
 		return List(Text) + function.Store(result, "%r" + entry.payload(3))
-	let single = "    " + result + "s = arith.truncf " + result + " : f64 to f32"
-	let wide = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
+	single = "    " + result + "s = arith.truncf " + result + " : f64 to f32"
+	wide = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
 	(single, wide, function.Store(result + "w", "%r" + entry.payload(3)))

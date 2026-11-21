@@ -17,22 +17,22 @@ Stored(number Text, target Text) Texts
 	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
 	Singled.Stored("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
 	MlirFeeding(MlirDeviceStatements.Singled, 2).Stored("%d2", "%r2") is ("    llvm.store %d2, %r2 : f32, !llvm.ptr")
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is in MlirRational.Kinds
 		return List(Text) + MlirTyped(function.Float).Store(number, target)
 	if IsFeeding(at, LoadReuse(function.method.instructions).Written(entry))
 		return List(Text) + function.Store(number, target)
-	let inexact = MlirExact(function, at).Set("%inexact", "%inexact", target)
+	inexact = MlirExact(function, at).Set("%inexact", "%inexact", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + inexact
 Packed(name Text) Texts
 	Singled.Packed("%d3").Last is "    %d3r3 = llvm.insertvalue %d3_q, %d3r2[2] : !llvm.struct<(f32, i64, i64)>"
 	Summing.Packed("%d3").Length is 2
 	Summing.Packed("%d3")(0) is "    %d3r0 = llvm.mlir.undef : !llvm.struct<(f64)>"
 	Chained.IsFloating(0, Chained.function.method.instructions(0))
-	let returned = MlirExact(function, at).Returned
+	returned = MlirExact(function, at).Returned
 	mutable lines = List(Text) + ("    " + name + "r0 = llvm.mlir.undef : " + returned)
 	for MlirExact(function, at).Names(name)
-		let packed = " = llvm.insertvalue " + value + ", " + name + "r" + index + "[" + index + "] : "
+		packed = " = llvm.insertvalue " + value + ", " + name + "r" + index + "[" + index + "] : "
 		lines = lines + ("    " + name + "r" + (index + 1) + packed + returned)
 	lines
 Unpacked(name Text) Texts
@@ -43,7 +43,7 @@ Unpacked(name Text) Texts
 	MlirFeeding(MlirWhole.Row.function, 0).IsFeeding(11, 9)
 	MlirFeeding(MlirFunction(Chained.function, Group = 5), 0).IsFloating(5, InstructionEntry.Return(3)) is false
 	Summing.IsFloated(9, 5) is false
-	let returned = MlirExact(function, at).Returned
+	returned = MlirExact(function, at).Returned
 	for MlirExact(function, at).Names(name)
 		"    " + value + " = llvm.extractvalue " + name + "r[" + index + "] : " + returned
 Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
@@ -56,7 +56,7 @@ Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
 	Summing.IsFloated(2, 1) is false
 	Chained.IsFloating(0, InstructionEntry.Invoke(0, ("Strict/Number", "Run", "Strict/Number"), List(Number), 0))
 	Passing.IsPassed(6, 5) is false
-	let call = "    " + result + "r = func.call @" + Symbol(calls.callee) + operands
+	call = "    " + result + "r = func.call @" + Symbol(calls.callee) + operands
 	(List(Text) + (call + " : (" + calls.Types + ") -> " + MlirExact(function, at).Returned)) + Unpacked(result)
 Symbol(callee MlirFunction) Text
 	Summing.Symbol(MlirDevice.Twice.function) is "Rows_Twice_1_device"
@@ -69,15 +69,15 @@ Called(number Text, target Text) Texts
 	Chained.Stored("%d1", "%r1") is ("    llvm.store %d1, %r1 : f64, !llvm.ptr")
 	Singled.Stored("%d6", "%r4")(1) is "    llvm.store %inexact, %r4_e : i64, !llvm.ptr"
 	Chained.IsStored(2, Chained.function.method.instructions(2), 2) is false
-	let exact = MlirExact(function, at).Set(number + "_e", number + "_q", target)
+	exact = MlirExact(function, at).Set(number + "_e", number + "_q", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + exact
 IsFeeding(position Number, register Number) Boolean
 	Chained.IsFeeding(1, 1)
 	Chained.IsFeeding(4, 3) is false
 	Summing.IsFeeding(6, 4) is false
-	let reuse = LoadReuse(function.method.instructions)
+	reuse = LoadReuse(function.method.instructions)
 	for Range(position + 1, function.method.instructions.Length)
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if register is in reuse.Reads(entry) and IsPositional(value, entry, register) or IsStored(value, entry, register)
 			return true
 		if reuse.Written(entry) is register
@@ -92,28 +92,28 @@ IsStored(position Number, entry InstructionEntry, register Number) Boolean
 	MlirFeeding(MlirWhole.Row.function, 0).IsFloating(13, MlirWhole.Rows(13)) is false
 	MlirFeeding(MlirWhole.Row.function, 0).IsFloating(10, MlirWhole.Rows(10))
 	MlirFeeding(MlirFiltering.Filtering.function, 0).IsFloating(5, MlirParallel.Filtered.instructions(5)) is false
-	let isStore = entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
+	isStore = entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
 	isStore and IsLoaded(position, entry.texts(0))
 IsPositional(position Number, entry InstructionEntry, register Number) Boolean
 	Chained.IsPositional(4, Chained.function.method.instructions(4), 3)
 	Passing.IsPositional(6, Passing.function.method.instructions(6), 2)
 	Summing.IsPositional(8, Summing.function.method.instructions(8), 5) is false
-	let kind = entry.kind
-	let isCompared = kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
+	kind = entry.kind
+	isCompared = kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	if kind is InstructionType.IndexCall or isCompared or IsPassed(position, register)
 		return true
-	let isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
-	let written = LoadReuse(function.method.instructions).Written(entry)
+	isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
+	written = LoadReuse(function.method.instructions).Written(entry)
 	(kind is InstructionType.Invoke or isCalculated) and IsFeeding(position, written)
 IsPassed(position Number, register Number) Boolean
 	Passing.IsPassed(6, 2)
 	MlirFeeding(MlirParallel.Doubling.function, 4).IsPassed(4, 1) is false
-	let entry = function.method.instructions(position)
-	let callees = MlirModule(function.types, "").Called(function, position)
+	entry = function.method.instructions(position)
+	callees = MlirModule(function.types, "").Called(function, position)
 	if callees.Length is 0
 		return false
 	for PayloadDecoder(entry).Arguments
-		let name = callees.First.method.parameters(index).Name
+		name = callees.First.method.parameters(index).Name
 		if value is register and MlirFeeding(callees.First, 0).IsLoaded(-1, name)
 			return true
 	false
@@ -124,19 +124,19 @@ IsLoaded(position Number, name Text) Boolean
 	Chained.IsFeeding(0, 5) is false
 	Chained.IsFeeding(0, 1) is false
 	for Range(position + 1, function.method.instructions.Length)
-		let entry = function.method.instructions(value)
-		let isNamed = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name
+		entry = function.method.instructions(value)
+		isNamed = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name
 		if isNamed and IsFeeding(value, entry.payload(0))
 			return true
 	false
 IsFloated(position Number, register Number) Boolean
 	Chained.IsFloated(4, 3)
 	Chained.IsFloated(1, 1) is false
-	let reuse = LoadReuse(function.method.instructions)
+	reuse = LoadReuse(function.method.instructions)
 	for Range(position + 1, function.method.instructions.Length)
-		let entry = function.method.instructions(value)
-		let isStored = entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
-		let isRead = register is in reuse.Reads(entry) and IsFloating(value, entry)
+		entry = function.method.instructions(value)
+		isStored = entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
+		isRead = register is in reuse.Reads(entry) and IsFloating(value, entry)
 		if isRead or isStored and IsFloatedVariable(value, entry.texts(0))
 			return true
 		if reuse.Written(entry) is register
@@ -145,12 +145,12 @@ IsFloated(position Number, register Number) Boolean
 IsFloating(position Number, entry InstructionEntry) Boolean
 	Chained.IsFloating(5, Chained.function.method.instructions(5))
 	Chained.IsFloating(4, Chained.function.method.instructions(4)) is false
-	let kind = entry.kind
-	let isCompared = kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
+	kind = entry.kind
+	isCompared = kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	if position is function.Group or isCompared or kind is in Unfloated
 		return false
-	let isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
-	let isWhole = kind is InstructionType.Invoke and entry.texts(1) is in ("Floor", "Length")
+	isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
+	isWhole = kind is InstructionType.Invoke and entry.texts(1) is in ("Floor", "Length")
 	isCalculated or isWhole then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
 IsFloatedVariable(position Number, name Text) Boolean
 	Chained.IsFloatedVariable(2, "offset") is false
@@ -158,8 +158,8 @@ IsFloatedVariable(position Number, name Text) Boolean
 	Summing.IsFloatedVariable(10, "row") is false
 	Summing.IsFloated(9, 6)
 	for Range(position + 1, function.method.instructions.Length)
-		let entry = function.method.instructions(value)
-		let isNamed = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name
+		entry = function.method.instructions(value)
+		isNamed = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name
 		if isNamed and IsFloated(value, entry.payload(0))
 			return true
 	false

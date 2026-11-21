@@ -17,30 +17,30 @@ constant Marked = "ByteOrderMarkIsNotAllowed: save the file as UTF-8 without BOM
 constant Project = ", run strict in the project folder"
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
 Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
-	let started = Process.Elapsed
-	let files = known.Length > 0 then known else SourceFiles(root).Of(Normalized(path))
+	started = Process.Elapsed
+	files = known.Length > 0 then known else SourceFiles(root).Of(Normalized(path))
 	if known.Length is 0
 		BuildProfile.Reported("Frontend / source discovery (" + files.Length + " files)", started)
-	let before = Process.Elapsed
-	let inference = ResolveCheck.Inference(files)
+	before = Process.Elapsed
+	inference = ResolveCheck.Inference(files)
 	BuildProfile.Reported("Frontend / type inference", before)
 	Built(path, root, withTests, files, inference).entries
 Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference, known = Dictionary(Text, TypeEntry)) LinkRound
-	let source = Normalized(path)
-	let isParsed = BuildProfile.Parsed(value, List(Text) + source)
-	let missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
+	source = Normalized(path)
+	isParsed = BuildProfile.Parsed(value, List(Text) + source)
+	missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
 		return Unlinked.With(Located(source, root, withTests, missing.First))
 	if isParsed is false or Resolved(source, inference, files) is false
 		return Unlinked
-	let fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
-	let main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
-	let entry = BuildProfile.Entry(main, withTests, isQuiet, selection)
-	let linked = BuildProfile.Linked(Linker(root, main, known, BinarySources(files).Stamped), entry)
+	fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
+	main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
+	entry = BuildProfile.Entry(main, withTests, isQuiet, selection)
+	linked = BuildProfile.Linked(Linker(root, main, known, BinarySources(files).Stamped), entry)
 	LinkHomes(linked.With(Checked(linked.linker, linked.entries, source, inference))).Saved
 Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
 	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
-	let sources = BinaryFile.Unchecked(Sources(linker, linked, source))
+	sources = BinaryFile.Unchecked(Sources(linker, linked, source))
 	if sources.Length > 0 and BuildProfile.Parsed(value, sources) is false
 		return List(TypeEntry)
 	mutable failures = 0
@@ -57,15 +57,15 @@ Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	FileCompiler.Sources(Linker.Sample, Logged, "./Examples/A.strict") is List(Text) + "./Examples/HelloLogger.strict"
 	mutable paths = List(Mutable(Text))
 	for linked
-		let local = Path(source).PathOnly.text + "/" + value.Name + ".strict"
-		let path = value.Name.IndexOf("/") < 0 then local else linker.SourcePath(value.Name)
+		local = Path(source).PathOnly.text + "/" + value.Name + ".strict"
+		path = value.Name.IndexOf("/") < 0 then local else linker.SourcePath(value.Name)
 		if path is not source and path is not in paths and File(path).Exists
 			paths.Add(path)
 	paths
 Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
-	let normalized = Normalized(path)
-	let hidden = Mentions(File(normalized).ReadLines).Hidden(path, type)
-	let above = SourceFiles(".").SubfolderWith("..", type) + SourceFiles(".").SubfolderWith("../..", type)
+	normalized = Normalized(path)
+	hidden = Mentions(File(normalized).ReadLines).Hidden(path, type)
+	above = SourceFiles(".").SubfolderWith("..", type) + SourceFiles(".").SubfolderWith("../..", type)
 	if hidden is not "" or above is not ""
 		logger.Log(hidden is "" then "TypeNotFound: " + type + " used in " + path + " is in " + above + Project else hidden)
 		return List(TypeEntry)
@@ -77,9 +77,9 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 Problems(files Texts) Texts slow
 	FileCompiler.Problems(("./Any.strict", "./Boolean.strict")) is ("", "")
 	for files
-		let lines = File(value).ReadLines
-		let broken = Unparsable(lines)
-		let issue = broken < 0 then "" else ResolveCheck.Located(value, broken + 1, FileCheck.Problem(lines, broken))
+		lines = File(value).ReadLines
+		broken = Unparsable(lines)
+		issue = broken < 0 then "" else ResolveCheck.Located(value, broken + 1, FileCheck.Problem(lines, broken))
 		IsMarked(File(value).ReadBytes) then ResolveCheck.Located(value, 1, Marked) else issue
 IsMarked(bytes Bytes) Boolean
 	FileCompiler.IsMarked((239, 187, 191, 104))
@@ -92,9 +92,9 @@ Unparsable(lines Texts) Number
 	FileCompiler.Unparsable(("Run", "\t1 is 1", "", "\t1")) is 2 and FileCompiler.Unparsable(("\t1", "")) is -1
 	Unparsable(Helped) is 1 and Unparsable(Trailing) is 1 and Unparsable(Unspaced) is 0 and Unparsable(Opened) is 0
 	for lines
-		let next = index + 1 < lines.Length then lines(index + 1) else ""
-		let isEmpty = value.Trim is "" and next.Trim is not ""
-		let isBroken = value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
+		next = index + 1 < lines.Length then lines(index + 1) else ""
+		isEmpty = value.Trim is "" and next.Trim is not ""
+		isBroken = value.StartsWith("	") then IsParsed(value.Trim) is false else Declaration.IsUnspaced(value)
 		if isEmpty or isBroken or IsBrokenConstant(value) or Tokenizer(value).HasOpenText
 			return index
 	Number.NotFound
@@ -107,18 +107,20 @@ IsBrokenConstant(line Text) Boolean
 		return false
 	IsComplete(StatementParser(Tokenizer(line).Tokens).ParseStatement) is false
 IsParsed(line Text) Boolean
-	FileCompiler.IsParsed("let a = b + c")
+	FileCompiler.IsParsed("let a = b + c") and FileCompiler.IsParsed("a = b + c")
 	FileCompiler.IsParsed("(number + other") is false and FileCompiler.IsParsed("a + b)") is false
 	FileCompiler.IsParsed("if generic is") and FileCompiler.IsParsed("not") is false
 	FileCompiler.IsParsed("* value") and FileCompiler.IsParsed("a + + b + c") is false
 	FileCompiler.IsParsed("number + other other") is false and FileCompiler.IsParsed("(, a)") is false
-	let tokens = Tokenizer(line).Tokens
-	let statement = StatementParser(tokens).ParseStatement
+	tokens = Tokenizer(line).Tokens
+	statement = StatementParser(tokens).ParseStatement
 	if statement is Error or Tokenizer.IsGrouped(tokens) is false
 		return false
-	let isReduce = statement.Kind is "Binary" and statement.children.First.Kind is "Missing"
-	let regenerated = Tokenizer(statement to Text).Tokens - "(" - ")"
-	IsComplete(isReduce then statement.children.Last else statement) and regenerated is (tokens - "(" - ")")
+	isReduce = statement.Kind is "Binary" and statement.children.First.Kind is "Missing"
+	printed = Tokenizer(statement to Text).Tokens - "(" - ")"
+	expected = tokens - "(" - ")"
+	regenerated = statement.Kind is "Declaration" and statement.text.StartsWith("let ") and expected.Length > 0 and expected(0) is not "let" then printed.Slice(1, printed.Length - 1) else printed
+	IsComplete(isReduce then statement.children.Last else statement) and regenerated is expected
 IsComplete(node SyntaxNode) Boolean
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + b * c").Tokens).Parse)
 	FileCompiler.IsComplete(SyntaxParser(Tokenizer("a + + b").Tokens).Parse) is false
@@ -136,7 +138,7 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	FileCompiler.IsOperand(SyntaxNode("Binary", "is", (SyntaxNode("Missing", ""), SyntaxNode("Missing", ""))), 0)
 	FileCompiler.IsOperand(SyntaxNode("Member", "a", SyntaxNode("Missing", "")), 0) is false
 	FileCompiler.IsOperand(SyntaxNode("Not", "not", SyntaxNode("Missing", "")), 0)
-	let isBinary = node.Kind is "Binary" and (position is 0 or node.text is not "is")
+	isBinary = node.Kind is "Binary" and (position is 0 or node.text is not "is")
 	node.Kind is in ("Not", "Negate", "List") or isBinary
 Resolved(source Text, inference TypeInference, files Texts = List(Text)) Boolean slow
 	FileCompiler.Resolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
@@ -162,8 +164,8 @@ Normalized(path Text) Text
 	Normalized("A.strict") is "./A.strict"
 	Normalized("../DeltaEngine/A.strict") is "./../DeltaEngine/A.strict"
 	Normalized(Directory.Current + "/Sub/A.strict") is "./Sub/A.strict"
-	let slashed = TypeSource.Relative(path).Replace("\\", "/").Replace("/./", "/")
-	let isRelative = slashed.StartsWith("/") is false and slashed.IndexOf(":") < 0
+	slashed = TypeSource.Relative(path).Replace("\\", "/").Replace("/./", "/")
+	isRelative = slashed.StartsWith("/") is false and slashed.IndexOf(":") < 0
 	isRelative and slashed.StartsWith("./") is false then "./" + slashed else slashed
 FullName(path Text, root Text) Text
 	FullName("C:/s/Bytecode\\A.strict", "C:/s") is "Strict/Bytecode/A"
@@ -172,10 +174,10 @@ FullName(path Text, root Text) Text
 	FullName("/x/Helper.strict", "C:/s") is "Strict/Helper"
 	FullName("C:/sx/A.strict", "C:/s") is "Strict/A"
 	FullName("sx/A.strict", "s") is "Strict/sx/A"
-	let slashed = path.Replace("\\", "/")
+	slashed = path.Replace("\\", "/")
 	if slashed.StartsWith(root + "/") is false and (slashed.IndexOf(":") is 1 or slashed.StartsWith("/"))
 		return "Strict/" + Path(slashed).FileName.RemoveExtension.text
-	let start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
+	start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
 	"Strict/" + slashed.Substring(start, slashed.Length - start - 7)
 FullNames(files Texts, root Text) Texts
 	Unoptimized.Loop(LoopPeeling.Summing, Counted, "") is LoopCodegen.Plain.Unpeeled(LoopPeeling.Summing, Counted, "")

@@ -8,8 +8,8 @@ Found(start Number) Numbers
 	mutable threads = List(Numbers)
 	mutable matched = List(Number)
 	for Range(start, text.Length + 1)
-		let current = matched.Length is 0 then Added(threads, Fresh, value) else threads
-		let cut = MatchIndex(current)
+		current = matched.Length is 0 then Added(threads, Fresh, value) else threads
+		cut = MatchIndex(current)
 		matched = cut < current.Length then current(cut).Slice(1, current(cut).Length - 1) else matched
 		threads = Advanced(current.Slice(0, cut), value)
 		if threads.Length is 0 and matched.Length > 0
@@ -58,7 +58,7 @@ Advanced(threads List(Numbers), at Number) List(Numbers)
 	mutable next = List(Numbers)
 	if at is text.Length
 		return next
-	let code = text(at).number
+	code = text(at).number
 	for threads
 		if steps(value(0)).Accepts(code)
 			next = Added(next, Moved(value, value(0) + 1), at + 1)
@@ -70,14 +70,14 @@ Added(threads List(Numbers), thread Numbers, at Number) List(Numbers)
 Followed(listed List(Numbers), thread Numbers, at Number) List(Numbers)
 	Plus.Followed(List(Numbers), (2, 1, -1), 2).Length is 2
 	RegexMachine(RegexParser("^a").Parsed, "ba").Followed(List(Numbers), (1, 1, -1), 1).Length is 0
-	let step = steps(thread(0))
+	step = steps(thread(0))
 	if step.Kind is RegexStep.Split
 		return Added(Added(listed, Moved(thread, thread(0) + step.First), at), Moved(thread, thread(0) + step.Second), at)
 	if step.Kind is RegexStep.Save
 		return Added(listed, Moved(Stored(thread, step.First, at), thread(0) + 1), at)
-	let isBegun = step.Kind is RegexStep.Begin and at is 0
-	let isEnded = step.Kind is RegexStep.End and at is text.Length
-	let target = step.Kind is RegexStep.Jump then thread(0) + step.First else thread(0) + 1
+	isBegun = step.Kind is RegexStep.Begin and at is 0
+	isEnded = step.Kind is RegexStep.End and at is text.Length
+	target = step.Kind is RegexStep.Jump then thread(0) + step.First else thread(0) + 1
 	step.Kind is RegexStep.Jump or isBegun or isEnded then Added(listed, Moved(thread, target), at) else listed
 Moved(thread Numbers, step Number) Numbers
 	Plus.Moved((1, 7), 4) is (4, 7)

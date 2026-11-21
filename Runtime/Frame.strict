@@ -25,7 +25,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	for machine.deadline > 0 then MutationCache.Steps else Invocation.MaxSteps
 		if position >= method.instructions.Length or (index % CheckSteps is End then IsLate(index, position) else false)
 			return position >= method.instructions.Length then Ended(slots) else MutationCache.Exhausted(slots, machine.deadline)
-		let entry = method.instructions(position)
+		entry = method.instructions(position)
 		slots(entry.Target) = Value(entry, position, slots)
 		if entry.kind is InstructionType.Invoke then slots(entry.Target).kind is "Changing" else false
 			for slots(entry.Target).items
@@ -36,14 +36,14 @@ Ended(slots List(VmValue)) List(VmValue)
 	Twice.Ended(Listed)(0).text is "ab"
 	Twice.Traced(Twice.Traced(VmValue.OfError("a"), 0, Listed), 0, Listed).items(1).items.Length is 1
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").Ended(Listed)(ResultSlot).items.First.text is "Timeout"
-	let stopped = machine.deadline > 0 or depth is 0 then MutationCache.Stopped(machine.deadline) else ""
+	stopped = machine.deadline > 0 or depth is 0 then MutationCache.Stopped(machine.deadline) else ""
 	stopped is "" then Looping.Returned(slots) else MutationCache.Exhausted(slots, machine.deadline)
 IsLate(step Number, position Number) Boolean
 	Twice.IsLate(End, 0) is false
 	Frame(Machine(Doubling, deadline = 0.001), Twice.method, "D").IsLate(End, 0)
 	if TestBudget.Busy(depth, step) is 1
-		let line = method.instructions(position.Clamp(0, method.instructions.Length - 1)).line
-		let place = owner.Split("/").Last + "." + method.Name + " line " + line
+		line = method.instructions(position.Clamp(0, method.instructions.Length - 1)).line
+		place = owner.Split("/").Last + "." + method.Name + " line " + line
 		machine.Logged("Slow: " + place + " has computed 1 s on the VM, it is stopped after 10 s, mark its tests native")
 	MutationCache.IsLate(machine)
 Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
@@ -54,7 +54,7 @@ Value(entry InstructionEntry, position Number, slots List(VmValue)) VmValue
 	if entry.kind < InstructionType.StoreSeparator
 		return Stored(entry, slots, position)
 	if entry.kind < InstructionType.BinaryOperatorsSeparator
-		let result = Operations.Result(entry.kind, slots(entry.payload(1)), slots(entry.payload(2)))
+		result = Operations.Result(entry.kind, slots(entry.payload(1)), slots(entry.payload(2)))
 		return machine.deadline > 0 then MutationCache.Budgeted(result) else result
 	Other(entry, slots, position)
 Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
@@ -65,10 +65,10 @@ Next(entry InstructionEntry, position Number, slots List(VmValue)) Number
 		return method.instructions.Length
 	if entry.kind is InstructionType.LoopBegin
 		return Entered(entry, slots, position)
-	let linked = entry.payload.Last
+	linked = entry.payload.Last
 	if entry.kind is InstructionType.LoopEnd
 		return Looping.Next(slots(LoopSlot), position, linked)
-	let isTaken = slots(FlagSlot).IsTrue is (entry.kind is InstructionType.JumpToIdIfTrue)
+	isTaken = slots(FlagSlot).IsTrue is (entry.kind is InstructionType.JumpToIdIfTrue)
 	entry.kind >= InstructionType.JumpToIdIfFalse and isTaken then linked else position + 1
 Stored(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Stored(Twice.method.instructions(0), Listed, 0).number is 21
@@ -90,19 +90,19 @@ Written(entry InstructionEntry, slots List(VmValue)) VmValue
 	Twice.Local(Resolver.OuterIndexSlot, Listed).kind is "None"
 	Twice.Local(ValueSlot, (Listed(5), Listed(6), Listed(5), Listed(5), Listed(5), Listed(8))).number is 1
 	Twice.Local(IndexSlot, (Listed(5), Listed(6), Listed(5), Listed(5), Listed(5), Listed(8))).number is 5
-	let index = entry.payload(2)
-	let position = index is Resolver.LiteralIndex then entry.payload(3) else Local(index, slots).number
-	let target = PayloadDecoder(entry).ElementParts.First
+	index = entry.payload(2)
+	position = index is Resolver.LiteralIndex then entry.payload(3) else Local(index, slots).number
+	target = PayloadDecoder(entry).ElementParts.First
 	Storage(machine.types).Written(slots(entry.payload(1)), target, position, slots(entry.payload(0)))
 Local(slot Number, slots List(VmValue)) VmValue
 	Twice.Local(ResultSlot, Listed).kind is "None"
 	Twice.Local(IndexSlot, Listed).number is 0
 	Twice.Local(Resolver.OuterSlot, Listed).text is "a"
 	if slot > IndexSlot or slot >= 0 and slot is not ValueSlot and slot is not IndexSlot
-		let found = slots(slot)
+		found = slots(slot)
 		return found.kind is "$Constant" then Constants(machine).Value(found.number, found.text to Number) else found
-	let state = slots(LoopSlot)
-	let isIndex = slot is IndexSlot or slot is Resolver.OuterIndexSlot
+	state = slots(LoopSlot)
+	isIndex = slot is IndexSlot or slot is Resolver.OuterIndexSlot
 	if slot > 0 and state.items.Length > 0
 		return Looping.Read(state, isIndex)
 	Looping.Current(state, slot < 0, isIndex, slots(isIndex then IndexSlot else ValueSlot))
@@ -113,8 +113,8 @@ Indexed(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Next(InstructionEntry(InstructionType.JumpToIdIfFalse, List(Text), (0, 7)), 1, Listed) is 2
 	Twice.Next(InstructionEntry(InstructionType.JumpEnd, List(Text), (0, 7)), 1, Listed) is 2
 	Twice.Next(InstructionEntry.LoopBegin(2, -1), 0, Listed) is 4
-	let collection = Local(entry.payload(2), slots)
-	let wrapped = Accessor(machine).Wrapped(collection, slots(entry.payload(1)).number)
+	collection = Local(entry.payload(2), slots)
+	wrapped = Accessor(machine).Wrapped(collection, slots(entry.payload(1)).number)
 	wrapped < 0 then Traced(OutOfRange, position, slots) else Accessor(machine).Item(collection, wrapped)
 Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Calling.Invoked(Calling.method.instructions.First, Listed, 0).Traces.IndexOf("at Caller.Run") > 0
@@ -122,18 +122,18 @@ Invoked(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Other(InstructionEntry(InstructionType.Return, List(Text), (8, -1, 6)), Listed, 0).kind is "Changing"
 	Looping.Read(Twice.Other(InstructionEntry.LoopBegin(6, 8), Listed, 0), false).number is 1
 	Twice.Other(InstructionEntry(InstructionType.InvokeWriteToList, "list", (8, 7)), Listed, 0).Length is 3
-	let call = Called(entry, slots)
-	let accessed = entry.payload.Length > call.Resolution + 3 then Accessor(machine).Accessed(call) else VmValue.None
-	let result = accessed.kind is "None" then machine.Call(call) else accessed
+	call = Called(entry, slots)
+	accessed = entry.payload.Length > call.Resolution + 3 then Accessor(machine).Accessed(call) else VmValue.None
+	result = accessed.kind is "None" then machine.Call(call) else accessed
 	result.kind is in VmValue.ErrorKinds then Traced(result, position, slots) else result
 Called(entry InstructionEntry, slots List(VmValue)) Invocation
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Instance.number is 4
 	Twice.Called(Invocation.AddCall.entry, (VmValue.OfNumber(3), VmValue.OfNumber(4))).Arguments.First.number is 3
 	Twice.Called(Invocation.AddCall.entry, Listed).Resolution is 10
 	Twice.Called(InstructionEntry.Invoke(0, ("T", "A", "N", "x", "y"), (1, 0), -1), Listed).Arguments.Last.text is "ab"
-	let count = 5 + entry.payload(3)
-	let flag = count + 1 + entry.payload(count)
-	let instance = entry.payload(flag) is 1 then slots(entry.payload(flag + 1)) else slots(ThisSlot)
+	count = 5 + entry.payload(3)
+	flag = count + 1 + entry.payload(count)
+	instance = entry.payload(flag) is 1 then slots(entry.payload(flag + 1)) else slots(ThisSlot)
 	mutable arguments = List(Mutable(VmValue))
 	for entry.payload(count)
 		arguments.Add(slots(entry.payload(count + 1 + index)))
@@ -142,14 +142,14 @@ Traced(error VmValue, position Number, slots List(VmValue)) VmValue
 	Twice.Traced(VmValue.OfError("a"), 0, Listed).Traces.IndexOf("at Doubler.Twice in Doubler.strict:line") > 0
 	if error.kind is "Strict/ErrorWithValue"
 		return VmValue(error.kind, error.number, error.text, (Traced(error.items(0), position, slots), error.items(1)))
-	let traces = error.items(1).items
-	let isShown = traces.Length < 2 and slots.Length > MembersSlot and owner is in machine.places
-	let resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolved(owner, machine.folder)
-	let rest = isShown then slots.Slice(MembersSlot, slots.Length - MembersSlot) else List(VmValue)
-	let start = isShown then machine.types(machine.places(owner)).members.Length else -1
-	let trace = TraceEntry(method, owner, start).Trace(rest, resolved, method.instructions(position).line)
-	let isRepeated = traces.Length > 0 and traces.Last is trace
-	let traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
+	traces = error.items(1).items
+	isShown = traces.Length < 2 and slots.Length > MembersSlot and owner is in machine.places
+	resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolved(owner, machine.folder)
+	rest = isShown then slots.Slice(MembersSlot, slots.Length - MembersSlot) else List(VmValue)
+	start = isShown then machine.types(machine.places(owner)).members.Length else -1
+	trace = TraceEntry(method, owner, start).Trace(rest, resolved, method.instructions(position).line)
+	isRepeated = traces.Length > 0 and traces.Last is trace
+	traced = isRepeated then error.items(1) else VmValue.OfList(Invocation.Kept(traces, trace))
 	VmValue(error.kind, error.number, error.text, (error.items(0), traced))
 Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Looping.Read(Twice.Looped(InstructionEntry.LoopBegin(6, 8), Listed, 0), false).number is 1
@@ -160,7 +160,7 @@ Looped(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	Twice.Looped(MethodEntry.CountingLoop.instructions(1), Listed, 1).number is 1
 	if entry.kind is InstructionType.LoopEnd
 		return Looping.Ended(slots(LoopSlot), -1 is in entry.payload and slots(FlagSlot).IsTrue is false)
-	let failed = Looping.Failed(slots(entry.payload(0)), Ending(entry, slots))
+	failed = Looping.Failed(slots(entry.payload(0)), Ending(entry, slots))
 	if failed.kind is not "None"
 		return Traced(failed, position, slots)
 	Looping.Begun(slots(LoopSlot), slots(entry.payload(0)), Ending(entry, slots), position)
@@ -197,7 +197,7 @@ Other(entry InstructionEntry, slots List(VmValue), position Number) VmValue
 	if entry.kind is InstructionType.LoopBegin or entry.kind is InstructionType.LoopEnd
 		return Looped(entry, slots, position)
 	if entry.kind is InstructionType.Return
-		let result = slots(entry.payload(0))
+		result = slots(entry.payload(0))
 		return entry.payload.Length is 1 then result else Paired(entry, slots)
 	if entry.kind is InstructionType.CheckError
 		return ErrorCheck(entry).Value(slots(entry.payload(0)), slots(entry.Target), value, position)

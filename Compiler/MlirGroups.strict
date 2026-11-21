@@ -33,7 +33,7 @@ Call Number
 		return Number.NotFound
 	mutable found = -1
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let adding = Adding(value)
+		adding = Adding(value)
 		if function.method.instructions(value).kind is InstructionType.LoopBegin or adding < 0
 			return Number.NotFound
 		if adding > 0
@@ -43,14 +43,14 @@ Adding(at Number) Number
 	Norming.Adding(11) is 1
 	Norming.Adding(7) is 0
 	Wrapping.Adding(11) is 1
-	let callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Called(function, at)
 	if callees.Length is not 1
 		return 0
-	let callee = callees.First
+	callee = callees.First
 	for callee.method.instructions
 		if value.kind is InstructionType.LoopBegin and MlirDeviceChoice(callee, index).IsChoice
 			return Number.NotFound
-	let summed = MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false)
+	summed = MlirDeviceSums(callee, 0).IsSummed(callee, 0, callee.method.instructions.Length, false)
 	summed then 1 else Wraps(callee) then 1 else 0
 Wraps(callee MlirFunction) Boolean
 	Norming.Wraps(MlirFunction(Norming.function, method = Delegated)) is false
@@ -73,7 +73,7 @@ Size(at Number) Text
 	Aligning.Call is 11 and Ranging.Call is -1
 	Norming.Size(11) is "size"
 	Norming.Size(7) is ""
-	let size = Arguments(function.method.instructions(at), at)
+	size = Arguments(function.method.instructions(at), at)
 	size.StartsWith("!") or size.StartsWith("?") then "" else size
 Arguments(entry InstructionEntry, at Number) Text
 	Norming.Arguments(Normed.instructions(11), 11) is "size"
@@ -85,21 +85,21 @@ Grouping(register Number, before Number) Text
 	Norming.Grouping(7, 11) is "size"
 	Norming.Grouping(4, 7) is "?size"
 	Norming.Grouping(1, 11) is ""
-	let writer = Writer(register, before)
-	let entry = function.method.instructions(writer)
+	writer = Writer(register, before)
+	entry = function.method.instructions(writer)
 	if writer < 0 or entry.kind is InstructionType.LoadConstantToRegister
 		return ""
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Loaded(entry.texts(0), writer)
-	let kind = entry.kind
-	let isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
+	kind = entry.kind
+	isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	kind is InstructionType.Invoke then Invoked(entry, writer) else isBinary then Calculated(entry, writer) else "!"
 Invoked(entry InstructionEntry, at Number) Text
 	Norming.Invoked(InstructionEntry.Invoke(5, ("Strict/Number", "Ceiling", "Strict/Number"), List(Number), 8), 11) is ""
 	Norming.Invoked(Normed.instructions(7), 7) is "size"
 	Norming.Invoked(Normed.instructions(11), 11) is "!"
-	let register = MlirDeviceCalls(function, at, function).Register(entry)
-	let instance = register < 0 then "" else Grouping(register, at)
+	register = MlirDeviceCalls(function, at, function).Register(entry)
+	instance = register < 0 then "" else Grouping(register, at)
 	entry.texts(1) is "Floor" then Floored(instance) else Combined(instance, Arguments(entry, at)) is "" then "" else "!"
 Writer(register Number, before Number) Number
 	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Subtract, (2, 4, 7)), 7) is "size"
@@ -115,43 +115,43 @@ Loaded(name Text, at Number) Text
 	if name is in ("index", "value")
 		return "!"
 	for at - position - 1
-		let earlier = function.method.instructions(at - 1 - index)
+		earlier = function.method.instructions(at - 1 - index)
 		if earlier.kind is InstructionType.StoreRegisterToVariable and earlier.texts(0) is name
 			return Grouping(earlier.payload(0), at - 1 - index)
 	""
 Calculated(entry InstructionEntry, at Number) Text
 	Norming.Calculated(Normed.instructions(6), 6) is "?size"
 	Norming.Calculated(Normed.instructions(9), 9) is "size"
-	let left = Grouping(entry.payload(1), at)
-	let right = Grouping(entry.payload(2), at)
-	let divisor = Writer(entry.payload(2), at)
-	let named = function.method.instructions(divisor)
-	let isNamed = divisor >= 0 and named.kind is InstructionType.LoadVariableToRegister
-	let isGrouping = entry.kind is InstructionType.Divide and left is "!" and right is "" and isNamed
-	let aligned = Aligned(entry, at)
+	left = Grouping(entry.payload(1), at)
+	right = Grouping(entry.payload(2), at)
+	divisor = Writer(entry.payload(2), at)
+	named = function.method.instructions(divisor)
+	isNamed = divisor >= 0 and named.kind is InstructionType.LoadVariableToRegister
+	isGrouping = entry.kind is InstructionType.Divide and left is "!" and right is "" and isNamed
+	aligned = Aligned(entry, at)
 	aligned is not "" then aligned else (isGrouping then "?" + named.texts(0) else Combined(left, right))
 Aligned(entry InstructionEntry, at Number) Text
 	Aligning.Aligned(AlignedCode(9), 9) is "size"
 	if entry.kind is not InstructionType.Subtract or IsIndex(entry.payload(1), at) is false
 		return ""
-	let writer = Resolved(entry.payload(2), at)
-	let remainder = function.method.instructions(writer)
+	writer = Resolved(entry.payload(2), at)
+	remainder = function.method.instructions(writer)
 	if writer < 0 or remainder.kind is not InstructionType.Modulo or IsIndex(remainder.payload(1), writer) is false
 		return ""
-	let divisor = Writer(remainder.payload(2), writer)
-	let named = function.method.instructions(divisor)
-	let isNamed = divisor >= 0 and named.kind is InstructionType.LoadVariableToRegister
+	divisor = Writer(remainder.payload(2), writer)
+	named = function.method.instructions(divisor)
+	isNamed = divisor >= 0 and named.kind is InstructionType.LoadVariableToRegister
 	isNamed and Grouping(remainder.payload(2), writer) is "" then named.texts(0) else ""
 Resolved(register Number, before Number) Number
 	Aligning.Resolved(6, 9) is 6 and Aligning.Resolved(3, 9) is 5
 	Aligning.Resolved(4, 7) is 6 and Aligning.Resolved(9, 9) is -1
-	let writer = Writer(register, before)
-	let entry = function.method.instructions(writer)
+	writer = Writer(register, before)
+	entry = function.method.instructions(writer)
 	if writer < 0 or entry.kind is not InstructionType.LoadVariableToRegister
 		return writer
 	for writer - position - 1
-		let at = writer - 1 - index
-		let stored = function.method.instructions(at)
+		at = writer - 1 - index
+		stored = function.method.instructions(at)
 		if stored.kind is InstructionType.StoreRegisterToVariable and stored.texts(0) is entry.texts(0)
 			return Resolved(stored.payload(0), at)
 	writer
@@ -164,8 +164,8 @@ IsIndex(register Number, before Number) Boolean
 	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Subtract, (2, 3, 7)), 9) is ""
 	if function.method.instructions(position).payload(1) is 1
 		return false
-	let writer = Writer(register, before)
-	let entry = function.method.instructions(writer)
+	writer = Writer(register, before)
+	entry = function.method.instructions(writer)
 	writer >= 0 and entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is "index"
 Combined(left Text, right Text) Text
 	Norming.Combined("", "?size") is "!" and Norming.Combined("size", "size") is "size"
@@ -173,7 +173,7 @@ Combined(left Text, right Text) Text
 	Norming.Combined("", "size") is "size"
 	Norming.Combined("size", "count") is "!"
 	Norming.Combined("?size", "") is "!"
-	let isOpen = left.StartsWith("!") or left.StartsWith("?") or right.StartsWith("!") or right.StartsWith("?")
+	isOpen = left.StartsWith("!") or left.StartsWith("?") or right.StartsWith("!") or right.StartsWith("?")
 	isOpen or left is not "" and right is not "" and left is not right then "!" else left is "" then right else left
 Floored(grouping Text) Text
 	Norming.Floored("?size") is "size"

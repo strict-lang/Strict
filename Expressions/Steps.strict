@@ -12,7 +12,7 @@ Of(nameIndex Number) Text
 		if tokens(value) is in (",", ")")
 			return ""
 		if tokens(value) is "with" and tokens(value + 1) is "Step"
-			let isRounding = value + 3 < tokens.Length and tokens(value + 3) is in ("Floor", "Ceiling")
+			isRounding = value + 3 < tokens.Length and tokens(value + 3) is in ("Floor", "Ceiling")
 			return tokens(value + 2) + (isRounding then " " + tokens(value + 3) else "")
 	""
 Entries(header HeaderTokens) Scope
@@ -20,13 +20,13 @@ Entries(header HeaderTokens) Scope
 	Steps(List(Text)).Entries(HeaderTokens(SecondStep.tokens)).names is ("B b step")
 	Steps(List(Text)).Entries(HeaderTokens(Tokenizer("B(a Number) Number with Step 0.5").Tokens)).TypeOf("B step") is "0.5"
 	Steps(List(Text)).Members(("has maxStep Number", "Run(a Number with Step 0.5)")).names.Length is 0
-	let name = header.tokens(0)
+	name = header.tokens(0)
 	mutable entries = Scope(List(Text), List(Text))
 	for "Step" is in header.tokens then header.ParameterNames else List(Text)
-		let step = Steps(header.tokens).Of(header.ParameterPosition(value))
+		step = Steps(header.tokens).Of(header.ParameterPosition(value))
 		if step is not ""
 			entries = entries.With(name + " " + value + " step", step)
-	let returned = "Step" is in header.tokens then Steps(header.tokens).Of(header.ParametersEnd) else ""
+	returned = "Step" is in header.tokens then Steps(header.tokens).Of(header.ParametersEnd) else ""
 	returned is "" then entries else entries.With(name + " step", returned)
 Members(lines Texts) Scope
 	Steps(List(Text)).Members(("has price Number with Step 0.01", "has count Number")).TypeOf("price step") is "0.01"
@@ -34,7 +34,7 @@ Members(lines Texts) Scope
 	mutable types = List(Mutable(Text))
 	for lines
 		if TypeShape(lines).IsMemberLine(value)
-			let step = value.IndexOf("Step") > 0 then Steps(Tokenizer(value).Tokens).Of(1) else ""
+			step = value.IndexOf("Step") > 0 then Steps(Tokenizer(value).Tokens).Of(1) else ""
 			if step is not ""
 				names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " step")
 				types.Add(step)
@@ -43,7 +43,7 @@ Unnumbered(path Text, lines Texts) Texts
 	Steps(List(Text)).Unnumbered("A", Rounded).Length is 0
 	Steps(List(Text)).Unnumbered("A", List(Text) + "has a Numbers with Step 1") is (NotNumber)
 	for lines
-		let type = value.StartsWith("	") then "" else Steps(Tokenizer(value).Tokens).Unrounded
+		type = value.StartsWith("	") then "" else Steps(Tokenizer(value).Tokens).Unrounded
 		if type is not ""
 			ResolveCheck.Located(path, index + 1, "StepMustBeOnNumber: " + type + ", only a Number is rounded to its step")
 Unrounded Text

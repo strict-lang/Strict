@@ -25,25 +25,25 @@ Emitted Texts
 	MlirCalls(Shapes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	MlirCalls(Hashes, 1).Emitted.Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(Shapes, 1).Emitted).IndexOf("@strict_pin(%t1of)") > 0
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if entry.kind is InstructionType.Print
 		return Printed(entry)
 	if entry.kind is InstructionType.FieldLoad
 		return MlirInstances(function, position).Field(entry)
 	if MlirTexts(function, position).IsConversion
 		return MlirTexts(function, position).Converted(entry)
-	let decoder = PayloadDecoder(entry)
+	decoder = PayloadDecoder(entry)
 	decoder.Text(2) is "from" then Created(entry, decoder) else Invoked(entry, decoder)
 Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 1).Created(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0
 	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0
-	let type = function.TypeOf(decoder.Text(1))
-	let count = PayloadDecoder(entry).ArgumentCount
-	let custom = decoder.Callee(type)
-	let instances = MlirInstances(function, position)
-	let target = "%r" + entry.payload(0)
-	let isForeign = MlirForeign(MlirFunction(function.types, type, custom, typeIndex = function.typeIndex)).IsForeign
+	type = function.TypeOf(decoder.Text(1))
+	count = PayloadDecoder(entry).ArgumentCount
+	custom = decoder.Callee(type)
+	instances = MlirInstances(function, position)
+	target = "%r" + entry.payload(0)
+	isForeign = MlirForeign(MlirFunction(function.types, type, custom, typeIndex = function.typeIndex)).IsForeign
 	if custom.instructions.Length is 0 and isForeign is false or IsMemberValue(entry, type, custom)
 		return Shared(MlirPairs(function, position).Constructed(entry, decoder.Text(1), instances), target)
 	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
@@ -52,85 +52,85 @@ Shared(constructed Texts, target Text) Texts
 	MlirCalls(Hashes, 1).Shared(List(Text), "%r1").Length is 0
 	if MlirConstants(function, position).IsConstant is false
 		return constructed
-	let isFlat = MlirFlats(function, position).Count(function.method.instructions(position).texts(0)) > 0
-	let pin = isFlat then "strict_flat_pin" else "strict_pin"
+	isFlat = MlirFlats(function, position).Count(function.method.instructions(position).texts(0)) > 0
+	pin = isFlat then "strict_flat_pin" else "strict_pin"
 	MlirLists(function, position).Cached(constructed, Temp("of"), pin) + function.Store(Temp("r"), target)
 IsMemberValue(entry InstructionEntry, type TypeEntry, chosen MethodEntry) Boolean
 	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash, FromText) is false
 	MlirCalls(Holding, 1).IsMemberValue(InstructionEntry.HolderFrom, Holding.type, Holding.type.methods.First) is false
-	let layout = MlirLayout(function)
-	let members = type.Changing
-	let arguments = PayloadDecoder(entry).Arguments
+	layout = MlirLayout(function)
+	members = type.Changing
+	arguments = PayloadDecoder(entry).Arguments
 	if members.Length is not 1 or arguments.Length is not 1 or chosen.parameters.Length is not 1
 		return false
-	let member = layout.Represented(TypeEntry.ShortName(members.First.typeName))
+	member = layout.Represented(TypeEntry.ShortName(members.First.typeName))
 	if layout.Represented(TypeEntry.ShortName(chosen.parameters.First.typeName)) is member
 		return false
-	let argument = MlirKinds(function).KindOf(position, arguments.First)
+	argument = MlirKinds(function).KindOf(position, arguments.First)
 	argument is TypeEntry.ShortName(type.Name) or layout.Represented(argument) is member
 Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
 	MlirCalls(MlirTails.Sample.function, 1).Emitted.Last is "  ^tail1:"
-	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
+	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
 	if MlirTails(function, position).IsTail
 		return MlirTails(function, position).Jumped(entry, type)
-	let count = PayloadDecoder(entry).ArgumentCount
-	let helper = NativeHelper(entry, decoder)
+	count = PayloadDecoder(entry).ArgumentCount
+	helper = NativeHelper(entry, decoder)
 	if helper is not ""
 		return MlirDestined(function, position).Destined(entry, MlirNatives(function, position).Emitted(entry, type, helper))
-	let compiled = MlirDestined(function, position).Destined(entry, Compiled(entry, decoder, type, count))
+	compiled = MlirDestined(function, position).Destined(entry, Compiled(entry, decoder, type, count))
 	MlirGrouped(function, position).Kept(compiled, entry.payload(0))
 Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
-	let callee = decoder.Callee(type)
-	let target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
+	callee = decoder.Callee(type)
+	target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
 	if callee.instructions.Length is 0 and MlirForeign(target).IsForeign is false
 		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
-	let types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
-	let names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
-	let called = "    " + Temp("r") + " = func.call @" + MlirCached(target).Called
-	let call = called + "(" + names + ") : (" + types + ") -> f64"
-	let returned = MlirSpent(function, position).Dead + MlirChecks(function, position).Returned(target, entry.payload(0))
+	types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
+	names = Text.Combine(List(Text) + Temp("m") + ArgumentNames(callee.parameters.Length), ", ")
+	called = "    " + Temp("r") + " = func.call @" + MlirCached(target).Called
+	call = called + "(" + names + ") : (" + types + ") -> f64"
+	returned = MlirSpent(function, position).Dead + MlirChecks(function, position).Returned(target, entry.payload(0))
 	MlirWholeCall(function, position).Dispatched(Loads(entry, type) + Defaults(callee, count) + call + returned)
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
 	if count > callee.parameters.Length
-		let called = function.type.Name + "." + function.method.Name + " calls " + callee.Name + " with " + count
+		called = function.type.Name + "." + function.method.Name + " calls " + callee.Name + " with " + count
 		return Error("InvalidCallArity: " + called + " instead of " + callee.parameters.Length)
-	let scratch = "%r" + function.method.instructions(position).payload(0)
+	scratch = "%r" + function.method.instructions(position).payload(0)
 	mutable lines = List(Mutable(Text))
 	for Range(count, callee.parameters.Length)
-		let initial = Natives(function.types).Initial(callee.parameters(value))
-		let named = initial.kind is "Text" then MlirDefaults(function).ParameterName(initial.text) else ""
-		let literal = MlirStatements(function, position).Literal(initial, scratch, "p" + value, named)
+		initial = Natives(function.types).Initial(callee.parameters(value))
+		named = initial.kind is "Text" then MlirDefaults(function).ParameterName(initial.text) else ""
+		literal = MlirStatements(function, position).Literal(initial, scratch, "p" + value, named)
 		lines = lines + literal + function.Load(Temp("a" + value), scratch)
 	lines
 NativeHelper(entry InstructionEntry, decoder PayloadDecoder) Text
 	MlirCalls(Shapes, 2).NativeHelper(Area, PayloadDecoder(Area)) is ""
 	if MlirCodes(function, position).IsPairCode(entry)
 		return "strict_pairs_text"
-	let type = function.TypeOf(decoder.Text(1))
-	let count = PayloadDecoder(entry).ArgumentCount
-	let isWrite = decoder.Text(2) is "Write" and decoder.Names.Length is 1
-	let name = isWrite then "Write" + decoder.Names.First.Capitalize else decoder.Text(2)
-	let declared = MlirNatives(function, position).Helper(type.Name, name, count)
-	let owned = MlirNatives(function, position).Helper(Owner(entry, type), name, count)
-	let paired = MlirPairs(function, position).Helper(entry, Owner(entry, type), name)
-	let fallback = TypeEntry.ShortName(type.Name).StartsWith("Dictionary") or owned is "" then declared else owned
+	type = function.TypeOf(decoder.Text(1))
+	count = PayloadDecoder(entry).ArgumentCount
+	isWrite = decoder.Text(2) is "Write" and decoder.Names.Length is 1
+	name = isWrite then "Write" + decoder.Names.First.Capitalize else decoder.Text(2)
+	declared = MlirNatives(function, position).Helper(type.Name, name, count)
+	owned = MlirNatives(function, position).Helper(Owner(entry, type), name, count)
+	paired = MlirPairs(function, position).Helper(entry, Owner(entry, type), name)
+	fallback = TypeEntry.ShortName(type.Name).StartsWith("Dictionary") or owned is "" then declared else owned
 	MlirReadText(function, position).Helper(paired is "" then fallback else paired)
 Owner(entry InstructionEntry, type TypeEntry) Text
 	MlirCalls(Shapes, 2).Owner(Area, AreaShape) is "Shape"
-	let instance = PayloadDecoder(entry).Instance
+	instance = PayloadDecoder(entry).Instance
 	instance >= 0 then MlirKinds(function).KindOf(position, instance) else type.Name
 Loads(entry InstructionEntry, type TypeEntry) Texts
 	MlirCalls(Shapes, 2).Loads(Area, AreaShape).Length is 1
-	let instance = PayloadDecoder(entry).Instance
-	let isOwn = type.Name is function.type.Name
-	let owned = instance >= 0 then "%r" + instance else isOwn then "%instance" else ""
-	let self = entry.texts(1) is "from" then "%r" + entry.payload(0) else owned
+	instance = PayloadDecoder(entry).Instance
+	isOwn = type.Name is function.type.Name
+	owned = instance >= 0 then "%r" + instance else isOwn then "%instance" else ""
+	self = entry.texts(1) is "from" then "%r" + entry.payload(0) else owned
 	constant none = "    " + Temp("m") + " = arith.constant 0.0 : f64"
-	let first = self is "" then none else function.Load(Temp("m"), self)
+	first = self is "" then none else function.Load(Temp("m"), self)
 	List(Text) + first + ArgumentLoads(entry, type)
 ArgumentLoads(entry InstructionEntry, type TypeEntry) Texts
 	MlirCalls(Shapes, 2).ArgumentLoads(Area, AreaShape).Length is 0
@@ -139,16 +139,16 @@ ArgumentLoads(entry InstructionEntry, type TypeEntry) Texts
 		Argument(entry, type, index)
 Argument(entry InstructionEntry, type TypeEntry, number Number) Text
 	Counters.Argument(NewCounter, CounterType, 1) is "    %t2a1 = llvm.load %r1 : !llvm.ptr -> f64"
-	let register = PayloadDecoder(entry).Arguments(number)
-	let layout = MlirLayout(function)
+	register = PayloadDecoder(entry).Arguments(number)
+	layout = MlirLayout(function)
 	if layout.Represented(MlirKinds(function).KindOf(position, register)) is not "List(Number)"
 		return function.Load(Temp("a" + number), "%r" + register)
-	let parameters = PayloadDecoder(entry).Callee(type).parameters
-	let wanted = number < parameters.Length then TypeEntry.ShortName(parameters(number).typeName) else ""
+	parameters = PayloadDecoder(entry).Callee(type).parameters
+	wanted = number < parameters.Length then TypeEntry.ShortName(parameters(number).typeName) else ""
 	if layout.Represented(wanted) is not "List(Text)"
 		return function.Load(Temp("a" + number), "%r" + register)
-	let raw = Temp("an" + number)
-	let texts = MlirMemory(function, position).Called(Temp("a" + number), "strict_list_texts", List(Text) + raw)
+	raw = Temp("an" + number)
+	texts = MlirMemory(function, position).Called(Temp("a" + number), "strict_list_texts", List(Text) + raw)
 	function.Load(raw, "%r" + register) + Character.NewLine + texts
 ArgumentNames(count Number) Texts
 	MlirCalls(Shapes, 1).Loads(NewShape, AreaShape)(0) is "    %t1m = llvm.load %r1 : !llvm.ptr -> f64"
@@ -166,9 +166,9 @@ ArgumentTypes(count Number) Texts
 		"f64"
 Printed(entry InstructionEntry) Texts
 	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_log(") > 0
-	let address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
-	let text = entry.payload(1) is 0 then Temp("a") else Temp("bp")
-	let logged = "    func.call @strict_log(" + Temp("a") + ", " + text + ") : (!llvm.ptr, !llvm.ptr) -> ()"
+	address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
+	text = entry.payload(1) is 0 then Temp("a") else Temp("bp")
+	logged = "    func.call @strict_log(" + Temp("a") + ", " + text + ") : (!llvm.ptr, !llvm.ptr) -> ()"
 	if entry.payload(1) is 0
 		return (address, logged)
 	List(Text) + address + MlirTexts(function, position).Pointer(entry.payload(2), "b") + logged

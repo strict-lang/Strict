@@ -2,22 +2,22 @@ has base Text
 has builder DeviceBuild
 constant Sample = GpuBuilt("Compiler/output/Parted", DeviceBuild.Missing)
 Indexed(device Text, kept Text, isTiling Boolean) Texts slow
-	let stamp = "" + HashCode(PtxCache(base).Fingerprint("", isTiling, builder, "")).number
+	stamp = "" + HashCode(PtxCache(base).Fingerprint("", isTiling, builder, "")).number
 	PtxLibraries.Of(base).Indexed(Built(device, kept, isTiling, stamp))
 Built(device Text, kept Text, isTiling Boolean, stamp Text) Texts slow
-	let module = GpuModule(device.Split("\n"))
-	let parts = GpuParts(module.Functions, kept.Split(","))
-	let types = parts.Types
-	let targets = isTiling then ("sm_80", "sm_75") else List(Text) + "sm_75"
+	module = GpuModule(device.Split("\n"))
+	parts = GpuParts(module.Functions, kept.Split(","))
+	types = parts.Types
+	targets = isTiling then ("sm_80", "sm_75") else List(Text) + "sm_75"
 	Directory.Create(Path(base).PathOnly.text + "/ptx")
 	Directory.Create(Path(base).PathOnly.text + "/ptx/built")
-	let failure = Compiled(types, parts.Texts(module, stamp), targets)
+	failure = Compiled(types, parts.Texts(module, stamp), targets)
 	failure is "" then Joined(types, targets) else List(Text) + failure
 Compiled(types Texts, texts Texts, targets Texts) Text slow
-	let stale = Stale(types, texts, targets)
+	stale = Stale(types, texts, targets)
 	for stale
 		File(Slot(types(value)) + ".mlir").Write(texts(value))
-	let failure = Lowered(Slots(types, stale), targets)
+	failure = Lowered(Slots(types, stale), targets)
 	for stale
 		Finished(Slot(types(value)), failure is "" then Key(texts(value)) else "")
 	failure
@@ -31,8 +31,8 @@ Stale(types Texts, texts Texts, targets Texts) Numbers slow
 			index
 IsStale(slot Text, key Text, targets Texts) Boolean slow
 	Sample.IsStale("Compiler/output/missing", "1", List(Text) + "sm_75")
-	let isKept = File(slot + ".key").Exists and PtxCache(slot).Read(".key") is key
-	let isBuilt = File(slot + "." + targets.First + ".ptx").Exists and File(slot + "." + targets.Last + ".ptx").Exists
+	isKept = File(slot + ".key").Exists and PtxCache(slot).Read(".key") is key
+	isBuilt = File(slot + "." + targets.First + ".ptx").Exists and File(slot + "." + targets.Last + ".ptx").Exists
 	(isKept and isBuilt) is false
 Key(text Text) Text
 	Sample.Key("a") is "97"
@@ -46,8 +46,8 @@ Slots(types Texts, stale Numbers) Texts
 		Slot(types(value))
 Lowered(slots Texts, targets Texts) Text slow
 	Sample.Lowered(List(Text), List(Text) + "sm_75") is ""
-	let optimized = MlirParts.Ran("mlir-opt", Optimizing(slots), builder.tools)
-	let translated = optimized is "" then MlirParts.Ran("mlir-translate", Translating(slots), builder.tools) else optimized
+	optimized = MlirParts.Ran("mlir-opt", Optimizing(slots), builder.tools)
+	translated = optimized is "" then MlirParts.Ran("mlir-translate", Translating(slots), builder.tools) else optimized
 	translated is "" then MlirParts.Ran("clang", Compiling(Shared(slots), targets), builder.tools) else translated
 Shared(slots Texts) Texts slow
 	for slots

@@ -14,22 +14,22 @@ Issues List(ValidationIssue)
 LineIssues(tokens Texts, line Number) List(ValidationIssue)
 	Sample.LineIssues(("f", "(", "(", "1", ")", ")"), 2).First.target is "( 1 )" + Hint
 	Sample.LineIssues(("f", "(", "(", "1", ",", "2", ")", ")"), 2).Length is 0
-	let brackets = Brackets(lines)
+	brackets = Brackets(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	for Range(1, tokens.Length - 2)
 		if tokens(value) is "(" and IsArgument(tokens, value, brackets)
-			let listed = tokens.Slice(value, brackets.Closing(tokens, value) - value + 1)
+			listed = tokens.Slice(value, brackets.Closing(tokens, value) - value + 1)
 			issues.Add(ValidationIssue("SingleElementListMustBeValue", Text.Combine(listed, " ") + Hint, line))
 	issues
 IsArgument(tokens Texts, open Number, brackets Brackets) Boolean
 	Sample.IsArgument(("f", "(", "(", "1", ")", ")"), 2, Brackets.Sample)
 	Sample.IsArgument(("x", "is", "(", "1", ")"), 2, Brackets.Sample) is false
 	Sample.IsArgument(("f", "(", "(", ")", ")"), 2, Brackets.Sample) is false
-	let close = brackets.Closing(tokens, open)
+	close = brackets.Closing(tokens, open)
 	if close >= tokens.Length - 1 or close is open + 1 or brackets.HasComma(tokens, open, close)
 		return false
-	let enclosing = Enclosing(tokens, open)
-	let isCall = enclosing > 0 then brackets.IsGroupOpen(tokens, enclosing) is false else false
+	enclosing = Enclosing(tokens, open)
+	isCall = enclosing > 0 then brackets.IsGroupOpen(tokens, enclosing) is false else false
 	isCall and tokens(open - 1) is in ("(", ",") and tokens(close + 1) is in (")", ",")
 Enclosing(tokens Texts, position Number) Number
 	Sample.Enclosing(("f", "(", "a", ",", "(", "b", ")", ")"), 4) is 1

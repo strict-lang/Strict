@@ -1,6 +1,6 @@
 Run(path)
-	let image = ImageLoader(path).Loaded
-	let adjusted = AdjustBrightness(AdjustBrightness.Increase).Process(image)
-	let outputPath = path.RemoveExtension.text + "_output.png"
+	image = ImageLoader(path).Loaded
+	adjusted = AdjustBrightness(AdjustBrightness.Increase).Process(image)
+	outputPath = path.RemoveExtension.text + "_output.png"
 	ImageSaver(outputPath).Save(adjusted)
 	logger.Log("Processed image saved to: " + outputPath)

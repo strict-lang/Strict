@@ -7,9 +7,9 @@ Types Texts
 	Units.Types is ("List", "Unit", "Shape", "Number", "Counted", "Units", "Logger")
 	Mentions(("has Instruction", "has Registers")).Types is ("Instruction", "Registers")
 	Mentions(("Run", "\tconstant Limit = 3", "\tLimit + Size")).Types is ("Size")
-	let shape = TypeShape(lines)
-	let own = shape.MemberScope.names + shape.MethodScope.names + Constants
-	let typed = Typed(shape)
+	shape = TypeShape(lines)
+	own = shape.MemberScope.names + shape.MethodScope.names + Constants
+	typed = Typed(shape)
 	Distinct(CollectedNames(lines) + typed, typed, own)
 Distinct(tokens Texts, typed Texts, own Texts) Texts
 	Mentions(List(Text)).Distinct(("a", "a", "b"), List(Text) + "b", List(Text) + "a") is ("b")
@@ -51,17 +51,17 @@ Missing(files Texts) Texts
 	Unknown(Names(files) + Composed(files))
 Composed(files Texts) Texts
 	Mentions(("has Size", "has logger")).Composed(("Math/Size.strict", "Logger.strict")).First is "Width"
-	let members = TypeShape(lines).MemberScope.types
+	members = TypeShape(lines).MemberScope.types
 	mutable names = List(Mutable(Text))
 	for files
 		if Path(value.Replace("\\", "/")).FileName.RemoveExtension.text is in members
-			let shape = TypeShape(File(value).ReadLines)
+			shape = TypeShape(File(value).ReadLines)
 			if shape.MemberScope.names.Length > 0
 				names = names + shape.MemberScope.names + shape.MethodScope.names
 	names
 Unknown(names Texts) Texts
 	Typo.Unknown(List(Text) + "Number") is ("Numbr", "Other")
-	let all = Named(names + Constants)
+	all = Named(names + Constants)
 	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
 		if IsKnown(value, all) is false
 			value
@@ -73,7 +73,7 @@ Constants Texts
 			Tokenizer(value.Trim).Tokens(1)
 Unmatched(names Texts, files Texts) Texts
 	Mentions.Unmatched(("Vector2s", "Missing"), List(Text) + "./Math/Vector2.strict") is ("Missing")
-	let known = Named(Names(files))
+	known = Named(Names(files))
 	for names
 		if IsKnown(value, known) is false
 			value
@@ -97,14 +97,14 @@ IsKnown(name Text, known Dictionary(Text, Boolean)) Boolean
 	name is in known then true else name.EndsWith("s") and IsKnown(name.Substring(0, name.Length - 1), known)
 Declared(shape Expressions/TypeShape) Texts
 	Mentions.Declared(TypeShape(Typo.lines)) is ("Numbr", "Numbers", "Other", "Number")
-	let calls = shape.CallScope(List(Text))
+	calls = shape.CallScope(List(Text))
 	mutable types = shape.MemberScope.types + Returned(shape)
 	for calls.names
 		if value.LastIndexOf(" types") > 0
 			types = types + calls.types(index).Split(",")
 	mutable result = List(Mutable(Text))
 	for types
-		let name = value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else value
+		name = value.IndexOf("(") > 0 then value.Substring(0, value.IndexOf("(")) else value
 		if name is not "" and name.IndexOf(")") < 0 and name.IndexOf(" ") < 0 and name is not in result
 			result.Add(name)
 	result
@@ -117,7 +117,7 @@ Returned(shape Expressions/TypeShape) Texts
 Hidden(path Text, type Text) Text
 	Hiding.Hidden("A.strict", "Kata") is "A.strict:line 2: " + HiddenType + "Kata, the method Kata hides the type"
 	Typo.Hidden("A.strict", "Numbr") is ""
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	for lines
 		if shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is type
 			return ResolveCheck.Located(path, index + 1, HiddenType + type + ", the method " + type + " hides the type")

@@ -19,32 +19,32 @@ FusedLine(line Text) Text
 	Averaging.FusedLine("\tOnes(2).Average") is "\tOnesAveraged(2)"
 	if Averaged(line) is ""
 		return line
-	let at = line.IndexOf(").Average")
-	let start = Opening(line, at)
-	let call = "Averaged" + line.Substring(start, at + 1 - start)
+	at = line.IndexOf(").Average")
+	start = Opening(line, at)
+	call = "Averaged" + line.Substring(start, at + 1 - start)
 	line.Substring(0, start) + call + line.Substring(at + 9, line.Length - at - 9)
 Called Texts
 	Averaging.Called is ("Ones")
 	mutable names = List(Mutable(Text))
 	for lines
-		let name = Averaged(value)
+		name = Averaged(value)
 		if name is not "" and name is not in names
 			names.Add(name)
 	names
 Averaged(line Text) Text
 	Averaging.Averaged("\tOnes(2).Average") is "Ones"
 	Averaging.Averaged("\tx.Ones(2).Average") is ""
-	let at = line.IndexOf(").Average")
-	let start = at < 0 then -1 else Opening(line, at)
+	at = line.IndexOf(").Average")
+	start = at < 0 then -1 else Opening(line, at)
 	if start < 1
 		return ""
-	let name = Name(line, start)
+	name = Name(line, start)
 	(start - name.Length is 0 or line(start - name.Length - 1) is not ".") and IsFusable(name) then name else ""
 Opening(line Text, closing Number) Number
 	Averaging.Opening("Ones(f(2)).Average", 9) is 4
 	mutable depth = 0
 	for closing
-		let character = line(closing - 1 - index)
+		character = line(closing - 1 - index)
 		if character is "(" and depth is 0
 			return closing - 1 - index
 		depth = character is ")" then depth + 1 else (character is "(" then depth - 1 else depth)
@@ -54,18 +54,18 @@ Name(line Text, start Number) Text
 	Averaging.Name("x.Ones(2)", 6) is "Ones"
 	mutable begin = start
 	for start
-		let character = line(start - 1 - index)
+		character = line(start - 1 - index)
 		if begin is start - index and character.Upper is not character.Lower
 			begin = start - 1 - index
 	line.Substring(begin, start - begin)
 IsFusable(name Text) Boolean
 	Averaging.IsFusable("Ones")
 	Averaging.IsFusable("Run") is false
-	let header = Header(name)
-	let element = header < 0 then "" else Element(lines(header))
+	header = Header(name)
+	element = header < 0 then "" else Element(lines(header))
 	if element is "" or element is not "Number" and MemberScope(element).names.Length is 0
 		return false
-	let ending = Ending(header)
+	ending = Ending(header)
 	mutable last = ""
 	for Range(header + 1, ending)
 		last = lines(value).StartsWith("\t\t") then last else lines(value)
@@ -92,11 +92,11 @@ Element(header Text) Text
 	Averaging.Element("Run") is ""
 	Averaging.Element("Runs") is ""
 	Averaging.Element("Run Number") is ""
-	let returned = HeaderTokens(Tokenizer(header).Tokens).ReturnType
+	returned = HeaderTokens(Tokenizer(header).Tokens).ReturnType
 	returned.EndsWith("s") then returned.Substring(0, returned.Length - 1) else ""
 MemberScope(element Text) Scope
 	Coloring.MemberScope("Color").names is ("Red", "Green", "Blue", "Alpha")
 	Coloring.MemberScope("Color").types is ("Byte", "Byte", "Byte", "Byte")
 	Averaging.MemberScope("Color").names.Length is 0
-	let path = folder + "/" + element + ".strict"
+	path = folder + "/" + element + ".strict"
 	TypeShape(folder is not "" and File(path).Exists then File(path).ReadLines else List(Text)).MemberScope

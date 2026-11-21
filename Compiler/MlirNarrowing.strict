@@ -26,7 +26,7 @@ Format(kind Text) Number
 	MlirNarrowing.Format("List(Float32)") is 32
 	MlirNarrowing.Format("Bytes") is 9
 	MlirNarrowing.Format("List(Number)") is 0
-	let plural = kind.StartsWith("List(") then kind.Substring(5, kind.Length - 6) + "s" else kind
+	plural = kind.StartsWith("List(") then kind.Substring(5, kind.Length - 6) + "s" else kind
 	plural is in PackedNames then Formats(PackedNames.Index(plural)) else 0
 Issues(functions List(MlirFunction)) Texts
 	MlirNarrowing.Issues((Summing.function, MlirKernel.Doubling.function)) is List(Text) + Summing.Issue
@@ -38,9 +38,9 @@ Found(inspected MlirFunction) Texts
 	MlirNarrowing.Found(Few.function).Length is 0
 	Text.Combine(MlirNarrowing.Found(MlirWideMembers.Sparking.function)).IndexOf("loops over Spark") > 0
 	for inspected.method.instructions
-		let isLoop = value.kind is InstructionType.LoopBegin
-		let wide = isLoop then MlirNarrowing(inspected, index).Issue + MlirWideMembers(inspected, index).Issue else ""
-		let issue = isLoop then wide + MlirGpuContract(inspected, index).Issue else ""
+		isLoop = value.kind is InstructionType.LoopBegin
+		wide = isLoop then MlirNarrowing(inspected, index).Issue + MlirWideMembers(inspected, index).Issue else ""
+		issue = isLoop then wide + MlirGpuContract(inspected, index).Issue else ""
 		if issue is not ""
 			issue
 Issue Text
@@ -48,10 +48,10 @@ Issue Text
 	Floats.Issue is ""
 	if IsCandidate is false
 		return ""
-	let wide = Wide
-	let file = TypeSource(function.type).Located("") + ":line "
-	let used = ": " + function.method.Name + " uses 64 bit numbers (" + Text.Combine(wide, ", ") + ")"
-	let issue = file + function.method.instructions(position).line + ": " + Rule + used
+	wide = Wide
+	file = TypeSource(function.type).Located("") + ":line "
+	used = ": " + function.method.Name + " uses 64 bit numbers (" + Text.Combine(wide, ", ") + ")"
+	issue = file + function.method.instructions(position).line + ": " + Rule + used
 	wide.Length is 0 then "" else issue + Advice
 Wide Texts
 	Summing.Wide is ("numbers")
@@ -59,7 +59,7 @@ Wide Texts
 	MlirNarrowing(MlirKernel.Doubling.function, 2).Wide is ("result", "numbers")
 	Texting.Wide.Length is 0
 	Singling.Wide is ("numbers")
-	let all = ((IsResulted then List(Text) + "result" else List(Text)) + Iterated) + MlirKernel(function, position).Sources
+	all = ((IsResulted then List(Text) + "result" else List(Text)) + Iterated) + MlirKernel(function, position).Sources
 	for all
 		if all.Index(value) is index and (value is "result" or IsWide(value))
 			value
@@ -75,15 +75,15 @@ IsWide(name Text) Boolean
 	Marked.IsWide("numbers") is false
 	if Bits(name) > 0 and Bits(name) < Number.DoubleBits
 		return false
-	let kind = MlirKinds(function).VariableKind(position, name)
+	kind = MlirKinds(function).VariableKind(position, name)
 	MlirLayout(function).Represented(kind) is "List(Number)" and Format(kind) is 0
 Iterated Texts
 	Summing.Iterated is ("numbers")
 	Few.Iterated.Length is 0
-	let writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
+	writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
 	if writer < 0 or MlirLoops(function, position).Collection is ""
 		return List(Text)
-	let entry = function.method.instructions(writer)
+	entry = function.method.instructions(writer)
 	entry.kind is InstructionType.LoadVariableToRegister then List(Text) + entry.texts(0) else List(Text)
 IsCandidate Boolean
 	Summing.IsCandidate
@@ -97,39 +97,39 @@ IsCandidate Boolean
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if function.method.instructions(value).kind is not in MlirSingle.Allowed
 			return false
-	let isNumeric = Iterated.Length is 0 or HasNumbers
+	isNumeric = Iterated.Length is 0 or HasNumbers
 	MlirGpuCheck(function, position).IsGpu is false and IsFew is false and IsForced is false and isNumeric
 HasNumbers Boolean
 	Summing.HasNumbers
 	Texting.HasNumbers is false
-	let kinds = MlirKinds(function)
+	kinds = MlirKinds(function)
 	for Iterated + MlirKernel(function, position).Sources
-		let kind = MlirLayout(function).Represented(kinds.VariableKind(position, value))
+		kind = MlirLayout(function).Represented(kinds.VariableKind(position, value))
 		if kind is "List(Number)" or Format(kind) > 0
 			return true
 	false
 IsFew Boolean
 	Few.IsFew
 	Summing.IsFew is false
-	let writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
+	writer = MlirKinds(function).Writer(position, function.method.instructions(position).payload(0))
 	if writer < 0
 		return false
-	let entry = function.method.instructions(writer)
+	entry = function.method.instructions(writer)
 	if entry.kind is not InstructionType.LoadConstantToRegister
 		return false
-	let literal = PayloadDecoder(entry).Value(1)
+	literal = PayloadDecoder(entry).Value(1)
 	literal.kind is not "Number" or literal.number < MlirCost(function, position).Threshold
 Problem(functions List(MlirFunction)) Text
 	MlirNarrowing.Problem(List(MlirFunction) + Few.function) is ""
 	MlirNarrowing.Problem(List(MlirFunction) + Summing.function) is "unsupported: loops\n" + Summing.Issue
-	let issues = Issues(functions)
+	issues = Issues(functions)
 	issues.Length is 0 then "" else "unsupported: loops\n" + Text.Combine(issues, "\n")
 IsForced Boolean
 	Forced.IsForced
 	Summing.IsForced is false
 	mutable names = Iterated
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let texts = function.method.instructions(value).texts
+		texts = function.method.instructions(value).texts
 		names = texts.Length > 0 then names + texts(0) else names
 	for names
 		if Bits(value) is Number.DoubleBits

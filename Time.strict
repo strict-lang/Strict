@@ -22,30 +22,30 @@ Day Number
 Date Numbers
 	Moment.Date is (2023, 11, 14)
 	Time(0).Date is (1970, 1, 1) and Time(951782400).Date is (2000, 2, 29)
-	let shifted = (seconds / Duration.Day.seconds).Floor + DaysBeforeEpoch
-	let era = (shifted / DaysPerEra).Floor
-	let dayOfEra = shifted - era * DaysPerEra
-	let leapDays = (dayOfEra / FourYearDays).Floor - (dayOfEra / CenturyDays).Floor + (dayOfEra / (DaysPerEra - 1)).Floor
-	let yearOfEra = ((dayOfEra - leapDays) / DaysPerYear).Floor
-	let dayOfYear = dayOfEra - (DaysPerYear * yearOfEra + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor)
-	let monthIndex = ((5 * dayOfYear + 2) / MarchToJulyDays).Floor
-	let month = monthIndex < 10 then monthIndex + 3 else monthIndex - 9
-	let day = dayOfYear - ((MarchToJulyDays * monthIndex + 2) / 5).Floor + 1
+	shifted = (seconds / Duration.Day.seconds).Floor + DaysBeforeEpoch
+	era = (shifted / DaysPerEra).Floor
+	dayOfEra = shifted - era * DaysPerEra
+	leapDays = (dayOfEra / FourYearDays).Floor - (dayOfEra / CenturyDays).Floor + (dayOfEra / (DaysPerEra - 1)).Floor
+	yearOfEra = ((dayOfEra - leapDays) / DaysPerYear).Floor
+	dayOfYear = dayOfEra - (DaysPerYear * yearOfEra + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor)
+	monthIndex = ((5 * dayOfYear + 2) / MarchToJulyDays).Floor
+	month = monthIndex < 10 then monthIndex + 3 else monthIndex - 9
+	day = dayOfYear - ((MarchToJulyDays * monthIndex + 2) / 5).Floor + 1
 	(yearOfEra + era * YearsPerEra + (month <= 2 then 1 else 0), month, day)
 Clock Numbers
 	Moment.Clock is (22, 13, 20)
-	let day = Duration.Day.seconds
-	let hour = Duration.Hour.seconds
-	let minute = Duration.Minute.seconds
-	let ofDay = seconds - (seconds / day).Floor * day
+	day = Duration.Day.seconds
+	hour = Duration.Hour.seconds
+	minute = Duration.Minute.seconds
+	ofDay = seconds - (seconds / day).Floor * day
 	((ofDay / hour).Floor, ((ofDay % hour) / minute).Floor, ofDay % minute)
 IsoDate Text
 	Moment.IsoDate is "2023-11-14"
-	let date = Date
+	date = Date
 	date(0) + "-" + Padded(date(1)) + "-" + Padded(date(2))
 IsoTime Text
 	Moment.IsoTime is "22:13:20"
-	let clock = Clock
+	clock = Clock
 	Padded(clock(0)) + ":" + Padded(clock(1)) + ":" + Padded(clock(2))
 to Text
 	Moment to Text is "2023-11-14 22:13:20"
@@ -64,20 +64,20 @@ Parse(text Text) Time
 	Time.Parse("Nov 14") is Error
 	if text.Length < 10 or text(4) is not "-" or text(7) is not "-"
 		return Error("InvalidTime: " + text)
-	let date = Days(text.Substring(0, 4) to Number, text.Substring(5, 2) to Number, text.Substring(8, 2) to Number)
-	let hasClock = text.Length >= ClockLength
-	let hours = hasClock then text.Substring(HourStart, 2) to Number else 0
-	let minutes = hasClock then text.Substring(MinuteStart, 2) to Number else 0
-	let clock = hours * Duration.Hour.seconds + minutes * Duration.Minute.seconds
+	date = Days(text.Substring(0, 4) to Number, text.Substring(5, 2) to Number, text.Substring(8, 2) to Number)
+	hasClock = text.Length >= ClockLength
+	hours = hasClock then text.Substring(HourStart, 2) to Number else 0
+	minutes = hasClock then text.Substring(MinuteStart, 2) to Number else 0
+	clock = hours * Duration.Hour.seconds + minutes * Duration.Minute.seconds
 	Time(date * Duration.Day.seconds + clock + (hasClock then text.Substring(SecondStart, 2) to Number else 0))
 Days(year Number, month Number, day Number) Number
 	Moment.Days(2023, 11, 14) is 19675
 	Moment.Days(1970, 1, 1) is 0
-	let shiftedYear = month <= 2 then year - 1 else year
-	let era = (shiftedYear / YearsPerEra).Floor
-	let yearOfEra = shiftedYear - era * YearsPerEra
-	let dayOfYear = ((MarchToJulyDays * (month > 2 then month - 3 else month + 9) + 2) / 5).Floor + day - 1
-	let dayOfEra = yearOfEra * DaysPerYear + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor + dayOfYear
+	shiftedYear = month <= 2 then year - 1 else year
+	era = (shiftedYear / YearsPerEra).Floor
+	yearOfEra = shiftedYear - era * YearsPerEra
+	dayOfYear = ((MarchToJulyDays * (month > 2 then month - 3 else month + 9) + 2) / 5).Floor + day - 1
+	dayOfEra = yearOfEra * DaysPerYear + (yearOfEra / 4).Floor - (yearOfEra / 100).Floor + dayOfYear
 	era * DaysPerEra + dayOfEra - DaysBeforeEpoch
 RoundUp(step Number) Time
 	Time(61).RoundUp(60) is Time(120)
@@ -93,7 +93,7 @@ Elapsed(current Time) Text
 	Moment.Elapsed(Time(1700000180)) is "about 3 minutes ago"
 	Moment.Elapsed(Time(1700086400)) is "about 1 day ago"
 	Moment.Elapsed(Time(1800000000)) is "about 3 years ago"
-	let passed = current.seconds - seconds
+	passed = current.seconds - seconds
 	if passed <= 5
 		return "just now"
 	for Units

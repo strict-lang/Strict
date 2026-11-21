@@ -7,8 +7,8 @@ constant PendingHeader = PendingSource then BinarySources(List(Text) + PendingPa
 constant PendingBytes = PendingFile.Packed(PendingHeader, List(TypeEntry) + BinaryLinks.Tested, List(Text))
 Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
 	Folders.Tested("Missing", ".") is 0
-	let files = NativeFolder(isRecursive = isRecursive).Files(folder)
-	let pending = Pending(files, isMutating)
+	files = NativeFolder(isRecursive = isRecursive).Files(folder)
+	pending = Pending(files, isMutating)
 	mutable failed = 0
 	if pending.Length > 0
 		if isMutating is false and isFull is false
@@ -27,9 +27,9 @@ Pending(files Texts, isMutating Boolean) Texts slow
 			value
 IsChanged(path Text) Boolean slow
 	Folders.IsChanged("Missing.strict")
-	let cache = BinaryFile(FileCompiler.Normalized(path))
-	let entries = cache.Head(File(cache.Path).ReadBytes)
-	let isTested = cache.IsCurrent(entries) and BinaryLinks(cache).IsTested(entries)
+	cache = BinaryFile(FileCompiler.Normalized(path))
+	entries = cache.Head(File(cache.Path).ReadBytes)
+	isTested = cache.IsCurrent(entries) and BinaryLinks(cache).IsTested(entries)
 	Execute.IsEdited(path) or isTested is false
 Nightly(folder Text, root Text) Number slow
 	Folders.Nightly("Missing", ".") is 0
@@ -39,8 +39,8 @@ Commands(command Text, paths Texts, root Text, isMutating = false, isFull = fals
 	Folders.Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
 	Folders.Commands("test", List(Text) + "a.strict", ".", true, true) is ("test \"a.strict\" \".\" mutations")
 	Folders.Commands("test", List(Text) + "a", ".", false, false, true) is ("test \"a\" \".\" nightly")
-	let checked = (command is "test" and isFull is false then " unit" else "") + (isMutating then " mutations" else "")
-	let options = isNightly then " nightly" else checked
+	checked = (command is "test" and isFull is false then " unit" else "") + (isMutating then " mutations" else "")
+	options = isNightly then " nightly" else checked
 	for paths
 		command + " \"" + value + "\" \"" + root + "\"" + options
 Cleaned(folder Text) Number
@@ -52,16 +52,16 @@ Cleaned(folder Text) Number
 	Directory.Exists("Compiler/output/Clean/obj") is false
 	mutable removed = 0
 	for Directory.Directories(folder)
-		let name = Path(value).FileName.text
+		name = Path(value).FileName.text
 		removed = removed + (name is "obj" then Removed(value) else (name is in (".git", "Tools") then 0 else Cleaned(value)))
 	removed
 IsKept(file Text) Boolean
 	Folders.IsKept("./obj/strict.ptx")
 	Folders.IsKept("./obj/strict.mlir") is false
 	Folders.IsKept("Compiler/obj/Missing.ptx") is false
-	let name = Path(file).FileName.text
-	let program = Path(Path(file).PathOnly.text).PathOnly.text + "/" + name.Split(".").First
-	let isDevice = ("." + name.Split(".").Last) is in (".ptx", ".fatbin", ".hsaco", ".metal")
+	name = Path(file).FileName.text
+	program = Path(Path(file).PathOnly.text).PathOnly.text + "/" + name.Split(".").First
+	isDevice = ("." + name.Split(".").Last) is in (".ptx", ".fatbin", ".hsaco", ".metal")
 	isDevice and (File(program + ".exe").Exists or File(program).Exists)
 Removed(folder Text) Number
 	Folders.Removed("Missing") is 0
@@ -78,8 +78,8 @@ Ran(arguments Texts) Number
 	Folders.Ran(List(Text)) is 0
 	mutable failed = 0
 	for Range(0, ((arguments.Length + Batch - 1) / Batch).Floor)
-		let start = value * Batch
-		let count = arguments.Length - start < Batch then arguments.Length - start else Batch
+		start = value * Batch
+		count = arguments.Length - start < Batch then arguments.Length - start else Batch
 		for Process.RunTools(Process.Current.executable, arguments.Slice(start, count))
 			logger.Log((value.Output + value.error).Replace("\r", "").Trim)
 			if value.exitCode is not 0

@@ -8,7 +8,7 @@ IsText Boolean
 Result VmValue
 	HostedText(Reading).Result.text is Text.Combine(File("Any.strict").ReadLines, "\n")
 	File("Runtime/obj/Written.txt").Write("a\nb") is not Error and File("Runtime/obj/Written.txt").ReadText is "a\nb"
-	let file = File(call.Instance.Member(0).text)
+	file = File(call.Instance.Member(0).text)
 	if call.MethodName is "ReadText"
 		return VmValue.OfText(file.ReadText)
 	file.Write(call.Arguments.First.text)

@@ -14,7 +14,7 @@ Flags(platform Number, root Text) Text
 	Adding.Flags(Platform.Windows, ".") is ""
 	mutable flags = ""
 	for folders
-		let file = value + "/" + Platform.NameOf(platform) + ".flags"
+		file = value + "/" + Platform.NameOf(platform) + ".flags"
 		if File(file).Exists
 			flags = flags + Rooted(Text.Combine(File(file).ReadLines, " "), value, root)
 	flags
@@ -23,12 +23,12 @@ Rooted(flags Text, folder Text, root Text) Text
 	Adding.Rooted("-DX a/b.c", "Frameworks/native", ".") is " -DX a/b.c"
 	Adding.Rooted("-DX a/b.c -Ia/c", "C:/s/E/native", "C:/s") is " -DX C:/s/a/b.c -IC:/s/a/c"
 	Adding.Rooted("-DX a/b.c", "C:/sx/E/native", "C:/s") is " -DX a/b.c"
-	let inside = folder.StartsWith(root + "/") then root + "/" else ""
-	let project = folder.StartsWith("../") then "../" + folder.Split("/")(1) + "/" else inside
+	inside = folder.StartsWith(root + "/") then root + "/" else ""
+	project = folder.StartsWith("../") then "../" + folder.Split("/")(1) + "/" else inside
 	mutable rooted = ""
 	for flags.Split(" ")
-		let isInclude = value.StartsWith("-I")
-		let path = isInclude then "-I" + project + value.Substring(2) else project + value
+		isInclude = value.StartsWith("-I")
+		path = isInclude then "-I" + project + value.Substring(2) else project + value
 		rooted = rooted + " " + (isInclude or IsSource(value) then path else value)
 	rooted
 Arguments(platform Number, root Text) Text
@@ -45,8 +45,8 @@ Objects(platform Number, root Text, cpu = "native") Text
 	NativeSources(List(Text)).Objects(Platform.Current, ".") is ""
 	if folders.Length is 0
 		return ""
-	let tokens = Flags(platform, root).Split(" ")
-	let options = Options(tokens, false) + (cpu is "native" then "" else " -march=" + cpu)
+	tokens = Flags(platform, root).Split(" ")
+	options = Options(tokens, false) + (cpu is "native" then "" else " -march=" + cpu)
 	mutable arguments = ""
 	for NativeLibrary(value).Objects(Files + Sources(tokens), platform, root, options)
 		if value.StartsWith("clang failed")
@@ -70,12 +70,12 @@ Options(tokens Texts, isLinking Boolean) Text
 	Adding.Options(("", "-DX"), false) is " -DX"
 	mutable options = ""
 	for tokens
-		let isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")
+		isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")
 		if value is not "" and IsSource(value) is false and isLinked is isLinking
 			options = options + " " + value
 	options
 IsCompiled(target Text, inputs Texts, options Text) Boolean
-	let flags = File(target + ".nativecache")
+	flags = File(target + ".nativecache")
 	flags.Exists and Text.Combine(flags.ReadLines, "\n") is options and IsCurrent(target, inputs)
 Inputs(platform Number, root Text) Texts
 	Adding.Inputs(Platform.Windows, ".").Last is "Examples/NativeAdd/native/Windows.flags"
@@ -87,7 +87,7 @@ Inputs(platform Number, root Text) Texts
 Placed(building Text, library Text) Text
 	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
 	File(building).Rename(library)
-	let unique = Path(building).RemoveExtension.text
+	unique = Path(building).RemoveExtension.text
 	for (".lib", ".exp")
 		if File(unique + value).Exists
 			File(unique + value).Delete
@@ -96,7 +96,7 @@ IsCurrent(target Text, inputs Texts) Boolean
 	Adding.IsCurrent("Examples/NativeAdd/native/Missing.dll", List(Text)) is false
 	if File(target).Exists is false
 		return false
-	let built = File(target).Modified
+	built = File(target).Modified
 	for inputs
 		if File(value).Exists and File(value).Modified > built
 			return false
@@ -105,35 +105,35 @@ Resource(base Text, platform Number, root Text) Text
 	Adding.Resource("Examples/Sum", Platform.Current, ".") is (Platform.Current is Platform.Windows then Summed else "")
 	Adding.Resource(Iconed, Platform.Linux, ".") is ""
 	Adding.Resource(Iconed, Platform.Current, ".") is (Platform.Current is Platform.Windows then Resourced else "")
-	let icon = Release(base).Icon
+	icon = Release(base).Icon
 	if platform is not Platform.Windows or File(icon).Exists is false
 		return ""
-	let full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
+	full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
 	File(base + ".rc").Write("GLFW_ICON ICON \"" + full + "\"")
-	let compiler = Toolchain(platform, root).Located("llvm-rc")
-	let compiled = ToolRunner(compiler).Execute("/FO \"" + base + ".res\" \"" + base + ".rc\"")
+	compiler = Toolchain(platform, root).Located("llvm-rc")
+	compiled = ToolRunner(compiler).Execute("/FO \"" + base + ".res\" \"" + base + ".rc\"")
 	File(base + ".rc").Delete
 	compiled.Failed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
 LinuxLinked(base Text, program Text, root Text) Text
 	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
-	let tools = Toolchain(Platform.Windows, root)
+	tools = Toolchain(Platform.Windows, root)
 	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quoted(tools.WslPath(root + "/Compiler"))
 	for Files
 		sources = sources + " " + tools.Quoted(tools.WslPath(value))
-	let gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc -no-pie "
-	let linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
-	let libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
-	let output = " -o " + tools.Quoted(tools.WslPath(program)) + libraries
+	gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc -no-pie "
+	linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
+	libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
+	output = " -o " + tools.Quoted(tools.WslPath(program)) + libraries
 	Release(base).Created(Path(program).PathOnly.text)
-	let linked = ToolRunner("wsl").Execute(linkage + sources + output)
+	linked = ToolRunner("wsl").Execute(linkage + sources + output)
 	linked.Failed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
 Wsl(flags Text, tools Toolchain) Text
 	Adding.Wsl(" -DX -IC:/s/a C:/s/b.c -lm", Toolchain.OnWindows) is " -DX -I\"/mnt/c/s/a\" \"/mnt/c/s/b.c\" -lm"
 	mutable converted = ""
 	for flags.Split(" ")
-		let isInclude = value.StartsWith("-I")
-		let path = isInclude then value.Substring(2) else value
-		let wsl = (isInclude then "-I" else "") + tools.Quoted(tools.WslPath(path))
+		isInclude = value.StartsWith("-I")
+		path = isInclude then value.Substring(2) else value
+		wsl = (isInclude then "-I" else "") + tools.Quoted(tools.WslPath(path))
 		if value is not ""
 			converted = converted + " " + (isInclude or IsSource(value) then wsl else value)
 	converted

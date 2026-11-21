@@ -34,7 +34,7 @@ WeightedIndex(weights Numbers) Number
 	PseudoRandom(1).WeightedIndex((1, 0, 3)) is 2
 	PseudoRandom(1).WeightedIndex((3, 1)) is 0
 	PseudoRandom(1).WeightedIndex(List(Number)) is -1
-	let target = Get(0, weights.Sum)
+	target = Get(0, weights.Sum)
 	mutable sum = 0
 	for weights
 		sum = sum + value

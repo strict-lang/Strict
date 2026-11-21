@@ -31,7 +31,7 @@ Declarations(starts Numbers) Texts
 Name(line Text) Text
 	Sample.Name(Tricky) is "k"
 	Sample.Name(Sample.lines(3)) is "A"
-	let at = line.IndexOf("@")
+	at = line.IndexOf("@")
 	line.Substring(at + 1, line.IndexOf("(", at) - at - 1)
 Typed(name Text) Text
 	Sample.Typed("Xor_Run_0") is "Xor"
@@ -40,14 +40,14 @@ Typed(name Text) Text
 	Sample.Typed("dp0") is "p0"
 	Sample.Typed("__stack_low") is "__stack_low"
 	Sample.Typed("t") is "t"
-	let type = name.Split("_").First
+	type = name.Split("_").First
 	type.Length < 2 then name else type(0).Lower is type(0) then type.Substring(1) else type
 Owner(line Text) Number
 	Sample.Owner("  func.func @strict_new() {") < RuntimeParts
 	Sample.Owner("  llvm.func @strict_new(%a: i64) {") is Sample.Owner("  func.func @strict_new() {")
 	Sample.Owner("  func.func @Xor_Run_0() {") is RuntimeParts + HashCode("Xor").number % (Toolchain.Parts - RuntimeParts)
 	Sample.Owner("  func.func @Xor_Run_0() {") is Sample.Owner("  llvm.mlir.global constant @lXor_Run_0_1(\"a\") : x")
-	let name = Name(line)
+	name = Name(line)
 	if name.StartsWith("strict_")
 		return HashCode(name).number % RuntimeParts
 	RuntimeParts + HashCode(Typed(name)).number % (Toolchain.Parts - RuntimeParts)
@@ -111,17 +111,17 @@ Public(header Text) Text
 	Sample.Public("  func.func @B() attributes {" + Internal + ", a} {") is "  func.func @B() attributes {a} {"
 	Sample.Public("  func.func @B() attributes {a, " + Internal + "} {") is "  func.func @B() attributes {a} {"
 	Sample.Public("  llvm.func internal @l() {") is "  llvm.func @l() {"
-	let unlinked = header.Replace(" attributes {" + Internal + "}", "").Replace(Internal + ", ", "")
-	let plain = unlinked.Replace(", " + Internal, "")
+	unlinked = header.Replace(" attributes {" + Internal + "}", "").Replace(Internal + ", ", "")
+	plain = unlinked.Replace(", " + Internal, "")
 	plain.Replace("  func.func private @", "  func.func @").Replace("  llvm.func internal @", "  llvm.func @")
 Declared(header Text) Text
 	Sample.Declared("  llvm.func @l(%s: !llvm.ptr, %n: i64) attributes {a} {") is "  llvm.func @l(!llvm.ptr, i64)"
 	Sample.Declared("  func.func private @F(%f: (i64) -> f64) -> (f64, i1) {").EndsWith("@F((i64) -> f64) -> (f64, i1)")
-	let open = header.IndexOf("(")
-	let close = Closing(header, open)
-	let kind = header.StartsWith("  func.func ") then "  func.func private " else "  llvm.func "
-	let name = header.Substring(header.IndexOf("@"), open - header.IndexOf("@"))
-	let arguments = Text.Combine(Types(header.Substring(open + 1, close - open - 1)), ", ")
+	open = header.IndexOf("(")
+	close = Closing(header, open)
+	kind = header.StartsWith("  func.func ") then "  func.func private " else "  llvm.func "
+	name = header.Substring(header.IndexOf("@"), open - header.IndexOf("@"))
+	arguments = Text.Combine(Types(header.Substring(open + 1, close - open - 1)), ", ")
 	kind + name + "(" + arguments + ")" + Results(header.Substring(close + 1, header.Length - close - 1))
 Closing(text Text, open Number) Number
 	Sample.Closing("f((a) b) c", 1) is 7
@@ -148,9 +148,9 @@ Global(line Text, isOwned Boolean) Text
 	Sample.Global("  llvm.mlir.global internal thread_local @d(0 : i64) : i64", false).EndsWith(" thread_local @d() : i64")
 	if isOwned
 		return line.StartsWith(Hidden) then Visible + line.Substring(Hidden.Length, line.Length - Hidden.Length) else line
-	let flags = line.Substring(0, line.IndexOf("@"))
-	let name = line.Substring(flags.Length, line.IndexOf("(", flags.Length) - flags.Length)
-	let fixed = flags.IndexOf(" constant ") > 0 then "constant " else ""
-	let local = flags.IndexOf(" thread_local ") > 0 then "thread_local " else ""
-	let type = line.Substring(line.LastIndexOf(" : ") + 3, line.Length - line.LastIndexOf(" : ") - 3)
+	flags = line.Substring(0, line.IndexOf("@"))
+	name = line.Substring(flags.Length, line.IndexOf("(", flags.Length) - flags.Length)
+	fixed = flags.IndexOf(" constant ") > 0 then "constant " else ""
+	local = flags.IndexOf(" thread_local ") > 0 then "thread_local " else ""
+	type = line.Substring(line.LastIndexOf(" : ") + 3, line.Length - line.LastIndexOf(" : ") - 3)
 	"  llvm.mlir.global external " + fixed + local + name + "() : " + type

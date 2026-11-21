@@ -23,7 +23,7 @@ IsNumbered(at Number) Boolean
 	Flagged.IsNumbered(0) and StatusCodes(("Run Number", "	0")).IsNumbered(0) is false and Flagged.IsNumbered(1) is false
 	if TypeShape(lines).IsMethodHeader(lines(at)) is false
 		return false
-	let tokens = Tokenizer(lines(at).Trim).Tokens
+	tokens = Tokenizer(lines(at).Trim).Tokens
 	tokens.First is not "Run" and HeaderTokens(tokens).ReturnType is "Number"
 IsStatus(at Number) Boolean
 	Stopping.IsStatus(0) and Counting.IsStatus(0) is false and Stopping.IsStatus(2) is false
@@ -42,7 +42,7 @@ IsWriting(at Number) Boolean
 	StatusCodes(("A Number", "\tLog(1)")).IsWriting(0) is false
 	StatusCodes(List(Text) + "A Number").IsWriting(0) is false
 	StatusCodes(("A Number", "\tLog(1)", "\t0")).IsWriting(0)
-	let end = End(at)
+	end = End(at)
 	for Range(at + 1, end)
 		if value < end - 1 and IsStatement(value)
 			return true
@@ -54,8 +54,8 @@ IsStatement(at Number) Boolean
 	StatusCodes(("A", "\tx.Log")).IsStatement(1) and StatusCodes(("A", "\tx")).IsStatement(1) is false
 	StatusCodes(("A", "\treturn Log(1)")).IsStatement(1) is false
 	StatusCodes(("A Number", "", "\t0")).IsStatement(1) is false
-	let tokens = Tokenizer(lines(at).Trim).Tokens
-	let isCall = "(" is in tokens or "." is in tokens
+	tokens = Tokenizer(lines(at).Trim).Tokens
+	isCall = "(" is in tokens or "." is in tokens
 	isCall and tokens.First is not in Inlines.Keywords and IsComparing(tokens) is false and IsYielded(at) is false
 IsComparing(tokens Texts) Boolean
 	Stopping.IsComparing(("a", "is", "1")) and Stopping.IsComparing(("Log", "(", "a", "is", "1", ")")) is false
@@ -84,7 +84,7 @@ IsYielded(at Number) Boolean
 	StatusCodes(("A", "\tfor 3", "\t\t1", "\tif x", "\t\tLog(1)")).IsYielded(4) is false
 	mutable indent = BodyParser.Indent(lines(at))
 	for Range(0, at).Reverse
-		let trimmed = lines(value).Trim
+		trimmed = lines(value).Trim
 		if BodyParser.Indent(lines(value)) < indent
 			if trimmed.StartsWith("for ") and trimmed.StartsWith("for as long as ") is false
 				return true
@@ -96,15 +96,15 @@ Returned(at Number) ValidationIssues
 	StatusCodes(("A Number", "\tfor 2", "\t\t0")).Returned(0).Length is 0
 	StatusCodes(("A Number", "\t0", "\tLog(1)", "\t2")).Returned(0).Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
-	let name = Tokenizer(lines(at)).Tokens.First
+	name = Tokenizer(lines(at)).Tokens.First
 	for Results(at)
 		issues = issues + Issued(name, Literals(value), at + index + 2)
 	issues
 Results(at Number) Texts
 	Stopping.Results(0) is ("", "", "0") and Freeing.Results(0).Last is "told is Error then 2 else -1"
 	for Range(at + 1, End(at))
-		let trimmed = lines(value).Trim
-		let isLast = value is End(at) - 1 and BodyParser.Indent(lines(value)) is 1
+		trimmed = lines(value).Trim
+		isLast = value is End(at) - 1 and BodyParser.Indent(lines(value)) is 1
 		isLast then trimmed else trimmed.StartsWith("return ") then trimmed.Substring(7) else ""
 Issued(name Text, literals Texts, line Number) ValidationIssues
 	Stopping.Issued("A", ("0", "1"), 2).Last to Text is "StatusNumberMustNotBeReturned: A returns 1" + Hint
@@ -116,16 +116,16 @@ Literals(result Text) Texts
 	Stopping.Literals("a then b else Count(1)").Length is 0 and Stopping.Literals("1 + x").Length is 0
 	Stopping.Literals("").Length is 0 and Stopping.Literals("0.5").Length is 0
 	for result.Split(" else ")
-		let at = value.LastIndexOf(" then ")
-		let part = at < 0 then value else value.Substring(at + 6, value.Length - at - 6)
+		at = value.LastIndexOf(" then ")
+		part = at < 0 then value else value.Substring(at + 6, value.Length - at - 6)
 		if IsInteger(part)
 			part
 Booleans(at Number) ValidationIssues
 	Flagged.Booleans(0).First to Text is "BooleanMustNotBeNumber: IsOn returns state > 0 then 1 else 0" + BooleanHint
 	Flagged.Booleans(0).First.Line is 3 and Masked.Booleans(0).Length is 1 and Sized.Booleans(0).Length is 0
 	StatusCodes(("Counted Number", "	Counted is 1", "	state > 0 then 1 else 0")).Booleans(0).Length is 0
-	let name = Tokenizer(lines(at)).Tokens.First
-	let isQuestion = IsQuestion(name)
+	name = Tokenizer(lines(at)).Tokens.First
+	isQuestion = IsQuestion(name)
 	for Results(at)
 		if isQuestion and IsBoolean(value)
 			ValidationIssue("BooleanMustNotBeNumber", name + " returns " + value + BooleanHint, at + index + 2)
@@ -134,13 +134,13 @@ IsBoolean(result Text) Boolean
 	Flagged.IsBoolean("(a then 2 else 0) + (b then 4 else 0)") and Flagged.IsBoolean("a then 2 else 0") is false
 	Flagged.IsBoolean("a then 1 else -1") is false and Flagged.IsBoolean("") is false
 	Flagged.IsBoolean("count + (a then 1 else 0)") is false and Flagged.IsBoolean("a then 1 else b then 1 else 0")
-	let tokens = Tokenizer(result).Tokens
-	let tail = tokens.Length > 3 then tokens.Slice(tokens.Length - 4, 4) else ("", "", "", "")
-	let isTail = tail(0) is "then" and tail(2) is "else" and tail(1) + " " + tail(3) is in ("1 0", "0 1")
+	tokens = Tokenizer(result).Tokens
+	tail = tokens.Length > 3 then tokens.Slice(tokens.Length - 4, 4) else ("", "", "", "")
+	isTail = tail(0) is "then" and tail(2) is "else" and tail(1) + " " + tail(3) is in ("1 0", "0 1")
 	mutable bits = 0
 	for tokens
-		let pair = value is "then" and index + 3 < tokens.Length then tokens(index + 2) is "else" else false
-		let isBit = pair then tokens(index + 3) is "0" and IsInteger(tokens(index + 1)) else false
+		pair = value is "then" and index + 3 < tokens.Length then tokens(index + 2) is "else" else false
+		isBit = pair then tokens(index + 3) is "0" and IsInteger(tokens(index + 1)) else false
 		bits = bits + (isBit then (MagicNumbers(List(Text)).IsPowerOfTwo(tokens(index + 1) to Number) then 1 else 0) else 0)
 	isTail and IsPlain(tokens) or bits > 1
 IsPlain(tokens Texts) Boolean
@@ -164,7 +164,7 @@ IsInteger(text Text) Boolean
 	Stopping.IsInteger("12") and Stopping.IsInteger("-1")
 	Stopping.IsInteger("x") is false and Stopping.IsInteger("1.5") is false and Stopping.IsInteger("") is false
 	Stopping.IsInteger("-") is false
-	let digits = text.StartsWith("-") then text.Substring(1) else text
+	digits = text.StartsWith("-") then text.Substring(1) else text
 	if digits is ""
 		return false
 	for Range(0, digits.Length)

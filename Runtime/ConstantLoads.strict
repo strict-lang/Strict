@@ -13,7 +13,7 @@ Rewritten List(TypeEntry)
 	mutable next = first
 	mutable rewritten = List(Mutable(TypeEntry))
 	for types
-		let count = Count(value)
+		count = Count(value)
 		rewritten.Add(count is 0 then value else TypeEntry(value, methods = Methods(value, next)))
 		next = next + count
 	rewritten
@@ -22,7 +22,7 @@ Methods(type TypeEntry, start Number) List(MethodEntry)
 	mutable next = start
 	mutable methods = List(Mutable(MethodEntry))
 	for type.methods
-		let count = Counted(value)
+		count = Counted(value)
 		methods.Add(count is 0 then value else MethodEntry(value, instructions = Instructions(value, next)))
 		next = next + count
 	methods
@@ -32,13 +32,13 @@ Instructions(method MethodEntry, start Number) List(InstructionEntry)
 	mutable next = start
 	mutable instructions = List(Mutable(InstructionEntry))
 	for method.instructions
-		let at = At(value)
+		at = At(value)
 		instructions.Add(at < 0 then value else Marked(value, at, next))
 		next = at < 0 then next else next + 1
 	instructions
 Marked(entry InstructionEntry, at Number, index Number) InstructionEntry
 	Ones.Marked(Stored, 0, 4).payload is (Cached, 4) + Stored.payload
-	let rest = entry.payload.Slice(at, entry.payload.Length - at)
+	rest = entry.payload.Slice(at, entry.payload.Length - at)
 	InstructionEntry(entry, payload = entry.payload.Slice(0, at) + Cached + index + rest)
 Decoded List(VmValue)
 	Ones.Decoded.First to Text is "(1, 1.5)"
@@ -64,6 +64,6 @@ At(entry InstructionEntry) Number
 	Ones.At(PayloadDecoder.Ones.entry) is 1 and Ones.At(Stored) is 0
 	Ones.At(InstructionEntry.LoadNumber(0, 7)) is -1 and Ones.At(InstructionEntry.Return(6)) is -1
 	Ones.At(InstructionEntry(InstructionType.Return, List(Text), List(Number))) is -1
-	let isLoad = entry.kind is InstructionType.LoadConstantToRegister
-	let at = isLoad then 1 else (entry.kind is InstructionType.StoreConstantToVariable then 0 else -1)
+	isLoad = entry.kind is InstructionType.LoadConstantToRegister
+	at = isLoad then 1 else (entry.kind is InstructionType.StoreConstantToVariable then 0 else -1)
 	at < 0 then Number.NotFound else (entry.payload(at) is in (3, 6) then at else Number.NotFound)

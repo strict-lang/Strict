@@ -22,7 +22,7 @@ Spread(previous Number) Number
 	constant SpreadShift = 1073741824
 	constant SpreadMultiplier = 1812433253
 	constant HalfWord = 65536
-	let mixed = previous xor (previous / SpreadShift).Floor
+	mixed = previous xor (previous / SpreadShift).Floor
 	(SpreadMultiplier * (mixed / HalfWord).Floor % HalfWord * HalfWord + SpreadMultiplier * (mixed % HalfWord)) % WordRange
 Uints(count Number) Numbers slow
 	MersenneTwister.Seeded(42).Uints(700)(624) is 108880612
@@ -45,7 +45,7 @@ Twisted(first Number, second Number) Number
 	constant UpperMask = 2147483648
 	constant LowerMask = 2147483647
 	constant TwistMatrix = 2567483615
-	let joined = (first and UpperMask) + (second and LowerMask)
+	joined = (first and UpperMask) + (second and LowerMask)
 	(joined / 2).Floor xor joined % 2 * TwistMatrix
 Tempered(number Number) Number
 	MersenneTwister(List(Number)).Tempered(1) is 4194449
@@ -55,9 +55,9 @@ Tempered(number Number) Number
 	constant ThirdShift = 32768
 	constant ThirdMask = 4022730752
 	constant LastShift = 262144
-	let first = number xor (number / FirstShift).Floor
-	let second = first xor first * SecondShift % WordRange and SecondMask
-	let third = second xor second * ThirdShift % WordRange and ThirdMask
+	first = number xor (number / FirstShift).Floor
+	second = first xor first * SecondShift % WordRange and SecondMask
+	third = second xor second * ThirdShift % WordRange and ThirdMask
 	third xor (third / LastShift).Floor
 Normals(count Number) Numbers slow
 	MersenneTwister.Seeded(42).Normals(16).First.IsNearlyEqual(1.9269153, 0.00001)
@@ -67,10 +67,10 @@ Normals(count Number) Numbers slow
 	Seeded(42).Normals(36)(17).IsNearlyEqual(-0.1596, 0.0001) and Seeded(42).Normals(20)(5).IsNearlyEqual(1.0783, 0.0001)
 	if count < BatchSize
 		return Error("FewerThanSixteen: " + count)
-	let tail = count % BatchSize is 0 then count else count - BatchSize
-	let uniforms = Uniforms(Uints(Needed(count, tail)))
+	tail = count % BatchSize is 0 then count else count - BatchSize
+	uniforms = Uniforms(Uints(Needed(count, tail)))
 	for count
-		let offset = index % BatchSize
+		offset = index % BatchSize
 		Normal(uniforms, index >= tail then count else index - offset, index >= tail then index - tail else offset)
 Needed(count Number, tail Number) Number
 	MersenneTwister(List(Number)).Needed(16, 16) is 16 and MersenneTwister(List(Number)).Needed(20, 4) is 36
@@ -86,6 +86,6 @@ Normal(uniforms Numbers, start Number, at Number) Number
 	MersenneTwister(List(Number)).Normal((0.5, 0.25, 0, 0, 0, 0, 0, 0, 0, 0.375), 0, 1).IsNearlyEqual(-0.53636, 0.00001)
 	MersenneTwister(List(Number)).Normal((0, 0, 0, 0.25, 0, 0, 0, 0, 0, 0, 0, 0.375), 2, 9).IsNearlyEqual(0.53636, 0.00001)
 	MersenneTwister.Seeded(42).Normals(20)(4).IsNearlyEqual(-0.7581311, 0.00001)
-	let radius = (-2 * (1 - uniforms(start + at % 8)).Logarithm).SquareRoot
-	let angle = Radians(2 * Number.Pi * uniforms(start + at % 8 + 8)) to Degrees
+	radius = (-2 * (1 - uniforms(start + at % 8)).Logarithm).SquareRoot
+	angle = Radians(2 * Number.Pi * uniforms(start + at % 8 + 8)) to Degrees
 	radius * (at < 8 then angle.Cos else angle.Sin)

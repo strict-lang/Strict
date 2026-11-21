@@ -44,14 +44,14 @@ IsConversion(source Text, method Text, target Text) Boolean
 	Parsing.IsConversion("Text", "Upper", "Strict/Text") is false
 	Parsing.IsConversion("Number", "to", "Strict/Number") is false
 	Parsing.IsConversion("Text", "to", "Strict/Boolean") is false
-	let isBase = source is in ("Number", "Character", "Boolean", "Text") or source.StartsWith("List(")
+	isBase = source is in ("Number", "Character", "Boolean", "Text") or source.StartsWith("List(")
 	method is "to" and (target is "Strict/Text" and isBase or target is "Strict/Number" and source is "Text")
 IsMemberValue(type TypeEntry) Boolean
 	Coding.IsMemberValue(TypeEntry.CharacterEntry)
 	Parsing.IsMemberValue(TypeEntry.CharacterEntry) is false
 	if IsWrapping(type) is false
 		return false
-	let kind = TypeEntry.ShortName(Arguments.First.kind)
+	kind = TypeEntry.ShortName(Arguments.First.kind)
 	IsMemberKind(kind, TypeEntry.ShortName(type.Name), TypeEntry.ShortName(type.Changing.First.typeName))
 IsMemberKind(kind Text, typeName Text, member Text) Boolean
 	Coding.IsMemberKind("Character", "Character", "Number") and Coding.IsMemberKind("Number", "Character", "Number")
@@ -68,7 +68,7 @@ Resolution Number
 	Invocation(AddCall.entry, List(VmValue), VmValue.None, 0, 0).Resolution is 0
 	if Resolved >= 0
 		return Resolved
-	let flag = Flag
+	flag = Flag
 	flag + 1 + entry.payload(flag)
 IsResolved Boolean
 	AddCall.IsResolved is false
@@ -86,14 +86,14 @@ Kept(traces List(VmValue), trace VmValue) List(VmValue)
 	AddCall.Kept(Traces, VmValue.None)(40).kind is "Strict/Stacktrace"
 	AddCall.Kept(Traces, VmValue.None)(40).items(0).text is "..."
 	AddCall.Kept(AddCall.Kept(Traces, VmValue.None), VmValue.None)(40).items(2).number is 2
-	let last = LastTraces - 1
+	last = LastTraces - 1
 	if traces.Length < FirstTraces + LastTraces
 		return traces + trace
-	let skipped = traces.Length > FirstTraces + LastTraces then traces(FirstTraces).items(2).number + 1 else 1
-	let gap = VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText("..."), VmValue.OfText(""), VmValue.OfNumber(skipped)))
+	skipped = traces.Length > FirstTraces + LastTraces then traces(FirstTraces).items(2).number + 1 else 1
+	gap = VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText("..."), VmValue.OfText(""), VmValue.OfNumber(skipped)))
 	traces.Slice(0, FirstTraces) + gap + traces.Slice(traces.Length - last, last) + trace
 Native(natives Natives) VmValue
 	Emptied.Native(Natives.Shapes).text is ""
 	Parsing.Native(Natives.Shapes).number is 5
-	let result = natives.Result(value)
+	result = natives.Result(value)
 	result is Error then VmValue.OfError(result.Name.text) else result

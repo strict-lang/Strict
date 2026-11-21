@@ -11,16 +11,16 @@ constant Thin = " -Wl,--lto-O2 -Wl,--thinlto-jobs=all" + LinkLowering + " -Wl,--
 constant Sizes = ("malloc", "calloc", "realloc", "memcpy", "memset", "strlen", "strncmp", "strftime", "fread", "fwrite", "fseek", "ftell", "strtol", "snprintf")
 Linked(base Text, executable Text) Text
 	Missing.Linked("Compiler/output/missing", "missing.html").StartsWith("mlir-opt failed")
-	let compiled = Compiled(base)
+	compiled = Compiled(base)
 	if compiled is not ""
 		return compiled
-	let folder = Release(base).Parent
-	let sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
-	let page = " --shell-file " + tools.Quoted(Shell(base))
+	folder = Release(base).Parent
+	sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
+	page = " --shell-file " + tools.Quoted(Shell(base))
 	Release(base).Created(Path(executable).PathOnly.text)
-	let inputs = tools.PartObjects(base + ".web") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
-	let output = " -o " + tools.Quoted(executable) + Options + Thinned(base) + " -O1"
-	let linked = ToolRunner(tools.Located("emcc")).Execute(inputs + output)
+	inputs = tools.PartObjects(base + ".web") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
+	output = " -o " + tools.Quoted(executable) + Options + Thinned(base) + " -O1"
+	linked = ToolRunner(tools.Located("emcc")).Execute(inputs + output)
 	linked.Failed then "emcc failed: " + linked.error else Optimized(executable)
 Thinned(base Text) Text
 	Options.IndexOf("--closure 1") >= 0 and Options.IndexOf("--profiling-funcs") is -1
@@ -31,18 +31,18 @@ Compiled(base Text) Text
 	Missing.Compiled("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if File(base + ".mlir").Exists is false
 		return tools.Lowered(base)
-	let lowered = MlirParts(MlirSplit(File(base + ".mlir").ReadLines)).Laid.Lowered(base + ".web", tools)
+	lowered = MlirParts(MlirSplit(File(base + ".mlir").ReadLines)).Laid.Lowered(base + ".web", tools)
 	lowered is not "" then lowered else tools.PartsCompiled(base + ".web") then "" else "clang failed for " + base
 Optimized(executable Text) Text
 	Missing.Optimized("Compiler/output/missing.html").StartsWith("wasm-opt failed")
-	let wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
-	let optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
-	let optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
+	wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
+	optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
+	optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
 	optimized.Failed then "wasm-opt failed: " + optimized.error else Iconed(executable)
 Iconed(executable Text) Text
-	let page = Text.Combine(File(executable).ReadLines, "\n")
-	let source = executable.Replace("/Release/Web/", "/obj/").Replace(".html", "")
-	let own = Release(source).Icon is not TypeSource.Root + "/Strict.ico"
+	page = Text.Combine(File(executable).ReadLines, "\n")
+	source = executable.Replace("/Release/Web/", "/obj/").Replace(".html", "")
+	own = Release(source).Icon is not TypeSource.Root + "/Strict.ico"
 	File(executable).Write(Favicons(page, own then "favicon.ico" else "https://strict-lang.org/img/favicon.ico"))
 	"Built " + executable
 Favicons(page Text, icon Text) Text
@@ -50,7 +50,7 @@ Favicons(page Text, icon Text) Text
 	Missing.Favicons("<head><link rel=icon href=b.ico></head>", "a.ico") is "<head><link rel=icon href=b.ico></head>"
 	Missing.Favicons("rel=icon</head>", "a.ico") is "rel=icon</head>"
 	Missing.Favicons("rel=\"icon\"</head>", "a.ico") is "rel=\"icon\"</head>"
-	let linked = "rel=icon" is in page or "rel=\"icon\"" is in page
+	linked = "rel=icon" is in page or "rel=\"icon\"" is in page
 	linked then page else page.Replace("</head>", "<link rel=\"icon\" href=\"" + icon + "\"></head>")
 Sized(mlir Text) Text
 	WebBuild.Sized("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
@@ -93,28 +93,28 @@ Mirrored(folder Text, base Text) Text
 	Missing.Mirrored("./Compiler/output/EmptyApp", "Compiler/output/missing") is ""
 	if folder is "." or HasFiles(folder + "/Content") is false
 		return ""
-	let path = "/" + (folder.StartsWith("./") then folder.Substring(2) else folder)
-	let linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
+	path = "/" + (folder.StartsWith("./") then folder.Substring(2) else folder)
+	linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
 	File(base + ".pre.js").Write("(Module.preRun ||= []).push(() => { FS.mkdirTree(\"" + path + "\"); " + linked + " })")
 	" --pre-js \"" + base + ".pre.js\""
 Shaded(program Text, base Text, isWritten Boolean) Text
 	WebBuild.Shaded("module {\n}", "Compiler/output/Unshaded", true) is "module {\n}"
 	WebBuild.Shaded("module {\n}\n" + WgslShader.Marker + "\nx", "Compiler/output/Shaded", true) is "module {\n}"
 	Missing.Scripted("Compiler/output/Shaded") is " --pre-js \"Compiler/output/Shaded.shaders.js\""
-	let marker = program.IndexOf("\n" + WgslShader.Marker + "\n")
+	marker = program.IndexOf("\n" + WgslShader.Marker + "\n")
 	if marker < 0
 		return program
-	let start = marker + WgslShader.Marker.Length + 2
+	start = marker + WgslShader.Marker.Length + 2
 	if isWritten
 		File(base + ".shaders.js").Write(program.Substring(start, program.Length - start))
 	program.Substring(0, marker)
 Shell(base Text) Text
 	Missing.Shell("Compiler/output/missing") is "C:/s/Compiler/WebShell.html"
-	let shell = BuildOutput.Delivered(base) + ".shell.html"
+	shell = BuildOutput.Delivered(base) + ".shell.html"
 	File(shell).Exists then shell else tools.root + "/Compiler/WebShell.html"
 Runtime Text
 	Missing.Runtime is " --js-library \"C:/s/Compiler/WebRuntime.js\" --pre-js \"C:/s/Compiler/NativeRuntimeWgsl.js\""
-	let library = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
+	library = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
 	library + " --pre-js " + tools.Quoted(tools.root + "/Compiler/NativeRuntimeWgsl.js")
 Scripted(base Text) Text
 	Missing.Scripted("Compiler/output/missing") is ""
@@ -123,6 +123,6 @@ InstallLines Texts
 	Missing.InstallLines.First is "git clone --depth 1 https://github.com/emscripten-core/emsdk.git C:/s/Tools/emsdk"
 	Missing.InstallLines(1) is "C:/s/Tools/emsdk/emsdk install latest"
 	Missing.InstallLines.Last is "C:/s/Tools/emsdk/emsdk activate latest"
-	let folder = tools.root + "/Tools/emsdk"
-	let cloned = "git clone --depth 1 https://github.com/emscripten-core/emsdk.git " + folder
+	folder = tools.root + "/Tools/emsdk"
+	cloned = "git clone --depth 1 https://github.com/emscripten-core/emsdk.git " + folder
 	(cloned, folder + "/emsdk install latest", folder + "/emsdk activate latest")

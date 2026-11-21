@@ -8,12 +8,12 @@ Chosen(files Texts, source Text) Texts
 	Plain.Chosen(Project, "./LogoApp/Game.strict") is ("./LogoApp/Scene.strict", "./WebWars/Unit.strict")
 	Qualified.Chosen(Project, "./Content/Catalog.strict") is ("./WebWars/Scene.strict", "./WebWars/Unit.strict")
 	Plain.Chosen(Project, "./Content/Catalog.strict") is Project
-	let names = Names(files)
+	names = Names(files)
 	mutable counts = Dictionary(Text, Number)
 	for names
 		counts(value) = (value is in counts then counts(value) else 0) + 1
 	for files
-		let best = counts(names(index)) > 1 then Best(SameNamed(files, names, names(index)), source) else value
+		best = counts(names(index)) > 1 then Best(SameNamed(files, names, names(index)), source) else value
 		if best is "" or best is value
 			value
 Names(files Texts) Texts
@@ -21,8 +21,8 @@ Names(files Texts) Texts
 	Plain.Best("./WebWars/Scene.strict", "./Content/Catalog.strict") is "./WebWars/Scene.strict"
 	Plain.Names(Project) is ("Scene.strict", "Scene.strict", "Unit.strict")
 	for files
-		let slashed = value.IndexOf("\\") < 0 then value else value.Replace("\\", "/")
-		let slash = slashed.LastIndexOf("/")
+		slashed = value.IndexOf("\\") < 0 then value else value.Replace("\\", "/")
+		slash = slashed.LastIndexOf("/")
 		slash < 0 then slashed else slashed.Substring(slash + 1, slashed.Length - slash - 1)
 SameNamed(files Texts, names Texts, name Text) Texts
 	Plain.Best(("x\\Scene.strict", "y\\Scene.strict"), "y\\Game.strict") is "y\\Scene.strict"
@@ -34,10 +34,10 @@ Best(candidates Texts, source Text) Text
 	Qualified.Best(Scenes, "./Content/Catalog.strict") is "./WebWars/Scene.strict"
 	Plain.Best(Scenes, "./Content/Catalog.strict") is ""
 	Both.Best(Scenes, "./Content/Catalog.strict") is ""
-	let qualified = Qualifying(candidates)
+	qualified = Qualifying(candidates)
 	if candidates.Length is 1 or qualified.Length > 0
 		return candidates.Length is 1 then candidates.First else (qualified.Length is 1 then qualified.First else "")
-	let folder = Path(source.Replace("\\", "/")).PathOnly.text
+	folder = Path(source.Replace("\\", "/")).PathOnly.text
 	for candidates
 		if Path(value.Replace("\\", "/")).PathOnly.text is folder
 			return value
@@ -52,7 +52,7 @@ IsQualified(path Text) Boolean
 	Qualified.IsQualified("./WebWars/Scene.strict")
 	Plain.IsQualified("./WebWars/Scene.strict") is false
 	TypeChoice(("has a WebWars/Scenery", "\tlet b = \"WebWars/Scene\"")).IsQualified("./WebWars/Scene.strict") is false
-	let parts = path.Replace("\\", "/").Split("/")
+	parts = path.Replace("\\", "/").Split("/")
 	parts(parts.Length - 2) is in Packages(parts.Last.Replace(".strict", ""))
 Ambiguous(names Texts, path Text) Texts
 	Plain.Ambiguous(("Scene", "Scene", "Unit", "Unit"), "A").Length is 1
@@ -62,22 +62,22 @@ Ambiguous(names Texts, path Text) Texts
 	Qualified.Ambiguous(("Scene", "Scene"), "A.strict").Length is 0
 	for names
 		if names.Index(value) is index and names.Count(value) > 1 and UsedLine(value) > 0
-			let issue = Issue(value)
+			issue = Issue(value)
 			if issue is not ""
 				ResolveCheck.Located(path, UsedLine(value), issue)
 Issue(name Text) Text
 	Plain.Issue("Scene").StartsWith("AmbiguousType: Scene") and Qualified.Issue("Scene") is ""
 	Both.Issue("Scene").StartsWith("SameNamedTypes: Scene")
-	let packages = Packages(name)
+	packages = Packages(name)
 	if packages.Length is 1
 		return ""
-	let clash = " from " + Text.Combine(packages, " and ") + ", a build keys types by their plain name, rename one"
-	let advice = " is defined in several packages here, write Package/" + name + " in a declaration"
+	clash = " from " + Text.Combine(packages, " and ") + ", a build keys types by their plain name, rename one"
+	advice = " is defined in several packages here, write Package/" + name + " in a declaration"
 	packages.Length > 1 then "SameNamedTypes: " + name + clash else "AmbiguousType: " + name + advice
 Unique(candidates Texts) Texts
 	TypeChoice(List(Text) + "a/Net.strict").Unique(("b/Net.strict", "b/Lay.strict")) is ("b/Lay.strict")
-	let existing = Names(lines)
-	let names = Names(candidates)
+	existing = Names(lines)
+	names = Names(candidates)
 	for candidates
 		if names(index) is not in existing
 			value
@@ -89,7 +89,7 @@ Packages(name Text) Texts
 	Plain.Packages("Scene").Length is 0
 	mutable packages = List(Mutable(Text))
 	for lines
-		let tokens = Tokenizer(value).Tokens
+		tokens = Tokenizer(value).Tokens
 		for Range(0, tokens.Length > 2 then tokens.Length - 2 else 0)
 			if tokens(value + 1) is "/" and tokens(value + 2) is name and tokens(value) is not in packages
 				packages.Add(tokens(value))

@@ -68,7 +68,7 @@ Lines Texts
 	constant unixText = Replace("\r", "")
 	if unixText is ""
 		return Texts
-	let parts = unixText.Split("\n")
+	parts = unixText.Split("\n")
 	if parts.Last is not ""
 		return parts
 	for Range(0, parts.Length - 1)
@@ -130,8 +130,8 @@ Substring(start Number, length = End) Text
 	"abcd".Substring(0, 5) is SubstringOutOfRange
 	"abcd".Substring(-1, 2) is SubstringOutOfRange
 	"abcd".Substring(0, -2) is SubstringOutOfRange
-	let offset = start < 0 then Length + start else start
-	let count = length is End then Length - offset else length
+	offset = start < 0 then Length + start else start
+	count = length is End then Length - offset else length
 	if offset < 0 or count < 0 or offset + count > Length
 		return SubstringOutOfRange
 	for Range(offset, offset + count)

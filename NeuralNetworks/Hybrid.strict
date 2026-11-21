@@ -8,16 +8,16 @@ constant Tiny = Hybrid(List(DeltaBlock) + DeltaBlock.Tiny)
 constant Single = Tiny.Prepared(Drafter.Rows(1))
 Loaded(model Gguf, first Number, count Number, zeros Numbers, basis Basis) Hybrid slow
 	Hybrid.Loaded(Drafter.Model, 0, 3, DeltaBlock.Tiny.memory, Basis.None).layers.Length is 3
-	let sigmoid = model.Value("general.architecture") is "qwen4exp"
+	sigmoid = model.Value("general.architecture") is "qwen4exp"
 	mutable loaded = List(Mutable(DeltaBlock))
 	for count
 		loaded.Add(DeltaBlock(DeltaBlock.Loaded(model, "blk." + (first + index) + ".", zeros, basis), sigmoidGate = sigmoid))
 	Hybrid(loaded)
 Memory(model Gguf) Numbers
 	Hybrid.Memory(Drafter.Model) is DeltaBlock.Tiny.memory
-	let architecture = model.Value("general.architecture")
-	let heads = model.Value(architecture + ".ssm.time_step_rank")
-	let size = model.Value(architecture + ".ssm.state_size")
+	architecture = model.Value("general.architecture")
+	heads = model.Value(architecture + ".ssm.time_step_rank")
+	size = model.Value(architecture + ".ssm.state_size")
 	Layer.Zeros(heads is "" then 0 else heads to Number * (size to Number) * (size to Number))
 Rewound(before Hybrid, tokens Number) Hybrid
 	Tiny.Prepared(Drafter.Pair).Rewound(Tiny, 1).layers(0).memory is Single.layers(0).memory
@@ -32,8 +32,8 @@ Prepared(input Numbers, sequences = 1) Hybrid
 	mutable stepped = List(Mutable(DeltaBlock))
 	mutable combinations = List(Mutable(Numbers))
 	for layers
-		let combined = value.Combined(hidden)
-		let cached = value.Cached(combined, sequences)
+		combined = value.Combined(hidden)
+		cached = value.Cached(combined, sequences)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
 		combinations.Add(combined.Length > RewindableTokens * value.Width then List(Number) else combined)
@@ -41,7 +41,7 @@ Prepared(input Numbers, sequences = 1) Hybrid
 Opened(combined Numbers, tokens Number, start Number) Hybrid
 	None.Opened((1, 2, 3, 4), 2, 1).gates is (2, 4)
 	None.Opened((1, 2, 3, 4), 1, 4).gates.Length is 0
-	let width = combined.Length / tokens
+	width = combined.Length / tokens
 	start is width then value else Hybrid(value, gates = Batch.Columns(combined, width, start, width - start))
 Gated(merged Numbers) Numbers
 	None.Gated((1, 2)) is (1, 2)

@@ -10,9 +10,9 @@ Emitted(texts List(MlirFunction)) Texts slow
 	Counting.Emitted(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
 	if module.Cached is ""
 		return Fresh(texts)
-	let keys = Keys(texts)
-	let stored = Stored
-	let emitted = Reused(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
+	keys = Keys(texts)
+	stored = Stored
+	emitted = Reused(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
 	Saved(keys, emitted, stored)
 	emitted
 Fresh(texts List(MlirFunction)) Texts
@@ -23,7 +23,7 @@ Reused(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isCh
 	mutable reused = 0
 	for keys
 		reused = value is in stored then reused + 1 else reused
-	let checking = isChecked then ", each compared with a fresh emission" else ""
+	checking = isChecked then ", each compared with a fresh emission" else ""
 	Logger.Log("Emission cache: " + reused + " of " + texts.Length + " functions reused" + checking)
 	Picked(texts, keys, stored, isChecked)
 Picked(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
@@ -34,7 +34,7 @@ Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked
 		return module.Emission(function, functions, recursive)
 	if isChecked is false
 		return stored(key)
-	let fresh = module.Emission(function, functions, recursive)
+	fresh = module.Emission(function, functions, recursive)
 	if stored(key) is not fresh
 		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
 	fresh
@@ -45,8 +45,8 @@ Parsed(text Text) Dictionary(Text, Text)
 	Counting.Parsed(Separator + "a\nx" + Separator + "a\ny")("a") is "x"
 	mutable stored = Dictionary(Text, Text)
 	for text.Split(Separator)
-		let end = value.IndexOf("\n")
-		let key = end > 0 then value.Substring(0, end) else ""
+		end = value.IndexOf("\n")
+		key = end > 0 then value.Substring(0, end) else ""
 		if key is not "" and key is not in stored
 			stored = stored.Add(key, value.Substring(end + 1))
 	stored
@@ -61,23 +61,23 @@ Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 Keys(texts List(MlirFunction)) Texts
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
 	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")
-	let shared = Shared(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
-	let graph = CallGraph(module.types)
+	shared = Shared(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
+	graph = CallGraph(module.types)
 	for texts
-		let own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
+		own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
 		Flags(value) + "|" + shared + "|" + graph.Closure(own) + "|" + graph.Calling(own)
 Flags(function MlirFunction) Text
 	Counting.Flags(MlirModule.Counters.Functions.First).StartsWith("Counter_Run_0|")
-	let loops = function.FastLoop + "|" + function.Group + "|" + function.Guarded
-	let slots = loops + "|" + function.Packing + "|" + function.Float
-	let calls = (function.lineSlots to Text) + "|" + function.IsDeferred
+	loops = function.FastLoop + "|" + function.Group + "|" + function.Guarded
+	slots = loops + "|" + function.Packing + "|" + function.Float
+	calls = (function.lineSlots to Text) + "|" + function.IsDeferred
 	function.Symbol + "|" + function.Variant + "|" + slots + "|" + calls + "|" + (function.Symbol is in recursive)
 Shared(compiler Text) Text
 	Counting.Shared("a").Length > 0
 	Counting.Shared("a") is not Counting.Shared("b")
 	Safe.Shared("a") is not Counting.Shared("a")
-	let safe = functions.Length > 0 then functions.First.safeCalls to Text else ""
-	let entry = compiler + "|" + safe + "|" + module.entryName + "|" + module.entries + "|" + module.entrySymbol
+	safe = functions.Length > 0 then functions.First.safeCalls to Text else ""
+	entry = compiler + "|" + safe + "|" + module.entryName + "|" + module.entries + "|" + module.entrySymbol
 	mutable sum = Wide(entry + "|" + module.platform + "|" + (module.countedFiles to Text))
 	for module.types
 		sum = (sum + Wide(Layout(value))) % Range

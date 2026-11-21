@@ -16,7 +16,7 @@ Store(stored Text, slot Text) Text
 Private(name Text) Texts
 	Double.Private("%r0").First is "    %r0.private = llvm.alloca %one x f64 : (i64) -> !llvm.ptr<5>"
 	Double.Private("%r0").Last is "    %r0 = llvm.addrspacecast %r0.private : !llvm.ptr<5> to !llvm.ptr"
-	let allocated = "    " + name + ".private = llvm.alloca %one x " + type + " : (i64) -> !llvm.ptr<5>"
+	allocated = "    " + name + ".private = llvm.alloca %one x " + type + " : (i64) -> !llvm.ptr<5>"
 	(allocated, "    " + name + " = llvm.addrspacecast " + name + ".private : !llvm.ptr<5> to !llvm.ptr")
 Written(slot Text) Text
 	Pointer.Written("%s") is "    func.call @strict_gc_written(%s) : (!llvm.ptr) -> ()"
@@ -33,11 +33,11 @@ Read(result Text, operands Text) Text
 	"    " + result + " = func.call @strict_device_element" + Suffix + operands + Elements + type
 Summed(result Text, sum Text) Text
 	Single.Summed("%y", "%x") is "    %y = func.call @strict_device_lanes_sums(%x, %lane, %lanes) : (f32, i64, i64) -> f32"
-	let call = "    " + result + " = func.call @strict_device_lanes_sum" + Suffix + "(" + sum + ", %lane, %lanes)"
+	call = "    " + result + " = func.call @strict_device_lanes_sum" + Suffix + "(" + sum + ", %lane, %lanes)"
 	call + " : (" + type + ", i64, i64) -> " + type
 Shuffled(result Text, source Text, offset Text) Text
 	Single.Shuffled("%y", "%x", "%o") is "    %y = func.call @strict_device_shuffles(%x, %o) : (f32, i32) -> f32"
-	let call = "    " + result + " = func.call @strict_device_shuffle" + Suffix + "(" + source + ", " + offset + ")"
+	call = "    " + result + " = func.call @strict_device_shuffle" + Suffix + "(" + source + ", " + offset + ")"
 	call + " : (" + type + ", i32) -> " + type
 Number(target Text, hex Text) Texts
 	Double.Number("%c", "0x0") is ("    %c = arith.constant 0x0 : f64")
@@ -49,10 +49,10 @@ Operated(result Text, kind Number, operands Text) Text
 	Single.Operated("%c", InstructionType.Power, "%a, %b").EndsWith(PowerCall)
 	Double.Operated("%c", InstructionType.Modulo, "%a, %b") is "    %c = arith.remf %a, %b : f64"
 	Double.Operated("%c", InstructionType.Add, "%a, %b") is "    %c = arith.addf %a, %b : f64"
-	let power = " = func.call @strict_device_power" + Suffix + "(%failed, " + operands + ") : (!llvm.ptr, "
+	power = " = func.call @strict_device_power" + Suffix + "(%failed, " + operands + ") : (!llvm.ptr, "
 	if kind is InstructionType.Power
 		return "    " + result + power + type + ", " + type + ") -> " + type
-	let operation = kind is InstructionType.Modulo then "remf" else MlirStatements.Copy.Operation(kind)
+	operation = kind is InstructionType.Modulo then "remf" else MlirStatements.Copy.Operation(kind)
 	"    " + result + " = arith." + operation + " " + operands + " : " + type
 Floored(result Text, number Text) Text
 	Single.Floored("%f", "%x") is "    %f = llvm.intr.floor(%x) : (f32) -> f32"

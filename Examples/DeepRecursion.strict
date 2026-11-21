@@ -9,7 +9,7 @@ Endless Number slow
 TraceLines Number slow
 	DeepRecursion(1).TraceLines is 52
 	DeepRecursion(0).TraceLines is 0
-	let failure = number > 0 then Ping else number
+	failure = number > 0 then Ping else number
 	failure is Error then (failure to Text).Lines.Length else 0
 Ping Number slow
 	DeepRecursion(1).Ping is Error

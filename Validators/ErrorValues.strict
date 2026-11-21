@@ -13,31 +13,31 @@ Issues ValidationIssues
 	Detailed.Issues.Length is 0 and Other.Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
-		let known = Known(index)
+		known = Known(index)
 		if known is not ""
-			let name = Raised(value)
-			let fix = name + " knows " + known + ", write Error(\"" + name + ": \" + " + known + ")"
+			name = Raised(value)
+			fix = name + " knows " + known + ", write Error(\"" + name + ": \" + " + known + ")"
 			issues.Add(ValidationIssue("ErrorMustIncludeValue", fix, index + 1))
 	issues
 Raised(line Text) Text
 	Reading.Raised(Reading.lines(1)) is "FileNotFound" and Seeding.Raised(Seeded(1)) is ""
 	Seeding.Raised(Seeded(3)) is "InvalidSeed" and Detailed.Raised(Detailed.lines(1)) is ""
 	Seeding.Raised("\tError(\"Missing\")") is "Missing" and Seeding.Raised("\tlet x = Error(\"Missing\")") is ""
-	let at = line.IndexOf("Error(\"")
+	at = line.IndexOf("Error(\"")
 	if at < 0
 		return ""
-	let before = line.Substring(0, at).Trim
-	let rest = line.Substring(at + 7, line.Length - at - 7)
-	let name = rest.Substring(0, rest.IndexOf("\""))
-	let isRaised = before is "" or before.EndsWith("return") or before.EndsWith(" then") or before.EndsWith(" else")
+	before = line.Substring(0, at).Trim
+	rest = line.Substring(at + 7, line.Length - at - 7)
+	name = rest.Substring(0, rest.IndexOf("\""))
+	isRaised = before is "" or before.EndsWith("return") or before.EndsWith(" then") or before.EndsWith(" else")
 	isRaised and rest.StartsWith(name + "\")") and name.IndexOf(" ") < 0 and name.IndexOf(":") < 0 then name else ""
 Condition(at Number) Text
 	Reading.Condition(1) is "\tFile(path).Exists" and Seeding.Condition(3) is "\tif seed < 0"
 	Other.Condition(4) is "" and Seeding.Condition(4) is ""
-	let split = lines(at).IndexOf(" then ")
+	split = lines(at).IndexOf(" then ")
 	if split >= 0
 		return lines(at).Substring(0, split)
-	let indent = BodyParser.Indent(lines(at))
+	indent = BodyParser.Indent(lines(at))
 	for Range(0, at).Reverse
 		if BodyParser.Indent(lines(value)) < indent
 			return lines(value).Trim.StartsWith("if ") then lines(value) else ""
@@ -50,17 +50,17 @@ Parameters(at Number) Texts
 	List(Text)
 Named(header HeaderTokens) Texts
 	Reading.Named(HeaderTokens.Made) is ("count") and Reading.Named(HeaderTokens.Loading) is ("path")
-	let types = header.ParameterTypes
+	types = header.ParameterTypes
 	for header.ParameterNames
 		if types(index) is in Valued
 			value
 Known(at Number) Text
 	Reading.Known(1) is "path" and Seeding.Known(3) is "seed" and Seeding.Known(1) is ""
 	Other.Known(2) is "" and Detailed.Known(1) is ""
-	let condition = Condition(at).Trim
+	condition = Condition(at).Trim
 	if Raised(lines(at)) is "" or condition.IndexOf(" is Error") >= 0
 		return ""
-	let used = Tokenizer(condition).Tokens
+	used = Tokenizer(condition).Tokens
 	for Parameters(at)
 		if IsDirect(used, value)
 			return value
@@ -71,7 +71,7 @@ IsDirect(used Texts, name Text) Boolean
 	Reading.IsDirect(("x", "+", "path"), "path") is false and Reading.IsDirect(List(Text) + "path", "path")
 	Reading.IsDirect(("a", "+", "path", "or", "path", "is", "b"), "path")
 	for used
-		let isJoined = index > 0 and used(index - 1) is "+" or index + 1 < used.Length and used(index + 1) is "+"
+		isJoined = index > 0 and used(index - 1) is "+" or index + 1 < used.Length and used(index + 1) is "+"
 		if value is name and isJoined is false
 			return true
 	false

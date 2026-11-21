@@ -12,8 +12,8 @@ Unescaped Text
 	mutable result = ""
 	mutable at = 0
 	for as long as at < raw.Length
-		let slash = raw.IndexOf("\\", at)
-		let stop = slash < 0 then raw.Length else slash
+		slash = raw.IndexOf("\\", at)
+		stop = slash < 0 then raw.Length else slash
 		result = result + raw.Substring(at, stop - at) + (slash < 0 then "" else Escape(slash + 1))
 		at = slash < 0 then raw.Length else slash + Step(slash + 1)
 	result
@@ -27,19 +27,19 @@ Escape(position Number) Text
 	Escaped.Escape(2) is "\""
 	Escaped.Escape(29) is "\n"
 	Escaped.Escape(17).Bytes is (240, 159, 152, 128)
-	let code = raw(position) to Text
-	let high = Hex(position + 1)
+	code = raw(position) to Text
+	high = Hex(position + 1)
 	if code is "u"
-		let offset = high % SurrogateValues * SurrogateValues - LowSurrogate
+		offset = high % SurrogateValues * SurrogateValues - LowSurrogate
 		return Utf8(IsPair(position) then SupplementaryStart + offset + Hex(position + 7) else high)
-	let found = "ntrbf".IndexOf(code)
+	found = "ntrbf".IndexOf(code)
 	found < 0 then code else Controls(found)
 IsPair(position Number) Boolean
 	Escaped.IsPair(17)
 	Escaped.IsPair(11) is false
 	JsonText("\\ud800\\udc00").IsPair(1) and JsonText("\\udc00\\udc00").IsPair(1) is false
 	JsonText("\\ud800abcdef").IsPair(1) is false
-	let high = Hex(position + 1)
+	high = Hex(position + 1)
 	high >= HighSurrogate and high < LowSurrogate and raw.StartsWith("\\u", position + 5)
 Hex(position Number) Number
 	Escaped.Hex(6) is 65

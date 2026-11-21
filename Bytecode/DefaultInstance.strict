@@ -13,8 +13,8 @@ constant Starting = TypeEntry("A", List(MemberEntry), MethodEntry(MethodEntry.He
 Called(node SyntaxNode, block CodeBlock) CodeBlock
 	Bagged.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "from"
 	Owned.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "Count"
-	let instanced = Instanced(node, block)
-	let arranged = NamedArguments(values).Arranged(node, block)
+	instanced = Instanced(node, block)
+	arranged = NamedArguments(values).Arranged(node, block)
 	instanced is node then values.Replacing(arranged, block) else values.InstanceCall(instanced, block)
 Instanced(node SyntaxNode, block CodeBlock) SyntaxNode
 	Bagged.Instanced(Counting, CodeBlock.Empty).children(0).Kind is "Call"
@@ -23,7 +23,7 @@ Instanced(node SyntaxNode, block CodeBlock) SyntaxNode
 	Computed.Instanced(Counting, CodeBlock.Empty).children(0).Kind is "Call"
 	if node.Kind is not in ("Member", "MethodCall") or node.children.Length is 0
 		return node
-	let type = node.children(0).text
+	type = node.children(0).text
 	if IsSelf(type) or values.IsTypeName(node.children(0), block) is false or IsReading(type, node.text) is false
 		return node
 	mutable children = node.children

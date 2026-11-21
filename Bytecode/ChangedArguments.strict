@@ -39,21 +39,21 @@ Stored(block CodeBlock) CodeBlock
 	Immutable.scope.TypeOf("painter") is "Painter"
 	Immutable.scope.TypeOf("ticker") is "Ticker"
 	Painting.StoredBack(Repaint, Holding.At(1), Holding).instructions.Length is 1
-	let header = values.target.Header(method)
-	let bodies = MethodBodies(TypeEntry.ShortName(values.target.TypeName), values.target.shape, values.inference)
+	header = values.target.Header(method)
+	bodies = MethodBodies(TypeEntry.ShortName(values.target.TypeName), values.target.shape, values.inference)
 	mutable stored = block
 	for bodies.RefParameters(header)
-		let loaded = stored.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, stored.register, value))
+		loaded = stored.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, stored.register, value))
 		stored = loaded.Stored("changed_" + header.ParameterNames.Index(value))
 	stored
 StoredBack(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
 	Painting.StoredBack(Paint, Holding.At(1), Holding).instructions.First.payload is (3, -1)
 	Painting.StoredBack(Paint, Holding.At(1), CodeBlock.Empty.Declare("ticker", "Ticker")).instructions.Length is 0
-	let start = values.ArgumentStart(call)
-	let isConstructed = start is 0 and values.inference.types.IsKnown(call.text)
+	start = values.ArgumentStart(call)
+	isConstructed = start is 0 and values.inference.types.IsKnown(call.text)
 	mutable stored = invoked
 	for Positions(TypeEntry.ShortName(Owner(call, block)), isConstructed then "from" else method)
-		let argument = start + value < call.children.Length then call.children(start + value) else call
+		argument = start + value < call.children.Length then call.children(start + value) else call
 		if argument.Kind is "Identifier" and block.scope.TypeOf(argument.text + " mutable") is not ""
 			stored = stored.Add(InstructionEntry.Named(Store, invoked.Result + 2 + value, argument.text))
 	stored

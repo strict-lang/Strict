@@ -6,31 +6,31 @@ Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32
 	if MachineUse.Weights(logger, "Qwen3Benchmark", path).Admitted
 		Ran(path, bits, count, repeats, batch, cacheBits, temperature)
 Ran(path Text, bits Number, count Number, repeats Number, batch Number, cacheBits Number, temperature Number)
-	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
-	let started = Process.Elapsed
-	let model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)
-	let loaded = Process.Elapsed
-	let prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
+	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	started = Process.Elapsed
+	model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)
+	loaded = Process.Elapsed
+	prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
 	logger.Log(Prompt + tokenizer.Decoded(Sampled(model.Prefilled(prompt, 0), prompt.Length, count, temperature)))
-	let prefill = Fastest(model, prompt)
-	let prefilled = model.Prefilled(prompt, 0)
-	let first = prefilled.Next
-	let durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
+	prefill = Fastest(model, prompt)
+	prefilled = model.Prefilled(prompt, 0)
+	first = prefilled.Next
+	durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
 	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
 Fastest(model Qwen3, prompt Numbers) Number slow
 	Qwen3Benchmark.Fastest(Qwen3.Tiny, (1, 2)) > 0
 	mutable fastest = 1000000
 	for 3
-		let before = Process.Elapsed
-		let first = model.Prefilled(prompt, 0).Next
-		let milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
+		before = Process.Elapsed
+		first = model.Prefilled(prompt, 0).Next
+		milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
 		fastest = first >= 0 and milliseconds < fastest then milliseconds else fastest
 	fastest
 Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers slow
 	Qwen3Benchmark.Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
-	let started = Process.Elapsed
-	let tokens = Generation(model, Sampling(temperature, TopK, TopP, PseudoRandom(1))).Continued(position, count)
-	let milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
+	started = Process.Elapsed
+	tokens = Generation(model, Sampling(temperature, TopK, TopP, PseudoRandom(1))).Continued(position, count)
+	milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
 	if temperature > 0
 		logger.Log("sampled " + count + " tokens at temperature " + temperature + " in " + milliseconds + " ms per token")
 	tokens
@@ -48,18 +48,18 @@ Durations(model Qwen3, token Number, start Number, count Number, batch Number) N
 		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
 		chosen = current.Nexts
 		GpuMemory.Finished
-		let duration = (Process.Elapsed - last) * 1000
+		duration = (Process.Elapsed - last) * 1000
 		last = last + duration / 1000
 		duration
 Report(prompt Number, prefill Number, durations Numbers, batch Number) Text
 	Qwen3Benchmark.Report(2, 4, (10, 20, 30), 1).StartsWith("prefill 2 tokens 4 ms (250 tokens/s)")
 	Qwen3Benchmark.Report(2, 4, (10, 20, 30), 8).EndsWith("median 20 ms (400 tokens/s) mean 20 ms p95 30 ms")
-	let median = Quantile(durations, 0.5)
-	let mean = durations.Sum / durations.Length
-	let prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "
-	let steps = batch is 1 then durations.Length + " tokens" else durations.Length + " steps of " + batch + " tokens"
-	let decoded = "decode " + steps + " median " + median.Round(2) + " ms (" + (batch * 1000 / median).Round
-	let late = " ms p95 " + Quantile(durations, TailShare).Round(2) + " ms"
+	median = Quantile(durations, 0.5)
+	mean = durations.Sum / durations.Length
+	prefilled = "prefill " + prompt + " tokens " + prefill.Round(2) + " ms (" + (1000 / prefill).Round + " tokens/s), "
+	steps = batch is 1 then durations.Length + " tokens" else durations.Length + " steps of " + batch + " tokens"
+	decoded = "decode " + steps + " median " + median.Round(2) + " ms (" + (batch * 1000 / median).Round
+	late = " ms p95 " + Quantile(durations, TailShare).Round(2) + " ms"
 	prefilled + decoded + " tokens/s) mean " + mean.Round(2) + late
 Quantile(numbers Numbers, share Number) Number
 	Qwen3Benchmark.Quantile((3, 1, 2), 0.5) is 2

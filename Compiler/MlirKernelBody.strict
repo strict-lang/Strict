@@ -19,28 +19,28 @@ Lines Texts
 	Body.Lines(11) is "    llvm.store %wfnone, %wfailed : i64, !llvm.ptr"
 	Body.Lines(Body.Lines.Length - 5) is "    llvm.store %wfl, %failed : i64, !llvm.ptr"
 	Text.Combine(Body.Lines).IndexOf(PickedCall) > 0
-	let header = "  llvm.func @" + MlirDevice(function, position).Name + "(" + MlirDevice.Fixed + Freed + Attributes
-	let failing = ("    %one = arith.constant 1 : i64") + MlirTyped("i64").Private("%wfailed") + Cleared
-	let started = (List(Text) + header) + Threads + failing + MlirGrouped.Plain + "  ^body:"
+	header = "  llvm.func @" + MlirDevice(function, position).Name + "(" + MlirDevice.Fixed + Freed + Attributes
+	failing = ("    %one = arith.constant 1 : i64") + MlirTyped("i64").Private("%wfailed") + Cleared
+	started = (List(Text) + header) + Threads + failing + MlirGrouped.Plain + "  ^body:"
 	started + Arguments + Stored + Failed + MlirDevice.Ending
 Kernels Texts
 	Body.Kernels.Length is Body.Lines.Length * 2 + Body.Functions.Length
 	Lines + MlirKernelBody(MlirFunction(function, Float = "f32"), position).Lines + Functions
 Freed Text
 	Body.Freed is ", %f_board_cells_d: !llvm.ptr, %f_board_cells_n: i64, %f_board_cells_b: i64"
-	let kernel = MlirWholeKernel(function, position)
+	kernel = MlirWholeKernel(function, position)
 	mutable text = ""
 	for kernel.Free
-		let parts = ", %f_" + value + "_d: !llvm.ptr, %f_" + value + "_n: i64, %f_" + value + "_b: i64"
+		parts = ", %f_" + value + "_d: !llvm.ptr, %f_" + value + "_n: i64, %f_" + value + "_b: i64"
 		text = text + (kernel.IsList(value) then parts else ", %f_" + value + ": f64")
 	text
 Arguments Texts
 	Body.Arguments.Length is 0
-	let kernel = MlirWholeKernel(function, position)
-	let kinds = MlirWholeFunction(kernel.Callee).Kinds
+	kernel = MlirWholeKernel(function, position)
+	kinds = MlirWholeFunction(kernel.Callee).Kinds
 	mutable lines = List(Mutable(Text))
 	for kernel.Reads
-		let name = kernel.Source(value)
+		name = kernel.Source(value)
 		if kinds(index) is "i" and name is not "index"
 			lines.Add("    %w" + index + " = arith.fptosi %f_" + name + " : f64 to i64")
 		else if kinds(index) is "o"
@@ -49,18 +49,18 @@ Arguments Texts
 Members(name Text, input Number) Texts
 	Body.Members("board", 0).Length is 0
 	Sized.Members("board", 0).Last.EndsWith("arith.bitcast %f_board_Size : f64 to i64")
-	let kernel = MlirWholeKernel(function, position)
+	kernel = MlirWholeKernel(function, position)
 	for MlirWholeInstance(kernel.Callee).Members(input)
-		let kind = kernel.Kind(name + "_" + value)
+		kind = kernel.Kind(name + "_" + value)
 		if kind is in ("i", "c")
 			MlirWholeFields(function).Converted("%f_" + name + "_" + value, kind, "%w" + input + "_" + value).First
 Names Texts
 	Body.Names is ("%f_board_cells_d", "%at")
-	let kernel = MlirWholeKernel(function, position)
-	let kinds = MlirWholeFunction(kernel.Callee).Kinds
+	kernel = MlirWholeKernel(function, position)
+	kinds = MlirWholeFunction(kernel.Callee).Kinds
 	mutable names = List(Mutable(Text))
 	for kernel.Reads
-		let name = kernel.Source(value)
+		name = kernel.Source(value)
 		if kinds(index) is "o"
 			names = names + MemberNames(name, index)
 		else
@@ -68,14 +68,14 @@ Names Texts
 	names
 MemberNames(name Text, input Number) Texts
 	Body.MemberNames("board", 0) is List(Text) + "%f_board_cells_d"
-	let kernel = MlirWholeKernel(function, position)
+	kernel = MlirWholeKernel(function, position)
 	for MlirWholeInstance(kernel.Callee).Members(input)
 		kernel.Kind(name + "_" + value) is "d" then "%f_" + name + "_" + value + "_d" else "%w" + input + "_" + value
 Stored Texts
 	Body.Stored.Last is Store
-	let kernel = MlirWholeKernel(function, position)
-	let statements = MlirWholeStatements(function, kernel.Call, "", "", "")
-	let calls = MlirFlatCall(statements, function.method.instructions(kernel.Call))
+	kernel = MlirWholeKernel(function, position)
+	statements = MlirWholeStatements(function, kernel.Call, "", "", "")
+	calls = MlirFlatCall(statements, function.method.instructions(kernel.Call))
 	(calls.Call("%wr", MlirWholeFlat(kernel.Callee), Names, "%wfailed"), Narrowed, Placed, Store)
 Functions Texts
 	Body.Functions.First.StartsWith("  func.func private @Board_Picked_2_whole_flat(")
@@ -91,13 +91,13 @@ Flattened(callee MlirFunction, depth Number) List(MlirFunction)
 	Body.Flattened(MlirWholeKernel.Kernel.Callee, 0).Length is 1
 	mutable found = List(MlirFunction) + callee
 	for callee.method.instructions
-		let isCall = value.kind is InstructionType.Invoke and depth < 3
+		isCall = value.kind is InstructionType.Invoke and depth < 3
 		if isCall and MlirWholeFunction(callee).IsBuilt(value, index) is false and IsNative(callee, value, index) is false
 			found = found + Flattened(MlirWholeFunction(callee).Callee(value), depth + 1)
 	found
 IsNative(callee MlirFunction, entry InstructionEntry, at Number) Boolean
 	Body.IsNative(Body.function, MlirWholeKernel.Blurring(8), 8) is false
-	let helper = MlirCalls(callee, at).NativeHelper(entry, PayloadDecoder(entry))
+	helper = MlirCalls(callee, at).NativeHelper(entry, PayloadDecoder(entry))
 	PayloadDecoder(entry).Text(2) is in ("Floor", "Length") or helper is not ""
 Privatized(lines Texts) Texts
 	Body.Privatized(List(Text) + "    %r0 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr").Length is 2
@@ -105,25 +105,25 @@ Privatized(lines Texts) Texts
 	constant alloca = " = llvm.alloca %one x "
 	mutable result = List(Mutable(Text))
 	for lines
-		let at = value.IndexOf(alloca)
-		let type = at < 0 then "" else value.Substring(at + alloca.Length, value.IndexOf(" : (i64)") - at - alloca.Length)
+		at = value.IndexOf(alloca)
+		type = at < 0 then "" else value.Substring(at + alloca.Length, value.IndexOf(" : (i64)") - at - alloca.Length)
 		result = at < 0 then result + value else result + MlirTyped(type).Private(value.Substring(4, at - 4))
 	result
 Value(at Number, name Text) Texts
 	Body.Value(0, "board_cells").Last is "    llvm.store %t5gv0, %t5gx0 : f64, !llvm.ptr"
 	Body.Value(0, "board_cells")(2).EndsWith("%t5gv0p[1] : (!llvm.ptr) -> !llvm.ptr, f64")
-	let temp = "%t" + position + "gv" + at
-	let pointer = "    " + temp + "p = func.call @strict_ptr(" + temp + "i) : (f64) -> !llvm.ptr"
-	let address = "    " + temp + "s = llvm.getelementptr " + temp + "p[" + Slot(name) + MlirGpu.Indexing
-	let slotted = "%t" + position + "gx" + at
-	let target = "    " + slotted + " = llvm.getelementptr %t" + position + "ga[" + at + MlirGpu.Indexing
-	let loaded = "    " + temp + " = llvm.load " + temp + "s : !llvm.ptr -> f64"
-	let instance = function.Load(temp + "i", "%v_" + name.Substring(0, name.IndexOf("_")))
+	temp = "%t" + position + "gv" + at
+	pointer = "    " + temp + "p = func.call @strict_ptr(" + temp + "i) : (f64) -> !llvm.ptr"
+	address = "    " + temp + "s = llvm.getelementptr " + temp + "p[" + Slot(name) + MlirGpu.Indexing
+	slotted = "%t" + position + "gx" + at
+	target = "    " + slotted + " = llvm.getelementptr %t" + position + "ga[" + at + MlirGpu.Indexing
+	loaded = "    " + temp + " = llvm.load " + temp + "s : !llvm.ptr -> f64"
+	instance = function.Load(temp + "i", "%v_" + name.Substring(0, name.IndexOf("_")))
 	(instance, pointer, address, loaded, target, function.Store(temp, slotted))
 Slot(name Text) Number
 	Body.Slot("board_cells") is 1
 	Body.Slot("board_width") is 0
-	let variable = name.Substring(0, name.IndexOf("_"))
-	let member = name.Substring(name.IndexOf("_") + 1, name.Length - name.IndexOf("_") - 1)
-	let type = function.TypeOf(MlirWholeKernel(function, position).TypeName(variable), true)
+	variable = name.Substring(0, name.IndexOf("_"))
+	member = name.Substring(name.IndexOf("_") + 1, name.Length - name.IndexOf("_") - 1)
+	type = function.TypeOf(MlirWholeKernel(function, position).TypeName(variable), true)
 	MlirEmbedded(function).Offset(type, member)

@@ -29,15 +29,15 @@ Wrapper Texts
 	MlirCached(MlirFunction.Counter).Wrapper.Length is 0
 	if function.type.ConstantSlot(function.method) < 0
 		return List(Text)
-	let symbol = function.Symbol
-	let header = "  func.func private @" + Called + "(%p0: f64) -> f64 {"
-	let compute = "    %computed = func.call @" + symbol + "(%p0) : (f64) -> f64"
+	symbol = function.Symbol
+	header = "  func.func private @" + Called + "(%p0: f64) -> f64 {"
+	compute = "    %computed = func.call @" + symbol + "(%p0) : (f64) -> f64"
 	Globals + header + Addresses + Checked + Entered + compute + Left + Stored
 Globals Texts
 	Kept.Globals.Last is "  llvm.mlir.global internal @sA_B_0(0 : i64) : i64"
-	let symbol = function.Symbol
+	symbol = function.Symbol
 	(Global + "k" + symbol + "(0.0 : f64) : f64", Global + "s" + symbol + "(0 : i64) : i64")
 Addresses Texts
 	Kept.Addresses.Last is "    %set = llvm.mlir.addressof @sA_B_0 : !llvm.ptr"
-	let symbol = function.Symbol
+	symbol = function.Symbol
 	("    %cache" + Address + "k" + symbol + Pointer, "    %set" + Address + "s" + symbol + Pointer)

@@ -12,7 +12,7 @@ Found(node SyntaxNode) SyntaxNode
 	Joining.Found(Joining.loop.children.Last) to Text is "index is 0"
 	Sigmas.Found(SyntaxNode("Identifier", "index")).Kind is "Missing"
 	Sigmas.Found(Nested).Kind is "Missing"
-	let isIndexed = node.Kind is "Binary" and node.text is "is" and node.children(0) to Text is "index"
+	isIndexed = node.Kind is "Binary" and node.text is "is" and node.children(0) to Text is "index"
 	if isIndexed and (node.children(1) to Text is "0" or node.children(1) to Text is in Lasts)
 		return node
 	for node.Kind is "For" then node.children.Slice(0, node.children.Length - 1) else node.children
@@ -37,10 +37,10 @@ Lasts Texts
 	LoopEdge(SyntaxNode("For", "", SyntaxNode("Call", "Range", (One, Count)))).Lasts.Last is "count - 1"
 	LoopEdge(SyntaxNode("For", "", SyntaxNode("Call", "Add", (One, Count)))).Lasts.Length is 2
 	Sigmas.Lasts.Last is "steps"
-	let iterable = loop.children(0)
-	let named = iterable to Text
-	let isAdded = iterable.Kind is "Binary" and iterable.text is "+" and iterable.children(1) to Text is "1"
-	let isRanged = iterable.Kind is "Call" and iterable.text is "Range" and iterable.children.Length is 2
-	let added = isAdded then List(Text) + iterable.children(0) to Text else List(Text)
-	let ranged = isRanged then List(Text) + (iterable.children(1) to Text + " - 1") else List(Text)
+	iterable = loop.children(0)
+	named = iterable to Text
+	isAdded = iterable.Kind is "Binary" and iterable.text is "+" and iterable.children(1) to Text is "1"
+	isRanged = iterable.Kind is "Call" and iterable.text is "Range" and iterable.children.Length is 2
+	added = isAdded then List(Text) + iterable.children(0) to Text else List(Text)
+	ranged = isRanged then List(Text) + (iterable.children(1) to Text + " - 1") else List(Text)
 	(named + " - 1", named + ".Length - 1") + ranged + added

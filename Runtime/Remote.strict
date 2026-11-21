@@ -7,7 +7,7 @@ Target(arguments Texts, absent Text) Text
 	Sample.Target(("a", "b"), "") is ""
 	Sample.Target(("--remote", "any"), "") is "any"
 	Sample.Target(List(Text), Ben) is "any"
-	let at = arguments.Index(Flag)
+	at = arguments.Index(Flag)
 	at < 0 or at + 1 >= arguments.Length then absent else arguments(at + 1)
 Without(arguments Texts) Texts
 	Sample.Without(("--remote", "AiServer", "--quality", "fast")) is ("--quality", "fast")
@@ -24,29 +24,29 @@ Without(arguments Texts) Texts
 	kept
 Named(arguments Texts) Number
 	Sample.Named(List(Text)) is -1
-	let remote = Target(arguments, "")
+	remote = Target(arguments, "")
 	Peers.IsAny(remote) or remote is "" then Number.NotFound else Forwarded(remote, Without(arguments))
 Sent(arguments Texts, absent Text, reply Text, line Text) Number
 	Sample.Sent(List(Text), Ben, "go\tjob\t0", "need") is -1
 	Sample.Sent(List(Text), Ben, "", "need") is -1
-	let remote = Target(arguments, absent)
-	let verdict = reply.Split("\t").First
+	remote = Target(arguments, absent)
+	verdict = reply.Split("\t").First
 	if Peers.IsAny(remote) is false or verdict is "go" or verdict is ""
 		return Number.NotFound
-	let chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
+	chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
 	chosen is "" then Number.NotFound else Forwarded(chosen, Without(arguments))
 Forwarded(name Text, arguments Texts) Number
 	Sample.Forwarded("missing", List(Text)) is Error
-	let host = Peers.Host(name)
+	host = Peers.Host(name)
 	if host is ""
 		logger.Log("No peer named " + name)
 		return Error("PeerNotFound")
-	let socket = Socket.Connect(host, Peers.Port)
+	socket = Socket.Connect(host, Peers.Port)
 	socket is Error then socket else Finished(socket, arguments)
 Finished(socket Number, arguments Texts) Number
 	Peers.Host("missing") is ""
 	Resident("").Send(socket, "run\t" + Text.Combine(arguments, "\t") + "\n")
-	let reply = Resident("").Received(socket, "\n")
+	reply = Resident("").Received(socket, "\n")
 	Socket.Close(socket)
 	logger.Log(reply.Trim)
 	reply.Trim.Split("\t").First to Number

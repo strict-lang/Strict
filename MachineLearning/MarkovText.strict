@@ -5,9 +5,9 @@ constant Characters = 200000
 constant Order = 5
 constant GeneratedCharacters = 400
 Run
-	let text = evaluation.Downloaded(Downloaded, Address).Substring(0, Characters)
-	let started = Process.Elapsed
-	let generated = Markov(text, Order).Generated(text.Substring(0, Order), GeneratedCharacters)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	text = evaluation.Downloaded(Downloaded, Address).Substring(0, Characters)
+	started = Process.Elapsed
+	generated = Markov(text, Order).Generated(text.Substring(0, Order), GeneratedCharacters)
+	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	logger.Log("Order " + Order + " chain over " + Characters + " characters of Shakespeare in " + milliseconds + " ms:")
 	logger.Log(generated)

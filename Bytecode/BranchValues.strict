@@ -17,7 +17,7 @@ Rewritten(body SyntaxNode) SyntaxNode
 	BranchValues("None").Rewritten(Chained).children(0).children.Last.children(0).Kind is "Number"
 	if mode is "None"
 		return body
-	let start = ChainStart(body)
+	start = ChainStart(body)
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
 		statements.Add(index >= start then Branch(Defaulted(value)) else value)
@@ -30,9 +30,9 @@ Defaulted(node SyntaxNode) SyntaxNode
 	BranchValues("Text").Defaulted(Selector).children.Last.children(0) is Selector.children.Last.children(0)
 	if mode is in ("", "None") or MethodBodies.IsSelector(node) is false
 		return node
-	let cases = node.children.Last
-	let unmatched = SyntaxNode("ElseValue", "", Unmatched)
-	let all = cases.children.Last.Kind is "ElseValue" then cases.children else cases.children + unmatched
+	cases = node.children.Last
+	unmatched = SyntaxNode("ElseValue", "", Unmatched)
+	all = cases.children.Last.Kind is "ElseValue" then cases.children else cases.children + unmatched
 	SyntaxNode(node.Kind, node.text, (node.children(0), SyntaxNode(cases.Kind, cases.text, all, cases.line)), node.line)
 ChainStart(body SyntaxNode) Number
 	Returning.ChainStart(Chained) is 0
@@ -88,7 +88,7 @@ Looped(line SyntaxNode) SyntaxNode
 	Returning.Looped(Looping).children.Last.children.Last.Kind is "Identifier"
 	if mode is not in ("sum", "product", "list", "add")
 		return line
-	let heads = line.children.Slice(0, line.children.Length - 1)
+	heads = line.children.Slice(0, line.children.Length - 1)
 	SyntaxNode("For", line.text, heads + LastWrapped(line.children.Last), line.line)
 LastLoop(body SyntaxNode) SyntaxNode
 	Returning.LastLoop(SyntaxNode("Body", "")) is SyntaxNode("Body", "")
@@ -98,7 +98,7 @@ LastLoop(body SyntaxNode) SyntaxNode
 	Returning.LastLoop(MethodCodegen.IfBody).Kind is "Number"
 	if body.children.Length is 0
 		return body
-	let last = body.children.Last
+	last = body.children.Last
 	last.Kind is in ("If", "ElseIf", "Else") and last.HasBody then LastLoop(last.children.Last) else last
 Reduction(line SyntaxNode) Text
 	Returning.Reduction(SyntaxNode("Binary", "+", (Value, Value))) is ""
@@ -113,7 +113,7 @@ Accumulated(line SyntaxNode) SyntaxNode
 	constant result = SyntaxNode("Identifier", "forResult")
 	if mode is "list"
 		return SyntaxNode("MethodCall", "Add", (result, line), line.line)
-	let combined = SyntaxNode("Binary", mode is "product" then "*" else "+", (result, line))
+	combined = SyntaxNode("Binary", mode is "product" then "*" else "+", (result, line))
 	SyntaxNode("Reassignment", "", (result, combined), line.line)
 IsValue(line SyntaxNode) Boolean
 	Returning.IsValue(SyntaxNode("Binary", "+", (Value, Value))) and Returning.IsValue(SyntaxNode("Identifier", "then"))

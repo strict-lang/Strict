@@ -13,9 +13,9 @@ Failures Number slow
 Reopened(server Number) slow
 	if server is Error
 		return Error("ServerNotOpened")
-	let port = Socket.Port(server)
-	let second = Socket.Listen(port)
-	let served = Loopback(server)
+	port = Socket.Port(server)
+	second = Socket.Listen(port)
+	served = Loopback(server)
 	if second is not Error
 		Socket.Close(second)
 	if served is Error
@@ -26,19 +26,19 @@ Reopened(server Number) slow
 Loopback(server Number) slow
 	if server is Error
 		return Error("ServerNotOpened")
-	let connected = Connected(server)
+	connected = Connected(server)
 	Socket.Close(server)
 	if connected is Error
 		return connected
 Connected(server Number) slow
-	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
+	client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	if client is Error
 		return Error("ClientNotConnected")
-	let accepted = Socket.Accept(server)
+	accepted = Socket.Accept(server)
 	if accepted is Error
 		Socket.Close(client)
 		return Error("ClientNotAccepted")
-	let exchanged = Exchanged(client, accepted)
+	exchanged = Exchanged(client, accepted)
 	Socket.Close(accepted)
 	Socket.Close(client)
 	if exchanged is Error
@@ -46,12 +46,12 @@ Connected(server Number) slow
 Exchanged(client Number, accepted Number) slow
 	if Socket.Send(client, (1, 2, 3)) is Error
 		return Error("BytesNotSent")
-	let received = Socket.Receive(accepted, 3)
+	received = Socket.Receive(accepted, 3)
 	if received is Error or received is not (1, 2, 3)
 		return Error("BytesNotReceived")
 	Socket.Output(accepted)
 	logger.Log("a")
 	Socket.Output(0)
-	let logged = Socket.Pending(client) is 2 then Socket.Receive(client, 2) else List(Number)
+	logged = Socket.Pending(client) is 2 then Socket.Receive(client, 2) else List(Number)
 	if logged is not (Character.LowercaseA, Character.NewLine.number)
 		return Error("LogNotForwarded")

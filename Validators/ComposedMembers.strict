@@ -15,7 +15,7 @@ Issues List(ValidationIssue)
 	Sample.Issues.Length is 3 and Sample.Issues.First.Line is 2
 	Sample.Issues(1) to Text is Rule + ": area.Size.Width, write area.Width"
 	Sample.Issues.Last to Text is Rule + ": Size.Area, write Area"
-	let target = CallTarget(inference.types, TypeShape(lines), typeName, List(Text))
+	target = CallTarget(inference.types, TypeShape(lines), typeName, List(Text))
 	mutable issues = List(Mutable(ValidationIssue))
 	for MethodBodies(typeName, TypeShape(lines), inference).Statements
 		issues = issues + NodeIssues(value.statement, value.scope, value.line + 1, target)
@@ -24,7 +24,7 @@ NodeIssues(node SyntaxNode, scope Scope, line Number, target Bytecode/CallTarget
 	Sample.NodeIssues(FileCheck.Parsed("(Size.Width)"), Scoped, 4, Boxing).First.Line is 4
 	ComposedMembers(("has Size", "Run", "\tif Size.Width > 1", "\t\tSize.Height"), "Box", Sized).Issues.Length is 2
 	mutable issues = List(Mutable(ValidationIssue))
-	let composed = Composed(node, scope, target)
+	composed = Composed(node, scope, target)
 	if composed is not ""
 		issues.Add(ValidationIssue(Rule, composed, line))
 	for node.children
@@ -38,8 +38,8 @@ Composed(node SyntaxNode, scope Scope, target Bytecode/CallTarget) Text
 	Other.Composed(FileCheck.Parsed("area.Size.Width"), Scoped, Boxing) is "area.Size.Width, write area.Width"
 	if node.Kind is not in ("Member", "MethodCall") or node.children(0).Kind is not in ("Member", "Identifier")
 		return ""
-	let held = node.children(0)
-	let owner = held.Kind is "Member" then inference.TypeOf(held.children(0), scope, scope) else typeName
+	held = node.children(0)
+	owner = held.Kind is "Member" then inference.TypeOf(held.children(0), scope, scope) else typeName
 	Written(held, node.text, owner, target)
 Written(held SyntaxNode, name Text, owner Text, target Bytecode/CallTarget) Text
 	Sample.Written(FileCheck.Parsed("area.Size"), "Height", "Box", Boxing) is "area.Size.Height, write area.Height"
@@ -47,5 +47,5 @@ Written(held SyntaxNode, name Text, owner Text, target Bytecode/CallTarget) Text
 	Areas.Written(FileCheck.Parsed("Area"), "Width", "Box", Area) is ""
 	if inference.types.MembersOf(owner).TypeOf(held.text) is not held.text
 		return ""
-	let direct = held.Kind is "Member" then held.children(0) to Text + "." + name else name
+	direct = held.Kind is "Member" then held.children(0) to Text + "." + name else name
 	target.Holding(owner, name) is held.text then held to Text + "." + name + ", write " + direct else ""

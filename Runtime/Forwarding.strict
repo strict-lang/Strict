@@ -28,34 +28,34 @@ Slotted(arguments Texts, slot Number) Number
 	Missing.Slotted(List(Text) + "test", Resident.Servers) is Unserved
 	if slot >= Resident.Servers
 		return Unserved
-	let server = Resident(root, ServerFamily(Resident.Variables).Name + (slot is 0 then "" else slot to Text))
-	let port = Port(server)
-	let isFree = File(server.Freed).Exists and port > 0
-	let answer = isFree then Answered(server, port, arguments) else Unserved
+	server = Resident(root, ServerFamily(Resident.Variables).Name + (slot is 0 then "" else slot to Text))
+	port = Port(server)
+	isFree = File(server.Freed).Exists and port > 0
+	answer = isFree then Answered(server, port, arguments) else Unserved
 	if answer is not Unserved
 		return answer
 	(isFree then false else port is NoPort or IsDead(port)) then Started(server.slot) else Slotted(arguments, slot + 1)
 Port(server Resident) Number
 	Missing.Port(Resident("Compiler/output/Missing")) is 0
-	let stamp = File(server.Stamped)
-	let stamped = stamp.Exists then stamp.ReadLines.First to Number else 0
+	stamp = File(server.Stamped)
+	stamped = stamp.Exists then stamp.ReadLines.First to Number else 0
 	stamped is Error then NoPort else stamped
 IsDead(port Number) Boolean
 	Sample.IsDead(0)
-	let socket = Socket.Connect("127.0.0.1", port)
+	socket = Socket.Connect("127.0.0.1", port)
 	if socket is Error
 		return true
 	Socket.Close(socket)
 	false
 Answered(server Resident, port Number, arguments Texts) Number
 	Sample.Answered(Server, 0, List(Text) + "test") is Unserved
-	let socket = Socket.Connect("127.0.0.1", port)
+	socket = Socket.Connect("127.0.0.1", port)
 	if socket is Error
 		File(server.Stamped).Delete
 		return Unserved
-	let claim = Claimed(server, socket)
-	let request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	let code = claim is not NoClaim and Greeted(socket) then Requested(socket, request) else Unserved
+	claim = Claimed(server, socket)
+	request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
+	code = claim is not NoClaim and Greeted(socket) then Requested(socket, request) else Unserved
 	Socket.Close(socket)
 	if code is Unserved and claim is not NoClaim
 		File(server.Freed + "." + claim).Rename(server.Freed)
@@ -65,23 +65,23 @@ Requested(socket Number, request Text) Number
 	Server.Send(socket, request) is Error then Unserved else Streamed(socket)
 Interrupted(server Resident, port Number) Number
 	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is Ended
-	let stamp = File(server.Stamped)
+	stamp = File(server.Stamped)
 	if stamp.Exists and stamp.ReadLines.First is (port to Text)
 		return Unserved
 	logger.Log("strict stop ended this request")
 	Ended
 Stopped Number
 	Missing.Stopped is 0
-	let killed = Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
-	let job = Path(Process.Current.executable.Replace("\\", "/")).FileName.RemoveExtension.text
+	killed = Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
+	job = Path(Process.Current.executable.Replace("\\", "/")).FileName.RemoveExtension.text
 	if Coordinator(coordinator).Sent("exit\t" + job, false) is "busy"
 		logger.Log("The coordinator keeps running for a job of another program")
 	killed
 Killed Number
-	let isWindows = Process.OperatingSystem is "Windows"
+	isWindows = Process.OperatingSystem is "Windows"
 	for Directory.Files(root + "/obj", "strict.server*")
 		File(value).Delete
-	let killed = Process.RunTool(isWindows then "powershell" else "sh", Killing(Process.Current.executable, isWindows))
+	killed = Process.RunTool(isWindows then "powershell" else "sh", Killing(Process.Current.executable, isWindows))
 	for Directory.Files(root + "/obj", "strict.server*") + Directory.Files(root + "/obj", "strict.free*")
 		File(value).Delete
 	killed.exitCode
@@ -96,74 +96,74 @@ IsForwarded(arguments Texts) Boolean
 	Sample.IsForwarded(("test", "a.strict")) or Process.Variable("STRICT_SERVER") is "0"
 	Sample.IsForwarded(("test", "a.strict", "native")) is false
 	Sample.IsForwarded(("run", "-c", "logger.Log(Process.Input)")) is false
-	let command = arguments.Length > 0 then arguments(0) else ""
-	let isInput = Scripted.IsCode(arguments) then "Process.Input" is in arguments(2) else false
-	let isLocal = "native" is in arguments or "lines" is in arguments or "-" is in arguments or isInput
-	let isOptedOut = Process.Variable("STRICT_SERVER") is "0"
-	let isServed = command is in ("test", "check", "build", "run") and isLocal is false and isOptedOut is false
+	command = arguments.Length > 0 then arguments(0) else ""
+	isInput = Scripted.IsCode(arguments) then "Process.Input" is in arguments(2) else false
+	isLocal = "native" is in arguments or "lines" is in arguments or "-" is in arguments or isInput
+	isOptedOut = Process.Variable("STRICT_SERVER") is "0"
+	isServed = command is in ("test", "check", "build", "run") and isLocal is false and isOptedOut is false
 	command is Resident.Stopping or isServed
 Started(slot Text) Number
-	let executable = Process.Current.executable
-	let isWindows = Process.OperatingSystem is "Windows"
-	let served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
-	let hidden = Starting + Quote + Quote + executable + Quote + served + Quote + "' -WindowStyle Hidden"
-	let detached = isWindows then hidden else "-c \"nohup '" + executable + "'" + served + " &\""
-	let started = Process.RunTool(isWindows then "powershell" else "sh", detached)
+	executable = Process.Current.executable
+	isWindows = Process.OperatingSystem is "Windows"
+	served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
+	hidden = Starting + Quote + Quote + executable + Quote + served + Quote + "' -WindowStyle Hidden"
+	detached = isWindows then hidden else "-c \"nohup '" + executable + "'" + served + " &\""
+	started = Process.RunTool(isWindows then "powershell" else "sh", detached)
 	if started.exitCode is not 0
 		logger.Log("strict server " + slot + " did not start: " + started.Output + started.error)
 	Unserved
 Logged(objects Text, isWindows Boolean, slot Text) Text
 	Sample.Logged("Compiler", true, "").EndsWith(" 2>>" + Quote + "Compiler/server.errors.log" + Quote)
 	Sample.Logged("Compiler", false, "2") is " >>'Compiler/server2.log' 2>>'Compiler/server2.errors.log'"
-	let hasObjects = Directory.Create(objects) is not Error
-	let output = Output.Replace("server", "server" + slot)
-	let errors = Errors.Replace("server", "server" + slot)
+	hasObjects = Directory.Create(objects) is not Error
+	output = Output.Replace("server", "server" + slot)
+	errors = Errors.Replace("server", "server" + slot)
 	Kept(objects, output)
 	Kept(objects, errors)
 	if hasObjects is false
 		return isWindows then "" else " >/dev/null 2>&1"
-	let mark = isWindows then Quote else "'"
+	mark = isWindows then Quote else "'"
 	" >>" + mark + objects + output + mark + " 2>>" + mark + objects + errors + mark
 Kept(objects Text, log Text)
 	Missing.Kept("Compiler/output/Missing", Output) is not Error
 	File("Compiler/output/server.log").Write("kept") is not Error
 	Missing.Kept("Compiler/output", Output) is not Error
 	File("Compiler/output/server.log").Exists
-	let current = File(objects + log)
+	current = File(objects + log)
 	if (current.Exists then current.Length > LogLimit else false) is false
 		return
-	let previous = objects + log.Replace("/server", Previous)
+	previous = objects + log.Replace("/server", Previous)
 	File(previous).Delete
 	current.Rename(previous)
 Claimed(server Resident, socket Number) Text
 	Sample.Claimed(Server, 0) is ""
-	let port = Socket.Port(socket)
+	port = Socket.Port(socket)
 	if port is Error
 		return NoClaim
 	File(server.Freed).Rename(server.Freed + "." + port)
 	File(server.Freed + "." + port).Exists then port to Text else NoClaim
 Greeted(socket Number) Boolean
 	Sample.Greeted(0) is false
-	let waited = Socket.Waiting(socket, Resident.GreetingSeconds)
+	waited = Socket.Waiting(socket, Resident.GreetingSeconds)
 	if waited is Error or waited is not 1
 		return false
-	let greeting = Resident.Greeting
+	greeting = Resident.Greeting
 	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
 Streamed(socket Number) Number
 	Sample.Streamed(0) is Dropped
 	mutable code = -2
 	for as long as code is -2
-		let block = Server.Received(socket, "\n")
+		block = Server.Received(socket, "\n")
 		code = StreamedLines.Code(block.Split("\n"), block.EndsWith("\n") then code else Dropped)
 	code is Resident.Refused then Unserved else code
 Loopback(code Number) Number slow
-	let server = Socket.Local(0)
-	let client = Socket.Connect("127.0.0.1", Socket.Port(server))
-	let accepted = Socket.Accept(server)
+	server = Socket.Local(0)
+	client = Socket.Connect("127.0.0.1", Socket.Port(server))
+	accepted = Socket.Accept(server)
 	Server.Send(client, Resident.Request(Directory.Current, ("test", "a.strict")))
-	let isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
+	isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
 	Server.Finished(accepted, code)
-	let streamed = isRequested and Greeted(client) then Streamed(client) else 1
+	streamed = isRequested and Greeted(client) then Streamed(client) else 1
 	Socket.Close(client)
 	Socket.Close(server)
 	streamed

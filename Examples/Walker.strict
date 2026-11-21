@@ -12,7 +12,7 @@ Steps(count Number) Vector3
 Kept(count Number) Vector3
 	Walker(Vector3(1, 1, 1), Vector3(1, 2, 3)).Kept(2) is Vector3(4, 6, 8)
 	mutable walker = Walker(position, velocity)
-	let start = walker.position
+	start = walker.position
 	for count
 		walker = Walker(walker, position = walker.position + walker.velocity)
 	start + walker.position

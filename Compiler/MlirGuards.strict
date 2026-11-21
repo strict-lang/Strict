@@ -33,12 +33,12 @@ Origins(position Number, register Number, seen = List(Text)) Texts
 	MlirGuards(MlirPassed.Wrapped, 2).Written(8) is ("?", "offset", "/")
 	MlirGuards(Nested, 2).Written(5) is ("offset")
 	MlirGuards(Nested, 2).Written(9) is ("offset", "offset", "/")
-	let writer = MlirKinds(function).Writer(position, register)
+	writer = MlirKinds(function).Writer(position, register)
 	writer <= function.Guarded then List(Text) + "?" else Written(writer, seen)
 Written(writer Number, seen = List(Text)) Texts
 	Shifts.Written(5) is ("offset")
 	Shifts.Written(6) is ("?")
-	let entry = function.method.instructions(writer)
+	entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(writer, entry.texts(0), seen)
 	if entry.kind is InstructionType.LoadConstantToRegister
@@ -56,23 +56,23 @@ Called(writer Number, entry InstructionEntry) Texts
 	MlirGuards(Nested, 2).Written(7) is ("?")
 	MlirGuards(Nested, 2).Written(11) is ("offset")
 	MlirGuards(Nested, 2).Written(12).Length is 0
-	let name = PayloadDecoder(entry).Text(2)
+	name = PayloadDecoder(entry).Text(2)
 	name is "Floor" then Floored(writer, entry) else name is "Length" then List(Text) else List(Text) + "?"
 Variable(position Number, name Text, seen = List(Text)) Texts
 	Shifts.Variable(4, "offset") is ("offset")
 	Shifts.Variable(4, "index").Length is 0 and Shifts.Variable(7, "value") is ("?")
 	if name is in seen
 		return List(Text)
-	let callees = MlirCalleeGuards(function, position)
+	callees = MlirCalleeGuards(function, position)
 	if name.StartsWith("conditional")
 		return callees.StoreOrigins(function.Guarded + 1, position, name, seen + name)
-	let stored = MlirKinds(function).Stored(position, name)
-	let found = stored > function.Guarded then callees.StoredOrigin(stored, seen + name) else Initial(name)
+	stored = MlirKinds(function).Stored(position, name)
+	found = stored > function.Guarded then callees.StoredOrigin(stored, seen + name) else Initial(name)
 	found + LoopOrigins(position, name, seen + name)
 LoopOrigins(position Number, name Text, seen Texts) Texts
 	Shifts.LoopOrigins(4, "offset", List(Text)).Length is 0
-	let loop = function.method.LoopBeginOf(position)
-	let loopEnd = loop >= function.Guarded and loop < position then function.method.LoopEndOf(loop) else -1
+	loop = function.method.LoopBeginOf(position)
+	loopEnd = loop >= function.Guarded and loop < position then function.method.LoopEndOf(loop) else -1
 	loopEnd < 0 then List(Text) else MlirCalleeGuards(function, position).StoreOrigins(position + 1, loopEnd, name, seen)
 Initial(name Text) Texts
 	Shifts.Initial("index").Length is 0
@@ -84,15 +84,15 @@ Initial(name Text) Texts
 Sited(position Number) Texts
 	Shifts.Sited(6) is ("offset")
 	Shifts.Sited(5) is ("?")
-	let entry = function.method.instructions(position)
-	let kind = entry.kind
+	entry = function.method.instructions(position)
+	kind = entry.kind
 	if kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return Origins(position, entry.payload(1)) + Origins(position, entry.payload(2))
 	if kind is InstructionType.IndexCall
 		return Origins(position, entry.payload(1))
 	if kind is InstructionType.LoopBegin
 		return Origins(position, entry.payload(0))
-	let isFloor = kind is InstructionType.Invoke and PayloadDecoder(entry).Text(2) is "Floor"
+	isFloor = kind is InstructionType.Invoke and PayloadDecoder(entry).Text(2) is "Floor"
 	isFloor then Floored(position, entry) else List(Text) + "?"
 Floored(position Number, entry InstructionEntry) Texts
 	Shifts.Named is ExactNamed
@@ -128,9 +128,9 @@ IsWhole(slot Text) Boolean
 Parameters Texts
 	Shifts.Parameters is ("offset")
 	mutable names = List(Mutable(Text))
-	let candidates = MlirCalleeGuards(function, at).FreeNumbers
+	candidates = MlirCalleeGuards(function, at).FreeNumbers
 	for Range(at + 1, function.method.LoopEndOf(at))
-		let origins = Sited(value)
+		origins = Sited(value)
 		if "?" is not in origins
 			names = names + Whole(origins)
 		if function.method.instructions(value).kind is InstructionType.Invoke
@@ -159,11 +159,11 @@ Reads Texts
 IsSingle(position Number) Boolean
 	Shifts.IsSingle(6)
 	Shifts.IsSingle(5) is false
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if function.Guarded < 0 or entry.kind is not InstructionType.IndexCall
 		return false
-	let name = entry.texts(0)
-	let isRows = MlirDeviceRows(function, position).IsRows(MlirKinds(function).VariableKind(position, name))
+	name = entry.texts(0)
+	isRows = MlirDeviceRows(function, position).IsRows(MlirKinds(function).VariableKind(position, name))
 	isRows is false and MlirKinds(function).Stored(position, name) < function.Guarded
 Mask Number
 	Shifts.Mask > 0
@@ -172,7 +172,7 @@ Mask Number
 	if IsUseful is false
 		return 0
 	mutable mask = 0
-	let divisors = MlirPassed(MlirFunction(function, Guarded = at), at).Divisors
+	divisors = MlirPassed(MlirFunction(function, Guarded = at), at).Divisors
 	for MlirGpuCheck(function, at).Free
 		mask = value is in Parameters or value is in Reads then mask + 2 ^ index else mask
 		mask = index < MaximumDivisors and value is in divisors then mask + 2 ^ (DivisorShift + index) else mask
@@ -185,11 +185,11 @@ Kernel Texts
 Named Texts
 	Shifts.Named.Last.EndsWith("(dense<0> : tensor<9xi64>) : !llvm.array<9 x i64>")
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named.Last.EndsWith("!llvm.array<2 x i64>")
-	let name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
-	let isExact = Mask > 0
-	let formats = MlirFormats(function, at)
-	let first = MlirDoubles(function, at).Failing then "" else name
-	let names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" + formats.Names(name) else "")
-	let size = first.Length + name.Length + 3 + (isExact then name.Length + 3 + formats.Count * (name.Length + 5) else 0)
-	let text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"
+	name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
+	isExact = Mask > 0
+	formats = MlirFormats(function, at)
+	first = MlirDoubles(function, at).Failing then "" else name
+	names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" + formats.Names(name) else "")
+	size = first.Length + name.Length + 3 + (isExact then name.Length + 3 + formats.Count * (name.Length + 5) else 0)
+	text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"
 	(text, "  llvm.mlir.global internal @f" + name + (isExact then ExactSlots else PlainSlots))

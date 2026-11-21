@@ -3,7 +3,7 @@ Held Boolean slow
 	LockedCycles(1100).Held
 	mutable held = 0
 	for count
-		let lock = File("Examples/LockedCycles.lock")
+		lock = File("Examples/LockedCycles.lock")
 		if lock.Locked
 			held = held + 1
 		lock.Delete

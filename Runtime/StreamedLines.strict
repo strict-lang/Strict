@@ -3,7 +3,7 @@ Code(lines Texts, code Number) Number
 	StreamedLines.Code("x", -2) is -2
 	mutable exited = code
 	for lines
-		let isExit = value.StartsWith(Resident.Exiting)
+		isExit = value.StartsWith(Resident.Exiting)
 		if isExit is false and index < lines.Length - 1
 			logger.Log(value)
 		exited = isExit then value.Replace(Resident.Exiting, "") to Number else exited

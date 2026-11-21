@@ -12,5 +12,5 @@ Added(other Numbers) Numbers
 Reported(other Numbers) Text
 	ReverseList(1, 2, 3).Reported((10, 20)).Split("\n").Length is 3
 	ReverseList(1, 2).Reported((10, 20)) is ""
-	let added = Added(other)
+	added = Added(other)
 	added is Error then added to Text else ""

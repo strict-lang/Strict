@@ -15,7 +15,7 @@ Stepped(steps Number) Vector3
 Kept(steps Number) Vector3
 	Swarm.Kept(2) is Vector3(0, 0, 0)
 	mutable positions = Line(3)
-	let first = positions(0)
+	first = positions(0)
 	for steps
 		positions = Moved(positions, Vector3(1, 0, 0))
 	first + positions(0) - positions(0)
@@ -27,7 +27,7 @@ Thinned(count Number) List(Vector3)
 	positions
 Untouched Number
 	Swarm.Untouched is 3
-	let before = Line(3)
+	before = Line(3)
 	before.Length + before.SwapRemoved(0).Length - 2
 Nudged(count Number) Vector3
 	Swarm.Nudged(2) is Vector3(2, 0, 0)
@@ -38,7 +38,7 @@ Nudged(count Number) Vector3
 Remembered(count Number) Vector3
 	Swarm.Remembered(2) is Vector3(1, 0, 0)
 	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
-	let first = positions(1)
+	first = positions(1)
 	for count
 		positions(1) = positions(1) + Vector3(1, 0, 0)
 	first

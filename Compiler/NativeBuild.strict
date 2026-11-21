@@ -23,18 +23,18 @@ IsProgram(path Text) Boolean
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
 Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text))
 	CodegenStamp(root).Pending(path)
-	let isProgram = isTesting is false and IsProgram(path)
-	let base = Output(path, isProgram)
-	let beside = Path(base).PathOnly.text + "/obj/" + Path(base).FileName.text
-	let objects = base.IndexOf("/obj/") >= 0 then base else beside
-	let loaded = Folder.Module(path, root, isCounting, isProgram, Target, sources)
-	let module = MlirModule(loaded, Cached = objects + ".emitted")
+	isProgram = isTesting is false and IsProgram(path)
+	base = Output(path, isProgram)
+	beside = Path(base).PathOnly.text + "/obj/" + Path(base).FileName.text
+	objects = base.IndexOf("/obj/") >= 0 then base else beside
+	loaded = Folder.Module(path, root, isCounting, isProgram, Target, sources)
+	module = MlirModule(loaded, Cached = objects + ".emitted")
 	if module.types.Length is 0
 		return Error("NoTypesCompiled")
-	let program = BuildProfile.Program(module, base, root, value)
+	program = BuildProfile.Program(module, base, root, value)
 	if program is ""
 		return Error("NoProgramEmitted")
-	let natives = NativeFolder(isRecursive = isRecursive).Natives(path, root, module.types)
+	natives = NativeFolder(isRecursive = isRecursive).Natives(path, root, module.types)
 	Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
 Tested(path Text, root Text, isCounting Boolean, sources Texts) Number
 	Compile(path, root, true, isCounting, sources)
@@ -42,15 +42,15 @@ Tested(path Text, root Text, isCounting Boolean, sources Texts) Number
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
 	NativeBuild(isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
-	let failure = Failure(program)
+	failure = Failure(program)
 	if failure is not ""
 		return Checked("Native compilation failed, " + failure)
-	let marker = program.IndexOf("\n" + MlirGpu.Marker)
+	marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if marker < 0 or isFast
 		return PtxCache(base).Unlaunched(program)
-	let gpu = DeviceBuild(Toolchain(Platform.Current, root))
-	let device = program.Substring(marker + 1, program.Length - marker - 1)
-	let ptx = Target is Platform.Current then gpu.Built(base, device, MlirTensors.Attending.Used(program)) else List(Text)
+	gpu = DeviceBuild(Toolchain(Platform.Current, root))
+	device = program.Substring(marker + 1, program.Length - marker - 1)
+	ptx = Target is Platform.Current then gpu.Built(base, device, MlirTensors.Attending.Used(program)) else List(Text)
 	Checked(gpu.Embedded(program.Substring(0, marker), ptx, base))
 Checked(built Text) Text
 	NativeBuild.Checked("module") is "module"
@@ -67,14 +67,14 @@ Natives(path Text, root Text, types List(TypeEntry)) Texts
 	mutable folders = List(Mutable(Text))
 	for types
 		if NativeFolder.IsNative(value, types)
-			let folder = TypeSource(value).NativeFolder(path, root)
+			folder = TypeSource(value).NativeFolder(path, root)
 			if Directory.Exists(folder) and folder is not in folders
 				folders.Add(folder)
 	folders
 Build(base Text, program Text, tools Toolchain, isCounting = false)
 	Unbuilt.Build("Compiler/output/Unbuilt/App", Broken, Toolchain.OnWindows) is Error("NotBuilt")
 	Directory.Exists("Compiler/output/Unbuilt/Release") is false
-	let built = Rebuilt(base, BuildProfile.Runtime(value, program, tools.root), tools)
+	built = Rebuilt(base, BuildProfile.Runtime(value, program, tools.root), tools)
 	logger.Log(built)
 	if built.StartsWith("Built ") is false
 		return Error("NotBuilt")
@@ -89,20 +89,20 @@ Target Number
 	isAndroid then Platform.Android else (isWeb then Platform.Web else Platform.Current)
 IsUnchanged(base Text, mlir Text, tools Toolchain) Boolean
 	NativeBuild.IsUnchanged("Compiler/output/missing", "module {\n}", Toolchain.OnWindows) is false
-	let sources = NativeSources(tools.natives)
-	let headers = tools.natives.Length is 0 then List(Text) else sources.Inputs(Platform.Current, tools.root)
-	let inputs = (base + ".mlir", Process.Current.executable, Release(base).Icon) + sources.Files + headers
-	let previous = File(base + ".mlir")
-	let isCross = isAndroid or isIOS or tools.isWeb or tools.cpu is not "native"
+	sources = NativeSources(tools.natives)
+	headers = tools.natives.Length is 0 then List(Text) else sources.Inputs(Platform.Current, tools.root)
+	inputs = (base + ".mlir", Process.Current.executable, Release(base).Icon) + sources.Files + headers
+	previous = File(base + ".mlir")
+	isCross = isAndroid or isIOS or tools.isWeb or tools.cpu is not "native"
 	if isCross or previous.Exists is false or sources.IsCurrent(tools.Executable(base), inputs) is false
 		return false
 	previous.Length is not mlir.Length then false else Text.Combine(previous.ReadLines, "\n") is mlir
 Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
 	NativeBuild.Rebuilt("Compiler/output/Written", Broken, Toolchain.OnWindows).StartsWith("mlir-opt failed")
-	let missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
+	missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
 		return tools.Installing(missing)
-	let tuned =Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native")
+	tuned =Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native")
 	if IsUnchanged(base, mlir, tuned)
 		return "Built " + tuned.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)
@@ -110,8 +110,8 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
 		return IOSBuild(tuned, isSimulator).Linked(base)
 	isAndroid then AndroidBuild(tuned).Linked(base) else Linked(base, tuned)
 Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
-	let executable = tools.Executable(base)
-	let result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
+	executable = tools.Executable(base)
+	result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
 	logger.Log(result.Output.Trim)
 	if ToolRunner.IsCrash(result.exitCode) is false
 		logger.Log(Execute.Summary(result.exitCode, path))
@@ -121,13 +121,13 @@ Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	result.exitCode
 Linked(base Text, tools Toolchain) Text slow
 	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
-	let executable = tools.Executable(base)
-	let isSwapped = Platform.Current is Platform.Windows and tools.isWeb is false and File(executable).Exists
-	let target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
-	let built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
-	let problem = isSwapped and built.StartsWith("Built ") then Intermediates.Replaced(executable, target) else ""
-	let kept = File(target).Exists then ", the new build is " + target else ""
-	let failed = (kept is "" then "Replaced " else "Could not replace ") + executable + ", " + problem + kept
+	executable = tools.Executable(base)
+	isSwapped = Platform.Current is Platform.Windows and tools.isWeb is false and File(executable).Exists
+	target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
+	built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
+	problem = isSwapped and built.StartsWith("Built ") then Intermediates.Replaced(executable, target) else ""
+	kept = File(target).Exists then ", the new build is " + target else ""
+	failed = (kept is "" then "Replaced " else "Could not replace ") + executable + ", " + problem + kept
 	problem is "" then built.Replace(target, executable) else failed
 CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
 	NativeBuild.CrossBuild("Compiler/output/missing", "module {}", Toolchain.OnWindows, true) is not Error
@@ -135,7 +135,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
 	if Target is not Platform.Windows or isCounting or isCrossing is false
 		return
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
-	let crossed = LinuxBuild(tools).Built(base)
+	crossed = LinuxBuild(tools).Built(base)
 	logger.Log(crossed)
 	if crossed.StartsWith("Built ") is false
 		return Error("CrossBuildFailed")
@@ -145,7 +145,7 @@ Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("Math", false) is "./Math/obj/Tests.test"
 	if Directory.Exists(path)
 		return FileCompiler.Normalized(path) + "/obj/Tests.test"
-	let intermediate = BuildOutput.Intermediate(path)
+	intermediate = BuildOutput.Intermediate(path)
 	intermediate.Substring(0, intermediate.Length - 7) + (isProgram then "" else ".test")
 Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.Linux).Length > 100000
@@ -153,9 +153,9 @@ Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
 	NativeBuild(false).Mlir("module {\n" + CpuNotice + "\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
-	let runtime = Released(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
-	let system = Text.Combine(Platform.Runtime(platform, root), "\n")
-	let body = program.Substring(0, program.Length - 1)
+	runtime = Released(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
+	system = Text.Combine(Platform.Runtime(platform, root), "\n")
+	body = program.Substring(0, program.Length - 1)
 	if platform is Platform.Web
 		return WebBuild.Sized(body + runtime) + "\n" + system + "\n}"
 	Text.Combine((body, runtime, "\n", system, "\n}"), "")
@@ -169,5 +169,5 @@ Failure(program Text) Text
 	NativeBuild.Failure("@c(\"unsupported: x\")") is ""
 	if program.StartsWith("unsupported:")
 		return program
-	let at = program.IndexOf("\nunsupported:")
+	at = program.IndexOf("\nunsupported:")
 	at < 0 then "" else program.Substring(at + 1, program.Length - at - 1).Lines.First

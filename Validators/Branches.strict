@@ -20,10 +20,10 @@ Blocks(at Number) List(ValidationIssue)
 	Same.Blocks(1).Length is 0 and Chain.Issues.Length is 0
 	if lines(at).Trim is not "else"
 		return List(ValidationIssue)
-	let depth = BodyParser.Indent(lines(at))
-	let header = Header(at, depth)
-	let chosen = lines.Slice(header + 1, at - header - 1)
-	let other = lines.Slice(at + 1, BodyParser(lines).BlockEnd(at + 1, depth + 1) - at - 1)
+	depth = BodyParser.Indent(lines(at))
+	header = Header(at, depth)
+	chosen = lines.Slice(header + 1, at - header - 1)
+	other = lines.Slice(at + 1, BodyParser(lines).BlockEnd(at + 1, depth + 1) - at - 1)
 	chosen is other then List(ValidationIssue) + Issue(chosen.First.Trim, at) else List(ValidationIssue)
 Header(at Number, depth Number) Number
 	Chain.Header(5, 1) is 3
@@ -40,11 +40,11 @@ Repeated(at Number) List(ValidationIssue)
 	Doubled.Repeated(0).Length is 0
 	Branches(List(Text) + "\tb 1 else 1").Repeated(0).Length is 0
 	Branches(List(Text) + "constant One = a then 1 else 1").Issues.Length is 1
-	let tokens = Tokenizer(lines(at).Trim).Tokens
+	tokens = Tokenizer(lines(at).Trim).Tokens
 	for tokens
 		if value is "then"
-			let chosen = Branch(tokens, index + 1, ("else", ","))
-			let next = index + chosen.Length + 1
+			chosen = Branch(tokens, index + 1, ("else", ","))
+			next = index + chosen.Length + 1
 			if next < tokens.Length and tokens(next) is "else" and Branch(tokens, next + 1, List(Text) + ",") is chosen
 				Issue(Text.Combine(chosen, " "), at)
 Branch(tokens Texts, start Number, stops Texts) Texts

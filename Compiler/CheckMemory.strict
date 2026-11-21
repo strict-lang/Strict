@@ -41,89 +41,89 @@ constant ChurnSrc = "Run\n\tmutable r = Filled(8192, 0)\n\tmutable total = 0\n\t
 Run Number
 	if Process.OperatingSystem is not "Windows"
 		return Error("CheckMemory limits process memory with a Windows job object")
-	let folder = "Examples/MemoryCheck" + 1000000.Random.Floor
+	folder = "Examples/MemoryCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let s1 = CheckJobAndPressure(folder) is Error then Error("JobFailed") else CheckUncollected(folder)
-	let err = s1 is Error then s1 else CheckCollections(folder)
+	s1 = CheckJobAndPressure(folder) is Error then Error("JobFailed") else CheckUncollected(folder)
+	err = s1 is Error then s1 else CheckCollections(folder)
 	Directory.Delete(folder)
 	if err is Error
 		return err
 	logger.Log("CheckMemory passed")
 	0
 CheckJobAndPressure(folder Text) Boolean
-	let exe = Built(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
+	exe = Built(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
 	if exe is Error
 		return exe
 	File(folder + "/job.c").Write(JobCode.Split("\n"))
-	let comp = Process.RunTool("clang", "-O2 \"" + folder + "/job.c\" -o \"" + folder + "/job.exe\"", CompileSeconds)
+	comp = Process.RunTool("clang", "-O2 \"" + folder + "/job.c\" -o \"" + folder + "/job.exe\"", CompileSeconds)
 	if comp.exitCode is not 0
 		return Error("JobCompileFailed: " + comp.Output + comp.error)
-	let r1 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + SmallInput, RunSeconds)
-	let r2 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + OomInput, RunSeconds)
-	let hasOom = "OutOfMemory" is in r2.Output and "AccessViolation" is not in r2.Output
+	r1 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + SmallInput, RunSeconds)
+	r2 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + OomInput, RunSeconds)
+	hasOom = "OutOfMemory" is in r2.Output and "AccessViolation" is not in r2.Output
 	"EXIT:1000" is not in r1.Output or not hasOom then Error("JobOomFailed: " + r1.Output) else CheckHeaps(folder)
 CheckHeaps(folder Text) Boolean
-	let p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
+	p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
 	if p1 is Error
 		return p1
-	let webJs = Built(folder, "WebPressure", FilledSrc + KeptSrc + WebA + WebB, "web")
+	webJs = Built(folder, "WebPressure", FilledSrc + KeptSrc + WebA + WebB, "web")
 	if webJs is Error
 		return webJs
-	let web = Process.RunTool(Directory.Directories("Tools/emsdk/node").First + "/node.exe", webJs, RunSeconds)
+	web = Process.RunTool(Directory.Directories("Tools/emsdk/node").First + "/node.exe", webJs, RunSeconds)
 	if web.exitCode is not 0 or "total 1924" is not in web.Output
 		return Error("WebPressureFailed: " + web.Output + web.error)
-	let ran = RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
+	ran = RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
 	ran is Error then ran else true
 CheckUncollected(folder Text) Boolean
-	let grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
-	let u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
+	grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
+	u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
 	if u1 is Error
 		return u1
-	let g2 = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownPassed") + GrownPassA + GrownPassB
-	let u2 = RunBuilt(folder, "GrownPassed", g2, "", LogEnv, "total 8062000", "Collection: ")
-	let pSrc = FilledSrc + PassedSrc
+	g2 = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownPassed") + GrownPassA + GrownPassB
+	u2 = RunBuilt(folder, "GrownPassed", g2, "", LogEnv, "total 8062000", "Collection: ")
+	pSrc = FilledSrc + PassedSrc
 	u2 is Error then u2 else RunBuilt(folder, "PassedLarge", pSrc, "", LogEnv, "total 2291430000", "Collection: ")
 CheckCollections(folder Text) Boolean
-	let trimOut = RunBuilt(folder, "TrimmedPool", FilledSrc + TrimA + TrimB, "", LogEnv, "total 192", "")
+	trimOut = RunBuilt(folder, "TrimmedPool", FilledSrc + TrimA + TrimB, "", LogEnv, "total 192", "")
 	if trimOut is Error
 		return trimOut
-	let parts = trimOut.Split("collected")
+	parts = trimOut.Split("collected")
 	if parts(0).Split("Collection: full").Length < 4 or "Collection: " is in parts(1)
 		return Error("TrimmedPoolWrong: " + trimOut)
-	let handed = RunBuilt(folder, "HandedBack", HandA + HandB1 + HandB2, "", "STRICT_GPU=0", "total 1010000", "")
+	handed = RunBuilt(folder, "HandedBack", HandA + HandB1 + HandB2, "", "STRICT_GPU=0", "total 1010000", "")
 	handed is Error then handed else CheckChurnAndProducts(folder)
 CheckChurnAndProducts(folder Text) Boolean
-	let churnExe = Built(folder, "Churning", FilledSrc + ChurnSrc, "")
-	let cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
-	let churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
-	let grp = Regex(ChurnPattern).Groups(churn)
-	let badC = "GarbageCollectionExceedsLimit" is not in churn or grp.Length < 4
+	churnExe = Built(folder, "Churning", FilledSrc + ChurnSrc, "")
+	cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
+	churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
+	grp = Regex(ChurnPattern).Groups(churn)
+	badC = "GarbageCollectionExceedsLimit" is not in churn or grp.Length < 4
 	if badC or grp(1) to Number + (grp(2) to Number) <= 0 or grp(3) is not "0"
 		return Error("ChurnWrong: " + churn)
-	let prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
-	let ok = prodOut is Error then prodOut else CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
+	prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
+	ok = prodOut is Error then prodOut else CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
 	ok is Error then ok else CheckTickersAndFiles(folder)
 CheckedMaxHeap(matches Texts) Boolean
 	if matches.Length is 0
 		return Error("NoHeapLogged")
 	for matches
-		let mb = Text.Combine(Regex("(\\d+)").Groups(value), "") to Number
+		mb = Text.Combine(Regex("(\\d+)").Groups(value), "") to Number
 		if mb >= MaxHeap
 			return Error("HeapExceededLimit: " + mb)
 	true
 CheckTickersAndFiles(folder Text) Boolean
-	let f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
+	f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
 	if f is Error or not CheckedFramesEnded(f, true)
 		return Error("FrameTickerWrong")
-	let w = FrameTicker(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", "100000", "40")
+	w = FrameTicker(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", "100000", "40")
 	w is Error or not CheckedWordsEnded(w) then Error("WordTickerWrong") else CheckLongLines(folder)
 FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts
-	let elem = itemType.Substring(0, itemType.Length - 1)
-	let hdr = "has size Number\nhas frame Number = 0\nhas kept " + itemType + " = List(" + elem + ")\n"
-	let base = (hdr + TickerA + TickerB).Replace("NAME", name).Replace("TYPE", itemType).Replace("TWO", two)
-	let code = base.Replace("ITEM", item).Replace("SIZE", size).Replace("FRAMES", frames)
-	let out = RunBuilt(folder, name, code, "", LogEnv, "frames " + frames, "")
+	elem = itemType.Substring(0, itemType.Length - 1)
+	hdr = "has size Number\nhas frame Number = 0\nhas kept " + itemType + " = List(" + elem + ")\n"
+	base = (hdr + TickerA + TickerB).Replace("NAME", name).Replace("TYPE", itemType).Replace("TWO", two)
+	code = base.Replace("ITEM", item).Replace("SIZE", size).Replace("FRAMES", frames)
+	out = RunBuilt(folder, name, code, "", LogEnv, "frames " + frames, "")
 	if out is Error
 		return out
 	mutable cols = List(Text)
@@ -154,39 +154,39 @@ CheckLongLines(folder Text) Boolean
 	for Doublings
 		word = word + word
 	File(folder + "/long.txt").Write(RepeatedLine(word.Substring(0, LineWidth), LineCount))
-	let l1 = "has logger\nRun\n\tlet started = Process.Elapsed\n\tlet lines = File(\"" + folder + "/long.txt\").ReadLines"
-	let longSrc = l1 + "\n\tlogger.Log(\"lines \" + lines.Length + \" slow \" + (Process.Elapsed - started > 3))"
-	let longOut = RunBuilt(folder, "LongLines", longSrc, "", "STRICT_GPU=0", "lines 1001 slow false", "")
+	l1 = "has logger\nRun\n\tlet started = Process.Elapsed\n\tlet lines = File(\"" + folder + "/long.txt\").ReadLines"
+	longSrc = l1 + "\n\tlogger.Log(\"lines \" + lines.Length + \" slow \" + (Process.Elapsed - started > 3))"
+	longOut = RunBuilt(folder, "LongLines", longSrc, "", "STRICT_GPU=0", "lines 1001 slow false", "")
 	if longOut is Error
 		return longOut
 	File(folder + "/tool.txt").Write(List(Text) + word.Substring(0, ToolWidth))
 	CheckTools(folder)
 CheckTools(folder Text) Boolean
-	let typed = folder.Replace("/", "\\\\") + "\\\\tool.txt"
+	typed = folder.Replace("/", "\\\\") + "\\\\tool.txt"
 	mutable code = "has logger\nLines(count Number) Texts\n\tToolOutputs(Logger).Lines(1).Length is 1\n"
 	code = code + "\tfor count\n\t\t\"/c type " + typed + "\"\nRun\n\tmutable total = 0\n"
 	code = code + "\tfor Process.RunTools(\"cmd\", Lines(128))\n\t\ttotal = total + value.Output.Length\n"
 	code = code + "\tlogger.Log(\"total \" + total)"
-	let ran = RunBuilt(folder, "ToolOutputs", code, "", "STRICT_GPU=0", "total 384000", "")
+	ran = RunBuilt(folder, "ToolOutputs", code, "", "STRICT_GPU=0", "total 384000", "")
 	ran is Error then ran else true
 RepeatedLine(line Text, count Number) Texts
 	for count
 		line
 Built(folder Text, name Text, code Text, platform Text) Text
-	let src = folder + "/" + name + ".strict"
+	src = folder + "/" + name + ".strict"
 	File(src).Write(code.Split("\n"))
-	let arg = "build " + src + (platform is "" then "" else " " + platform)
-	let built = Process.RunTool(Process.Current.executable, arg, ToolSeconds)
+	arg = "build " + src + (platform is "" then "" else " " + platform)
+	built = Process.RunTool(Process.Current.executable, arg, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed " + name + ": " + built.Output + built.error)
 	platform is "" then folder + "/" + name + ".exe" else folder + "/Release/Web/" + name + ".js"
 RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, ban Text) Text
-	let exe = Built(folder, name, code, platform)
+	exe = Built(folder, name, code, platform)
 	if exe is Error
 		return exe
-	let res = Process.RunTool("cmd", "/c " + (env is "" then "" else "set " + env + "&& ") + "\"" + exe + "\"", RunSeconds)
-	let miss = want is not "" and want is not in res.Output
-	let bad = res.exitCode is not 0 or miss or ban is not "" and ban is in res.Output
+	res = Process.RunTool("cmd", "/c " + (env is "" then "" else "set " + env + "&& ") + "\"" + exe + "\"", RunSeconds)
+	miss = want is not "" and want is not in res.Output
+	bad = res.exitCode is not 0 or miss or ban is not "" and ban is in res.Output
 	bad then Error(name + " failed: " + res.Output + res.error) else res.Output
 JobCode Text
 	constant headers = "#define _CRT_SECURE_NO_WARNINGS\n#include <windows.h>\n#include <stdio.h>\n#include <stdlib.h>"

@@ -10,17 +10,17 @@ Run(arguments Texts)
 	if MachineUse.Weights(logger, "NemotronText", Folder + Name).Admitted
 		Ran(arguments)
 Ran(files Texts) slow
-	let started = Process.Elapsed
-	let tokenizer = GemmaTokens.Loaded(Gguf(Folder + Name))
-	let model = Gemma4.Loaded(Folder + Name)
+	started = Process.Elapsed
+	tokenizer = GemmaTokens.Loaded(Gguf(Folder + Name))
+	model = Gemma4.Loaded(Folder + Name)
 	logger.Log("Nemotron 3.5 Bolt E4B loaded in " + ((Process.Elapsed - started) * 1000).Round + " ms")
 	if files.Length is 0
 		logger.Log(Prompt + Answered(tokenizer, model, Prompt))
 	for files
 		logger.Log(Answered(tokenizer, model, File(value).Exists then Text.Utf8(File(value).ReadBytes) else Chat(value)))
 Answered(tokenizer GemmaTokens, model Gemma4, prompt Text) Text
-	let began = Process.Elapsed
-	let generated = Generation(model).Generated(tokenizer.Encoded(prompt), Count)
+	began = Process.Elapsed
+	generated = Generation(model).Generated(tokenizer.Encoded(prompt), Count)
 	logger.Log((generated to Text) + " in " + ((Process.Elapsed - began) * 1000).Round + " ms")
 	tokenizer.Decoded(Kept(generated, (tokenizer.ids("<eos>"), tokenizer.ids("<turn|>"))))
 Chat(question Text) Text

@@ -18,17 +18,17 @@ Loaded(theta Number, picked = List(Number)) Qwen3 slow
 	Tiny.Loaded(10000, (1, 2, 3)).tokens(0).Length is 0
 	Plain.Loaded(5000000).Prefilled((1, 2, 3), 0).hidden(0).IsNearlyEqual(-6.434468, 0.02)
 	Plain.Loaded(5000000).Prefilled((1, 2, 3), 0).hidden(100).IsNearlyEqual(2.307147, 0.02)
-	let basis = Basis(Basis.None, grouped = true, convrot = group)
-	let width = file.Shape("embed_tokens.weight")(1)
-	let normed = file.Entry("norm.weight") is "" then Layer.Zeros(width) else Norm("norm.weight")
+	basis = Basis(Basis.None, grouped = true, convrot = group)
+	width = file.Shape("embed_tokens.weight")(1)
+	normed = file.Entry("norm.weight") is "" then Layer.Zeros(width) else Norm("norm.weight")
 	Qwen3(Blocks(basis), file.Hosted("embed_tokens", picked), List(Numbers), normed, theta, rotary = rotary, basis = basis)
 Blocks(basis Basis) List(Qwen3Block) slow
-	let completion = Completion(label, Layers, Process.Elapsed)
+	completion = Completion(label, Layers, Process.Elapsed)
 	mutable blocks = List(Mutable(Qwen3Block))
 	mutable deltas = List(Mutable(DeltaBlock))
 	for Layers
-		let layer = "layers." + index + "."
-		let isAttention = file.Entry(layer + "self_attn.q_proj.weight") is not ""
+		layer = "layers." + index + "."
+		isAttention = file.Entry(layer + "self_attn.q_proj.weight") is not ""
 		if isAttention
 			blocks.Add(Qwen3Block(Attending(layer, basis), hybrid = Hybrid(deltas)))
 		deltas = isAttention then List(Mutable(DeltaBlock)) else deltas + Delta(layer, basis)
@@ -43,80 +43,80 @@ Layers Number
 Attending(layer Text, basis Basis) Qwen3Block slow
 	Tiny.Attending("layers.3.", Basis.None).queryNorm.Length is 4
 	Tiny.Attending("layers.3.", Basis.None).heads is 2
-	let size = file.Shape(layer + "self_attn.q_norm.weight").First
-	let projected = Layer(file.Quantized(layer + "self_attn.o_proj", Number.SingleBits), Layer.Unbiased)
-	let rows = HeadRows(size, rotary, projected.weights.First.Length / size)
-	let queryNorm = rows.Norm(Norm(layer + "self_attn.q_norm.weight"))
-	let keyNorm = rows.Norm(Norm(layer + "self_attn.k_norm.weight"))
-	let normed = Norm(layer + "input_layernorm.weight")
-	let after = Norm(layer + "post_attention_layernorm.weight")
-	let keyHeads = file.Shape(layer + "self_attn.k_proj.weight").First / size
-	let feedForward = FeedForward(layer, basis)
+	size = file.Shape(layer + "self_attn.q_norm.weight").First
+	projected = Layer(file.Quantized(layer + "self_attn.o_proj", Number.SingleBits), Layer.Unbiased)
+	rows = HeadRows(size, rotary, projected.weights.First.Length / size)
+	queryNorm = rows.Norm(Norm(layer + "self_attn.q_norm.weight"))
+	keyNorm = rows.Norm(Norm(layer + "self_attn.k_norm.weight"))
+	normed = Norm(layer + "input_layernorm.weight")
+	after = Norm(layer + "post_attention_layernorm.weight")
+	keyHeads = file.Shape(layer + "self_attn.k_proj.weight").First / size
+	feedForward = FeedForward(layer, basis)
 	Qwen3Block(normed, Attended(layer, rows), projected, queryNorm, keyNorm, after, feedForward, rows.heads, keyHeads)
 Attended(layer Text, rows HeadRows) Layer
 	Tiny.Attended("layers.3.", HeadRows(4, 2, 2)).weights.Length is 24
-	let queried = file.Quantized(layer + "self_attn.q_proj", Number.SingleBits)
-	let keyed = rows.Permuted(file.Quantized(layer + "self_attn.k_proj", Number.SingleBits))
-	let valued = file.Quantized(layer + "self_attn.v_proj", Number.SingleBits)
+	queried = file.Quantized(layer + "self_attn.q_proj", Number.SingleBits)
+	keyed = rows.Permuted(file.Quantized(layer + "self_attn.k_proj", Number.SingleBits))
+	valued = file.Quantized(layer + "self_attn.v_proj", Number.SingleBits)
 	Layer(rows.Queries(queried) + keyed + valued + rows.Gates(queried), Layer.Unbiased)
 Delta(layer Text, basis Basis) DeltaBlock slow
 	Tiny.Delta("layers.0.", Basis.None).decays.Length is 4
-	let mixing = Mixing(layer + "linear_attn.", FeedForward(layer, basis))
-	let normed = Norm(layer + "input_layernorm.weight")
-	let after = Norm(layer + "post_attention_layernorm.weight")
-	let window = Layer.Zeros(mixing.convolution.Length / 4 * 3)
-	let memory = Layer.Zeros(mixing.decays.Length * mixing.norm.Length * mixing.norm.Length)
+	mixing = Mixing(layer + "linear_attn.", FeedForward(layer, basis))
+	normed = Norm(layer + "input_layernorm.weight")
+	after = Norm(layer + "post_attention_layernorm.weight")
+	window = Layer.Zeros(mixing.convolution.Length / 4 * 3)
+	memory = Layer.Zeros(mixing.decays.Length * mixing.norm.Length * mixing.norm.Length)
 	DeltaBlock(mixing, attentionNorm = normed, mlpNorm = after, window = window, memory = memory)
 Mixing(prefix Text, feedForward Experts) DeltaBlock slow
 	Tiny.Mixing(Linear, Experts.Single).steps.Length is 4
-	let keyHeads = KeyHeads(prefix)
-	let convolution = Convolution(prefix, keyHeads)
-	let decays = Decays(Tiled(file.Values(prefix + "A_log"), 1, keyHeads))
-	let steps = Tiled(file.Values(prefix + "dt_bias"), 1, keyHeads)
-	let projected = Layer(file.Quantized(prefix + "out_proj", Number.SingleBits), Layer.Unbiased)
-	let headNorm = file.Values(prefix + "norm.weight")
-	let none = List(Number)
-	let inputs = Inputs(prefix, keyHeads)
-	let mixed = DeltaBlock(none, inputs, convolution, decays, steps, headNorm, projected, none, feedForward)
+	keyHeads = KeyHeads(prefix)
+	convolution = Convolution(prefix, keyHeads)
+	decays = Decays(Tiled(file.Values(prefix + "A_log"), 1, keyHeads))
+	steps = Tiled(file.Values(prefix + "dt_bias"), 1, keyHeads)
+	projected = Layer(file.Quantized(prefix + "out_proj", Number.SingleBits), Layer.Unbiased)
+	headNorm = file.Values(prefix + "norm.weight")
+	none = List(Number)
+	inputs = Inputs(prefix, keyHeads)
+	mixed = DeltaBlock(none, inputs, convolution, decays, steps, headNorm, projected, none, feedForward)
 	DeltaBlock(mixed, rates = Rates(prefix, keyHeads))
 KeyHeads(prefix Text) Number
 	Tiny.KeyHeads(Linear) is 2
-	let heads = file.Shape(prefix + "A_log").First
-	let size = file.Shape(prefix + "norm.weight").First
+	heads = file.Shape(prefix + "A_log").First
+	size = file.Shape(prefix + "norm.weight").First
 	(file.Shape(prefix + "in_proj_qkv.weight").First - heads * size) / size / 2
 Inputs(prefix Text, keyHeads Number) Layer
 	Tiny.Inputs(Linear, 2).weights.Length is 24
-	let size = file.Shape(prefix + "norm.weight").First
-	let qkv = file.Quantized(prefix + "in_proj_qkv", Number.SingleBits)
-	let keys = 2 * keyHeads * size
-	let values = TiledRows(qkv.Slice(keys, qkv.Length - keys), size, keyHeads)
-	let gates = TiledRows(file.Quantized(prefix + "in_proj_z", Number.SingleBits), size, keyHeads)
+	size = file.Shape(prefix + "norm.weight").First
+	qkv = file.Quantized(prefix + "in_proj_qkv", Number.SingleBits)
+	keys = 2 * keyHeads * size
+	values = TiledRows(qkv.Slice(keys, qkv.Length - keys), size, keyHeads)
+	gates = TiledRows(file.Quantized(prefix + "in_proj_z", Number.SingleBits), size, keyHeads)
 	Layer(qkv.Slice(0, keys) + values + gates, Layer.Unbiased)
 Rates(prefix Text, keyHeads Number) Layer
 	Tiny.Rates(Linear, 2).weights.Length is 8
-	let betas = TiledRows(file.Rows(prefix + "in_proj_b.weight"), 1, keyHeads)
+	betas = TiledRows(file.Rows(prefix + "in_proj_b.weight"), 1, keyHeads)
 	Layer(betas + TiledRows(file.Rows(prefix + "in_proj_a.weight"), 1, keyHeads), Layer.Unbiased)
 Convolution(prefix Text, keyHeads Number) Numbers
 	Tiny.Convolution(Linear, 2).Length is 64
-	let size = file.Shape(prefix + "norm.weight").First
-	let taps = file.Values(prefix + "conv1d.weight")
-	let keys = 2 * keyHeads * size * 4
+	size = file.Shape(prefix + "norm.weight").First
+	taps = file.Values(prefix + "conv1d.weight")
+	keys = 2 * keyHeads * size * 4
 	taps.Slice(0, keys) + Tiled(taps.Slice(keys, taps.Length - keys), size * 4, keyHeads)
 FeedForward(layer Text, basis Basis) Experts slow
 	Tiny.FeedForward("layers.0.", Basis.None).used is 1
 	Plain.FeedForward("layers.0.", Basis.None).used is 1
-	let gated = file.Quantized(layer + "mlp.gate_proj", Number.SingleBits)
-	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
-	let expansion = Layer(gated + Projection(layer, "mlp.up_proj", inputs), Layer.Unbiased)
+	gated = file.Quantized(layer + "mlp.gate_proj", Number.SingleBits)
+	inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
+	expansion = Layer(gated + Projection(layer, "mlp.up_proj", inputs), Layer.Unbiased)
 	Experts(Experts.Dense(expansion, Layer(Projection(layer, "mlp.down_proj", ""), Layer.Unbiased)), basis = basis)
 IsFolded(layer Text) Boolean
 	Plain.IsFolded("layers.0.")
 	Tiny.IsFolded("layers.0.") is false
-	let inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
+	inputs = file.Entry(layer + "mlp.down_proj.pre_quant_scale")
 	inputs is not "" and file.IsFours(layer + "mlp.up_proj") and file.IsFours(layer + "mlp.down_proj")
 Projection(layer Text, kind Text, inputs Text) List(Numbers)
 	Plain.Projection("layers.0.", "mlp.up_proj", "").Length is Plain.file.Shape("layers.0.mlp.up_proj.weight").First
-	let name = layer + kind
+	name = layer + kind
 	IsFolded(layer) then file.Folded(name, inputs, Number.SingleBits) else file.Quantized(name, Number.SingleBits)
 Norm(name Text) Numbers
 	Tiny.Norm("norm.weight").Length is 8
@@ -128,13 +128,13 @@ Decays(logarithms Numbers) Numbers
 		-value.Exponential
 Tiled(values Numbers, size Number, keyHeads Number) Numbers
 	Tiny.Tiled((0, 1, 2, 3), 1, 2) is (0, 2, 1, 3)
-	let repeats = values.Length / size / keyHeads
+	repeats = values.Length / size / keyHeads
 	for values.Length
-		let head = (index / size).Floor
+		head = (index / size).Floor
 		values(((head % keyHeads) * repeats + (head / keyHeads).Floor) * size + index % size)
 TiledRows(rows List(Numbers), size Number, keyHeads Number) List(Numbers)
 	Tiny.TiledRows(((0), (1), (2), (3)), 1, 2) is ((0), (2), (1), (3))
-	let repeats = rows.Length / size / keyHeads
+	repeats = rows.Length / size / keyHeads
 	for rows.Length
-		let head = (index / size).Floor
+		head = (index / size).Floor
 		rows(((head % keyHeads) * repeats + (head / keyHeads).Floor) * size + index % size)

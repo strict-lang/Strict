@@ -11,23 +11,23 @@ constant SecondCases = ("1024: ^ffloop1fast", "2048: ^fgloop1fast", "512: ^fhloo
 Branch Texts
 	Summing.Branch is ("    cf.cond_br %f1ok1, ^floop1packed, ^loop1generic")
 	Doubling.Branch.Last is "    cf.cond_br %f2fast, ^floop2packed, ^loop2generic"
-	let kind = Packable.Length > 0 then "packed, ^loop" else "fast, ^loop"
-	let flag = "%f" + position + "ok" + MlirKernel(function, position).Sources.Length
-	let targets = ", ^floop" + position + kind + position + "generic"
-	let isParallel = MlirParallel(function, position).IsParallel
-	let chosen = isParallel then "%f" + position + "fast" else flag
+	kind = Packable.Length > 0 then "packed, ^loop" else "fast, ^loop"
+	flag = "%f" + position + "ok" + MlirKernel(function, position).Sources.Length
+	targets = ", ^floop" + position + kind + position + "generic"
+	isParallel = MlirParallel(function, position).IsParallel
+	chosen = isParallel then "%f" + position + "fast" else flag
 	(isParallel then Limited(flag) else List(Text)) + ("    cf.cond_br " + chosen + targets)
 Limited(flag Text) Texts
 	Doubling.Limited("%f2ok1")(1) is "    %f2few = arith.cmpf olt, %f2n, %f2pt : f64"
 	Doubling.Limited("%f2ok1").Last is "    %f2fast = arith.andi %f2ok1, %f2few : i1"
-	let prefix = "%f" + position
-	let threshold = "    " + prefix + "pt = arith.constant " + MlirCost(function, position).Threshold + ".0 : f64"
-	let few = "    " + prefix + "few = arith.cmpf olt, " + prefix + "n, " + prefix + "pt : f64"
+	prefix = "%f" + position
+	threshold = "    " + prefix + "pt = arith.constant " + MlirCost(function, position).Threshold + ".0 : f64"
+	few = "    " + prefix + "few = arith.cmpf olt, " + prefix + "n, " + prefix + "pt : f64"
 	(threshold, few, "    " + prefix + "fast = arith.andi " + flag + ", " + prefix + "few : i1")
 Packable Texts
 	Summing.Packable is (MlirFastLoop.Iterated, "numbers")
 	Doubling.Packable is (MlirFastLoop.Iterated, "numbers")
-	let loops = MlirLoops(function, position)
+	loops = MlirLoops(function, position)
 	mutable names = loops.Collection is "List(Number)" then List(Text) + MlirFastLoop.Iterated else List(Text)
 	for MlirKernel(function, position).Sources
 		if MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, value)) is "List(Number)"
@@ -36,29 +36,29 @@ Packable Texts
 Keyed(name Text, index Number) Texts
 	Summing.Keyed("numbers", 1).Last is "    %f1s2 = arith.addi %f1s1, %f1w1 : i64"
 	Summing.Keyed("for", 0).First is "    %f1k_for = func.call @strict_list_holder(%f1v) : (f64) -> !llvm.ptr"
-	let prefix = "%f" + position
-	let list = name is MlirFastLoop.Iterated then prefix + "v" else prefix + "l_" + name
-	let holder = prefix + "k_" + name
-	let held = "    " + holder + " = func.call @strict_list_holder(" + list + ") : (f64) -> !llvm.ptr"
-	let at = "    " + prefix
-	let packed = at + "packed" + index + " = func.call @strict_holder_packed(" + holder + ") : (!llvm.ptr) -> i64"
-	let shift = at + "m" + index + " = arith.constant " + 6 * index + " : i64"
-	let shifted = at + "w" + index + " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
-	let sum = at + "s" + (index + 1) + " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
+	prefix = "%f" + position
+	list = name is MlirFastLoop.Iterated then prefix + "v" else prefix + "l_" + name
+	holder = prefix + "k_" + name
+	held = "    " + holder + " = func.call @strict_list_holder(" + list + ") : (f64) -> !llvm.ptr"
+	at = "    " + prefix
+	packed = at + "packed" + index + " = func.call @strict_holder_packed(" + holder + ") : (!llvm.ptr) -> i64"
+	shift = at + "m" + index + " = arith.constant " + 6 * index + " : i64"
+	shifted = at + "w" + index + " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
+	sum = at + "s" + (index + 1) + " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
 	(held, packed) + Brained(name, index) + (shift, shifted, sum)
 Brained(name Text, index Number) Texts
 	Summing.Brained("numbers", 1)(1) is "    %f1brain_numbers = arith.cmpi eq, %f1packed1, %f1brainformat1 : i64"
-	let prefix = "%f" + position
-	let flag = prefix + "brain_" + name
-	let formats = (prefix + "brainformat" + index, prefix + "halfformat" + index)
-	let packed = prefix + "packed" + index
-	let compared = "    " + flag + " = arith.cmpi eq, " + packed + ", " + formats(0) + " : i64"
-	let chosen = "    " + prefix + "q" + index + " = arith.select " + flag + ", " + formats(1) + ", " + packed + " : i64"
+	prefix = "%f" + position
+	flag = prefix + "brain_" + name
+	formats = (prefix + "brainformat" + index, prefix + "halfformat" + index)
+	packed = prefix + "packed" + index
+	compared = "    " + flag + " = arith.cmpi eq, " + packed + ", " + formats(0) + " : i64"
+	chosen = "    " + prefix + "q" + index + " = arith.select " + flag + ", " + formats(1) + ", " + packed + " : i64"
 	("    " + formats(0) + Numbered + "17 : i64", compared, "    " + formats(1) + Numbered + "16 : i64", chosen)
 Case(source Number) Texts
 	Summing.Case(1) is SecondCases
-	let scale = WidthBase ^ source
-	let first = Widths.Length * source
+	scale = WidthBase ^ source
+	first = Widths.Length * source
 	for Widths
 		Target(value * scale, first + index)
 Shared(count Number) Texts
@@ -66,8 +66,8 @@ Shared(count Number) Texts
 	Summing.Shared(1).Length is 0
 	if count < 2
 		return List(Text)
-	let scale = (WidthBase ^ count - 1) / (WidthBase - 1)
-	let first = Widths.Length * count
+	scale = (WidthBase ^ count - 1) / (WidthBase - 1)
+	first = Widths.Length * count
 	for SharedWidths
 		Target(value * scale, first + index)
 Target(key Number, number Number) Text
@@ -79,7 +79,7 @@ Cases(count Number) Texts
 	mutable cases = Shared(count)
 	for count
 		cases = cases + Case(index)
-	let first = Widths.Length * count + SharedWidths.Length
+	first = Widths.Length * count + SharedWidths.Length
 	for Mixed(count)
 		cases = cases + Target(value, first + index)
 	cases
@@ -89,21 +89,21 @@ Mixed(count Number) Numbers
 	if count is not 2
 		return List(Number)
 	for Widths.Length * Widths.Length
-		let first = Widths(index % Widths.Length)
-		let second = Widths((index / Widths.Length).Floor)
+		first = Widths(index % Widths.Length)
+		second = Widths((index / Widths.Length).Floor)
 		if first is not second or first is not in SharedWidths
 			first + WidthBase * second
 Dispatched Texts
 	Text.Combine(Summing.Dispatched).IndexOf("[default: ^loop1generic, 0: ^floop1fast, 1040: ^fkloop1fast") > 0
 	Text.Combine(Summing.Dispatched).IndexOf("520: ^fmloop1fast, 16: ^faloop1fast") > 0
-	let names = Packable
+	names = Packable
 	if names.Length is 0
 		return List(Text)
 	mutable lines = List(Text) + ("  ^floop" + position + "packed:", "    %f" + position + "s0 = arith.constant 0 : i64")
 	for names
 		lines = lines + Keyed(value, index)
-	let cases = Text.Combine(Cases(names.Length), ", ")
-	let targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + cases
+	cases = Text.Combine(Cases(names.Length), ", ")
+	targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + cases
 	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
 Variants Texts
 	Summing.Variants.First is "  ^faloop1fast:"
@@ -126,10 +126,10 @@ Packings(names Texts) Texts
 	packings
 Variant(packing Text, number Number) Texts
 	Summing.Variant("for 16", 0).First is "  ^faloop1fast:"
-	let packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
-	let single = MlirSingle(packed, position)
-	let copied = single.IsSingle then single.Copied else MlirFastLoop(packed, position).Copied
-	let finished = MlirCounter(function, position).Finished(Letters(number))
+	packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
+	single = MlirSingle(packed, position)
+	copied = single.IsSingle then single.Copied else MlirFastLoop(packed, position).Copied
+	finished = MlirCounter(function, position).Finished(Letters(number))
 	MlirKernel(function, position).Renamed(copied, Letters(number)) + finished
 Pairs(names Texts, width Number) Texts
 	Summing.Pairs(("for", "numbers"), 16) is ("for 16", "numbers 16")

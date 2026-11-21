@@ -18,9 +18,9 @@ constant Cut = VmValue.OfError("SubstringOutOfRange")
 constant TextMethods = ("StartsWith", "EndsWith", "IndexOf", "LastIndexOf", "Substring", "Upper", "Lower", "Capitalize", "Trim", "TrimStart", "TrimEnd", "Bytes", "Utf8")
 Result(call Invocation) VmValue
 	Shapes.Result(NewShape).items.First.number is 3 and Shapes.Result(Invocation.Parsing).number is 5
-	let name = call.MethodName
+	name = call.MethodName
 	if name is "from"
-		let type = TypeOf(call.TypeName)
+		type = TypeOf(call.TypeName)
 		if type.members.Length is 1 and type.methods.Length > 0
 			return Foreign(call, types, folder).Constructed(type)
 		return Rounding.Single.Built(type, call, value, type.IsStruct)
@@ -34,7 +34,7 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")
 	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(1)).Length is 1
 	Shapes.Keyed("set", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))).items.Last.items.Last.number is 5
-	let found = ValueSearch(pairs.items).Key(arguments.First)
+	found = ValueSearch(pairs.items).Key(arguments.First)
 	if name is "in"
 		return VmValue.OfBoolean(found >= 0)
 	if name is "get"
@@ -68,7 +68,7 @@ Converted(instance VmValue, target Text) VmValue
 		return VmValue.OfList(converted)
 	if target is "Strict/Number"
 		return instance.kind is "Number" then instance else Parsed(instance.text)
-	let text = instance to Text
+	text = instance to Text
 	if target is "Strict/Character" and instance.kind is "Text" and text.Length > 1
 		return VmValue.OfError("InvalidCharacter")
 	VmValue.OfText(target is "Strict/Character" then text.Substring(0, text.Length is 0 then 0 else 1) else text)
@@ -76,18 +76,18 @@ Parsed(text Text) VmValue
 	Shapes.Parsed("5").number is 5
 	Shapes.Parsed("abc").items.First.text is "InvalidNumber: abc"
 	Shapes.Searched("EndsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("EndsWith", "ab", BcTwo).IsTrue is false
-	let number = text to Number
+	number = text to Number
 	number is Error then VmValue.OfError("InvalidNumber: " + TraceEntry.Cut(text)) else VmValue.OfNumber(number)
 Logical(name Text, left VmValue, call Invocation) VmValue
 	Shapes.Logical("not", VmValue.OfBoolean(true), NewShape).IsTrue is false
 	Shapes.Logical("and", VmValue.TrueValue, NewShape).IsTrue is false
 	if name is "not"
 		return VmValue.OfBoolean(left.IsTrue is false)
-	let right = call.Arguments.First
+	right = call.Arguments.First
 	if call.TypeName.EndsWith("Number") then TypeEntry.ShortName(call.TypeName) is "Number" else false
 		return VmValue.OfNumber(Bitwise(name, left.number, right.number))
-	let isLeft = left.IsTrue
-	let isRight = right.IsTrue
+	isLeft = left.IsTrue
+	isRight = right.IsTrue
 	if name is "xor"
 		return VmValue.OfBoolean(isLeft is not isRight)
 	VmValue.OfBoolean(name is "and" then isLeft and isRight else isLeft or isRight)
@@ -108,7 +108,7 @@ Queried(name Text, instance VmValue, call Invocation) VmValue
 	Shapes.Queried("Fail", VmValue.None, NewShape).kind is "Strict/Error"
 	if call.TypeName.StartsWith("Strict/Dictionary(")
 		return Keyed(name, instance, call.Arguments)
-	let position = name is in ("in", "Index") then ValueSearch(instance.items).Index(call.Arguments.First) else -1
+	position = name is in ("in", "Index") then ValueSearch(instance.items).Index(call.Arguments.First) else -1
 	if name is "in"
 		return VmValue.OfBoolean(position >= 0)
 	name is "Index" then VmValue.OfNumber(position) else Foreign(call, types, folder).Called
@@ -118,10 +118,10 @@ Searched(name Text, text Text, arguments List(VmValue)) VmValue
 	Shapes.Searched("Substring", "abc", List(VmValue) + VmValue.OfNumber(1)).text is "bc"
 	if arguments.Length is 0 or name is "Utf8"
 		return name is in ("Bytes", "Utf8") then ByteTexts(name, text, arguments) else Edited(name, text)
-	let first = arguments.First
-	let second = arguments.Length > 1 then arguments(1).number else name is "Substring" then Text.End else 0
+	first = arguments.First
+	second = arguments.Length > 1 then arguments(1).number else name is "Substring" then Text.End else 0
 	if name is "Substring"
-		let part = text.Substring(first.number, second)
+		part = text.Substring(first.number, second)
 		return part is Error then Cut else VmValue.OfText(part)
 	if name is in ("StartsWith", "EndsWith")
 		return VmValue.OfBoolean(name is "EndsWith" then text.EndsWith(first.text) else text.StartsWith(first.text, second))
@@ -160,7 +160,7 @@ Constructed(call Invocation) VmValue
 	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
 	Natives(List(TypeEntry) + Single).Constructed(NewSingle).number is 0.10000000149011612
 	Natives((Byted, Pixel)).Constructed(NewPixel).items.First.number is 127
-	let type = TypeOf(call.TypeName)
+	type = TypeOf(call.TypeName)
 	Rounding.Single.Built(type, call, value, type.IsStruct)
 Fresh(type TypeEntry) VmValue
 	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(2)) is VmValue.TrueValue
@@ -176,15 +176,15 @@ Fresh(type TypeEntry) VmValue
 Constructed(type TypeEntry, finished List(VmValue)) VmValue
 	Shapes.Constructed(Shape, Frame.Listed).items.First.number is 1
 	Shapes.Constructed(Shape, (VmValue.None, VmValue.None, VmValue.OfError("a"))).kind is "Strict/Error"
-	let result = finished(Frame.ResultSlot)
+	result = finished(Frame.ResultSlot)
 	if result.kind is in VmValue.ErrorKinds
 		return result
-	let natives = value
+	natives = value
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		values.Add(Rounding.Single.RoundedValue(value, finished(Frame.MembersSlot + index), natives))
-	let built = VmValue(type.Name, 0, "", values)
-	let changed = result.kind is "Changing" then result.items.Slice(1, result.items.Length - 1) else List(VmValue)
+	built = VmValue(type.Name, 0, "", values)
+	changed = result.kind is "Changing" then result.items.Slice(1, result.items.Length - 1) else List(VmValue)
 	changed.Length is 0 then built else VmValue(result, items = (List(VmValue) + built) + changed)
 Initial(member MemberEntry) VmValue
 	Shapes.Initial(Width).number is 0 and Shapes.Initial(Width).kind is "Number"
@@ -197,7 +197,7 @@ Initial(member MemberEntry) VmValue
 		return VmValue.OfNumber(0)
 	if member.typeName is in ("Strict/Text", "Strict/Boolean")
 		return member.typeName is "Strict/Text" then VmValue.OfText("") else VmValue.OfBoolean(false)
-	let isList = member.typeName.StartsWith("Strict/List") or member.typeName.StartsWith("Strict/Dictionary")
+	isList = member.typeName.StartsWith("Strict/List") or member.typeName.StartsWith("Strict/Dictionary")
 	isList then VmValue.OfList(List(VmValue)) else VmValue.None
 IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
 	Shapes.Converted(VmValue.OfList(VmValue.OfNumber(1)), "Strict/List(Text)") is VmValue.OfList(VmValue.OfText("1"))
@@ -209,10 +209,10 @@ IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.Rounded, TypeEntry.Rounded.methods.First) is false
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, TypeEntry.ToNumber)
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, Either) is false
-	let declared = chosen.parameters.Length is 1 then chosen.parameters.First.typeName else ""
-	let parameter = TypeOf(declared)
-	let kind = parameter.Wrapped is "" then TypeEntry.ShortName(parameter.Name) else parameter.Wrapped
-	let isEither = declared.IndexOf(" or ") > 0
+	declared = chosen.parameters.Length is 1 then chosen.parameters.First.typeName else ""
+	parameter = TypeOf(declared)
+	kind = parameter.Wrapped is "" then TypeEntry.ShortName(parameter.Name) else parameter.Wrapped
+	isEither = declared.IndexOf(" or ") > 0
 	call.IsWrapping(type) and kind is not TypeEntry.ShortName(type.Changing.First.typeName) and isEither is false
 TypeOf(name Text) TypeEntry
 	Shapes.TypeOf("Strict/Shape").members.Length is 2
@@ -221,8 +221,8 @@ TypeOf(name Text) TypeEntry
 	for types
 		if value.Name is name
 			return value
-	let short = name.Substring(name.LastIndexOf("/") + 1, name.Length - name.LastIndexOf("/") - 1)
-	let qualified = "/" + short
+	short = name.Substring(name.LastIndexOf("/") + 1, name.Length - name.LastIndexOf("/") - 1)
+	qualified = "/" + short
 	for types
 		if IsNamed(value, name, short, qualified)
 			return value

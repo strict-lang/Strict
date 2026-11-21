@@ -7,11 +7,11 @@ Rotated BFloat16s
 	Convrot((List(Number) + 1) + Layer.Zeros(15), 16).Rotated(3) is -0.25
 	Convrot(Convrot(Sixteen.Rotated, 16).Rotated, 16).Rotated is Sixteen.Rotated
 	Convrot(Sixteen.Rotated, 16).Rotated is Sixteen.values
-	let first = Stage(values, 1)
-	let second = group > 4 then Stage(first, 4) else first
+	first = Stage(values, 1)
+	second = group > 4 then Stage(first, 4) else first
 	constant ThirdStep = 16
 	constant FourthStep = 64
-	let third = group > ThirdStep then Stage(second, ThirdStep) else second
+	third = group > ThirdStep then Stage(second, ThirdStep) else second
 	for values.Length
 		group > FourthStep then Butterfly(third, index, FourthStep) else third(index)
 Applied(rotated Boolean) Numbers
@@ -25,8 +25,8 @@ Stage(input Numbers, step Number) BFloat16s
 		Butterfly(input, index, step)
 Butterfly(input Numbers, at Number, step Number) Number
 	Unit.Butterfly((1, 0, 0, 0), 3, 1) is -0.5
-	let digit = (at / step).Floor % 4
-	let first = (at / (4 * step)).Floor * 4 * step + at % step
-	let low = input(first) * (digit is 3 then -0.5 else 0.5) + input(first + step) * (digit is 2 then -0.5 else 0.5)
-	let high = input(first + 2 * step) * (digit is 1 then -0.5 else 0.5)
+	digit = (at / step).Floor % 4
+	first = (at / (4 * step)).Floor * 4 * step + at % step
+	low = input(first) * (digit is 3 then -0.5 else 0.5) + input(first + step) * (digit is 2 then -0.5 else 0.5)
+	high = input(first + 2 * step) * (digit is 1 then -0.5 else 0.5)
 	low + high + input(first + 3 * step) * (digit is 0 then -0.5 else 0.5)

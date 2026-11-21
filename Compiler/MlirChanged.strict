@@ -21,7 +21,7 @@ Kept(isUnchanged Boolean) Texts
 	Feeding.Kept(true).First is "    %t2c0v = llvm.load %v_food : !llvm.ptr -> f64"
 	mutable lines = List(Mutable(Text))
 	for Names(function.method)
-		let source = isUnchanged then Given(value) else "%v_" + value
+		source = isUnchanged then Given(value) else "%v_" + value
 		lines = lines + (Loaded(index, source), Address(value, index), Stored(index, Temp("c" + index + "a")))
 	lines
 Given(name Text) Text
@@ -31,24 +31,24 @@ Given(name Text) Text
 Taken Texts
 	Taking.Taken.Last is "    llvm.store %t0c0v, %r1 : f64, !llvm.ptr"
 	MlirChanged(Taking.function, 1).Taken.Length is 0
-	let entry = function.method.instructions(position)
-	let callee = Callee
+	entry = function.method.instructions(position)
+	callee = Callee
 	mutable lines = List(Mutable(Text))
 	for callee.Name is "" then List(Text) else Names(callee)
-		let slot = "%r" + (entry.payload(0) + Offset(value))
+		slot = "%r" + (entry.payload(0) + Offset(value))
 		lines = lines + (Address(value, index), Loaded(index, Temp("c" + index + "a")), Stored(index, slot))
 	lines
 Callee MethodEntry
 	Taking.Callee is Next
 	MlirChanged(Taking.function, 1).Callee.Name is ""
-	let entry = function.method.instructions(position)
-	let inliner = Inliner(function.types)
-	let type = entry.kind is InstructionType.Invoke then inliner.TypeOf(entry.texts(0)) else Untyped
+	entry = function.method.instructions(position)
+	inliner = Inliner(function.types)
+	type = entry.kind is InstructionType.Invoke then inliner.TypeOf(entry.texts(0)) else Untyped
 	type.Name is "" then Inliner.NoMethod else inliner.Callee(type, entry)
 Kind(register Number) Text
 	Taking.Kind(1) is "Ticker"
-	let entry = function.method.instructions(position)
-	let offset = register - entry.payload(0)
+	entry = function.method.instructions(position)
+	offset = register - entry.payload(0)
 	offset is 1 then TypeEntry.ShortName(entry.texts(0)) else TypeEntry.ShortName(Callee.parameters(offset - 2).typeName)
 With(emitted Texts) Texts
 	Taking.With(List(Text) + "a").Length is 4
@@ -58,7 +58,7 @@ Names(method MethodEntry) Texts
 	Keeping.Names(Calls).Length is 0 and Keeping.Names(Laned).Length is 0
 	mutable names = List(Mutable(Text))
 	for method.instructions
-		let isStored = value.kind is InstructionType.StoreRegisterToVariable
+		isStored = value.kind is InstructionType.StoreRegisterToVariable
 		if isStored and IsChange(value.texts(0)) and value.texts(0) is not in names
 			names.Add(value.texts(0))
 	names
@@ -66,7 +66,7 @@ IsChange(name Text) Boolean
 	Keeping.IsChange(ChangedInstance.Name) and Keeping.IsChange("changed_0") and Keeping.IsChange("changed_12")
 	(Keeping.IsChange("changed_0_high") or Keeping.IsChange("changed_X") or Keeping.IsChange("changed")) is false
 	constant Prefix = "changed_"
-	let isIndexed = name.Length > Prefix.Length and name.StartsWith(Prefix) and name.LastIndexOf("_") is Prefix.Length - 1
+	isIndexed = name.Length > Prefix.Length and name.StartsWith(Prefix) and name.LastIndexOf("_") is Prefix.Length - 1
 	name is ChangedInstance.Name or (isIndexed then Tokenizer.IsDigit(name(Prefix.Length)) else false)
 Offset(name Text) Number
 	Keeping.Offset(ChangedInstance.Name) is 1
@@ -92,8 +92,8 @@ Stored(index Number, slot Text) Text
 IsRead(register Number) Boolean
 	Taking.IsRead(1)
 	Taking.IsRead(0) is false
-	let steps = function.method.instructions
-	let reuse = LoadReuse(steps)
+	steps = function.method.instructions
+	reuse = LoadReuse(steps)
 	for Range(position + 1, steps.Length)
 		if steps(value).kind is not in (InstructionType.StoreRegisterToVariable, InstructionType.FieldLoad)
 			return false

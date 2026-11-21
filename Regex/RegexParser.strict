@@ -18,12 +18,12 @@ Parsed List(RegexStep)
 	RegexParser("(?:a)").Parsed.Length is 4
 	RegexParser("\\da").Parsed(1).Accepts(55)
 	RegexParser("^").Parsed(1).Kind is RegexStep.Begin
-	let part = Alternation(0, 0)
+	part = Alternation(0, 0)
 	part.next < pattern.Length then InvalidPattern(pattern) else part.Captured(0) + RegexStep(RegexStep.Match)
 Alternation(start Number, groups Number) RegexPart
 	RegexParser("a|b").Alternation(0, 0).steps.Length is 4
 	RegexParser("a|b|c").Alternation(0, 0).steps.Length is 7
-	let left = Sequence(start, groups)
+	left = Sequence(start, groups)
 	At(left.next) is "|" then left.Or(Alternation(left.next + 1, left.groups)) else left
 Sequence(start Number, groups Number) RegexPart
 	RegexParser("ab|c").Sequence(0, 0).next is 2
@@ -32,7 +32,7 @@ Sequence(start Number, groups Number) RegexPart
 	RegexParser("|a").Sequence(0, 0).next is 0
 	mutable part = RegexPart(List(RegexStep), start, groups)
 	for as long as At(part.next) is not in ("", "|", ")")
-		let piece = Repeated(part.next, part.groups)
+		piece = Repeated(part.next, part.groups)
 		part = RegexPart(part.steps + piece.steps, piece.next, piece.groups)
 	part
 Repeated(start Number, groups Number) RegexPart
@@ -40,42 +40,42 @@ Repeated(start Number, groups Number) RegexPart
 	RegexParser("a+?").Repeated(0, 0).next is 3
 	RegexParser("ab").Repeated(0, 0).next is 1
 	RegexParser("a{2}").Repeated(0, 0).next is 4
-	let atom = Atom(start, groups)
-	let quantifier = At(atom.next)
+	atom = Atom(start, groups)
+	quantifier = At(atom.next)
 	quantifier is "{" then Counted(atom) else quantifier is in Quantifiers then Quantified(atom, quantifier) else atom
 Quantified(atom RegexPart, quantifier Text) RegexPart
 	RegexParser("a?").Quantified(RegexPart.Letter, "?").steps.Length is 2
 	RegexParser("a??").Quantified(RegexPart.Letter, "?").steps(0).First is 2
 	RegexParser("a?").Quantified(RegexPart.Letter, "?").next is 2
 	RegexParser("a+").Quantified(RegexPart.Letter, "+").steps.Length is 2
-	let isLazy = At(atom.next + 1) is "?"
-	let repeated = quantifier is "*" then atom.Star(isLazy) else atom.Plus(isLazy)
+	isLazy = At(atom.next + 1) is "?"
+	repeated = quantifier is "*" then atom.Star(isLazy) else atom.Plus(isLazy)
 	RegexPart(quantifier is "?" then atom.Optional(isLazy) else repeated, atom.next + (isLazy then 2 else 1), atom.groups)
 Counted(atom RegexPart) RegexPart
 	RegexParser("a{2}").Counted(RegexPart.Letter).steps.Length is 2
 	RegexParser("a{2,3}").Counted(RegexPart.Letter).steps.Length is 4
 	RegexParser("a{2,}").Counted(RegexPart.Letter).steps.Length is 5
 	RegexParser("a{2").Counted(RegexPart.Letter) is InvalidPattern
-	let close = pattern.IndexOf("}", atom.next)
+	close = pattern.IndexOf("}", atom.next)
 	if close < 0
 		return InvalidPattern
-	let bounds = pattern.Substring(atom.next + 1, close - atom.next - 1).Split(",")
-	let least = bounds(0) to Number
-	let most = bounds.Length is 1 then least else bounds(1) is "" then -1 else bounds(1) to Number
-	let extra = most < 0 then atom.Star(false) else RegexPart(atom.Optional(false), 0, 0).Repeated(most - least)
+	bounds = pattern.Substring(atom.next + 1, close - atom.next - 1).Split(",")
+	least = bounds(0) to Number
+	most = bounds.Length is 1 then least else bounds(1) is "" then -1 else bounds(1) to Number
+	extra = most < 0 then atom.Star(false) else RegexPart(atom.Optional(false), 0, 0).Repeated(most - least)
 	RegexPart(atom.Repeated(least) + extra, close + 1, atom.groups)
 Atom(start Number, groups Number) RegexPart
 	RegexParser("*").Atom(0, 0) is InvalidPattern
 	RegexParser("\\d").Atom(0, 0).next is 2
 	RegexParser("[ab]").Atom(0, 0).next is 4
 	RegexParser("\\da").Atom(0, 0).steps(0).Accepts(55) and RegexParser("[ab]").Atom(0, 0).steps(0).Accepts(91) is false
-	let character = At(start)
+	character = At(start)
 	if character is "("
 		return Group(start, groups)
 	if character is "["
 		return Class(start + 1, groups)
-	let isEscape = character is "\\"
-	let step = isEscape then Escaped(At(start + 1)) else Plain(start)
+	isEscape = character is "\\"
+	step = isEscape then Escaped(At(start + 1)) else Plain(start)
 	RegexPart(List(RegexStep) + step, start + (isEscape then 2 else 1), groups)
 Group(start Number, groups Number) RegexPart
 	RegexParser("(a)").Group(0, 0).groups is 1
@@ -84,9 +84,9 @@ Group(start Number, groups Number) RegexPart
 	RegexParser("(a").Group(0, 0) is InvalidPattern
 	RegexParser("(?:a)").Group(0, 0).groups is 0
 	RegexParser("(a)").Group(0, 0).next is 3
-	let isCapture = pattern.StartsWith("(?:", start) is false
-	let index = isCapture then groups + 1 else groups
-	let inner = Alternation(start + (isCapture then 1 else 3), index)
+	isCapture = pattern.StartsWith("(?:", start) is false
+	index = isCapture then groups + 1 else groups
+	inner = Alternation(start + (isCapture then 1 else 3), index)
 	if At(inner.next) is not ")"
 		return InvalidPattern
 	RegexPart(isCapture then inner.Captured(index) else inner.steps, inner.next + 1, inner.groups)
@@ -96,7 +96,7 @@ Class(start Number, groups Number) RegexPart
 	NotA.Accepts(97) is false and NotA.Accepts(94)
 	RegexParser("[]a]").Class(1, 0).steps(0).Accepts(93) and RegexParser("[").Class(1, 0) is InvalidPattern
 	RegexParser("[a").Class(1, 0) is InvalidPattern and RegexParser("[ab]c").Class(1, 0).next is 4
-	let isNegated = At(start) is "^"
+	isNegated = At(start) is "^"
 	mutable item = Item(isNegated then start + 1 else start)
 	mutable ranges = item.steps(0).ranges
 	for as long as At(item.next) is not "]"
@@ -108,9 +108,9 @@ Item(start Number) RegexPart
 	RegexParser("a-]").Item(0).next is 1
 	RegexParser("\\D").Item(0) is InvalidPattern
 	RegexParser("abc").Item(0).next is 1
-	let isEscape = At(start) is "\\"
-	let low = isEscape then Escaped(At(start + 1)) else RegexStep.Literal(Code(start))
-	let after = start + (isEscape then 2 else 1)
+	isEscape = At(start) is "\\"
+	low = isEscape then Escaped(At(start + 1)) else RegexStep.Literal(Code(start))
+	after = start + (isEscape then 2 else 1)
 	if low.isNegated
 		return InvalidPattern
 	if At(after) is not "-" or At(after + 1) is in ("]", "")
@@ -123,22 +123,22 @@ Escaped(character Text) RegexStep
 	RegexParser("").Escaped("n").Accepts(10)
 	RegexParser("").Escaped(".").Accepts(46)
 	RegexParser("").Escaped("") is Error
-	let lower = character.Lower
+	lower = character.Lower
 	if lower is in Escapes
 		return RegexStep(RegexStep.Consume, EscapeRanges(Escapes.Index(lower)), character is not lower)
-	let isControl = character is in Controls
+	isControl = character is in Controls
 	RegexStep.Literal(isControl then ControlCodes(Controls.Index(character)) else RegexParser(character).Code(0))
 Plain(position Number) RegexStep
 	RegexParser(".").Plain(0).Accepts(10) is false
 	RegexParser("$").Plain(0).Kind is RegexStep.End
 	RegexParser("a").Plain(0).Accepts(97)
 	RegexParser(".").Plain(0).Accepts(97)
-	let character = At(position)
+	character = At(position)
 	if character is "."
 		return RegexStep(RegexStep.Consume, (10, 10), true)
 	if character is in ("*", "+", "?", "{")
 		return InvalidPattern
-	let anchor = character is "^" then RegexStep(RegexStep.Begin) else RegexStep(RegexStep.End)
+	anchor = character is "^" then RegexStep(RegexStep.Begin) else RegexStep(RegexStep.End)
 	character is in ("^", "$") then anchor else RegexStep.Literal(Code(position))
 At(position Number) Text
 	RegexParser("ab").At(1) is "b"

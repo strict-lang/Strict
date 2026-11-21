@@ -17,7 +17,7 @@ TypeOf(name Text) Text
 	if name is not in names
 		return ""
 	for names.Length - indexed
-		let position = names.Length - 1 - index
+		position = names.Length - 1 - index
 		if names(position) is name
 			return types(position)
 	types(positions(name))
@@ -37,7 +37,7 @@ Count(name Text) Number
 TypeAt(name Text, ordinal Number) Text
 	Scope(("a", "b", "a"), ("A", "B", "C")).TypeAt("a", 1) is "C"
 	Scope(("a", "b"), ("A", "B")).TypeAt("a", 1) is ""
-	let position = Position(name, ordinal)
+	position = Position(name, ordinal)
 	position < 0 then "" else types(position)
 Position(name Text, ordinal Number) Number
 	Scope(("a", "b", "a"), ("A", "B", "C")).Position("a", 1) is 2

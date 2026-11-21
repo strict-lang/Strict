@@ -10,17 +10,17 @@ constant WebOnly = " is a Web app, build it with web"
 constant Tested = NativeCompiler
 constant Web = "MossWeb.strict"
 Ran(arguments Texts) Number
-	let rest = arguments.Slice(1, arguments.Length - 1)
+	rest = arguments.Slice(1, arguments.Length - 1)
 	if Locked(rest(0)) is false
 		return 1
-	let started = Process.Elapsed
-	let cache = NativeCache(arguments(0), rest)
-	let result = Current(cache) then 0 else BuildProfile.Compiled(cache)
-	let code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
-	let reported = Reported(code, started, result is Error then result to Text else "")
+	started = Process.Elapsed
+	cache = NativeCache(arguments(0), rest)
+	result = Current(cache) then 0 else BuildProfile.Compiled(cache)
+	code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
+	reported = Reported(code, started, result is Error then result to Text else "")
 	Unlocked(rest(0)) then reported else 1
 Current(cache NativeCache) Boolean
-	let isCurrent = BuildProfile.Current(cache)
+	isCurrent = BuildProfile.Current(cache)
 	if isCurrent
 		logger.Log(cache.Message)
 	isCurrent
@@ -32,11 +32,11 @@ Reported(code Number, started Number, problem Text) Number
 	BuildProfile.Reported(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
 	code
 Locked(target Text) Boolean slow
-	let lock = File(Lock(target))
+	lock = File(Lock(target))
 	if lock.Locked
 		return true
 	logger.Log("Waiting for the other build of " + target)
-	let started = Process.Elapsed
+	started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
 		Process.Wait(0.1)
 		if lock.Locked
@@ -52,31 +52,31 @@ Unlocked(target Text) Boolean
 	File(Lock(target)).Exists is false
 Lock(target Text) Text
 	NativeCompiler.Lock("Examples/Sum.strict") is "./Examples/obj/Sum.strict.lock"
-	let path = BuildOutput.Intermediate(target) + ".lock"
+	path = BuildOutput.Intermediate(target) + ".lock"
 	Directory.Create(Path(path).PathOnly.text)
 	path
 Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
 		return Checked(rest, sources)
-	let request = TestRequest(rest)
+	request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
 		return Error("InvalidTestRequest")
-	let isCounting = request.Option is "lines"
-	let isRecursive = "--no-recursive" is not in request.Options
-	let selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
-	let build = NativeBuild(false, selection = selection, isRecursive = isRecursive)
+	isCounting = request.Option is "lines"
+	isRecursive = "--no-recursive" is not in request.Options
+	selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
+	build = NativeBuild(false, selection = selection, isRecursive = isRecursive)
 	build.Tested(rest(0), rest(1), isCounting, sources)
 Checked(rest Texts, sources Texts) Number
-	let gate = Execute.Served(rest(0), rest(1), true, sources)
+	gate = Execute.Served(rest(0), rest(1), true, sources)
 	if gate.code is 0
 		Built(rest, sources, gate.Types)
 	gate.code
 Built(rest Texts, sources Texts, gated List(TypeEntry))
-	let options = Options(rest)
+	options = Options(rest)
 	if rest.Length > 2 and rest(2) is "library"
 		return LibraryBuild.Built(rest(0), rest(1))
-	let problem = Problem(rest(0), options, sources)
+	problem = Problem(rest(0), options, sources)
 	if problem is not ""
 		logger.Log(problem)
 		return Error("UnsupportedBuildOptions")
@@ -90,7 +90,7 @@ Problem(path Text, options Texts, sources Texts) Text
 	Tested.Problem(Web, List(Text), Summing) is Web + WebOnly and Tested.Problem(Web, List(Text) + "web", Summing) is ""
 	if Path(path).FileName.text.IndexOf("Web") >= 0 and "web" is not in options
 		return path + WebOnly
-	let isFast = "fast" is in options
+	isFast = "fast" is in options
 	if IsMixed(options) or isFast and options.Length > 1
 		return isFast then Alone else Mixed
 	isFast and IsGame(path) then Whole + path else isFast and IsLearning(sources) then path + Model else ""
@@ -99,8 +99,8 @@ IsGame(path Text) Boolean
 	Release("Compiler/output/Game/obj/Demo").Created("Compiler/output/Game/Content") is not Error
 	NativeCompiler.IsGame("Compiler/output/Game/Game.strict")
 	NativeCompiler.IsGame("Compiler/output/Game/Demo.strict") is false
-	let folder = Path(path).PathOnly.text
-	let content = Directory.Exists(folder + "/Content") or File(folder + "/ContentBuild.strict").Exists
+	folder = Path(path).PathOnly.text
+	content = Directory.Exists(folder + "/Content") or File(folder + "/ContentBuild.strict").Exists
 	Path(path).FileName.text is Path(folder).FileName.text + ".strict" and content
 IsLearning(sources Texts) Boolean
 	NativeCompiler.IsLearning(Learning)
@@ -113,8 +113,8 @@ IsMixed(options Texts) Boolean
 	NativeCompiler.IsMixed(("android", "ios"))
 	NativeCompiler.IsMixed(("ios", "web"))
 	NativeCompiler.IsMixed(("ios", "simulator")) is false
-	let isMobile = "android" is in options or "ios" is in options
-	let isDesktop = "web" is in options or "linux" is in options or "windows" is in options
+	isMobile = "android" is in options or "ios" is in options
+	isDesktop = "web" is in options or "linux" is in options or "windows" is in options
 	"android" is in options and "ios" is in options or isMobile and isDesktop
 Configured(options Texts, path = "") NativeBuild
 	NativeCompiler.Configured(("ios", "simulator")).Target is Platform.IOSSimulator
@@ -122,11 +122,11 @@ Configured(options Texts, path = "") NativeBuild
 	NativeCompiler.Configured(List(Text) + "windows").isReleased
 	NativeCompiler.Configured(List(Text) + "fast").isFast
 	NativeCompiler.Configured(List(Text), "./Strict.strict").isReleased
-	let isWeb = "web" is in options
-	let isCrossing = "linux" is in options and isWeb is false
-	let configured = NativeBuild(isCrossing, isWeb, "android" is in options, "ios" is in options)
-	let isFast = "fast" is in options
-	let isReleased = "windows" is in options or Path(path).FileName.text is "Strict.strict"
+	isWeb = "web" is in options
+	isCrossing = "linux" is in options and isWeb is false
+	configured = NativeBuild(isCrossing, isWeb, "android" is in options, "ios" is in options)
+	isFast = "fast" is in options
+	isReleased = "windows" is in options or Path(path).FileName.text is "Strict.strict"
 	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = isReleased, isFast = isFast)
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")

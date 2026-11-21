@@ -3,7 +3,7 @@ Code Text
 	ValueCode(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("b"))).Code is "(1, \"b\")"
 	ValueCode(VmValue.Failed).Code is "Error(\"x\")"
 	ValueCode(VmValue("Strict/Point", 0, "", (VmValue.OfNumber(1), VmValue.None))).Code is "Point(1)"
-	let kind = shown.kind
+	kind = shown.kind
 	if kind is in ("Text", "Number", "Boolean", "None")
 		return kind is "Text" then shown.text.Code else shown to Text
 	if kind is "Strict/Error"

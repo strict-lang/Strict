@@ -16,9 +16,9 @@ Measured(anchor Numbers) Numbers native
 	(GpuMemory.HostAvailable, Used(Spike) + anchor.Length, GpuMemory.HostAvailable)
 Recovered Boolean native
 	ReturnedMemory.Recovered
-	let anchor = Anchor
-	let measured = Measured(anchor)
+	anchor = Anchor
+	measured = Measured(anchor)
 	Process.Collected
-	let left = measured(0) - GpuMemory.HostAvailable
+	left = measured(0) - GpuMemory.HostAvailable
 	logger.Log("spike " + (measured(0) - measured(2)).Round + " left " + left.Round + " after " + measured(1) + " numbers")
 	left < Kept and anchor.Last is 1

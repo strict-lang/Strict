@@ -34,7 +34,7 @@ Promoted(executable Text)
 	Promoting.Pending("Strict.strict") is not Error
 	Promoting.Promoted(Process.Current.executable) is not Error
 	File("Compiler/output/Promoting/obj/Strict.codegen.pending").Exists is false
-	let pending = File(root + "/obj/Strict.codegen.pending")
+	pending = File(root + "/obj/Strict.codegen.pending")
 	if pending.Exists
 		File(root + "/obj/Strict.codegen").Write(pending.ReadText + "\n" + File(executable).Modified)
 		pending.Delete
@@ -43,7 +43,7 @@ Current(executable Text) Text
 	Output.Promoted(Process.Current.executable) is not Error
 	Output.Current(Process.Current.executable) is "codegen " + Output.Hashed
 	Output.Current("Compiler/output/missing.exe").StartsWith("Compiler/output/missing.exe|")
-	let stamp = File(root + "/obj/Strict.codegen")
-	let lines = stamp.Exists then stamp.ReadLines else List(Text)
-	let isOwn = lines.Length is 2 then lines(1) is File(executable).Modified to Text else false
+	stamp = File(root + "/obj/Strict.codegen")
+	lines = stamp.Exists then stamp.ReadLines else List(Text)
+	isOwn = lines.Length is 2 then lines(1) is File(executable).Modified to Text else false
 	isOwn then "codegen " + lines(0) else executable + "|" + File(executable).Modified

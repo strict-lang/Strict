@@ -10,8 +10,8 @@ Run(arguments Texts) Number
 Written
 	if Process.Variable("STRICT_GPU") is not "0"
 		return Error("SeedNeedsStrictGpuZero")
-	let tool = Toolchain(Platform.Current, ".").Located("mlir-opt")
-	let shrunk = Process.RunTool(tool, "Compiler/obj/Seed.mlir" + Passes + Lowered, ToolSeconds)
+	tool = Toolchain(Platform.Current, ".").Located("mlir-opt")
+	shrunk = Process.RunTool(tool, "Compiler/obj/Seed.mlir" + Passes + Lowered, ToolSeconds)
 	if shrunk.exitCode is not 0
 		return Error("SeedNotShrunk: " + shrunk.Output + shrunk.error)
 	File("Compiler/Bootstrap.mlir").Write(Cut(File(Lowered).ReadText, File("Compiler/NativeRuntime.mlir").ReadLines.First))

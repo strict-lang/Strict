@@ -15,9 +15,9 @@ Execute(arguments Text, phase = "") ProcessResult
 ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
 	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.Failed
 	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
-	let tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
-	let started = Process.Elapsed
-	let results = Process.RunTools(name, arguments)
+	tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
+	started = Process.Elapsed
+	results = Process.RunTools(name, arguments)
 	BuildProfile.Reported(phase is "" then tool else phase, started)
 	for results
 		Retried(Cleaned(value), arguments(index))
@@ -28,8 +28,8 @@ Retried(result ProcessResult, arguments Text) ProcessResult
 Cleaned(result ProcessResult) ProcessResult
 	Echo.Cleaned(ProcessResult(0, "a\r\n", "")).Output is "a\n"
 	Echo.Cleaned(ProcessResult(127, "", "")).error is "Tool " + Echo.name + " exited 127 without output"
-	let silent = result.Failed and result.Output is "" and result.error is ""
-	let error = silent then "Tool " + name + " exited " + result.exitCode + " without output" else result.error
+	silent = result.Failed and result.Output is "" and result.error is ""
+	error = silent then "Tool " + name + " exited " + result.exitCode + " without output" else result.error
 	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), error.Replace("\r", ""))
 IsCrash(exitCode Number) Boolean
 	ToolRunner.IsCrash(139)

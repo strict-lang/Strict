@@ -37,8 +37,8 @@ Methods(type TypeEntry) List(MethodEntry)
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + MethodEntry.GoRun)).Length is 1
 	Doubling.Methods(Machine.Doubler).First.Slots is 9
 	for type.methods
-		let names = Slots(type, value)
-		let scratch = names.Length + LoadReuse(value.instructions).RegisterCount
+		names = Slots(type, value)
+		scratch = names.Length + LoadReuse(value.instructions).RegisterCount
 		MethodEntry(value.Name, value.parameters, value.declaredType, Instructions(value, names, scratch), scratch + 1)
 Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEntry)
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials + ChangedInstance.Name, 8).Last.payload.Last is 6
@@ -46,11 +46,11 @@ Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEn
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.payload.Length is 1
 	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 10
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.Target is Frame.ResultSlot
-	let changed = Changed(method, names)
+	changed = Changed(method, names)
 	for method.instructions
-		let resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
-		let rebased = LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length)
-		let placed = Fielded(Placed(rebased, method, index, scratch))
+		resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
+		rebased = LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length)
+		placed = Fielded(Placed(rebased, method, index, scratch))
 		value.kind is InstructionType.Return then InstructionEntry(placed, payload = placed.payload + changed) else placed
 Fielded(entry InstructionEntry) InstructionEntry
 	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Pair"), (4, 3, -1, -2))).payload is (4, 3, 0, 1)
@@ -59,7 +59,7 @@ Fielded(entry InstructionEntry) InstructionEntry
 	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Other"), (4, 3, -1, -2))).payload.Last is -2
 	if entry.kind is not InstructionType.FieldLoad or entry.texts.Length < 2 or entry.payload.Length < 4
 		return entry
-	let route = Position(Natives(types).TypeOf(entry.texts.Last))
+	route = Position(Natives(types).TypeOf(entry.texts.Last))
 	for route < 0 then List(MemberEntry) else types(route).members
 		if value.Name is entry.texts.First
 			return InstructionEntry(entry, payload = (entry.payload(0), entry.payload(1), route, index))
@@ -73,7 +73,7 @@ Changed(method MethodEntry, names Texts) Numbers
 	mutable slots = List(Mutable(Number)) + names.Index(ChangedInstance.Name)
 	mutable isChanged = slots.First >= 0
 	for method.parameters
-		let slot = names.Index("changed_" + index)
+		slot = names.Index("changed_" + index)
 		slots.Add(slot)
 		isChanged = isChanged or slot >= 0
 	isChanged then slots else List(Number)
@@ -85,9 +85,9 @@ Targeted(entry InstructionEntry) InstructionEntry
 	Doubling.Targeted(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9
 	Doubling.Targeted(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
 	Accessor.FirstResolved.payload is (1, -1, -2, 0, -3, 0, 1, 0, 0, 1, 0, 0, 1, -1, 0)
-	let call = Invocation(entry, List(VmValue), VmValue.None)
-	let target = Routes(types).Target(call)
-	let path = Accessor(Machine(types)).Marked(target, call.Count)
+	call = Invocation(entry, List(VmValue), VmValue.None)
+	target = Routes(types).Target(call)
+	path = Accessor(Machine(types)).Marked(target, call.Count)
 	InstructionEntry(entry.kind, entry.texts, entry.payload + target + path, entry.line)
 Position(type TypeEntry) Number
 	Doubling.Placed(ElementStore, Sample, 0, 9).payload is ElementStore.payload
@@ -110,7 +110,7 @@ Slots(type TypeEntry, method MethodEntry) Texts
 	for method.parameters
 		names.Add(value.Name)
 	for method.instructions
-		let local = Local(value)
+		local = Local(value)
 		if local is not in names and local is not in ("", "outer", "outer.index")
 			names.Add(local)
 	names
@@ -122,32 +122,32 @@ Local(entry InstructionEntry) Text
 		return entry.texts.Length > 0 then entry.texts.Last else "#result"
 	if entry.kind is not in Named
 		return ""
-	let parts = PayloadDecoder(entry).ElementParts
+	parts = PayloadDecoder(entry).ElementParts
 	if entry.kind is not InstructionType.StoreRegisterToVariable or parts.Length is 0
 		return entry.texts(0)
-	let dot = parts(0).IndexOf(".")
+	dot = parts(0).IndexOf(".")
 	dot > 0 then parts(0).Substring(0, dot) else parts(0)
 Slotted(entry InstructionEntry, names Texts) InstructionEntry
 	Doubling.Slotted(Sample.instructions(2), Specials + "a").payload is (1, 6)
 	Doubling.Slotted(InstructionEntry.LoadNumber(0, 7), Specials).payload is (0, 1, 7)
-	let local = Local(entry)
+	local = Local(entry)
 	if local is ""
 		return Decoded(entry)
-	let kind = entry.kind
-	let slot = Slot(local, names)
+	kind = entry.kind
+	slot = Slot(local, names)
 	if kind is InstructionType.StoreConstantToVariable or kind is InstructionType.CheckError
 		return Decoded(InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line))
-	let payload = entry.payload
-	let start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
+	payload = entry.payload
+	start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
 	InstructionEntry(kind, entry.texts, start + slot + Element(entry, names), entry.line)
 Decoded(entry InstructionEntry) InstructionEntry
 	Doubling.Decoded(InstructionEntry.LoadNumber(0, 1.5)).payload is (0, 1, 1.5)
 	Doubling.Decoded(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
 	Doubling.Decoded(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "a")).payload is (1, 0.5, -1, 0)
-	let at = entry.kind is InstructionType.LoadConstantToRegister then 1 else 0
+	at = entry.kind is InstructionType.LoadConstantToRegister then 1 else 0
 	if (at is 1 or entry.kind is InstructionType.StoreConstantToVariable) is false or entry.payload(at) is not 3
 		return entry
-	let number = PayloadDecoder(entry).Double(at + 1)
+	number = PayloadDecoder(entry).Double(at + 1)
 	mutable payload = at is 1 then (entry.payload(0), 1, number) else (1, number)
 	for Range(at + 9, entry.payload.Length)
 		payload = payload + entry.payload(value)
@@ -159,10 +159,10 @@ Element(entry InstructionEntry, names Texts) Numbers
 	Doubling.Element(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a(index)"), Specials).Length is 1
 	if entry.kind is not InstructionType.StoreRegisterToVariable
 		return List(Number)
-	let parts = PayloadDecoder(entry).ElementParts
+	parts = PayloadDecoder(entry).ElementParts
 	if parts.Length is 0
 		return List(Number)
-	let slot = Slot(parts(1), names)
+	slot = Slot(parts(1), names)
 	slot is -1 then (LiteralIndex, parts(1) to Number) else List(Number) + slot
 Slot(name Text, names Texts) Number
 	Doubling.Slot("outer.index", Specials) is OuterIndexSlot
@@ -183,20 +183,20 @@ Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Numb
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
 	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
 	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
-	let isJump = entry.kind is InstructionType.JumpToIdIfFalse or entry.kind is InstructionType.JumpToIdIfTrue
-	let isFailing = entry.kind is InstructionType.CheckError and entry.texts.Length > 0
-	let ended = isFailing then InstructionEntry.Jump(InstructionType.JumpEnd, PayloadDecoder(entry).SevenBit(1)) else entry
-	let jumped = isJump or isFailing then entry.payload + method.JumpEndOf(ended) else entry.payload
-	let looped = entry.kind is InstructionType.LoopEnd then jumped + method.LoopBeginOf(position) else jumped
+	isJump = entry.kind is InstructionType.JumpToIdIfFalse or entry.kind is InstructionType.JumpToIdIfTrue
+	isFailing = entry.kind is InstructionType.CheckError and entry.texts.Length > 0
+	ended = isFailing then InstructionEntry.Jump(InstructionType.JumpEnd, PayloadDecoder(entry).SevenBit(1)) else entry
+	jumped = isJump or isFailing then entry.payload + method.JumpEndOf(ended) else entry.payload
+	looped = entry.kind is InstructionType.LoopEnd then jumped + method.LoopBeginOf(position) else jumped
 	InstructionEntry(entry.kind, entry.texts, looped, entry.line, Destination(entry, scratch))
 Destination(entry InstructionEntry, scratch Number) Number
 	Doubling.Destination(InstructionEntry.Binary(InstructionType.Equal, (6, 7)), 9) is Frame.FlagSlot
-	let kind = entry.kind
+	kind = entry.kind
 	if kind is in (InstructionType.StoreConstantToVariable, InstructionType.CheckError)
 		return entry.payload.Last
 	if kind is in ListWrites
 		return entry.payload(1)
 	if kind is in (InstructionType.Return, InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return kind is InstructionType.Return then Frame.ResultSlot else Frame.LoopSlot
-	let written = LoadReuse(List(InstructionEntry)).WritePosition(entry)
+	written = LoadReuse(List(InstructionEntry)).WritePosition(entry)
 	written >= 0 then entry.payload(written) else kind is in Comparisons then Frame.FlagSlot else scratch

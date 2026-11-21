@@ -38,16 +38,16 @@ At(position Number, name Text) Texts
 	MlirLines(Jumped).At(2, "%line").Length is 0
 	if function.IsCounted is false
 		return List(Text)
-	let entry = function.method.instructions(position)
-	let previous = position > 0 then function.method.instructions(position - 1).line else 0
-	let isStart = entry.line > 0 and entry.kind is not InstructionType.JumpEnd and entry.line is not previous
-	let started = isStart then Started(position, entry.line, name) else List(Text)
+	entry = function.method.instructions(position)
+	previous = position > 0 then function.method.instructions(position - 1).line else 0
+	isStart = entry.line > 0 and entry.kind is not InstructionType.JumpEnd and entry.line is not previous
+	started = isStart then Started(position, entry.line, name) else List(Text)
 	entry.kind is InstructionType.Return then started + Stop else started
 Started(position Number, line Number, name Text) Texts
 	MlirLines(Lined).Started(2, 3, "%line").First is "    %line2 = arith.constant 5 : i64"
 	MlirLines(Lined).Started(2, 3, "%t1line").Last.IndexOf("(%linetable, %t1line2, %linestate)") > 0
-	let slot = function.lineSlots(Numbers.Index(line))
-	let call = "    func.call @strict_line(%linetable, " + name + position + ", %linestate)" + Signature
+	slot = function.lineSlots(Numbers.Index(line))
+	call = "    func.call @strict_line(%linetable, " + name + position + ", %linestate)" + Signature
 	("    " + name + position + " = arith.constant " + slot + " : i64", call)
 End Texts
 	MlirLines(Lined).End is List(Text) + Stop
@@ -58,19 +58,19 @@ End Texts
 Framed Texts
 	MlirLines(MlirChecks.Presenting).Framed is ("    func.call @strict_frame_ended() : () -> ()")
 	MlirLines(Unlined).Framed.Length is 0
-	let isFramed = function.type.IsRealtime and function.method.Name is "Presented"
+	isFramed = function.type.IsRealtime and function.method.Name is "Presented"
 	isFramed then List(Text) + "    func.call @strict_frame_ended() : () -> ()" else List(Text)
 Placed Texts
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")
 	MlirLines(Lined, "Strict/Shape", "Examples/Shape.strict").Placed.First is "Examples/Shape.strict:2"
-	let file = File(function.type)
+	file = File(function.type)
 	for Numbers
 		file + ":" + value
 File(type TypeEntry) Text
 	MlirLines(Lined, ("A", "Strict/Shape"), ("A.strict", "C/B.strict")).File(Shaped) is "C/B.strict"
 	MlirLines(Lined, "A", "Math/A").File(TypeEntry("Size", List(MemberEntry), List(MethodEntry))) is "Math/Size.strict"
 	MlirLines(Lined).File(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "List.strict"
-	let at = mainNames.Index(type.Name)
+	at = mainNames.Index(type.Name)
 	if at >= 0
 		return mainFiles(at)
 	TypeSource(type).Located(mainFiles.Length is 0 then "" else Path(mainFiles.First).PathOnly.text)
@@ -88,25 +88,25 @@ Places(functions List(MlirFunction), names Texts, files Texts) Texts
 Uncompiled(functions List(MlirFunction), mains List(TypeEntry)) List(MlirFunction)
 	MlirLines.Uncompiled(List(MlirFunction) + Lined, List(TypeEntry) + Shaped).Length is 1
 	MlirLines.Uncompiled(List(MlirFunction) + Lined, (Shaped, Shaped)).Length is 2
-	let symbols = MlirRecursion.Symbols(functions)
+	symbols = MlirRecursion.Symbols(functions)
 	mutable uncompiled = List(Mutable(MlirFunction))
 	for main, method in mains, main.methods
-		let candidate = MlirFunction(functions.First.types, main, method)
+		candidate = MlirFunction(functions.First.types, main, method)
 		if candidate.Symbol is not in symbols
 			uncompiled.Add(candidate)
 	uncompiled
 Counted(functions List(MlirFunction), mains List(TypeEntry), files Texts) List(MlirFunction)
 	MlirLines.Counted(Shapes, List(TypeEntry) + MlirFunction.Shape, "Shape.strict").First.lineSlots is (0, 1)
 	Module.Text.IndexOf(Print) > 0
-	let names = NativeFolder.Names(mains)
-	let places = Places(functions + Uncompiled(functions, mains), names, files)
+	names = NativeFolder.Names(mains)
+	places = Places(functions + Uncompiled(functions, mains), names, files)
 	for functions
 		MlirFunction(value.types, value.type, value.method, MlirLines(value, names, files).Indexes(places))
 Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts
 	MlirLines.Table(Shapes, List(TypeEntry) + MlirFunction.Shape, "A.strict").First.IndexOf("tensor<6xf64>") > 0
-	let places = Places(functions + Uncompiled(functions, mains), NativeFolder.Names(mains), files)
-	let size = places.Length * 3
-	let table = "  llvm.mlir.global internal @strict_lines(dense<0.0> : tensor<" + size + "xf64>)"
+	places = Places(functions + Uncompiled(functions, mains), NativeFolder.Names(mains), files)
+	size = places.Length * 3
+	table = "  llvm.mlir.global internal @strict_lines(dense<0.0> : tensor<" + size + "xf64>)"
 	mutable lines = List(Text) + (table + " : !llvm.array<" + size + " x f64>")
 	mutable printer = Printer
 	for places
@@ -115,13 +115,13 @@ Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts
 	lines + printer + ("    return", "  }")
 Named(place Text, index Number) Text
 	MlirLines(Lined).Named("A.strict:2", 0).EndsWith("place0(\"A.strict:2\\00\") : !llvm.array<11 x i8>")
-	let constants = MlirConstants(function, 0)
-	let length = constants.EscapedLength(place, false) + 1
-	let escaped = "(\"" + constants.Escaped(place, false) + "\\00\") : !llvm.array<" + length
+	constants = MlirConstants(function, 0)
+	length = constants.EscapedLength(place, false) + 1
+	escaped = "(\"" + constants.Escaped(place, false) + "\\00\") : !llvm.array<" + length
 	"  llvm.mlir.global internal constant @strict_line_place" + index + escaped + " x i8>"
 Printed(index Number) Texts
 	MlirLines(Lined).Printed(3).Last.IndexOf("@strict_line_print(%linetable, %lineindex3, %lineplace3)") > 0
-	let place = "    %lineplace" + index + " = llvm.mlir.addressof @strict_line_place" + index + " : !llvm.ptr"
-	let position = "    %lineindex" + index + " = arith.constant " + index + " : i64"
-	let call = "    func.call @strict_line_print(%linetable, %lineindex" + index + ", %lineplace" + index + ")"
+	place = "    %lineplace" + index + " = llvm.mlir.addressof @strict_line_place" + index + " : !llvm.ptr"
+	position = "    %lineindex" + index + " = arith.constant " + index + " : i64"
+	call = "    func.call @strict_line_print(%linetable, %lineindex" + index + ", %lineplace" + index + ")"
 	(place, position, call + Signature)

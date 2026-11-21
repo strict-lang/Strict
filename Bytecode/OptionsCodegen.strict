@@ -10,17 +10,17 @@ Lines(names Texts) Texts
 	Settings.Lines(List(Text)).Length is 0
 	Settings.Lines(("Parsed", "Usage")).Length is 5
 	Settings.Lines(List(Text) + "Usage").First is "Usage Text"
-	let parsed = automatic.IsWanted("Parsed", names) then Parsed else List(Text)
+	parsed = automatic.IsWanted("Parsed", names) then Parsed else List(Text)
 	parsed + (automatic.IsWanted("Usage", names) then Usage else List(Text))
 Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Settings.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
 	Memberless.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, HelloParsed) is TypeEntry.HelloLogger
-	let prefix = main.fullName + "."
-	let wanted = (prefix + "Parsed") is in targets or prefix + "Usage" is in targets
+	prefix = main.fullName + "."
+	wanted = (prefix + "Parsed") is in targets or prefix + "Usage" is in targets
 	if wanted is false or automatic.instantiation.types.Inherited(automatic.instance, "Parsed") is ""
 		return entry
-	let names = entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text)
-	let missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))
+	names = entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text)
+	missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))
 	automatic.Appended(main, entry, automatic.lines + Lines(missing))
 Parsed Texts
 	Settings.Parsed.First is "Parsed(arguments Texts) Settings"
@@ -29,18 +29,18 @@ Parsed Texts
 	SettingsParsed.Last.EndsWith("line.Repeated(\"loras\", List(Text)), line.Flag(\"jsonOutput\", false))")
 	Single.Parsed(1) is "\tlet line = CommandLine(arguments, List(Text) + \"count\").Checked"
 	Rendering.Parsed.Last.StartsWith("\tRendering(Resolution(line.Numeric(\"width\", 720), ")
-	let members = Members
-	let line = "\tlet line = CommandLine(arguments, " + Joined(Quoted(MemberNames(members)), "Text") + ").Checked"
-	let built = "\t" + automatic.instance + "(" + Text.Combine(MemberArguments(members), ", ") + ")"
+	members = Members
+	line = "\tlet line = CommandLine(arguments, " + Joined(Quoted(MemberNames(members)), "Text") + ").Checked"
+	built = "\t" + automatic.instance + "(" + Text.Combine(MemberArguments(members), ", ") + ")"
 	(List(Text) + ("Parsed(arguments Texts) " + automatic.instance) + line) + built
 Usage Texts
 	Settings.Usage.Last.EndsWith("false to Text), (\"\", \"\", \"\", \"\", \"\"))")
 	Single.Usage.Last.EndsWith(".Usage(List(Text) + 1 to Text, List(Text) + \"\")")
 	Rendering.Usage.Last.EndsWith(", (Resolution.Help(0), Resolution.Help(1), Help(0)))")
-	let members = Members
-	let shown = MemberShown(members)
-	let described = MemberDescriptions("", members)
-	let usage = ").Usage(" + Joined(shown, "Text") + ", " + Joined(described, "Text") + ")"
+	members = Members
+	shown = MemberShown(members)
+	described = MemberDescriptions("", members)
+	usage = ").Usage(" + Joined(shown, "Text") + ", " + Joined(described, "Text") + ")"
 	(List(Text) + "Usage Text") + ("\tCommandLine(List(Text), " + Joined(Quoted(MemberNames(members)), "Text") + usage)
 Listed Text
 	Single.Listed is "List(Text) + \"count\""
@@ -82,7 +82,7 @@ Descriptions(prefix Text) Texts
 	MemberDescriptions(prefix, Members)
 MemberDescriptions(prefix Text, members List(OptionMember)) Texts
 	Settings.MemberDescriptions("", Settings.Members).First is "\"\""
-	let help = Text.Combine(automatic.lines, "\n").IndexOf("constant Help =") >= 0 then prefix + "Help" else ""
+	help = Text.Combine(automatic.lines, "\n").IndexOf("constant Help =") >= 0 then prefix + "Help" else ""
 	mutable plain = 0
 	mutable described = List(Text)
 	for members

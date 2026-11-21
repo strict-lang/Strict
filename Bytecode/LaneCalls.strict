@@ -39,7 +39,7 @@ Lanes(member MemberEntry) Texts
 	Sample.Lanes(Counted).Length is 0
 	Sample.Lanes(MemberEntry("seed", "Strict/Pair", List(InstructionEntry) + StructLanes.Constructed, false)).Length is 0
 	Sample.Lanes(MemberEntry("zero", "Strict/Pair", List(InstructionEntry), true)).Length is 0
-	let isFixed = member.IsConstant or member.initial.Length > 0 or StructLanes.IsLane(member)
+	isFixed = member.IsConstant or member.initial.Length > 0 or StructLanes.IsLane(member)
 	if isFixed or LaneNesting.IsPlainType(member.typeName)
 		return List(Text)
 	StructLanes(types).Members(Inliner(types).TypeOf(member.typeName))
@@ -49,15 +49,15 @@ Divided(members List(MemberEntry)) List(MemberEntry)
 	Sample.Divided(Drawer.members)(1).Bits is 32
 	mutable result = List(MemberEntry)
 	for members
-		let member = value
-		let lanes = Lanes(member)
+		member = value
+		lanes = Lanes(member)
 		result = lanes.Length is 0 then result + member else result + Split(member, lanes)
 	result
 Split(member MemberEntry, lanes Texts) List(MemberEntry)
 	Sample.Split(Offset, ("real", "imaginary")).First.Name is "offset_real"
 	Sample.Split(Offset, ("real", "imaginary")).First.typeName is "Strict/Number"
 	Sizing.Split(Sized, ("Width", "Height")).Last.Bits is 32
-	let bits = member.Bits > 0 then member.Bits else LeafBits(Inliner(types).TypeOf(member.typeName))
+	bits = member.Bits > 0 then member.Bits else LeafBits(Inliner(types).TypeOf(member.typeName))
 	for lanes
 		MemberEntry(StructLanes.Lane(member.Name, value), "Strict/Number", List(InstructionEntry), false, bits)
 Signature(call InstructionEntry) Texts
@@ -68,7 +68,7 @@ Signature(call InstructionEntry) Texts
 	LaneCalls((StructLanes.Pair, Custom)).Signature(BuiltFrom) is ("offset Pair")
 	if call.kind is not InstructionType.Invoke
 		return List(Text)
-	let type = Inliner(types).TypeOf(call.texts(0))
+	type = Inliner(types).TypeOf(call.texts(0))
 	if call.texts(1) is "from" and Inliner(types).Declared(type, call).instructions.Length is 0
 		return StructLanes(types).Members(type).Length > 0 then List(Text) else Laned(type.members)
 	LaneNesting(types).MethodSignature(type, call)
@@ -76,7 +76,7 @@ Width(call InstructionEntry, position Number, signature Texts) Number
 	Sample.Width(Shift, 0, Shifts) is 2
 	Sample.Width(Shift, 1, Shifts) is 0
 	Sample.Width(Swapped, 1, Shifts) is 2
-	let type = LaneFlow(types).Typed(signature, call.texts(3 + position))
+	type = LaneFlow(types).Typed(signature, call.texts(3 + position))
 	type is "" then 0 else StructLanes(types).Members(Inliner(types).TypeOf(type)).Length
 Called(call InstructionEntry, laned Texts, base Number, signature Texts) List(InstructionEntry)
 	Sample.Called(Shift, "4 Pair", 9, Shifts).Length is 3
@@ -85,10 +85,10 @@ Called(call InstructionEntry, laned Texts, base Number, signature Texts) List(In
 	Sample.Called(Shift, "4 Pair", 9, Shifts).Last.texts(4) is "offset_imaginary"
 	Sample.Called(Shift, "4 Pair", 9, Shifts).Last.payload is (5, -1, -2, 3, -4, -5, -6, -3, 3, 9, 10, 3, 0)
 	Sample.Called(Defaulted, "4 Pair", 9, Shifts).Last.payload is (5, -1, -2, 3, -4, -5, -6, -3, 2, 9, 10, 1, 2)
-	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
-	let instance = reads.Length > Given(call) then call.payload(reads.Last) else -1
-	let names = (call.texts(0), call.texts(1), call.texts(2)) + Names(call, signature)
-	let made = InstructionEntry.Invoke(call.payload(0), names, Registers(call, base, signature), instance)
+	reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	instance = reads.Length > Given(call) then call.payload(reads.Last) else -1
+	names = (call.texts(0), call.texts(1), call.texts(2)) + Names(call, signature)
+	made = InstructionEntry.Invoke(call.payload(0), names, Registers(call, base, signature), instance)
 	Loads(call, laned, base, signature) + InstructionEntry(made.kind, made.texts, made.payload, call.line)
 Given(call InstructionEntry) Number
 	Sample.Given(Defaulted) is 1
@@ -102,8 +102,8 @@ Names(call InstructionEntry, signature Texts) Texts
 	Sample.Names(Made, Shifts) is ("offset_real", "offset_imaginary", "count")
 	mutable names = List(Text)
 	for Range(3, call.texts.Length)
-		let name = call.texts(value)
-		let type = LaneFlow(types).Typed(signature, name)
+		name = call.texts(value)
+		type = LaneFlow(types).Typed(signature, name)
 		names = type is "" then names + name else names + Prefixed(name, LaneNesting(types).MembersOf(type))
 	names
 Prefixed(name Text, lanes Texts) Texts
@@ -113,11 +113,11 @@ Prefixed(name Text, lanes Texts) Texts
 		StructLanes.Lane(name, value)
 Registers(call InstructionEntry, base Number, signature Texts) Numbers
 	Sample.Registers(Shift, 9, Shifts) is (9, 10, 3)
-	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
+	reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable registers = List(Number)
 	mutable next = base
 	for Given(call)
-		let width = Width(call, value, signature)
+		width = Width(call, value, signature)
 		registers = width is 0 then registers + call.payload(reads(value)) else registers + Sequence(next, width)
 		next = next + width
 	registers
@@ -134,9 +134,9 @@ Loads(call InstructionEntry, laned Texts, base Number, signature Texts) List(Ins
 	mutable lines = List(InstructionEntry)
 	mutable offset = 0
 	for Given(call)
-		let type = LaneFlow(types).Typed(signature, call.texts(3 + value))
+		type = LaneFlow(types).Typed(signature, call.texts(3 + value))
 		if type is not ""
-			let reg = call.payload(LoadReuse(List(InstructionEntry)).InvokeReads(call)(value))
+			reg = call.payload(LoadReuse(List(InstructionEntry)).InvokeReads(call)(value))
 			lines = lines + Read(reg, type, LaneFlow(types).Typed(laned, reg to Text) is not "", base + offset, call.line)
 			offset = offset + Width(call, value, signature)
 	lines
@@ -145,41 +145,41 @@ Read(register Number, type Text, isLaned Boolean, base Number, line Number) List
 	Sample.Read(4, "Pair", false, 9, 0)(1).texts is ("imaginary", "Pair")
 	mutable lines = List(InstructionEntry)
 	for StructLanes(types).Members(Inliner(types).TypeOf(type))
-		let name = StructLanes.Lane("lanes" + register, value)
-		let lane = StructLanes.Named(InstructionType.LoadVariableToRegister, base + index, name, line)
+		name = StructLanes.Lane("lanes" + register, value)
+		lane = StructLanes.Named(InstructionType.LoadVariableToRegister, base + index, name, line)
 		lines = isLaned then lines + lane else lines + Field(register, type, value, base + index, line)
 	lines
 Field(register Number, type Text, name Text, target Number, line Number) List(InstructionEntry)
 	Sample.Field(4, "Pair", "imaginary", 10, 0).First.texts is ("imaginary", "Pair")
-	let owner = Inliner(types).TypeOf(type)
-	let at = name.IndexOf("_")
-	let isDivided = types.Length > 0 and StructLanes(types).Members(owner).Length is 0
+	owner = Inliner(types).TypeOf(type)
+	at = name.IndexOf("_")
+	isDivided = types.Length > 0 and StructLanes(types).Members(owner).Length is 0
 	if at < 0 or LaneNesting.Member(owner, name).Name is name or isDivided
-		let entry = InstructionEntry(InstructionType.FieldLoad, (name, type), (target, register, -1, -2), line)
+		entry = InstructionEntry(InstructionType.FieldLoad, (name, type), (target, register, -1, -2), line)
 		return List(InstructionEntry) + entry
-	let parent = name.Substring(0, at)
-	let sub = name.Substring(at + 1, name.Length - at - 1)
-	let subType = TypeEntry.ShortName(LaneNesting.Member(owner, parent).typeName)
-	let head = InstructionEntry(InstructionType.FieldLoad, (parent, type), (target, register, -1, -2), line)
+	parent = name.Substring(0, at)
+	sub = name.Substring(at + 1, name.Length - at - 1)
+	subType = TypeEntry.ShortName(LaneNesting.Member(owner, parent).typeName)
+	head = InstructionEntry(InstructionType.FieldLoad, (parent, type), (target, register, -1, -2), line)
 	head + Field(target, subType, sub, target, line)
 Spread(entry InstructionEntry, type Text, base Number) List(InstructionEntry)
 	Sample.Spread(Offsets, "Pair", 8).First.texts is ("offset_real", "Drawer")
-	let isField = entry.kind is InstructionType.FieldLoad
-	let owner = TypeEntry.ShortName(type)
-	let sourceType = isField then entry.texts(1) else owner
-	let source = entry.payload(isField then 1 else 0)
+	isField = entry.kind is InstructionType.FieldLoad
+	owner = TypeEntry.ShortName(type)
+	sourceType = isField then entry.texts(1) else owner
+	source = entry.payload(isField then 1 else 0)
 	mutable lines = isField then List(InstructionEntry) else List(InstructionEntry) + entry
 	for StructLanes(types).Members(Inliner(types).TypeOf(type))
-		let fieldName = isField then StructLanes.Lane(entry.texts(0), value) else value
-		let lane = StructLanes.Lane("lanes" + entry.payload(0), value)
-		let stored = StructLanes.Named(InstructionType.StoreRegisterToVariable, base, lane, entry.line)
+		fieldName = isField then StructLanes.Lane(entry.texts(0), value) else value
+		lane = StructLanes.Lane("lanes" + entry.payload(0), value)
+		stored = StructLanes.Named(InstructionType.StoreRegisterToVariable, base, lane, entry.line)
 		lines = lines + Field(source, sourceType, fieldName, base, entry.line) + stored
 	lines
 LeafBits(type TypeEntry) Number
 	Sample.LeafBits(StructLanes.Pair) is 0
 	if type.members.Length is 0
 		return 0
-	let first = type.members.First
+	first = type.members.First
 	if first.Bits > 0 or first.typeName is in ("Strict/Number", type.Name) or LaneNesting.IsPlainType(first.typeName)
 		return first.Bits
 	LeafBits(Inliner(types).TypeOf(first.typeName))

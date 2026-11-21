@@ -12,10 +12,10 @@ Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number
 	Twice.hidden(700).IsNearlyEqual(-11.63847, 0.05)
 	Twice.hidden(1100).IsNearlyEqual(0.35246, 0.05)
 	Twice.hidden(1200).IsNearlyEqual(-0.01126, 0.05)
-	let encoded = Encoded(images, height, width)
-	let lengths = Lengths(texts)
-	let size = encoded.First.First.Length / model.norm.Length
-	let rotation = Rotation(lengths, size, vision.Grid(height, width)(1) / 2)
+	encoded = Encoded(images, height, width)
+	lengths = Lengths(texts)
+	size = encoded.First.First.Length / model.norm.Length
+	rotation = Rotation(lengths, size, vision.Grid(height, width)(1) / 2)
 	model.Forwarded(Embedded(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
 Encoded(images List(Numbers), height Number, width Number) List(List(Numbers)) slow
 	Tiny.Encoded(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
@@ -53,7 +53,7 @@ Rows(lengths Numbers, size Number) Numbers
 	rows
 Rotation(lengths Numbers, size Number, columns Number) Numbers slow
 	Tiny.Rotation((2, 3), 6, 3).Length is 11 * 32
-	let heights = Axis(1, lengths, size, columns)
+	heights = Axis(1, lengths, size, columns)
 	model.Rotations(Axis(0, lengths, size, columns), heights, Axis(2, lengths, size, columns))
 Restored(tokens Numbers) Numbers
 	Tiny.Restored((1, 2)).Length is 128

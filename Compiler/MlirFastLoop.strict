@@ -29,49 +29,49 @@ Temp(suffix Text) Text
 Checked Texts
 	Doubling.Checked.Last is "    %t2ok1 = arith.andi %t2ok0, %t2e_numbers : i1"
 	"    %t2g_input = arith.cmpf oge, %t2n_input, %t2w_input : f64" is in Squaring.Checked
-	let memory = MlirMemory(function, position)
+	memory = MlirMemory(function, position)
 	mutable lines = MlirLoops(function, position).CountBounds(function.method.instructions(position))
 	lines = lines + ("    " + Temp("ok0") + " = arith.constant true")
 	for MlirKernel(function, position).Sources
-		let length = memory.Called(Temp("n_" + value), "strict_list_length", List(Text) + Temp("l_" + value))
-		let combined = Joined("ok" + (index + 1), Temp("ok" + index), Temp("e_" + value))
+		length = memory.Called(Temp("n_" + value), "strict_list_length", List(Text) + Temp("l_" + value))
+		combined = Joined("ok" + (index + 1), Temp("ok" + index), Temp("e_" + value))
 		lines = lines + Listed(value) + length + Enough(value) + combined
 	lines
 Listed(source Text) Texts
 	Doubling.Listed("numbers") is ("    %t2l_numbers = llvm.load %v_numbers : !llvm.ptr -> f64")
 	Guarding.Listed("numbers").Last is "    %t1l_numbers = arith.select %t1lf_numbers, %zero, %t1lu_numbers : f64"
 	Guarding.Listed("numbers")(1) is "    %t1lf_numbers = func.call @strict_is_failure(%t1lu_numbers) : (f64) -> i1"
-	let list = Temp("l_" + source)
+	list = Temp("l_" + source)
 	if source is not in MlirKernel(function, position).Checked
 		return List(Text) + function.Load(list, "%v_" + source)
-	let loaded = Temp("lu_" + source)
-	let failed = "    " + Temp("lf_" + source) + " = func.call @strict_is_failure(" + loaded + ") : (f64) -> i1"
-	let chosen = "    " + list + " = arith.select " + Temp("lf_" + source) + ", %zero, " + loaded + " : f64"
+	loaded = Temp("lu_" + source)
+	failed = "    " + Temp("lf_" + source) + " = func.call @strict_is_failure(" + loaded + ") : (f64) -> i1"
+	chosen = "    " + list + " = arith.select " + Temp("lf_" + source) + ", %zero, " + loaded + " : f64"
 	(function.Load(loaded, "%v_" + source), failed, chosen)
 Enough(source Text) Texts
 	Doubling.Enough("numbers") is ("    %t2e_numbers = arith.cmpf oge, %t2n_numbers, %t2n : f64")
 	Squaring.Enough("input").Last is "    %t2e_input = arith.andi %t2g_input, %t2p_input : i1"
-	let reads = MlirKernel(function, position).Shifted(source)
+	reads = MlirKernel(function, position).Shifted(source)
 	if reads.Length is 0
 		return List(Text) + Compared("e_" + source, Temp("n_" + source), Temp("n"))
 	mutable lines = List(Mutable(Text))
 	for reads
 		lines = lines + Offset(value) + Spanned(value, reads)
-	let needed = "    " + Temp("w_" + source) + " = arith.addf " + Temp("n") + ", " + Temp("hi_" + reads.Last) + " : f64"
-	let fits = Compared("g_" + source, Temp("n_" + source), Temp("w_" + source))
-	let checks = (needed, fits, Compared("p_" + source, Temp("lo_" + reads.Last), "%zero"))
+	needed = "    " + Temp("w_" + source) + " = arith.addf " + Temp("n") + ", " + Temp("hi_" + reads.Last) + " : f64"
+	fits = Compared("g_" + source, Temp("n_" + source), Temp("w_" + source))
+	checks = (needed, fits, Compared("p_" + source, Temp("lo_" + reads.Last), "%zero"))
 	lines + checks + Joined("e_" + source, Temp("g_" + source), Temp("p_" + source))
 Offset(at Number) Texts
 	Squaring.Offset(7).First is "    %t2v0_7 = llvm.load %v_start : !llvm.ptr -> f64"
 	Shifting.Offset(13)(1) is "    %t2o1_13 = arith.addf %zero, %t2v0_13 : f64"
 	Shifting.Offset(13)(3) is "    %t2o0_13 = arith.addf %t2o1_13, %t2v1_13 : f64"
-	let terms = MlirKernel(function, position).Offsets(at)
+	terms = MlirKernel(function, position).Offsets(at)
 	mutable lines = List(Mutable(Text))
 	for terms
-		let term = Temp("v" + index + "_" + at)
-		let sum = index is 0 then "%zero" else Temp("o" + (terms.Length - index) + "_" + at)
-		let read = value.StartsWith("0x") then MlirTyped.Double.Constant(term, value) else function.Load(term, "%v_" + value)
-		let added = Temp("o" + (terms.Length - 1 - index) + "_" + at) + " = arith.addf " + sum + ", " + term
+		term = Temp("v" + index + "_" + at)
+		sum = index is 0 then "%zero" else Temp("o" + (terms.Length - index) + "_" + at)
+		read = value.StartsWith("0x") then MlirTyped.Double.Constant(term, value) else function.Load(term, "%v_" + value)
+		added = Temp("o" + (terms.Length - 1 - index) + "_" + at) + " = arith.addf " + sum + ", " + term
 		lines = lines + read + ("    " + added + " : f64")
 	lines + ("    " + Temp("oi_" + at) + " = arith.fptosi " + Temp("o0_" + at) + " : f64 to i64")
 Spanned(at Number, reads Numbers) Texts
@@ -81,11 +81,11 @@ Spanned(at Number, reads Numbers) Texts
 	Squaring.Spanned(12, (7, 12)).Last is "    %t2hi_12 = arith.maximumf %t2hi_7, %t2o0_12 : f64"
 	Shifting.Offset(8).First is "    %t2v0_8 = arith.constant 0x4078D00000000000 : f64"
 	Shifting.Enough("numbers").Length is 16
-	let order = reads.Index(at)
-	let low = order is 0 then "%zero" else Temp("lo_" + reads(order - 1))
-	let high = order is 0 then "%zero" else Temp("hi_" + reads(order - 1))
-	let sum = ", " + Temp("o0_" + at) + " : f64"
-	let lowest = "    " + Temp("lo_" + at) + " = arith.minimumf " + low + sum
+	order = reads.Index(at)
+	low = order is 0 then "%zero" else Temp("lo_" + reads(order - 1))
+	high = order is 0 then "%zero" else Temp("hi_" + reads(order - 1))
+	sum = ", " + Temp("o0_" + at) + " : f64"
+	lowest = "    " + Temp("lo_" + at) + " = arith.minimumf " + low + sum
 	(lowest, "    " + Temp("hi_" + at) + " = arith.maximumf " + high + sum)
 Compared(name Text, left Text, right Text) Text
 	Doubling.Compared("e", "%a", "%b") is "    %t2e = arith.cmpf oge, %a, %b : f64"
@@ -105,14 +105,14 @@ Started Texts
 	Doubling.Started.First is "  ^loop2fast:"
 	Doubling.Started.Last is "    %t2ri = func.call @strict_list_items(%t2r) : (f64) -> !llvm.ptr"
 	Byting.Started.Last is "    %t2ri = func.call @strict_list_data(%t2r) : (f64) -> !llvm.ptr"
-	let loops = MlirLoops(function, position)
-	let collected = Widths.Pointed(Temp("h"), Temp("v"), Iterated, "strict_list_items")
-	let items = loops.Items.Length is 0 then loops.Items else collected + loops.Items.Last
+	loops = MlirLoops(function, position)
+	collected = Widths.Pointed(Temp("h"), Temp("v"), Iterated, "strict_list_items")
+	items = loops.Items.Length is 0 then loops.Items else collected + loops.Items.Last
 	mutable lines = List(Text) + ("  ^loop" + position + "fast:") + items
 	for MlirKernel(function, position).Sources
 		lines = lines + Widths.Pointed(Temp("h_" + value), Temp("l_" + value), value, "strict_list_start")
-	let saved = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
-	let results = MlirBytes(function, position).Started(Temp("r"), Temp("ri"))
+	saved = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
+	results = MlirBytes(function, position).Started(Temp("r"), Temp("ri"))
 	lines + saved + loops.Outered + (loops.IsCollecting then results else List(Text))
 Counted Texts
 	Doubling.Counted.Last is "  ^loop2body:"
@@ -120,12 +120,12 @@ Counted Texts
 	Doubling.Counted(1) is "    %t2zi = arith.constant 0 : i64"
 	Doubling.Counted(2) is "    cf.br ^loop2(%t2zi : i64)"
 	Doubling.Counted(3) is "  ^loop2(%t2ki: i64):"
-	let label = "^loop" + position
-	let whole = "    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
+	label = "^loop" + position
+	whole = "    " + Temp("ni") + " = arith.fptosi " + Temp("n") + " : f64 to i64"
 	mutable start = List(Text) + ("    " + Temp("zi") + " = arith.constant 0 : i64")
 	start = start + MlirCounter(function, position).Started + ("    cf.br " + label + "(" + Temp("zi") + " : i64)")
-	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("ki") + ", " + Temp("ni") + " : i64"
-	let branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
+	check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("ki") + ", " + Temp("ni") + " : i64"
+	branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "exit"
 	List(Text) + whole + start + ("  " + label + "(" + Temp("ki") + ": i64):") + check + branch + ("  " + label + "body:")
 Current Texts
 	Doubling.Current.Last is "    llvm.store %t2g, %v_value : f64, !llvm.ptr"
@@ -133,8 +133,8 @@ Current Texts
 	Doubling.Current(1) is "    llvm.store %t2c, %v_index : f64, !llvm.ptr"
 	Doubling.Current(2) is "    %t2gp = llvm.getelementptr %t2h[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	Doubling.Current(3) is "    %t2g = llvm.load %t2gp : !llvm.ptr -> f64"
-	let converted = "    " + Temp("c") + " = arith.sitofp " + Temp("ki") + " : i64 to f64"
-	let index = (converted, function.Store(Temp("c"), "%v_index"))
+	converted = "    " + Temp("c") + " = arith.sitofp " + Temp("ki") + " : i64 to f64"
+	index = (converted, function.Store(Temp("c"), "%v_index"))
 	if MlirLoops(function, position).Collection is ""
 		return index + function.Store(Temp("c"), "%v_value")
 	index + Widths.Loaded(Temp("g"), Temp("gp"), Temp("h"), Iterated) + function.Store(Temp("g"), "%v_value")
@@ -144,7 +144,7 @@ Copied Texts
 	Doubling.Copied(10) is Doubling.Started(1) and Doubling.Copied(20) is Doubling.Counted.First
 	Doubling.Copied(27) is Doubling.Current.First and Doubling.Copied(32) is Doubling.Looped.First
 	Doubling.Copied(49) is "  ^loop2exit:" and Doubling.Copied.Length is 53
-	let started = Started
+	started = Started
 	List(Text) + started.First + Checked + (started - started.First) + Counted + Current + Looped + Exited
 Looped Texts
 	Doubling.Looped.Last is "    cf.br ^loop2(%t2next : i64)"
@@ -154,8 +154,8 @@ Looped Texts
 	mutable lines = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		lines = lines + MlirLines(function).At(value, Temp("line")) + function.Emitted(value)
-	let one = "    " + Temp("one") + " = arith.constant 1 : i64"
-	let next = "    " + Temp("next") + " = arith.addi " + Temp("ki") + ", " + Temp("one") + " : i64"
+	one = "    " + Temp("one") + " = arith.constant 1 : i64"
+	next = "    " + Temp("next") + " = arith.addi " + Temp("ki") + ", " + Temp("one") + " : i64"
 	lines + one + next + MlirCounter(function, position).Branched("^loop" + position + "(" + Temp("next") + " : i64)")
 Exited Texts
 	Doubling.Exited.First is "  ^loop2exit:"
@@ -163,25 +163,25 @@ Exited Texts
 	Doubling.Exited(2) is "    llvm.store %t2x, %v_index : f64, !llvm.ptr"
 	Doubling.Exited(3) is "    llvm.store %t2y, %v_value : f64, !llvm.ptr"
 	MlirFastLoop(MlirBytes.Flattening.function, 2).Exited(1) is MlirBytes.Flattening.Unbuffered("%t2r").First
-	let loops = MlirLoops(function, function.method.LoopEndOf(position))
-	let helper = MlirParallel(function, position).Filler
-	let filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
-	let restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
-	let isFilled = MlirLoops(function, position).IsCollecting and MlirBytes(function, position).Flattened is 0
-	let collected = isFilled then List(Text) + filled else MlirBytes(function, position).Unbuffered(Temp("r"))
+	loops = MlirLoops(function, function.method.LoopEndOf(position))
+	helper = MlirParallel(function, position).Filler
+	filled = MlirMemory(function, position).Called(Temp("fill"), helper, (Temp("r"), Temp("n")))
+	restored = (function.Store(Temp("x"), "%v_index"), function.Store(Temp("y"), "%v_value"))
+	isFilled = MlirLoops(function, position).IsCollecting and MlirBytes(function, position).Flattened is 0
+	collected = isFilled then List(Text) + filled else MlirBytes(function, position).Unbuffered(Temp("r"))
 	List(Text) + ("  ^loop" + position + "exit:") + collected + restored + loops.Restored(position)
 Emitted(at Number) Texts
 	Doubling.Emitted(4).First is "    %t4p = llvm.getelementptr %t2h_numbers[%t2ki] : (!llvm.ptr, i64) -> !llvm.ptr, f64"
 	Doubling.Emitted(7).Last is "    llvm.store %t7e, %t7p : f64, !llvm.ptr"
 	Halving.Emitted(4).Index("    %t4xw = arith.extf %t4xn : f16 to f64") is 2
 	Squaring.Emitted(7).First is "    %t2k7 = arith.addi %t2ki, %t2oi_7 : i64"
-	let entry = function.method.instructions(at)
-	let pointer = "%t" + at + "p"
+	entry = function.method.instructions(at)
+	pointer = "%t" + at + "p"
 	if entry.kind is InstructionType.IndexCall
 		return Widths.Read("%t" + at + "x", at) + function.Store("%t" + at + "x", "%r" + entry.payload(0))
-	let element = "%t" + at + "e"
-	let bytes = MlirBytes(function, position)
-	let address = "    " + pointer + " = llvm.getelementptr " + Temp("ri") + "[" + Temp("ki") + "]" + Pointer + bytes.Width
+	element = "%t" + at + "e"
+	bytes = MlirBytes(function, position)
+	address = "    " + pointer + " = llvm.getelementptr " + Temp("ri") + "[" + Temp("ki") + "]" + Pointer + bytes.Width
 	(function.Load(element, "%r" + entry.payload(0)), address) + bytes.Stored(element, pointer)
 Widths MlirWidths
 	Doubling.Widths.position is 2
@@ -196,16 +196,16 @@ Widths MlirWidths
 IsAccumulated(at Number) Boolean
 	Summing.IsAccumulated(5)
 	Doubling.IsAccumulated(6) is false
-	let entry = function.method.instructions(at)
-	let next = function.method.instructions(at + 1)
-	let isSum = entry.kind is InstructionType.Add or entry.kind is InstructionType.Subtract
+	entry = function.method.instructions(at)
+	next = function.method.instructions(at + 1)
+	isSum = entry.kind is InstructionType.Add or entry.kind is InstructionType.Subtract
 	if function.FastLoop < 0 or isSum is false or next.kind is not InstructionType.StoreRegisterToVariable
 		return false
-	let writer = Writer(entry.payload(1), at)
-	let isLoaded = writer.kind is InstructionType.LoadVariableToRegister and next.texts(0) is in writer.texts
+	writer = Writer(entry.payload(1), at)
+	isLoaded = writer.kind is InstructionType.LoadVariableToRegister and next.texts(0) is in writer.texts
 	isLoaded and next.payload(0) is entry.payload(3)
 Writer(register Number, at Number) InstructionEntry
 	Summing.Writer(3, 5).texts.First is "sum"
 	Summing.Writer(0, 5).kind is InstructionType.Add
-	let writer = LoadReuse(function.method.instructions).Writer(register, at, function.FastLoop)
+	writer = LoadReuse(function.method.instructions).Writer(register, at, function.FastLoop)
 	function.method.instructions(writer < 0 then at else writer)

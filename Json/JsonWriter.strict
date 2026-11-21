@@ -41,7 +41,7 @@ Quoted(content Text) Text
 	quoted + "\""
 Added(entry Text) JsonWriter
 	Object.Added("\"a\":1").Added("\"b\":2").text is "{\"a\":1,\"b\":2}"
-	let separator = text.Length > 2 then (isSpaced then ", " else ",") else ""
+	separator = text.Length > 2 then (isSpaced then ", " else ",") else ""
 	JsonWriter(text.Substring(0, text.Length - 1) + separator + entry + text(text.Length - 1), isSpaced)
 Colon Text
 	Object.Colon is ":" and SpacedObject.Colon is ": "
@@ -54,7 +54,7 @@ Escaped(character Character) Text
 		return "\\" + character
 	if character.number >= Character.Space
 		return character to Text
-	let named = JsonText.Controls.Index(character to Text)
+	named = JsonText.Controls.Index(character to Text)
 	if named >= 0
 		return "\\" + "ntrbf".characters(named)
 	constant hex = JsonText.HexDigits

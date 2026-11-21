@@ -2,13 +2,13 @@ has base Text
 constant Opening = "= func.call @" + "Window_Open("
 constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
 AndroidPackaged
-	let release = Parent + "/Release/Android"
+	release = Parent + "/Release/Android"
 	Content(Parent + "/Release/Content")
 	Directory.Create(Parent + "/Release")
 	Directory.Create(release)
 	Directory.Create(release + "/jniLibs")
 	Directory.Create(release + "/jniLibs/arm64-v8a")
-	let library = AndroidBuild(Toolchain(Platform.Current, TypeSource.Root)).Executable(base)
+	library = AndroidBuild(Toolchain(Platform.Current, TypeSource.Root)).Executable(base)
 	File(release + "/jniLibs/arm64-v8a/libmain.so").Write(File(library).ReadBytes)
 	Directory.Create(release + "/assets")
 	logger.Log("Android native library and assets: " + release)
@@ -17,7 +17,7 @@ MobilePackaged(platform Number)
 	if platform is Platform.Android
 		return AndroidPackaged
 	Content(Parent + "/Release/Content")
-	let release = Parent + "/Release/iOS"
+	release = Parent + "/Release/iOS"
 	Refreshed(release, release + "/Content", base, (".ios.a", ".simulator.a"))
 Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isReleased = false)
 	Release("Examples/Sum").Packaged("module {\n}") is not Error
@@ -34,14 +34,14 @@ Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isRelea
 		NativePackaged(isCrossing)
 NativePackaged(isCrossing Boolean)
 	Content(Parent + "/Release/Content")
-	let ending = Platform.Current is Platform.Windows then ".exe" else ""
+	ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
 		return Refreshed(Parent + "/Release", "", BuildOutput.Delivered(base), (ending, ".shell.html"))
 	if Platform.Current is Platform.MacOS
 		return MacOSBundle(base).Released
-	let folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
+	folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
 	Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), (ending, ".shell.html"))
-	let linux = Parent + "/Release/Linux"
+	linux = Parent + "/Release/Linux"
 	if isCrossing and Platform.Current is Platform.Windows and File(linux + "/" + Named(base)).Exists
 		Refreshed(linux, linux + "/Content", base, List(Text))
 IsDemo Boolean
@@ -49,27 +49,27 @@ IsDemo Boolean
 	Release(TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
 	Release("Missing/AtlasDemo").IsDemo is false
 	Release("Games/Samples/AtlasDemo").IsDemo is false
-	let game = Parent + "/" + Path(Parent).FileName.text + ".strict"
+	game = Parent + "/" + Path(Parent).FileName.text + ".strict"
 	base.EndsWith("Demo") and File(game).Exists
 Parent Text
 	Release("Missing/App").Parent is "Missing"
 	Release("App").Parent is "."
 	Release("./Missing/obj/App.test").Parent is "./Missing"
-	let parent = Path(base).PathOnly.text
-	let source = parent.EndsWith("/obj") then parent.Substring(0, parent.Length - 4) else parent
+	parent = Path(base).PathOnly.text
+	source = parent.EndsWith("/obj") then parent.Substring(0, parent.Length - 4) else parent
 	source is "" or source is "obj" then "." else source
 Icon Text
 	Release("Examples/NativeAdd/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release("Examples/NativeAdd/Adder").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release("Missing/App").Icon is TypeSource.Root + "/Strict.ico"
 	Release("Examples/NativeAdd/obj/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
-	let own = BuildOutput.Delivered(base) + ".ico"
-	let folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
+	own = BuildOutput.Delivered(base) + ".ico"
+	folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
 	File(own).Exists then own else File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text, content Text, stem Text, endings Texts)
 	Created(release)
 	for endings
-		let built = stem + value
+		built = stem + value
 		if File(built).Exists
 			if Placed(built, release + "/" + Named(built)) is false
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
@@ -78,13 +78,13 @@ Refreshed(release Text, content Text, stem Text, endings Texts)
 	Sidecar(release)
 	Mirrored(content)
 Placed(source Text, target Text) Boolean
-	let temporary = target + "." + 1000000000.Random.Floor + ".tmp"
-	let bytes = File(source).ReadBytes
+	temporary = target + "." + 1000000000.Random.Floor + ".tmp"
+	bytes = File(source).ReadBytes
 	File(temporary).Write(bytes)
-	let isComplete = File(temporary).Exists and File(temporary).ReadBytes.Length is bytes.Length
+	isComplete = File(temporary).Exists and File(temporary).ReadBytes.Length is bytes.Length
 	if isComplete
 		File(temporary).Rename(target)
-	let isPlaced = isComplete and File(temporary).Exists is false and File(target).Exists
+	isPlaced = isComplete and File(temporary).Exists is false and File(target).Exists
 	File(temporary).Delete
 	isPlaced
 Sidecar(release Text)
@@ -93,7 +93,7 @@ Sidecar(release Text)
 	Release("Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
 	Release("Compiler/output/obj/A").Packaged("module {\n}") is not Error
 	File("Compiler/output/Release/" + Platform.NameOf(Platform.Current) + "/A.shell.html").Exists
-	let isWeb = Path(release).FileName.text is "Web"
+	isWeb = Path(release).FileName.text is "Web"
 	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and Placed(Icon, release + "/favicon.ico") is false
 		logger.Log("Release could not place " + release + "/favicon.ico")
 	for Sidecars
@@ -107,19 +107,19 @@ Synced(source Text, target Text)
 	Removed(source, target)
 Content(target Text)
 	Release("Missing/App").Content("Missing/Release/Content") is not Error
-	let source = Parent + "/Content"
-	let builder = Parent + "/ContentBuild.strict"
+	source = Parent + "/Content"
+	builder = Parent + "/ContentBuild.strict"
 	if File(builder).Exists is false
 		return Synced(source, target)
-	let built = BuiltContent(builder, source, target)
+	built = BuiltContent(builder, source, target)
 	if built.Failed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
 		return Error("ContentBuildFailed")
 BuiltContent(builder Text, source Text, target Text) ProcessResult
-	let tools = Toolchain(Platform.Current, TypeSource.Root)
-	let exe = tools.Executable(TypeSource.Root + "/Strict")
-	let isCurrent = NativeCache("build", (builder, TypeSource.Root)).IsCurrent
-	let compiled = isCurrent then ProcessResult(0, "", "") else ToolRunner(exe).Execute("build \"" + builder + "\"")
+	tools = Toolchain(Platform.Current, TypeSource.Root)
+	exe = tools.Executable(TypeSource.Root + "/Strict")
+	isCurrent = NativeCache("build", (builder, TypeSource.Root)).IsCurrent
+	compiled = isCurrent then ProcessResult(0, "", "") else ToolRunner(exe).Execute("build \"" + builder + "\"")
 	if compiled.Failed
 		return compiled
 	ToolRunner(tools.Executable(Parent + "/ContentBuild")).Execute("\"" + source + "\" \"" + target + "\"")
@@ -127,7 +127,7 @@ Copied(source Text, target Text)
 	if Directory.Exists(source)
 		Created(target)
 		for Directory.Files(source)
-			let copy = target + "/" + Named(value)
+			copy = target + "/" + Named(value)
 			if File(copy).Exists is false or File(value).Modified > File(copy).Modified
 				File(copy).Write(File(value).ReadBytes)
 		for Directory.Directories(source)

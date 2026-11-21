@@ -6,21 +6,21 @@ constant Stored = " : f64, !llvm.ptr"
 Reader Number
 	Built.Reader is 2
 	Area.Reader is -1
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
 		return Number.NotFound
-	let reader = Next(entry.payload(0))
+	reader = Next(entry.payload(0))
 	reader < 0 then Number.NotFound else IsPlain(position) and IsReference then reader else Number.NotFound
 Next(register Number) Number
 	Built.Next(1) is 2
-	let reader = First(register)
+	reader = First(register)
 	reader < 0 then Number.NotFound else IsPlain(reader) then reader else Number.NotFound
 First(register Number) Number
 	Built.First(1) is 2
-	let steps = function.method.instructions
-	let reuse = LoadReuse(steps)
+	steps = function.method.instructions
+	reuse = LoadReuse(steps)
 	for Range(position + 1, steps.Length)
-		let isChecked = steps(value).kind is InstructionType.CheckError
+		isChecked = steps(value).kind is InstructionType.CheckError
 		if register is in reuse.Reads(steps(value)) and isChecked is false
 			return value
 		if IsFlow(steps(value).kind) or reuse.Written(steps(value)) is register
@@ -33,7 +33,7 @@ IsFlow(kind Number) Boolean
 IsPlain(at Number) Boolean
 	Built.IsPlain(1)
 	Built.IsPlain(0) is false
-	let tails = MlirTails(function, at)
+	tails = MlirTails(function, at)
 	tails.IsCall and tails.IsTail is false and MlirWholeFunction(function).IsInsideLoop(at) is false
 IsReference Boolean
 	Built.IsReference
@@ -52,17 +52,17 @@ Wrapped(emitted Texts) Texts
 	reloads + emitted + clears + Kept
 Writers Numbers
 	Area.Writers is (1)
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	mutable writers = List(Mutable(Number))
 	for LoadReuse(steps).Reads(steps(position))
-		let writer = MlirKinds(function).Writer(position, value)
+		writer = MlirKinds(function).Writer(position, value)
 		if writer >= 0 and MlirHanded(function, writer).Reader is position
 			writers.Add(writer)
 	writers
 Reloaded(writer Number) Texts
 	Area.Reloaded(1).Last is "    llvm.store %t2hand1, %r1 : f64, !llvm.ptr"
-	let reloaded = "%t" + position + "hand" + writer
-	let loaded = "    " + reloaded + " = llvm.load volatile %handed" + writer + " : !llvm.ptr -> f64"
+	reloaded = "%t" + position + "hand" + writer
+	loaded = "    " + reloaded + " = llvm.load volatile %handed" + writer + " : !llvm.ptr -> f64"
 	(loaded, function.Store(reloaded, "%r" + function.method.instructions(writer).payload(0)))
 Slots Texts
 	Built.Slots.First is "    %handed1 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
@@ -75,6 +75,6 @@ Kept Texts
 	Built.Kept.First is "    %t1hand = llvm.load %r1 : !llvm.ptr -> f64"
 	if Reader < 0
 		return List(Text)
-	let kept = "%t" + position + "hand"
-	let register = "%r" + function.method.instructions(position).payload(0)
+	kept = "%t" + position + "hand"
+	register = "%r" + function.method.instructions(position).payload(0)
 	(function.Load(kept, register), "    llvm.store volatile " + kept + ", %handed" + position + Stored)

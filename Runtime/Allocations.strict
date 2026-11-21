@@ -1,5 +1,5 @@
 OfNumber(amount Number) Number
 	VmValue.OfNumber(1).number is 1
 	Allocations.OfNumber(7) < Allocations.OfNumber(2000)
-	let earlier = Process.Executed(5)
+	earlier = Process.Executed(5)
 	VmValue.OfNumber(amount).number is amount then Process.Executed(5) else earlier

@@ -34,7 +34,7 @@ Issues ValidationIssues
 OrderIssues ValidationIssues
 	Limits(("Run", "\t1", "has a"), false).OrderIssues.First to Text is "MembersMustComeBeforeMethods: has a"
 	Limits(("has a", "Run", "\t1"), false).OrderIssues.Length is 0
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	for Range(shape.MembersEnd, lines.Length)
 		if shape.IsMemberLine(lines(value))
 			ValidationIssue("MembersMustComeBeforeMethods", lines(value), value + 1)
@@ -57,7 +57,7 @@ ParenthesisIssues(line Text, number Number) ValidationIssues
 	Sample.ParenthesisIssues("	let a = 1, 2)", 0).Length is 1
 	Sample.ParenthesisIssues("	let a = (1, 2)", 0).Length is 0
 	Sample.ParenthesisIssues("	let a = \"(\"", 0).Length is 0
-	let tokens = Tokenizer(line).Tokens
+	tokens = Tokenizer(line).Tokens
 	if tokens.Count("(") is tokens.Count(")")
 		return List(ValidationIssue)
 	List(ValidationIssue) + ValidationIssue("ParenthesesMustBeClosed", line.Trim, number + 1)
@@ -82,8 +82,8 @@ LengthIssues(line Text, number Number) ValidationIssues
 	Sample.LengthIssues("constant A = " + Wide, 0).First to Text is "CharacterCountMustBeWithinLimit: 263 > 240"
 	Sample.LengthIssues("constant A = 1" + Wide.Substring(0, 100), 0).Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
-	let limit = (line.StartsWith("constant ") then 2 else 1) * MaxCharacters * scale
-	let length = line.Length to Text + " > " + limit
+	limit = (line.StartsWith("constant ") then 2 else 1) * MaxCharacters * scale
+	length = line.Length to Text + " > " + limit
 	if (line.StartsWith("\t") or line.StartsWith("constant ")) and line.Length > limit
 		issues.Add(ValidationIssue("CharacterCountMustBeWithinLimit", length, number + 1))
 	issues
@@ -101,11 +101,11 @@ NegationIssues(line Text, number Number) ValidationIssues
 	Sample.NegationIssues("\tlet a = \"0 - b\"", 0).Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	if "0 - " is in line
-		let tokens = Tokenizer(line.Trim).Tokens
+		tokens = Tokenizer(line.Trim).Tokens
 		for tokens.Length - 2
 			if IsZeroMinus(tokens, index)
-				let operand = Operand(tokens, index + 2)
-				let detail = "write -" + operand + " instead of 0 - " + operand
+				operand = Operand(tokens, index + 2)
+				detail = "write -" + operand + " instead of 0 - " + operand
 				issues.Add(ValidationIssue("ZeroMinusMustBeNegation", detail, number + 1))
 	issues
 IsZeroMinus(tokens Texts, index Number) Boolean
@@ -117,9 +117,9 @@ IsZeroMinus(tokens Texts, index Number) Boolean
 	Sample.IsZeroMinus(("b", "is", "0", "-", "c"), 2)
 	Sample.IsZeroMinus(("=", "0", "+", "b"), 1) is false
 	Sample.IsZeroMinus(("return", "0", "-", "b"), 1)
-	let before = index is 0 then "(" else tokens(index - 1)
-	let precedence = SyntaxNode("Binary", before).Precedence
-	let opening = before is in ("(", ",", "=", "not", "return", "if") or precedence > 0 and precedence < MinusPrecedence
+	before = index is 0 then "(" else tokens(index - 1)
+	precedence = SyntaxNode("Binary", before).Precedence
+	opening = before is in ("(", ",", "=", "not", "return", "if") or precedence > 0 and precedence < MinusPrecedence
 	tokens(index) is "0" and tokens(index + 1) is "-" and opening
 Operand(tokens Texts, start Number) Text
 	Sample.Operand(("b", ".", "Y", "*", "2"), 0) is "b.Y"
@@ -139,12 +139,12 @@ CountIssues ValidationIssues
 	Limits(OnlyConstants.lines + "constant Q" + "constant R" + "Run", false).CountIssues.Length is 0
 	Methods.CountIssues.First to Text is "MethodCountMustNotExceedLimit: 19 > 18"
 	Limits(Methods.lines, false, 2).CountIssues.Length is 0
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	mutable methods = 0
 	for lines
 		methods = methods + (shape.IsMethodHeader(value) then 1 else 0)
-	let methodIssues = Counted("MethodCountMustNotExceedLimit", isBase then 0 else methods, MaxMethods * scale)
-	let memberIssues = Counted("MemberCountShouldNotExceedLimit", Count("has "), MaxMembers * scale)
+	methodIssues = Counted("MethodCountMustNotExceedLimit", isBase then 0 else methods, MaxMethods * scale)
+	memberIssues = Counted("MemberCountShouldNotExceedLimit", Count("has "), MaxMembers * scale)
 	methodIssues + memberIssues + Counted("ConstantCountShouldNotExceedLimit", Count("constant "), MaxConstants * scale)
 Count(start Text) Number
 	OnlyConstants.Count("constant ") is 16
@@ -170,5 +170,5 @@ Scale(path Text) Number
 	Limits.Scale("Games\\Atlas.strict") is 1
 	Limits.Scale("Content/SheetCatalog.strict") is 2
 	Limits.Scale("Games\\Generated\\Atlas.strict") is 10
-	let folder = Path(Path(path).PathOnly.text).FileName.text
+	folder = Path(Path(path).PathOnly.text).FileName.text
 	folder is "Generated" then 10 else (folder is "Content" then 2 else 1)

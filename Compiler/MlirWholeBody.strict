@@ -24,27 +24,27 @@ Lines Texts
 	lines
 Whole Texts
 	Halving.Whole.Last is "  }"
-	let parts = MlirWholeTypes(function).Settled.Split("|")
+	parts = MlirWholeTypes(function).Settled.Split("|")
 	(List(Text) + Header) + Slots(parts(0), parts(1)) + Body(parts(0), parts(1), parts(2), false) + "  }"
 Body(registers Text, variables Text, naturals Text, isFlat Boolean) Texts
 	Text.Combine(Halving.Body("iiii", "--i-", "iiiii", false)).IndexOf("arith.floordivsi") > 0
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
-		let statements = MlirWholeStatements(function, index, registers, variables, naturals, isFlat)
-		let emitted = row < 0 then statements.Emitted else MlirWholeRows(function, row).Emitted(statements)
+		statements = MlirWholeStatements(function, index, registers, variables, naturals, isFlat)
+		emitted = row < 0 then statements.Emitted else MlirWholeRows(function, row).Emitted(statements)
 		lines = lines + function.Label(index) + emitted
 	lines
 Header Text
 	Halving.Header.StartsWith("  func.func private @Shape_Halved_1_whole(%failed: !llvm.ptr, %p0: i64) -> i64")
 	Module.Text.IndexOf("@Halves_Halved_1_whole(") > 0
-	let values = MlirWholeValues(0)
+	values = MlirWholeValues(0)
 	mutable typed = List(Mutable(Text)) + "%failed: !llvm.ptr"
 	for MlirWholeFunction(function).Kinds
 		typed.Add("%p" + index + ": " + values.Typed(value))
 	for row < 0 then List(Text) else MlirWholeRows.Extras
 		typed.Add(value + ": i64")
-	let returned = ") -> " + values.Typed(MlirWholeTypes(function).Returned)
-	let symbol = row < 0 then MlirWholeFunction(function).Symbol else MlirWholeRows(function, row).Symbol
+	returned = ") -> " + values.Typed(MlirWholeTypes(function).Returned)
+	symbol = row < 0 then MlirWholeFunction(function).Symbol else MlirWholeRows(function, row).Symbol
 	"  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + returned + Inlined
 Slots(registers Text, variables Text) Texts
 	Halving.Slots("iifi", "--i-").Last is "    llvm.store %p0, %v_number : i64, !llvm.ptr"
@@ -52,10 +52,10 @@ Slots(registers Text, variables Text) Texts
 	Allocated(registers, variables) + Parameters(variables) + MlirWholeFields(function).Prologue
 Allocated(registers Text, variables Text) Texts
 	"    %v_number = llvm.alloca %one x i64 : (i64) -> !llvm.ptr" is in Halving.Allocated("iifi", "--i-")
-	let values = MlirWholeValues(0)
+	values = MlirWholeValues(0)
 	mutable lines = ("    %one = arith.constant 1 : i64", Slot("%flag", "i1"))
 	for registers.Length
-		let typed = Slot("%r" + index, values.Typed(registers(index)))
+		typed = Slot("%r" + index, values.Typed(registers(index)))
 		lines = lines + typed + Slot("%r" + index + "p", "!llvm.ptr") + Slot("%r" + index + "i", "i64")
 	for function.VariableNames
 		lines = lines + Slot("%v_" + value, values.Typed(variables(index)))
@@ -74,10 +74,10 @@ Slot(name Text, type Text) Text
 Parameter(number Number, type Text) Texts
 	Halving.Parameter(0, "i64") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
 	Halfway.Parameter(0, "i64") is ("    llvm.store %p0, %v_number : i64, !llvm.ptr")
-	let slot = ", %v_" + function.method.parameters(number).Name + " : " + type + ", !llvm.ptr"
-	let found = MlirArguments(callers).Constant(function, number, 0)
+	slot = ", %v_" + function.method.parameters(number).Name + " : " + type + ", !llvm.ptr"
+	found = MlirArguments(callers).Constant(function, number, 0)
 	if found.Length is 0 or found.First.Floor is not found.First
 		return List(Text) + ("    llvm.store %p" + number + slot)
-	let literal = "    %c" + number + " = arith.constant " + MlirStatements.Copy.Hex(found.First) + " : f64"
-	let converted = MlirWholeValues(0).Converted("%c" + number, "f", "i", "%c" + number + "i")
+	literal = "    %c" + number + " = arith.constant " + MlirStatements.Copy.Hex(found.First) + " : f64"
+	converted = MlirWholeValues(0).Converted("%c" + number, "f", "i", "%c" + number + "i")
 	(literal, converted, "    llvm.store %c" + number + "i" + slot)

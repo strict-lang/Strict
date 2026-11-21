@@ -25,12 +25,12 @@ IsKnown Boolean
 	Kept.IsKnown
 	Changed.IsKnown is false
 	Sizes.IsKnown
-	let entry = function.method.instructions(position)
-	let isOwn = entry.kind is InstructionType.Invoke and entry.texts(1) is "Validated"
+	entry = function.method.instructions(position)
+	isOwn = entry.kind is InstructionType.Invoke and entry.texts(1) is "Validated"
 	if isOwn is false or entry.texts(0) is not function.type.Name
 		return false
-	let writer = MlirKinds(function).Writer(position, entry.payload.Last)
-	let made = writer >= 0 then function.method.instructions(writer) else entry
+	writer = MlirKinds(function).Writer(position, entry.payload.Last)
+	made = writer >= 0 then function.method.instructions(writer) else entry
 	made.kind is InstructionType.Invoke and made.texts(1) is "from" and IsUnchanged(made, writer)
 IsUnchanged(made InstructionEntry, at Number) Boolean
 	Kept.IsUnchanged(Keeping.instructions(1), 1)
@@ -41,7 +41,7 @@ IsUnchanged(made InstructionEntry, at Number) Boolean
 	true
 Checked(owner TypeEntry) Texts
 	Kept.Checked(Validator) is ("width")
-	let names = MlirInstances(function, 0).StoredNames(owner)
+	names = MlirInstances(function, 0).StoredNames(owner)
 	for owner.methods
 		if value.Name is "Validated"
 			return Read(value, names)
@@ -58,14 +58,14 @@ Read(validation MethodEntry, names Texts) Texts
 IsKept(made InstructionEntry, at Number, name Text) Boolean
 	Kept.IsKept(Keeping.instructions(1), 1, "width")
 	Changed.IsKept(MlirStructs.Checker.function.method.instructions(1), 1, "width") is false
-	let named = Invocation(made, List(VmValue), VmValue.None).ParameterNames.Index(name)
-	let index = named < 0 then MlirInstances(function, 0).StoredNames(function.type).Index(name) else named
+	named = Invocation(made, List(VmValue), VmValue.None).ParameterNames.Index(name)
+	index = named < 0 then MlirInstances(function, 0).StoredNames(function.type).Index(name) else named
 	if index < 0 or index >= PayloadDecoder(made).ArgumentCount
 		return false
-	let source = MlirKinds(function).Writer(at, PayloadDecoder(made).Arguments(index))
-	let loaded = source >= 0 then function.method.instructions(source) else made
-	let isMember = loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is name
-	let isCopied = isMember and name is not in function.method.ParameterNames and MlirParameters(function).IsFixed(name)
+	source = MlirKinds(function).Writer(at, PayloadDecoder(made).Arguments(index))
+	loaded = source >= 0 then function.method.instructions(source) else made
+	isMember = loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is name
+	isCopied = isMember and name is not in function.method.ParameterNames and MlirParameters(function).IsFixed(name)
 	isCopied or Count(name) > 0 and MlirValidated(function, source).Gathered is Count(name)
 Count(name Text) Number
 	Sizes.Count("numbers") is 16
@@ -77,11 +77,11 @@ Count(name Text) Number
 Returned(call InstructionEntry) Number
 	Sizes.Returned(CountCall) is 16
 	Sizes.Returned(FromCall) is 0
-	let name = call.kind is InstructionType.Invoke then call.texts(1) else "from"
+	name = call.kind is InstructionType.Invoke then call.texts(1) else "from"
 	if name is "from"
 		return 0
-	let decoder = PayloadDecoder(call)
-	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), name)
+	decoder = PayloadDecoder(call)
+	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), name)
 	MlirValidated(MlirFunction(function.types, type, decoder.Callee(type)), 0).Collected
 Gathered Number
 	MlirValidated(MlirBytes.Flattening.function, 6).Gathered is 3
@@ -89,20 +89,20 @@ Gathered Number
 	MlirValidated(Sizes.function, 0).Gathered is 16
 	if position < 0
 		return 0
-	let steps = function.method.instructions
-	let isLoaded = position > 0 and steps(position).kind is InstructionType.LoadVariableToRegister
-	let isGathered = isLoaded and steps(position - 1).kind is InstructionType.LoopEnd
+	steps = function.method.instructions
+	isLoaded = position > 0 and steps(position).kind is InstructionType.LoadVariableToRegister
+	isGathered = isLoaded and steps(position - 1).kind is InstructionType.LoopEnd
 	isGathered then MlirBytes(function, function.method.LoopBeginOf(position - 1)).Flattened else Returned(steps(position))
 Collected Number
 	MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Counting), 0).Collected is 16
 	Emptied.Collected is 0
-	let steps = function.method.instructions
-	let end = steps.Length - 3
+	steps = function.method.instructions
+	end = steps.Length - 3
 	if end <= 0
 		return 0
-	let isRead = "forResult" is in steps(end + 1).texts and steps.Last.kind is InstructionType.Return
+	isRead = "forResult" is in steps(end + 1).texts and steps.Last.kind is InstructionType.Return
 	if steps(end).kind is not InstructionType.LoopEnd or isRead is false
 		return 0
-	let begin = function.method.LoopBeginOf(end)
-	let isRaw = MlirKernel(function, begin).IsSimple and MlirLoops(function, begin).IsCollecting
+	begin = function.method.LoopBeginOf(end)
+	isRaw = MlirKernel(function, begin).IsSimple and MlirLoops(function, begin).IsCollecting
 	isRaw then MlirCounter(function, begin).Constant(steps(begin).payload(0), -1) else 0

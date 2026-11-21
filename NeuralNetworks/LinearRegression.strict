@@ -19,7 +19,7 @@ Stepped(line Numbers) Numbers
 	mutable slope = 0
 	mutable intercept = 0
 	for Inputs
-		let difference = Difference(line, index)
+		difference = Difference(line, index)
 		slope = slope + 2 * difference * value / Inputs.Length
 		intercept = intercept + 2 * difference / Inputs.Length
 	(line(0) - Rate * slope, line(1) - Rate * intercept)
@@ -30,13 +30,13 @@ Error(line Numbers) Number
 	LinearRegression.Error((2, 1)).Round(3) is 0.017
 	mutable sum = 0
 	for Inputs
-		let difference = Difference(line, index)
+		difference = Difference(line, index)
 		sum = sum + difference * difference
 	sum / Inputs.Length
 Exact Numbers
 	LinearRegression.Exact.First.Round(4) is 2.0006
-	let meanInput = Inputs.Average
-	let meanTarget = Targets.Average
+	meanInput = Inputs.Average
+	meanTarget = Targets.Average
 	mutable covariance = 0
 	mutable variance = 0
 	for Inputs

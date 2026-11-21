@@ -3,5 +3,5 @@ GoToMatchingLoopBracket(direction Number, startAt Number) Number
 	MatchingLoopFinder(5).GoToMatchingLoopBracket(1, 0) is 1
 	MatchingLoopFinder(5).GoToMatchingLoopBracket(1, 2) is 3
 	MatchingLoopFinder(5).GoToMatchingLoopBracket(1, 4) is 1
-	let next = startAt + direction
+	next = startAt + direction
 	next < instructionCount then next else direction

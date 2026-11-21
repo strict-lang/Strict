@@ -7,7 +7,7 @@ constant Tiny = 0.00000001
 constant Start = Moments(List(Numbers) + (0, 0), List(Numbers) + (0, 0), List(Number) + 0, List(Number) + 0)
 Zeros(layer Layer) Moments
 	Moments.Zeros(Layer.Halves) is Start
-	let biases = layer.Zeros(layer.biases.Length)
+	biases = layer.Zeros(layer.biases.Length)
 	Moments(Zeroed(layer.weights), Zeroed(layer.weights), biases, biases)
 Zeroed(rows List(Numbers)) List(Numbers)
 	Start.Zeroed(List(Numbers) + (3, 4)) is List(Numbers) + (0, 0)
@@ -16,9 +16,9 @@ Zeroed(rows List(Numbers)) List(Numbers)
 Updated(deltas Numbers, input Numbers, beta Number) Moments
 	Start.Updated(List(Number) + 2, (1, 0), 0.5).first is List(Numbers) + (1, 0)
 	Start.Updated(List(Number) + 2, (1, 0), 0.5).secondBias.First.Round(3) is 0.004
-	let gradients = Gradients(deltas, input)
-	let firsts = Averaged(first, gradients, beta, false)
-	let seconds = Averaged(second, gradients, SquareBeta, true)
+	gradients = Gradients(deltas, input)
+	firsts = Averaged(first, gradients, beta, false)
+	seconds = Averaged(second, gradients, SquareBeta, true)
 	Moments(firsts, seconds, Mixed(firstBias, deltas, beta, false), Mixed(secondBias, deltas, SquareBeta, true))
 Gradients(deltas Numbers, input Numbers) List(Numbers)
 	Start.Gradients((1, 2), (3, 4)) is ((3, 4), (6, 8))

@@ -10,6 +10,6 @@ Integers Numbers
 	BinaryNames("a", "bc").Integers is (6, 2, 1, 97, 2, 98, 99)
 	mutable integers = List(Number) + names.Length
 	for names
-		let bytes = ByteEncoder.Empty.UnicodeBytes(value)
+		bytes = ByteEncoder.Empty.UnicodeBytes(value)
 		integers = integers + bytes.Length + bytes
 	List(Number) + integers.Length + integers

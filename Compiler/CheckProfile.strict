@@ -5,42 +5,42 @@ constant StagesA = ("Dependency inventory", "Dependency snapshot", "Frontend / s
 constant StagesB = ("Frontend / name validation", "Emission / reachability", "Emission / safety", "Emission / function bodies", "GPU preparation", "Host runtime assembly")
 constant StagesC = ("mlir-opt", "mlir-translate", "Linking", "Packaging", "Build total")
 Run Number
-	let folder = "Compiler/output/ProfileCheck" + 1000000.Random.Floor
+	folder = "Compiler/output/ProfileCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	if result is Error
 		return result
 	logger.Log("Detailed VM/native timings are opt-in; cache hits still skip all compilation and tests")
 	0
 Checked(folder Text) Boolean
-	let probe = folder + "/Probe.strict"
+	probe = folder + "/Probe.strict"
 	File(probe).Write(ProbeLines)
-	let ext = Process.OperatingSystem is "Windows" then ".exe" else ""
-	let probeRes = CheckProbeVm(probe, folder + "/Probe" + ext)
+	ext = Process.OperatingSystem is "Windows" then ".exe" else ""
+	probeRes = CheckProbeVm(probe, folder + "/Probe" + ext)
 	if probeRes is Error
 		return probeRes
-	let program = folder + "/Program.strict"
+	program = folder + "/Program.strict"
 	File(program).Write(ProgramLines)
-	let out = Ran(Process.Current.executable, "build " + program, "1")
+	out = Ran(Process.Current.executable, "build " + program, "1")
 	out is Error then out else CheckCacheHit(program, folder + "/Program" + ext, out)
 CheckProbeVm(probe Text, exe Text) Boolean
-	let v1 = Ran(Process.Current.executable, probe, "1")
+	v1 = Ran(Process.Current.executable, probe, "1")
 	if v1 is Error or "Fast profile probe:" is not in v1
 		return Error("DetailedVmTimingsMissing: " + (v1 to Text))
-	let v0 = Ran(Process.Current.executable, probe, "0")
+	v0 = Ran(Process.Current.executable, probe, "0")
 	if v0 is Error or "Fast profile probe:" is in v0
 		return Error("QuietVmUnexpectedProbe: " + (v0 to Text))
-	let built = Ran(Process.Current.executable, "build " + probe, "1")
+	built = Ran(Process.Current.executable, "build " + probe, "1")
 	built is Error then built else CheckProbeNative(exe)
 CheckProbeNative(exe Text) Boolean
-	let n1 = Ran(exe, "", "1")
-	let n0 = Ran(exe, "", "0")
-	let bad = n1 is Error or "Fast profile probe:" is not in n1 or n0 is Error or "Fast profile probe:" is in n0
+	n1 = Ran(exe, "", "1")
+	n0 = Ran(exe, "", "0")
+	bad = n1 is Error or "Fast profile probe:" is not in n1 or n0 is Error or "Fast profile probe:" is in n0
 	bad then Error("NativeProfileCheckFailed") else true
 CheckCacheHit(program Text, exe Text, buildOut Text) Boolean
-	let stageErr = MissingStage(buildOut)
+	stageErr = MissingStage(buildOut)
 	if stageErr is Error
 		return stageErr
 	if "Test passed:" is in buildOut or "Test failed:" is in buildOut
@@ -48,7 +48,7 @@ CheckCacheHit(program Text, exe Text, buildOut Text) Boolean
 	CheckHitLoop(program, exe, File(exe).Modified)
 CheckHitLoop(program Text, exe Text, stamp Number) Boolean
 	for ("1", "0")
-		let hit = Ran(Process.Current.executable, "build " + program, value)
+		hit = Ran(Process.Current.executable, "build " + program, value)
 		if hit is Error or "Up to date:" is not in hit or "Frontend /" is in hit
 			return Error("CacheHitFailed: " + (hit to Text))
 		if ("Compiler build cache hit:" is in hit) is not (value is "1") or File(exe).Modified is not stamp
@@ -60,8 +60,8 @@ MissingStage(buildOut Text) Boolean
 			return Error(value + " missing:\n" + buildOut)
 	true
 Ran(tool Text, args Text, detailed Text) Text
-	let win = Process.OperatingSystem is "Windows"
-	let env = "STRICT_BUILD_PROFILE=" + detailed + (win then "&& set STRICT_THREADS=8&& " else " STRICT_THREADS=8 ")
-	let cmd = (win then "set " + env else env) + "\"" + tool + "\"" + (args is "" then "" else " " + args)
-	let res = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
+	win = Process.OperatingSystem is "Windows"
+	env = "STRICT_BUILD_PROFILE=" + detailed + (win then "&& set STRICT_THREADS=8&& " else " STRICT_THREADS=8 ")
+	cmd = (win then "set " + env else env) + "\"" + tool + "\"" + (args is "" then "" else " " + args)
+	res = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 	res.exitCode is not 0 then Error("RunFailed: " + res.Output + res.error) else res.Output

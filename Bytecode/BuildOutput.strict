@@ -1,41 +1,41 @@
 Intermediate(path Text) Text
 	BuildOutput.Intermediate("Examples\Sum.strict") is "./Examples/obj/Sum.strict"
 	BuildOutput.Intermediate("C:/s/A") is "C:/s/obj/A"
-	let normalized = FileCompiler.Normalized(path)
-	let slash = normalized.LastIndexOf("/")
+	normalized = FileCompiler.Normalized(path)
+	slash = normalized.LastIndexOf("/")
 	normalized.Substring(0, slash) + "/obj" + normalized.Substring(slash)
 Delivered(base Text) Text
 	BuildOutput.Delivered("./Examples/obj/Sum") is "./Examples/Sum"
 	BuildOutput.Delivered("./obj/Strict") is "./Strict"
 	BuildOutput.Delivered("./Math/obj/Tests.test") is "./Math/obj/Tests.test"
 	BuildOutput.Delivered("Compiler/output/Sum") is "Compiler/output/Sum"
-	let slash = base.LastIndexOf("/")
-	let isObj = base.EndsWith(".test") is false and slash >= 4 and base.Substring(slash - 4, 4) is "/obj"
+	slash = base.LastIndexOf("/")
+	isObj = base.EndsWith(".test") is false and slash >= 4 and base.Substring(slash - 4, 4) is "/obj"
 	isObj then base.Substring(0, slash - 4) + base.Substring(slash) else base
 Released(base Text, platformName Text) Text
 	BuildOutput.Released("./Examples/obj/Sum", "Linux") is "./Examples/Release/Linux/Sum"
 	BuildOutput.Released("./Math/obj/Tests.test", "Linux") is "./Math/obj/Tests.test"
 	if base.EndsWith(".test")
 		return base
-	let program = Delivered(base)
-	let slash = program.LastIndexOf("/")
+	program = Delivered(base)
+	slash = program.LastIndexOf("/")
 	program.Substring(0, slash) + "/Release/" + platformName + program.Substring(slash)
 Shipped(release Text, sidecar Text) Text
 	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.ptx") is "Compiler/output/Unshipped/B.ptx"
 	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.runtime.ptx").EndsWith("/Unshipped/shared.runtime.ptx")
-	let name = Path(sidecar).FileName.text
-	let at = name.IndexOf(".runtime.")
+	name = Path(sidecar).FileName.text
+	at = name.IndexOf(".runtime.")
 	if at < 0
 		return release + "/" + name
-	let ending = name.Substring(at)
-	let shared = release + "/shared" + ending
+	ending = name.Substring(at)
+	shared = release + "/shared" + ending
 	if IsKept(release, sidecar, name.Substring(0, at), ending)
 		return release + "/" + name
 	Swept(release, sidecar, ending)
 	shared
 IsKept(release Text, sidecar Text, program Text, ending Text) Boolean slow
 	BuildOutput.IsKept("Compiler/output/Unshipped", "A/obj/B.runtime.ptx", "B", ".runtime.ptx") is false
-	let shared = File(release + "/shared" + ending)
+	shared = File(release + "/shared" + ending)
 	shared.Exists and shared.ReadBytes is not File(sidecar).ReadBytes and Dependents(release, program, ending).Length > 0
 Swept(release Text, sidecar Text, ending Text) slow
 	BuildOutput.Swept("Compiler/output/Unshipped", "A/obj/B.runtime.ptx", ".runtime.ptx") is not Error
@@ -46,14 +46,14 @@ Swept(release Text, sidecar Text, ending Text) slow
 Dependents(release Text, program Text, ending Text) Texts slow
 	BuildOutput.Dependents("Compiler/output/Unshipped", "B", ".runtime.ptx").Length is 0
 	for Directory.Files(release, "*.ptx")
-		let stem = Path(value).FileName.text.Replace(".ptx", "")
+		stem = Path(value).FileName.text.Replace(".ptx", "")
 		if stem.IndexOf(".") < 0 and stem is not program and File(release + "/" + stem + ending).Exists is false
 			stem
 Newer(path Text, sources Texts) Text
 	BuildOutput.Newer("Compiler/output/missing.exe", List(Text) + "BuildOutput.strict") is ""
 	if File(path).Exists is false
 		return ""
-	let built = File(path).Modified
+	built = File(path).Modified
 	for sources
 		if File(value).Exists
 			if File(value).Modified > built
@@ -61,8 +61,8 @@ Newer(path Text, sources Texts) Text
 	path
 Fresh(base Text, extension Text, sources Texts) Text
 	BuildOutput.Fresh("Compiler/output/missing", ".exe", List(Text) + "BuildOutput.strict") is ""
-	let delivered = Newer(Delivered(base) + extension, sources)
-	let released = Newer(Released(base, Platform.NameOf(Platform.Current)) + extension, sources)
+	delivered = Newer(Delivered(base) + extension, sources)
+	released = Newer(Released(base, Platform.NameOf(Platform.Current)) + extension, sources)
 	if released is "" or delivered is ""
 		return released is "" then delivered else released
 	File(released).Modified >= File(delivered).Modified then released else delivered

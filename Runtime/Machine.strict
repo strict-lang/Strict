@@ -24,8 +24,8 @@ constant Reading = (InstructionEntry.Named(InstructionType.LoadVariableToRegiste
 constant Read = MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", Reading)
 constant Defaulting = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Pair", Paired.members, (Starting, Read))).Resolved)
 Completed(typeName Text, arguments List(VmValue)) Boolean
-	let result = ProgramRun(value).Result(typeName, arguments)
-	let isFailed = result.kind is in VmValue.ErrorKinds
+	result = ProgramRun(value).Result(typeName, arguments)
+	isFailed = result.kind is in VmValue.ErrorKinds
 	if isFailed
 		logger.Log(result to Text)
 	isFailed is false
@@ -37,25 +37,25 @@ Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
 	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("abc")).Last.kind is "Strict/Error"
 	mutable typed = List(Mutable(VmValue))
 	for arguments
-		let parameter = index < parameters.Length then parameters(index) else parameters.Last
-		let isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
+		parameter = index < parameters.Length then parameters(index) else parameters.Last
+		isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
 		typed.Add(isNumber then Natives(types).Parsed(value.text) else value)
-	let isListed = parameters.Length is 1 and parameters.First.typeName.StartsWith("Strict/List(")
+	isListed = parameters.Length is 1 and parameters.First.typeName.StartsWith("Strict/List(")
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
 Tested(typeName Text, runner Text = TestCodegen.Runner) Number
 	Hello.Tested("HelloLogger") is 0
 	Machine(Hello, deadline = 0.001).Tested("HelloLogger") is 1
 	Defaulting.Tested("Pair") is 5
-	let main = Natives(types).TypeOf(typeName)
-	let tests = main.Callee(runner, 0, "None", List(Text))
-	let instance = Started(main)
-	let result = Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name)
+	main = Natives(types).TypeOf(typeName)
+	tests = main.Callee(runner, 0, "None", List(Text))
+	instance = Started(main)
+	result = Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name)
 	result.kind is "Strict/Error" then 1 else result.number
 Started(main TypeEntry) VmValue
 	Defaulting.Started(Defaulting.types.First).items.Last.number is 5
 	Hello.Started(TypeEntry.HelloLogger) is Natives(Hello.types).Fresh(TypeEntry.HelloLogger)
-	let fresh = Natives(types).Fresh(main)
-	let start = DefaultInstance.Start(main)
+	fresh = Natives(types).Fresh(main)
+	start = DefaultInstance.Start(main)
 	if start.instructions.Length is 0
 		return fresh
 	Execute(start, Bound(main, fresh, start, List(VmValue), fresh), main.Name)
@@ -70,20 +70,20 @@ Prepared Machine
 		created.Add(Natives(types).Fresh(value))
 		located(value.Name) = TypeSource(value).Located(folder)
 		placed(value.Name) = index
-	let prepared = Machine(types, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)
+	prepared = Machine(types, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)
 	Constants(Machine(prepared, places = placed)).Computed
 Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmValue), prototype VmValue) List(VmValue)
 	Hello.Bound(Doubler, VmValue.OfNumber(2), Doubler.methods.First, List(VmValue), VmValue.None).First.number is 2
 	Hello.Bound(Doubler, VmValue.None, Defaulted, List(VmValue), VmValue.None).Last.number is 7
 	Frame.Doubling.Bound(Doubler, VmValue.None, Frame.Twice.method, List(VmValue), VmValue.None).Length is 9
 	Hello.Bound(Texts, VmValue.OfText("ab"), Doubler.methods.First, List(VmValue), VmValue.None).Last.text is "ab"
-	let start = Frame.MembersSlot + type.members.Length
-	let end = start + method.parameters.Length
-	let mode = type.members.Length is 0 then 0 else Ownership(type, instance.kind)
-	let empty = VmValue.None
+	start = Frame.MembersSlot + type.members.Length
+	end = start + method.parameters.Length
+	mode = type.members.Length is 0 then 0 else Ownership(type, instance.kind)
+	empty = VmValue.None
 	for (end, method.Slots).Maximum
-		let head = index < 2 then instance else index is Index and end > start then Indexed(method, arguments) else empty
-		let arg = index >= start then (index < end then Argument(method, arguments, index - start) else empty) else empty
+		head = index < 2 then instance else index is Index and end > start then Indexed(method, arguments) else empty
+		arg = index >= start then (index < end then Argument(method, arguments, index - start) else empty) else empty
 		index < Frame.MembersSlot then head else index < start then Member(type, instance, index, mode, prototype) else arg
 Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototype VmValue) VmValue
 	Hello.Member(Wrapper, VmValue.OfError("a"), 6, 0, VmValue.None).kind is "Strict/Error"
@@ -91,10 +91,10 @@ Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototyp
 	Hello.Member(Wrapper, VmValue.OfError("a"), 7, 0, Natives(List(TypeEntry)).Fresh(Wrapper)).number is 7
 	if slot < Frame.MembersSlot
 		return slot < 2 then instance else VmValue.None
-	let position = slot - Frame.MembersSlot
+	position = slot - Frame.MembersSlot
 	if ownership is 2 and position < instance.items.Length
 		return instance.items(position)
-	let member = type.members(position)
+	member = type.members(position)
 	if member.IsConstant
 		return position < prototype.items.Length then prototype.items(position) else Natives.Initial(member)
 	ownership > 0 then instance.Member(position) else instance.As(member.typeName)
@@ -123,10 +123,10 @@ MemberValue(owner TypeEntry, instance VmValue, index Number) VmValue
 	Hello.MemberValue(Wrapper, VmValue.OfError("a"), 1).number is 7
 	Hello.MemberValue(TypeEntry.CharacterEntry, VmValue.OfText("a"), 0).number is 97
 	Hello.MemberValue(Paired, VmValue("Strict/Pair(Number)", 0, "", (VmValue.None, VmValue.OfNumber(2))), 1).number is 2
-	let member = owner.members(index)
+	member = owner.members(index)
 	if member.IsConstant
 		return Constants(value).Member(owner, index)
-	let mode = Ownership(owner, instance.kind)
+	mode = Ownership(owner, instance.kind)
 	if mode is 2 and index < instance.items.Length
 		return instance.items(index)
 	mode > 0 then instance.Member(index) else instance.As(member.typeName)
@@ -138,8 +138,8 @@ Ownership(type TypeEntry, kind Text) Number
 	Hello.Ownership(TypeEntry(Doubler, Name = "Doubler"), "Strict/Doubler") is 2
 	if kind is "None"
 		return 0
-	let long = kind.Length > type.Name.Length then kind else type.Name
-	let short = kind.Length > type.Name.Length then type.Name else kind
+	long = kind.Length > type.Name.Length then kind else type.Name
+	short = kind.Length > type.Name.Length then type.Name else kind
 	if long is short or long.Length is short.Length + 7 and long.StartsWith("Strict/") and long.EndsWith(short)
 		return short.IndexOf("List") < 0 then 2 else (TypeEntry.Based(type.Name) is "List" then 1 else 2)
 	kind is "List" then 1 else TypeEntry.Based(type.Name) is TypeEntry.Based(kind) then 1 else 0
@@ -151,10 +151,10 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Machine(Frame.Doubling, isQuiet = true, isSampling = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
-	let stopped = deadline > 0 or depth % 64 is 0 then MutationCache.Stopped(deadline) else ""
+	stopped = deadline > 0 or depth % 64 is 0 then MutationCache.Stopped(deadline) else ""
 	if stopped is not ""
 		return VmValue.OfError(stopped)
-	let frame = Frame(value, method, owner, depth)
+	frame = Frame(value, method, owner, depth)
 	(isTracing or isSampling then SampledFrame(frame).Chosen(locals) else frame.Finished(locals))(Frame.ResultSlot)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
@@ -166,26 +166,26 @@ Call(call Invocation) VmValue
 	(deadline > 0 then Hosted(call).IsChanging else false) then VmValue.OfError("ChangeInMutationRun") else Routed(call)
 Routed(call Invocation) VmValue
 	Hello.Routed(Invocation.Uppered).text is "AB"
-	let at = call.Resolution
-	let entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
-	let route = entry.payload(at)
+	at = call.Resolution
+	entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
+	route = entry.payload(at)
 	if route is Resolver.Hosting
 		return Hosted(call).Contained
 	if route is Resolver.Searching
 		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
 	if route is Resolver.Native and entry.payload(at + 1) > 0
 		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
-	let skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
+	skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
 	skip then call.Native(Natives(types, folder)) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
 Executed(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
 	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
-	let type = types(route)
-	let prototype = route < prototypes.entries.Length then prototypes.At(route) else Natives(types).Fresh(type)
+	type = types(route)
+	prototype = route < prototypes.entries.Length then prototypes.At(route) else Natives(types).Fresh(type)
 	if (method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false) is false
 		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name, call.Depth)
-	let frame = Frame(value, method, type.Name, call.Depth)
+	frame = Frame(value, method, type.Name, call.Depth)
 	Natives(types).Constructed(type, frame.Finished(Bound(type, prototype, method, call.Arguments, prototype)))
 Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
@@ -194,8 +194,8 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 	Pairing.Field(InstructionEntry(InstructionType.FieldLoad, ("x", "Pair"), (1, 0, 0, 1)), Resolver.Two).number is 2
 	if entry.payload.Length > 3 then entry.payload(2) >= 0 else false
 		return MemberValue(types(entry.payload(2)), instance, entry.payload(3))
-	let name = entry.texts.Length > 1 then entry.texts.Last else instance.kind
-	let owner = name is in places then types(places(name)) else Natives(types).TypeOf(name)
+	name = entry.texts.Length > 1 then entry.texts.Last else instance.kind
+	owner = name is in places then types(places(name)) else Natives(types).TypeOf(name)
 	for owner.members
 		if value.Name is entry.texts(0)
 			return MemberValue(owner, instance, index)
@@ -203,7 +203,7 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 Logged(message Text)
 	Hello.Logged("") is not Error
 	Machine(Hello, isQuiet = true).Logged("a") is not Error
-	let isLate = isQuiet and quietUntil > 0 and Process.Elapsed >= quietUntil
+	isLate = isQuiet and quietUntil > 0 and Process.Elapsed >= quietUntil
 	if message is not "" and IsShown(message, isLate)
 		logger.Log(isLate then "Still testing after " + Process.Elapsed.Round(1) + " s: " + message else message)
 IsShown(message Text, isLate Boolean) Boolean
@@ -214,5 +214,5 @@ IsShown(message Text, isLate Boolean) Boolean
 	Machine(Hello, isQuiet = true).IsShown("  got: 1", false)
 	Machine(Hello, isQuiet = true).IsShown("Test slow: a", false)
 	Machine(Hello, isQuiet = true).IsShown("Slow: a", false)
-	let isReport = message.StartsWith("Test failed: ") or message.StartsWith("Test slow: ") or message.StartsWith("Slow: ")
+	isReport = message.StartsWith("Test failed: ") or message.StartsWith("Test slow: ") or message.StartsWith("Slow: ")
 	isQuiet is false or isLate or isReport or message.StartsWith("  got: ")

@@ -7,11 +7,11 @@ Run
 		if File(Folder + value).Exists is false
 			if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + value + "\" \"" + Address + value + "\"").Failed
 				return Error("DownloadFailed: " + Address + value)
-	let started = Process.Elapsed
-	let tokenizer = Gpt2Tokens.Parsed(File(Folder + "vocab.json").ReadLines.First, File(Folder + "merges.txt").ReadLines)
-	let model = Gpt2.Loaded(Folder + "model.safetensors", BFloat16.Bits)
-	let loaded = Process.Elapsed
-	let generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
-	let milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
+	started = Process.Elapsed
+	tokenizer = Gpt2Tokens.Parsed(File(Folder + "vocab.json").ReadLines.First, File(Folder + "merges.txt").ReadLines)
+	model = Gpt2.Loaded(Folder + "model.safetensors", BFloat16.Bits)
+	loaded = Process.Elapsed
+	generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
+	milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
 	logger.Log(Prompt + tokenizer.Decoded(generated))
 	logger.Log("GPT-2 loaded in " + ((loaded - started) * 1000).Round + " ms, " + milliseconds + " ms per token")

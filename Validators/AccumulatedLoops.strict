@@ -12,26 +12,26 @@ Issues List(ValidationIssue)
 	Mapped.Issues.First.Line is 3 and Filtered.Issues.First.Line is 3 and Summed.Issues.Length is 0
 	Unique.Issues.Length is 0 and Joined.Issues.Length is 0
 	for lines
-		let found = value.StartsWith("	mutable ") and value.IndexOf(" = List(") > 0 then Looped(index) else ""
+		found = value.StartsWith("	mutable ") and value.IndexOf(" = List(") > 0 then Looped(index) else ""
 		if found is not ""
 			ValidationIssue("AccumulatingLoopMustBeForExpression", found, index + 1)
 Looped(at Number) Text
 	Mapped.Looped(2) is "doubled, write for numbers with value * 2 as its body" and Summed.Looped(2) is ""
-	let name = Tokenizer(lines(at).Trim).Tokens(1)
-	let isFiltered = at + 4 < lines.Length then lines(at + 2).StartsWith("		if ") else false
-	let body = isFiltered then 3 else 2
-	let isShaped = at + body + 1 < lines.Length and lines(at + 1).StartsWith("	for ")
-	let isEnded = isShaped then lines(at + body + 1) is "	" + name and IsLast(at + body + 1) else false
-	let isPure = isFiltered then name is not in Tokenizer(lines(at + 2)).Tokens else true
-	let isJoined = isEnded then IsJoined(at + body) else false
-	let element = isEnded and isPure and isJoined is false then Element(lines(at + body), name, body) else ""
+	name = Tokenizer(lines(at).Trim).Tokens(1)
+	isFiltered = at + 4 < lines.Length then lines(at + 2).StartsWith("		if ") else false
+	body = isFiltered then 3 else 2
+	isShaped = at + body + 1 < lines.Length and lines(at + 1).StartsWith("	for ")
+	isEnded = isShaped then lines(at + body + 1) is "	" + name and IsLast(at + body + 1) else false
+	isPure = isFiltered then name is not in Tokenizer(lines(at + 2)).Tokens else true
+	isJoined = isEnded then IsJoined(at + body) else false
+	element = isEnded and isPure and isJoined is false then Element(lines(at + body), name, body) else ""
 	element is "" then "" else name + ", write " + lines(at + 1).Trim + " with " + element + " as its body"
 IsJoined(at Number) Boolean
 	Joined.IsJoined(4) and Mapped.IsJoined(4) is false
 	for MethodBodies(typeName, TypeShape(lines), inference).Statements
 		if value.line is at and value.statement.Kind is "Reassignment"
-			let added = value.statement.children(1)
-			let type = added.Kind is "Binary" then inference.TypeOf(added.children(1), value.scope, value.scope) else ""
+			added = value.statement.children(1)
+			type = added.Kind is "Binary" then inference.TypeOf(added.children(1), value.scope, value.scope) else ""
 			return type is "" then false else type.StartsWith("List(") or inference.types.IsPlural(type)
 	false
 IsLast(at Number) Boolean
@@ -41,10 +41,10 @@ Element(line Text, name Text, depth Number) Text
 	Mapped.Element("		doubled.Add(value * 2)", "doubled", 2) is "value * 2"
 	Mapped.Element("			evens = evens + value", "evens", 3) is "value" and Mapped.Element("		x = y", "x", 2) is ""
 	Mapped.Element("		sums = sums + (sums.Last + value)", "sums", 2) is ""
-	let indent = BodyParser.Indent(line)
-	let code = line.Trim
-	let isAdded = code.StartsWith(name + ".Add(") and code.EndsWith(")")
-	let added = isAdded then code.Substring(name.Length + 5, code.Length - name.Length - 6) else ""
-	let joined = code.StartsWith(name + " = " + name + " + ") then code.Substring(name.Length * 2 + 6) else ""
-	let element = added is "" then joined else added
+	indent = BodyParser.Indent(line)
+	code = line.Trim
+	isAdded = code.StartsWith(name + ".Add(") and code.EndsWith(")")
+	added = isAdded then code.Substring(name.Length + 5, code.Length - name.Length - 6) else ""
+	joined = code.StartsWith(name + " = " + name + " + ") then code.Substring(name.Length * 2 + 6) else ""
+	element = added is "" then joined else added
 	indent is depth and name is not in Tokenizer(element).Tokens then element else ""

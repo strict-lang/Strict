@@ -8,9 +8,9 @@ constant Unit = Layer(((1, 0), (0, 1)), Layer.Unbiased)
 constant Splitting = Layer(((1, 0), (0, 1), (1, 0), (0, 1), (1, 0), (0, 1)), Layer.Unbiased)
 constant Tiny = ShortConvolution(Splitting, (0.5, 1, 2, 1), Unit, 2)
 Loaded(model Gguf, prefix Text) ShortConvolution slow
-	let projected = Layer(model.Rows(prefix + "shortconv.in_proj.weight"), Layer.Unbiased)
-	let weights = model.Values(prefix + "shortconv.conv.weight")
-	let contracted = Layer(model.Rows(prefix + "shortconv.out_proj.weight"), Layer.Unbiased)
+	projected = Layer(model.Rows(prefix + "shortconv.in_proj.weight"), Layer.Unbiased)
+	weights = model.Values(prefix + "shortconv.conv.weight")
+	contracted = Layer(model.Rows(prefix + "shortconv.out_proj.weight"), Layer.Unbiased)
 	ShortConvolution(projected, weights, contracted, weights.Length / contracted.weights.Length)
 Mixed(normed Numbers, sequences = 1) ShortConvolution
 	Tiny.Mixed((1, 2, 3, 4)).output is (1, 8, 28.5, 96)
@@ -18,28 +18,28 @@ Mixed(normed Numbers, sequences = 1) ShortConvolution
 	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Mixed((1, 1, 1, 1), 2).window is (1, 1, 1, 1)
 	Tiny.Mixed((1, 2, 3, 4)).window is (9, 16)
 	Tiny.Mixed((1, 2, 3, 4)).Mixed((1, 1)).output is (5.5, 33)
-	let combined = Basis.None.Sums(inputs.weights, inputs.biases, normed)
-	let channels = projection.weights.First.Length
-	let gated = Gated(combined, channels)
-	let mixed = Picked(combined, Convolved(gated, channels, sequences), channels)
-	let projected = Basis.None.Sums(projection.weights, projection.biases, mixed)
+	combined = Basis.None.Sums(inputs.weights, inputs.biases, normed)
+	channels = projection.weights.First.Length
+	gated = Gated(combined, channels)
+	mixed = Picked(combined, Convolved(gated, channels, sequences), channels)
+	projected = Basis.None.Sums(projection.weights, projection.biases, mixed)
 	ShortConvolution(value, window = Shifted(gated, channels, sequences), output = projected)
 Gated(combined Numbers, channels Number) Numbers
 	Tiny.Gated((1, 2, 3, 4, 5, 6), 2) is (5, 12)
-	let offset = 2 * channels
+	offset = 2 * channels
 	for combined.Length / 3
-		let start = (index / channels).Floor * 3 * channels + index % channels
+		start = (index / channels).Floor * 3 * channels + index % channels
 		combined(start) * combined(start + offset)
 Convolved(gated Numbers, channels Number, sequences Number) Numbers
 	Tiny.Convolved((1, 4, 9, 16), 2, 1) is (1, 4, 9.5, 24)
 	ShortConvolution(Tiny, window = (2, 3)).Convolved((1, 1), 2, 1) is (2, 7)
-	let perSequence = gated.Length / channels / sequences
+	perSequence = gated.Length / channels / sequences
 	for gated.Length
-		let token = (index / channels).Floor
-		let channel = index % channels
-		let sequence = (token / perSequence).Floor
-		let row = token % perSequence - width + 1
-		let first = sequence * perSequence
+		token = (index / channels).Floor
+		channel = index % channels
+		sequence = (token / perSequence).Floor
+		row = token % perSequence - width + 1
+		first = sequence * perSequence
 		mutable sum = 0
 		for width
 			sum = sum + kernel(channel * width + value) * Tapped(gated, first, row + value, sequence, channel, channels)
@@ -58,13 +58,13 @@ Picked(combined Numbers, convolved Numbers, channels Number) Numbers
 Shifted(gated Numbers, channels Number, sequences Number) Numbers
 	Tiny.Shifted((1, 4, 9, 16), 2, 1) is (9, 16)
 	ShortConvolution(Tiny, width = 3).Shifted((1, 4), 2, 1) is (0, 0, 1, 4)
-	let kept = width - 1
-	let perSequence = gated.Length / channels / sequences
+	kept = width - 1
+	perSequence = gated.Length / channels / sequences
 	for sequences * kept * channels
-		let sequence = (index / (kept * channels)).Floor
-		let row = perSequence + (index / channels).Floor % kept
-		let channel = index % channels
-		let later = (sequence * perSequence + row - kept) * channels + channel
+		sequence = (index / (kept * channels)).Floor
+		row = perSequence + (index / channels).Floor % kept
+		channel = index % channels
+		later = (sequence * perSequence + row - kept) * channels + channel
 		row < kept then Earlier(sequence * kept + row, channel, channels) else gated(later)
 Earlier(row Number, channel Number, channels Number) Number
 	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Earlier(1, 0, 2) is 4 and Tiny.Earlier(0, 0, 2) is 0

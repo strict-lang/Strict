@@ -21,12 +21,12 @@ IsNearlyFive Boolean
 Checked Number
 	ErrorHandling(5).Checked is 10
 	ErrorHandling(0).Checked is Error("NotDoubled")
-	let found = Found
+	found = Found
 	found is Error then Error("NotDoubled") else found * 2
 Described Text
 	ErrorHandling(5).Described is "5"
 	ErrorHandling(0).Described.StartsWith("Error: Missing")
-	let found = Found
+	found = Found
 	found is Error then "Error: " + found.Name else found to Text
 Passed Number
 	ErrorHandling(5).Passed is 6
@@ -69,7 +69,7 @@ IsSmallOrMissing Boolean
 	ErrorHandling(0).IsSmallOrMissing
 	ErrorHandling(5).IsSmallOrMissing is false
 	ErrorHandling(2).IsSmallOrMissing
-	let found = Found
+	found = Found
 	found < 3 or found is Error
 HasLargeRemainder Boolean
 	ErrorHandling(4).HasLargeRemainder

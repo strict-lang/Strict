@@ -14,7 +14,7 @@ constant Coupled = MlirWholeInstance(MlirFunction(Types + MlirCouples.Sizing, Gr
 IsInstance(typeName Text) Boolean
 	Sized.IsInstance("Grid")
 	Sized.IsInstance("Number") is false
-	let short = TypeEntry.ShortName(typeName)
+	short = TypeEntry.ShortName(typeName)
 	if MlirLayout(function).IsStruct(short) is false
 		return false
 	for MlirInstances(function, 0).Stored(function.TypeOf(short))
@@ -32,7 +32,7 @@ Kind(typeName Text) Text
 	Sized.Kind("Strict/Number") is "i"
 	Sized.Kind("Strict/Grid") is ""
 	Coupled.Kind("Strict/Math/Sizing") is "c"
-	let short = TypeEntry.ShortName(typeName)
+	short = TypeEntry.ShortName(typeName)
 	if short is in ("Number", "Boolean") or MlirLayout(function).IsByte(short)
 		return "i"
 	if MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(short))
@@ -50,8 +50,8 @@ UsesSelf Boolean
 Members(input Number) Texts
 	Sized.Members(0) is ("cells", "width")
 	Fits.Members(1) is ("width")
-	let isSelf = input >= function.method.parameters.Length
-	let name = isSelf then "" else function.method.parameters(input).Name
+	isSelf = input >= function.method.parameters.Length
+	name = isSelf then "" else function.method.parameters(input).Name
 	mutable names = List(Mutable(Text))
 	for position, member in function.method.instructions.Length, Used(position, name, isSelf)
 		if member is not in names
@@ -60,9 +60,9 @@ Members(input Number) Texts
 Used(at Number, name Text, isSelf Boolean) Texts
 	Sized.Used(1, "grid", false) is ("cells")
 	Sized.Used(5, "grid", false) is ("width")
-	let entry = function.method.instructions(at)
-	let isLoad = entry.kind is InstructionType.LoadVariableToRegister
-	let isOwn = isSelf and isLoad and entry.texts(0) is not in function.method.ParameterNames
+	entry = function.method.instructions(at)
+	isLoad = entry.kind is InstructionType.LoadVariableToRegister
+	isOwn = isSelf and isLoad and entry.texts(0) is not in function.method.ParameterNames
 	if isOwn and entry.texts(0) is in MlirInstances(function, 0).StoredNames(function.type)
 		return List(Text) + entry.texts(0)
 	if entry.kind is InstructionType.FieldLoad and IsFrom(entry.payload(1), at, name)
@@ -70,8 +70,8 @@ Used(at Number, name Text, isSelf Boolean) Texts
 	entry.kind is InstructionType.Invoke then Passed(entry, at, name) else List(Text)
 Passed(entry InstructionEntry, at Number, name Text) Texts
 	Sized.Passed(Sizing.instructions(5), 5, "grid") is ("width")
-	let reads = LoadReuse(function.method.instructions).InvokeReads(entry)
-	let callee = MlirWholeFunction(function).Callee(entry)
+	reads = LoadReuse(function.method.instructions).InvokeReads(entry)
+	callee = MlirWholeFunction(function).Callee(entry)
 	mutable names = List(Mutable(Text))
 	for reads
 		if (callee.method.Name is function.method.Name) is false and IsFrom(entry.payload(value), at, name)
@@ -80,20 +80,20 @@ Passed(entry InstructionEntry, at Number, name Text) Texts
 IsFrom(register Number, at Number, name Text) Boolean
 	Sized.IsFrom(0, 1, "grid")
 	Sized.IsFrom(3, 5, "grid") is false
-	let writer = MlirKinds(function).Writer(at, register)
+	writer = MlirKinds(function).Writer(at, register)
 	if writer < 0 or name is ""
 		return false
-	let loaded = function.method.instructions(writer)
+	loaded = function.method.instructions(writer)
 	loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is name
 Field(entry InstructionEntry, at Number) Text
 	Sized.Field(Sizing.instructions(1), 1) is "%v_grid_cells"
 	Fits.Field(Fitting.instructions(1), 1) is ""
 	if entry.kind is not InstructionType.FieldLoad
 		return ""
-	let writer = MlirKinds(function).Writer(at, entry.payload(1))
-	let loaded = writer < 0 then entry else function.method.instructions(writer)
-	let isLoaded = loaded.kind is InstructionType.LoadVariableToRegister
-	let isParameter = isLoaded and loaded.texts(0) is in function.method.ParameterNames
+	writer = MlirKinds(function).Writer(at, entry.payload(1))
+	loaded = writer < 0 then entry else function.method.instructions(writer)
+	isLoaded = loaded.kind is InstructionType.LoadVariableToRegister
+	isParameter = isLoaded and loaded.texts(0) is in function.method.ParameterNames
 	isParameter then "%v_" + loaded.texts(0) + "_" + entry.texts(0) else ""
 ParameterKind(parameter MemberEntry) Text
 	Sized.ParameterKind(Sizing.parameters.First) is "o"
@@ -108,14 +108,14 @@ ParameterKind(parameter MemberEntry) Text
 OwnKind(name Text) Text
 	Fits.OwnKind("width") is "i"
 	Sized.OwnKind("width") is "-"
-	let isOwn = UsesSelf and name is in MlirInstances(function, 0).StoredNames(function.type)
+	isOwn = UsesSelf and name is in MlirInstances(function, 0).StoredNames(function.type)
 	isOwn then MemberKind(function.type.Name, name) else (MlirWholeText(function).IsText(name) then "t" else "-")
 IsReadable(entry InstructionEntry) Boolean
 	Sized.IsReadable(Sizing.instructions(1))
 	Coupled.IsReadable(MlirWholeNative.Widths)
 	MlirWholeInstance(MlirLanes.Sample.function).IsReadable(MlirLanes.Greens)
-	let isPacked = MlirLanes(function, 0).IsPacked(entry.texts(1)) or MlirCouples(function, 0).IsCoupled(entry.texts(1))
-	let isMember = (IsInstance(entry.texts(1)) or isPacked) and MemberKind(entry.texts(1), entry.texts(0)) is not ""
+	isPacked = MlirLanes(function, 0).IsPacked(entry.texts(1)) or MlirCouples(function, 0).IsCoupled(entry.texts(1))
+	isMember = (IsInstance(entry.texts(1)) or isPacked) and MemberKind(entry.texts(1), entry.texts(0)) is not ""
 	isMember or MlirWholeText(function).Kind(entry) is not ""
 IsMemberList(name Text) Boolean
 	Sized.IsMemberList("list0")
@@ -123,8 +123,8 @@ IsMemberList(name Text) Boolean
 	mutable found = false
 	for function.method.instructions
 		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is name
-			let at = MlirKinds(function).Writer(index, value.payload(0))
-			let writer = at < 0 then value else function.method.instructions(at)
+			at = MlirKinds(function).Writer(index, value.payload(0))
+			writer = at < 0 then value else function.method.instructions(at)
 			found = false
 			if writer.kind is InstructionType.FieldLoad
 				found = MemberKind(writer.texts(1), writer.texts(0)) is in ("d", "p")

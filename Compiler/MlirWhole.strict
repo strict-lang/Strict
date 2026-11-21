@@ -15,7 +15,7 @@ constant Counting = MlirWhole(MlirLoops.Counting.function, 0)
 IsWhole Boolean
 	Row.IsWhole
 	Counting.IsWhole is false
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.LoopBegin or entry.payload(1) is 1 or function.FastLoop >= 0
 		return false
 	if MlirLoops(function, position).Collection is not ""
@@ -27,43 +27,43 @@ IsWhole Boolean
 IsAllowed(at Number) Boolean
 	Row.IsAllowed(13)
 	Row.IsAllowed(17)
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Kind(at) is "Number"
 	if entry.kind is in (InstructionType.IndexCall, InstructionType.CheckError)
 		return IsRead(at)
 	if entry.kind is InstructionType.StoreRegisterToVariable
 		return IsStored(at)
-	let isNextStored = function.method.instructions(at + 1).kind is InstructionType.StoreRegisterToVariable
+	isNextStored = function.method.instructions(at + 1).kind is InstructionType.StoreRegisterToVariable
 	isNextStored and IsStored(at + 1) or IsBounded(LoadReuse(function.method.instructions).Written(entry), at + 1)
 IsStored(at Number) Boolean
 	Row.IsStored(18)
 	Row.IsStored(17) is false
-	let term = function.method.instructions(at - 1).payload(2)
+	term = function.method.instructions(at - 1).payload(2)
 	MlirDeviceSums(function, position).IsAccumulation(at) and IsBounded(term, at - 1)
 IsRead(at Number) Boolean
 	Row.IsRead(15)
 	Row.IsRead(16)
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.CheckError
 		return entry.texts.Length is 0 and IsRead(at - 1)
-	let next = function.method.instructions(at + 1)
-	let isChecked = next.kind is InstructionType.CheckError and next.payload(0) is entry.payload(0)
+	next = function.method.instructions(at + 1)
+	isChecked = next.kind is InstructionType.CheckError and next.payload(0) is entry.payload(0)
 	isChecked and IsByteList(entry.texts) and IsBounded(entry.payload(1), at)
 IsByteList(names Texts) Boolean
 	Row.IsByteList(List(Text) + "pixels")
 	Row.IsByteList(List(Text)) is false
 	if names.Length is 0
 		return false
-	let parameters = MlirParameters(function)
+	parameters = MlirParameters(function)
 	names(0) is in parameters.FixedLists and parameters.IsBytes(names(0))
 IsBounded(register Number, at Number) Boolean
 	Row.IsBounded(12, 15)
 	Row.IsBounded(5, 17) is false
-	let writer = Writer(register, at)
+	writer = Writer(register, at)
 	if writer < 0
 		return false
-	let entry = function.method.instructions(writer)
+	entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return IsSmall(PayloadDecoder(entry).Value(1).number)
 	if entry.kind is InstructionType.LoadVariableToRegister
@@ -92,11 +92,11 @@ Kind(at Number) Text
 	MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, function.method.instructions(at).texts(0)))
 Inputs Texts
 	Row.Inputs is ("middle", "radius")
-	let carried = MlirSingle(function, position).Carried
+	carried = MlirSingle(function, position).Carried
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
-		let name = Kind(value) is "Number" then entry.texts(0) else "value"
+		entry = function.method.instructions(value)
+		name = Kind(value) is "Number" then entry.texts(0) else "value"
 		if name is not in carried and name is not in ("value", "index") and name is not in names
 			names.Add(name)
 	names

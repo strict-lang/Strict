@@ -5,12 +5,12 @@ has path Text
 Passing(candidates Texts) Texts slow
 	if candidates.Length is 0
 		return List(Text)
-	let types = Prepared(candidates)
+	types = Prepared(candidates)
 	if types.Length is 0
 		return List(Text)
 	mutable passed = List(Mutable(Text))
 	for candidates
-		let changed = Changed(types, index)
+		changed = Changed(types, index)
 		if Machine(changed, List(VmValue), Path(path).PathOnly.text).Prepared.Tested(changed.First.Name) is 0
 			passed.Add(value)
 	passed
@@ -18,17 +18,17 @@ Prepared(candidates Texts) List(TypeEntry) slow
 	mutable methods = List(Mutable(MethodEntry))
 	for candidates
 		methods.Add(Compiled(value, index))
-	let entry = main.Entry
-	let tests = TestCodegen(main, true).Tests
-	let runner = MethodEntry(tests.First, instructions = Mutants.Silent(tests.First.instructions))
-	let combined = TypeEntry(entry, methods = entry.methods + methods + runner + (tests - tests.First))
+	entry = main.Entry
+	tests = TestCodegen(main, true).Tests
+	runner = MethodEntry(tests.First, instructions = Mutants.Silent(tests.First.instructions))
+	combined = TypeEntry(entry, methods = entry.methods + methods + runner + (tests - tests.First))
 	Resolver(Linker(root, main, isFast = true).Linked(combined, List(Text))).Resolved
 Compiled(body Text, index Number) MethodEntry
-	let generator = main.Generator
-	let scope = main.MethodScope(header, generator.target)
-	let expression = SyntaxParser(Tokenizer(body).Tokens).Parse
-	let code = MethodCodegen(generator).Generate(SyntaxNode("Body", "", expression), scope, main.BodyType(header))
-	let optimized = LoadReuse(code.instructions).Optimized
+	generator = main.Generator
+	scope = main.MethodScope(header, generator.target)
+	expression = SyntaxParser(Tokenizer(body).Tokens).Parse
+	code = MethodCodegen(generator).Generate(SyntaxNode("Body", "", expression), scope, main.BodyType(header))
+	optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry("$Suggestion" + index, main.Parameters(header), main.Declared(header), optimized)
 Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
 	mutable methods = types.First.methods
@@ -41,5 +41,5 @@ Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
 			methods(index) = MethodEntry(replacement, Name = value.Name)
 	List(TypeEntry) + TypeEntry(types.First, methods = methods) + types.Slice(1, types.Length - 1)
 Matches(method MethodEntry, replacement MethodEntry) Boolean
-	let same = method.Name is header.tokens.First and method.returnType is replacement.returnType
+	same = method.Name is header.tokens.First and method.returnType is replacement.returnType
 	same and method.parameters is replacement.parameters

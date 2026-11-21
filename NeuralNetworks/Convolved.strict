@@ -23,27 +23,27 @@ Summed Numbers slow
 		Tapped((index / shape(3)).Floor, index % shape(3))
 Tapped(pixel Number, output Number) Number
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 6, 1)).Tapped(3, 0) is 10
-	let channels = shape(2)
-	let taps = (4 - shape(5)) * (4 - shape(5))
-	let first = (Parity(pixel) * shape(3) + output) * taps * channels
+	channels = shape(2)
+	taps = (4 - shape(5)) * (4 - shape(5))
+	first = (Parity(pixel) * shape(3) + output) * taps * channels
 	mutable sum = 0
 	for taps * channels
-		let source = Source(pixel, (index / channels).Floor)
-		let channel = index % channels
-		let number = source < 0 then 0 else values(source * channels + channel)
-		let activated = Activation(shape(4)).Output(number * affine(channel) + affine(channels + channel))
+		source = Source(pixel, (index / channels).Floor)
+		channel = index % channels
+		number = source < 0 then 0 else values(source * channels + channel)
+		activated = Activation(shape(4)).Output(number * affine(channel) + affine(channels + channel))
 		sum = sum + (source < 0 then 0 else activated) * weights(first + index)
 	sum
 Source(pixel Number, tap Number) Number
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 6, 1)).Source(3, 0) is 0
 	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 6, 1)).Source(0, 0) is -1
 	Convolved(Square, (1, 0), Box, (4, 4, 1, 1, 6, 2)).Source(15, 0) is 3
-	let factor = shape(5)
-	let side = 4 - factor
-	let outputRow = (pixel / shape(1)).Floor
-	let row = (outputRow / factor).Floor + (tap / side).Floor - 1 + outputRow % factor
-	let column = ((pixel % shape(1)) / factor).Floor + tap % side - 1 + (pixel % shape(1)) % factor
-	let inside = row >= 0 and row < shape(0) / factor and column >= 0 and column < shape(1) / factor
+	factor = shape(5)
+	side = 4 - factor
+	outputRow = (pixel / shape(1)).Floor
+	row = (outputRow / factor).Floor + (tap / side).Floor - 1 + outputRow % factor
+	column = ((pixel % shape(1)) / factor).Floor + tap % side - 1 + (pixel % shape(1)) % factor
+	inside = row >= 0 and row < shape(0) / factor and column >= 0 and column < shape(1) / factor
 	inside then row * shape(1) / factor + column else Number.NotFound
 Parity(pixel Number) Number
 	Convolved(Square, (1, 0), Center, (4, 4, 1, 1, 6, 2)).Parity(6) is 2

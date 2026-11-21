@@ -18,7 +18,7 @@ IsOperation Boolean
 	MlirListOperators(MlirLists.Listed, 1).IsOperation is false
 	MlirListOperators(Mixed, 5).IsOperation
 	MlirListOperators(Moduled, 2).IsOperation
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if entry.kind is not in Operators
 		return false
 	IsList(entry.payload(1)) or entry.kind is InstructionType.Add and IsList(entry.payload(2))
@@ -36,63 +36,63 @@ Helper(entry InstructionEntry) Text
 	MlirListOperators(Mixed, 4).Helper(Arithmetic(4)) is "strict_list_divided_number"
 	MlirListOperators(Mixed, 2).Helper(Remainder) is "strict_list_modulo_number"
 	MlirListOperators(Mixed, 5).Helper(Arithmetic(5)) is "strict_list_prepend"
-	let isList = IsList(entry.payload(2))
+	isList = IsList(entry.payload(2))
 	if entry.kind is InstructionType.Subtract
 		return isList then "strict_list_without" else "strict_list_removed"
 	if entry.kind is InstructionType.Add
 		return Added(entry, isList)
-	let division = entry.kind is InstructionType.Modulo then "strict_list_modulo" else "strict_list_divided"
-	let operation = entry.kind is InstructionType.Multiply then "strict_list_times" else division
+	division = entry.kind is InstructionType.Modulo then "strict_list_modulo" else "strict_list_divided"
+	operation = entry.kind is InstructionType.Multiply then "strict_list_times" else division
 	isList then operation else operation + "_number"
 Added(entry InstructionEntry, isList Boolean) Text
 	MlirListOperators(Mixed, 5).Added(Arithmetic(5), false) is "strict_list_prepend"
 	MlirListOperators(Downcast, 2).Added(Downcast.method.instructions(2), true) is "strict_list_downcast"
 	if IsList(entry.payload(1)) is false
 		return "strict_list_prepend"
-	let isNumbers = ElementSuffix(entry.payload(1)) is "number"
-	let isDowncast = isList and isNumbers and ElementSuffix(entry.payload(2)) is "text"
+	isNumbers = ElementSuffix(entry.payload(1)) is "number"
+	isDowncast = isList and isNumbers and ElementSuffix(entry.payload(2)) is "text"
 	isDowncast then "strict_list_downcast" else (isList then "strict_list_concat" else Adder)
 Adder Text
 	MlirListOperators(MlirAppended.Filling.function, 4).Adder is "strict_list_add_seeded"
 	MlirListOperators(MlirLists.Listed, 4).Adder is "strict_list_add"
-	let appended = MlirAppended(function, position)
+	appended = MlirAppended(function, position)
 	if appended.IsOwned is false
 		return "strict_list_add"
 	appended.Seed is "" then "strict_list_add_owned" else "strict_list_add_seeded"
 Operands(entry InstructionEntry) Texts
 	MlirListOperators(MlirAppended.Filling.function, 4).Operands(MlirAppended.Added(0)).Length is 3
 	MlirListOperators(MlirLists.Listed, 4).Operands(Steps(4)).Length is 2
-	let names = MlirLists(function, position)
-	let plain = (names.Temp("a"), names.Temp("b"))
+	names = MlirLists(function, position)
+	plain = (names.Temp("a"), names.Temp("b"))
 	Helper(entry) is "strict_list_add_seeded" then plain + names.Temp("s") else plain
 Seeding(entry InstructionEntry) Texts
 	MlirListOperators(MlirAppended.Filling.function, 4).Seeding(MlirAppended.Added(0)).First.IndexOf("%v_numbers") > 0
 	MlirListOperators(MlirLists.Listed, 4).Seeding(Steps(4)).Length is 0
 	if Helper(entry) is not "strict_list_add_seeded"
 		return List(Text)
-	let seed = MlirLists(function, position).Temp("s")
+	seed = MlirLists(function, position).Temp("s")
 	List(Text) + function.Load(seed, "%v_" + MlirAppended(function, position).Seed)
 Operated(entry InstructionEntry) Texts
 	MlirListOperators(MlirLists.Listed, 4).Operated(Steps(4)).Length is 4
 	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0
 	MlirListOperators(MlirAppended.Filling.function, 4).Operated(MlirAppended.Added(0))(3).IndexOf("_seeded(") > 0
-	let names = MlirLists(function, position)
-	let result = names.Temp("c")
-	let kinds = MlirKinds(function)
-	let element = MlirLayout(function).Represented(kinds.ElementKind(kinds.KindOf(position, entry.payload(1))))
-	let call = MlirMemory(function, position).Passed(result, Helper(entry), Operands(entry), element)
-	let left = function.Load(names.Temp("a"), "%r" + entry.payload(1))
-	let right = RightOperand(entry, IsList(entry.payload(2)))
+	names = MlirLists(function, position)
+	result = names.Temp("c")
+	kinds = MlirKinds(function)
+	element = MlirLayout(function).Represented(kinds.ElementKind(kinds.KindOf(position, entry.payload(1))))
+	call = MlirMemory(function, position).Passed(result, Helper(entry), Operands(entry), element)
+	left = function.Load(names.Temp("a"), "%r" + entry.payload(1))
+	right = RightOperand(entry, IsList(entry.payload(2)))
 	(List(Text) + left + right) + Seeding(entry) + call + function.Store(result, "%r" + entry.payload(3))
 RightOperand(entry InstructionEntry, isList Boolean) Texts
 	Text.Combine(MlirListOperators(Worded, 2).RightOperand(WordSteps(2), false)).IndexOf("strict_number_text") > 0
 	MlirListOperators(MlirLists.Listed, 4).RightOperand(Steps(4), false).Length is 1
-	let kinds = MlirKinds(function)
-	let right = kinds.KindOf(position, entry.payload(2))
-	let isNumbers = (isList then kinds.ElementKind(right) else right) is "Number"
-	let needsTexts = isNumbers and kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text"
-	let helper = isList then "strict_list_texts" else "strict_number_text"
-	let names = MlirLists(function, position)
-	let raw = function.Load(names.Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))
-	let converted = MlirMemory(function, position).Called(names.Temp("b"), helper, List(Text) + names.Temp("br"))
+	kinds = MlirKinds(function)
+	right = kinds.KindOf(position, entry.payload(2))
+	isNumbers = (isList then kinds.ElementKind(right) else right) is "Number"
+	needsTexts = isNumbers and kinds.ElementKind(kinds.KindOf(position, entry.payload(1))) is "Text"
+	helper = isList then "strict_list_texts" else "strict_number_text"
+	names = MlirLists(function, position)
+	raw = function.Load(names.Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))
+	converted = MlirMemory(function, position).Called(names.Temp("b"), helper, List(Text) + names.Temp("br"))
 	needsTexts then (raw, converted) else List(Text) + raw

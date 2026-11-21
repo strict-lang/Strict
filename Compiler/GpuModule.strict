@@ -15,12 +15,12 @@ Closes Numbers
 Functions List(GpuFunction)
 	Sample.Functions.Length is 2 and Sample.Functions.First.name is "A_B_1_gpu2"
 	Sample.Functions.Last.text is GpuFunction.Device.text
-	let closes = Closes
+	closes = Closes
 	for Starts
 		GpuFunction(Named(lines(value)), lines(value), Text.Combine(lines.Slice(value, closes(index) - value + 1), "\n"))
 Named(header Text) Text
 	Sample.Named(GpuFunction.DeviceHead) is "C_D_2_devices"
-	let start = header.IndexOf("@") + 1
+	start = header.IndexOf("@") + 1
 	header.Substring(start, header.IndexOf("(") - start)
 Head Texts
 	Sample.Head is Opening
@@ -35,5 +35,5 @@ Shared Texts
 IsShared(line Text) Boolean
 	Sample.IsShared(Data) and Sample.IsShared("  }") is false and Sample.IsShared("    llvm.return") is false
 	Sample.IsShared(GpuFunction.DeviceHead) is false
-	let isEntry = line.StartsWith("  ") and line.StartsWith("   ") is false and line.StartsWith("  ^") is false
+	isEntry = line.StartsWith("  ") and line.StartsWith("   ") is false and line.StartsWith("  ^") is false
 	isEntry and line is not "  }" and line.EndsWith("{") is false

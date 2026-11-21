@@ -44,7 +44,7 @@ Refresh(lines Texts, scope Scope, marks Scope) Scope
 	Sample.Refresh(Reading.lines, Marked.First, Sample.Marks(Marked)).TypeOf("Go changes") is ""
 	if Changes(lines).Members.Length is 0
 		return scope
-	let changing = Changes(lines, false, marks).Methods
+	changing = Changes(lines, false, marks).Methods
 	mutable kept = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for scope.names

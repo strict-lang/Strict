@@ -31,19 +31,19 @@ Indexed Texts
 	Norming.Indexed.Last is "    cf.cond_br %inside, ^body(%atFirst : i64), ^exit"
 	if function.Group < 0
 		return MlirDevice(function, position).Laned + Plain
-	let size = function.Load("%groupd", "%v_" + MlirGroups(function, position).Size(function.Group))
-	let memo = MlirDevice(function, position).Slot("%groupMemo")
-	let target = MlirGroupBatched(function, position).IsUsed then "^quadEntry" else "^body(%atFirst : i64)"
-	let looped = (Looped.First, "    cf.cond_br %inside, " + target + ", ^exit")
+	size = function.Load("%groupd", "%v_" + MlirGroups(function, position).Size(function.Group))
+	memo = MlirDevice(function, position).Slot("%groupMemo")
+	target = MlirGroupBatched(function, position).IsUsed then "^quadEntry" else "^body(%atFirst : i64)"
+	looped = (Looped.First, "    cf.cond_br %inside, " + target + ", ^exit")
 	(size, "    %group = arith.fptosi %groupd : " + function.Float + " to i64") + Lanes + memo + looped
 Launched Texts
 	Norming.Launched.First is "    %t2ggd = llvm.load %v_size : !llvm.ptr -> f64"
 	MlirGrouped(MlirBatched.Paired.function, 2).Launched is ("    %t2gg = arith.constant -4 : i64")
 	Norming.Launched.Last is "    %t2gg = arith.fptosi %t2ggd : f64 to i64"
 	Doubling.Launched is ("    %t2gg = arith.constant 0 : i64")
-	let name = "%t" + position + "gg"
-	let groups = MlirGroups(function, position)
-	let call = groups.Call
+	name = "%t" + position + "gg"
+	groups = MlirGroups(function, position)
+	call = groups.Call
 	if call < 0
 		return List(Text) + MlirTyped.Integer.Constant(name, MlirBatched(function, position).IsUsed then "-4" else "0")
 	(function.Load(name + "d", "%v_" + groups.Size(call)), "    " + name + " = arith.fptosi " + name + "d : f64 to i64")
@@ -53,45 +53,45 @@ Memos Texts
 	MlirGrouped(MlirGroups.Norming.function, 0).Memos.First is "    %memo11 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
-		let call = value.kind is InstructionType.LoopBegin then MlirGroups(function, index).Call else -1
+		call = value.kind is InstructionType.LoopBegin then MlirGroups(function, index).Call else -1
 		if call >= 0
-			let memo = "%memo" + call
-			let unset = "    " + memo + "n = arith.constant 0x7FF8000000000000 : f64"
-			let allocated = ("    " + memo + Allocated, "    " + memo + "k" + Allocated, unset)
+			memo = "%memo" + call
+			unset = "    " + memo + "n = arith.constant 0x7FF8000000000000 : f64"
+			allocated = ("    " + memo + Allocated, "    " + memo + "k" + Allocated, unset)
 			lines = lines + allocated + MlirGrouped(function, index).Unset
 	lines
 Unset Texts
 	MlirGrouped(MlirGroups.Norming.function, 2).Unset is ("    llvm.store %memo11n, %memo11k : f64, !llvm.ptr")
 	Doubling.Unset.Length is 0
-	let call = MlirGroups(function, position).Call
+	call = MlirGroups(function, position).Call
 	call < 0 then List(Text) else List(Text) + function.Store("%memo" + call + "n", "%memo" + call + "k")
 Kept(called Texts, register Number) Texts
 	Calling.Kept(List(Text) + "    call", 9) is Checking + "    call" + Joining
 	Calling.Kept(List(Text) + "    call", 9)(5) is "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64"
 	MlirGrouped(MlirGroups.Norming.function, 7).Kept(List(Text) + "    call", 5) is ("    call")
-	let begin = function.method.LoopBeginOf(position)
-	let counted = begin >= 0 then MlirLoops(function, begin).Collection is "" else false
-	let adding = counted then MlirGroups(function, 0).Adding(position) else 0
-	let call = adding < 1 then -1 else MlirGroups(function, begin).Call
+	begin = function.method.LoopBeginOf(position)
+	counted = begin >= 0 then MlirLoops(function, begin).Collection is "" else false
+	adding = counted then MlirGroups(function, 0).Adding(position) else 0
+	call = adding < 1 then -1 else MlirGroups(function, begin).Call
 	call is not position then called else Keyed(MlirGroups(function, begin).Size(position)) + called + Rejoined(register)
 Keyed(size Text) Texts
 	Calling.Keyed("size") is Checking
 	Calling.Keyed("size").Last is "  ^t11call:"
-	let key = (function.Load(Temp("i"), "%v_index"), function.Load(Temp("s"), "%v_" + size))
-	let divided = "    " + Temp("q") + " = arith.divf " + Temp("i") + ", " + Temp("s") + " : f64"
-	let compared = "    " + Temp("h") + " = arith.cmpf oeq, " + Temp("k") + ", " + Temp("m") + " : f64"
-	let label = "^t" + position
-	let branch = ("    cf.cond_br " + Temp("h") + ", " + label + "kept, " + label + "call", "  " + label + "call:")
-	let floored = (divided, MlirTyped.Double.Floored(Temp("k"), Temp("q")), function.Load(Temp("m"), Memo + "k"))
+	key = (function.Load(Temp("i"), "%v_index"), function.Load(Temp("s"), "%v_" + size))
+	divided = "    " + Temp("q") + " = arith.divf " + Temp("i") + ", " + Temp("s") + " : f64"
+	compared = "    " + Temp("h") + " = arith.cmpf oeq, " + Temp("k") + ", " + Temp("m") + " : f64"
+	label = "^t" + position
+	branch = ("    cf.cond_br " + Temp("h") + ", " + label + "kept, " + label + "call", "  " + label + "call:")
+	floored = (divided, MlirTyped.Double.Floored(Temp("k"), Temp("q")), function.Load(Temp("m"), Memo + "k"))
 	key + floored + compared + branch
 Rejoined(register Number) Texts
 	Calling.Rejoined(9) is Joining
 	Calling.Rejoined(9).Last is "  ^t11joined:"
-	let memo = Memo
-	let result = "%r" + register
-	let fresh = (function.Store(Temp("k"), memo + "k"), function.Load(Temp("r"), result), function.Store(Temp("r"), memo))
-	let kept = ("  ^t" + position + "kept:", function.Load(Temp("c"), memo), function.Store(Temp("c"), result))
-	let joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
+	memo = Memo
+	result = "%r" + register
+	fresh = (function.Store(Temp("k"), memo + "k"), function.Load(Temp("r"), result), function.Store(Temp("r"), memo))
+	kept = ("  ^t" + position + "kept:", function.Load(Temp("c"), memo), function.Store(Temp("c"), result))
+	joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
 	fresh + ("    cf.br ^t" + position + "joined") + kept + joined
 Temp(suffix Text) Text
 	Norming.Indexed.Length is 21
@@ -127,21 +127,21 @@ Remembered(called Texts) Texts
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("%t11gf = arith.cmpi eq") > 0
 	if position is not function.Group
 		return called
-	let register = "%r" + function.method.instructions(position).payload(0)
-	let kept = ("    cf.br ^t" + position + "joined", "  ^t" + position + "kept:")
-	let joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
+	register = "%r" + function.method.instructions(position).payload(0)
+	kept = ("    cf.br ^t" + position + "joined", "  ^t" + position + "kept:")
+	joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
 	(Branched + called + Saved(register, "%groupMemo", "n")) + kept + Saved("%groupMemo", register, "o") + joined
 Branched Texts
 	Remembering.Remembered(List(Text) + "    call") is Shared
 	Remembering.Branched(1) is "    cf.cond_br %t11gf, ^t11call, ^t11kept"
-	let first = "    " + Temp("f") + " = arith.cmpi eq, %at, %atFirst : i64"
-	let branch = "    cf.cond_br " + Temp("f") + ", ^t" + position + "call, ^t" + position + "kept"
+	first = "    " + Temp("f") + " = arith.cmpi eq, %at, %atFirst : i64"
+	branch = "    cf.cond_br " + Temp("f") + ", ^t" + position + "call, ^t" + position + "kept"
 	(first, branch, "  ^t" + position + "call:")
 Saved(source Text, target Text, suffix Text) Texts
 	Exacting.Saved("%r9", "%m", "n")(2) is "    %t11gnx_e = llvm.load %r9_e : !llvm.ptr -> i64"
 	Exacting.Saved("%r9", "%m", "n")(4) is "    llvm.store %t11gnx_e, %m_e : i64, !llvm.ptr"
 	Exacting.Saved("%r9", "%m", "n").Last is "    llvm.store %t11gnx_q, %m_q : i64, !llvm.ptr"
 	Remembering.Saved("%r9", "%groupMemo", "n").First is "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64"
-	let exact = MlirExact(function, position)
-	let moved = (function.Load(Temp(suffix), source), function.Store(Temp(suffix), target))
+	exact = MlirExact(function, position)
+	moved = (function.Load(Temp(suffix), source), function.Store(Temp(suffix), target))
 	moved + exact.Loaded(Temp(suffix + "x"), source) + exact.Set(Temp(suffix + "x_e"), Temp(suffix + "x_q"), target)

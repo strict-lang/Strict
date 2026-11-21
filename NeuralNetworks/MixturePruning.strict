@@ -1,16 +1,16 @@
 constant Pruning = MixturePruning
 Run(path Text, used = 6, dropped = "", count = 100)
-	let tokenizer = Gpt2Tokens.Loaded(Gguf(path))
-	let removed = dropped is "" then List(Number) else dropped.Split(",") to Numbers
-	let model = Using(Without(Qwen3.Loaded(path, 4), removed), used)
-	let benchmark = Qwen3Benchmark
-	let prompt = tokenizer.Encoded(Qwen3Benchmark.Prompt)
-	let prefilled = model.Prefilled(prompt, 0)
-	let durations = benchmark.Durations(prefilled, prefilled.Next, prompt.Length, count, 1)
-	let speed = benchmark.Report(prompt.Length, 1, durations, 1)
+	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
+	removed = dropped is "" then List(Number) else dropped.Split(",") to Numbers
+	model = Using(Without(Qwen3.Loaded(path, 4), removed), used)
+	benchmark = Qwen3Benchmark
+	prompt = tokenizer.Encoded(Qwen3Benchmark.Prompt)
+	prefilled = model.Prefilled(prompt, 0)
+	durations = benchmark.Durations(prefilled, prefilled.Next, prompt.Length, count, 1)
+	speed = benchmark.Report(prompt.Length, 1, durations, 1)
 	logger.Log(path + " using " + used + " experts without layers (" + dropped + "): " + speed)
-	let evaluation = Evaluation
-	let reports = Perplexity(model).Reports(tokenizer, evaluation.Heldout(8))
+	evaluation = Evaluation
+	reports = Perplexity(model).Reports(tokenizer, evaluation.Heldout(8))
 	logger.Log("English " + evaluation.Described(reports(0)) + ", Strict " + evaluation.Described(reports(1)))
 Using(model Qwen3, count Number) Qwen3 slow
 	Pruning.Using(Qwen3.TinyMixture, 1).blocks.First.experts.used is 1

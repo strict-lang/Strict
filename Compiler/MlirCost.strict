@@ -25,8 +25,8 @@ Threshold Number
 	Filtering.Threshold is 8334
 	Devices.Threshold is Device
 	MlirCost(MlirFunction(Devices.function, method = MethodEntry(Doubler, instructions = Reader)), 2).Threshold is 3
-	let count = (Work / Iteration).Ceiling
-	let isDevice = Iteration < Outside and IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
+	count = (Work / Iteration).Ceiling
+	isDevice = Iteration < Outside and IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
 	count.Maximum(isDevice then Device else 2)
 IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolean
 	Devices.IsDevice(Devices.function, 3, 6, 0)
@@ -34,7 +34,7 @@ IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolea
 	for Range(first, last)
 		if inspected.method.instructions(value).kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, value).IsGpu
 			return true
-		let callees = depth < 8 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
+		callees = depth < 8 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
 		if callees.Length > 0 and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
 			return true
 	false
@@ -42,8 +42,8 @@ Iteration Number
 	Doubling.Iteration is 8
 	MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Reading), 2).Iteration is 20002
 	Norming.Iteration < Norming.Sum(Normed, 3, Normed.method.LoopEndOf(2), 0)
-	let total = Sum(function, position + 1, function.method.LoopEndOf(position), 0)
-	let kept = MlirGroups(function, position).Call
+	total = Sum(function, position + 1, function.method.LoopEndOf(position), 0)
+	kept = MlirGroups(function, position).Call
 	kept < 0 then total else total - Called(function, kept, 0) + Native
 Sum(inspected MlirFunction, first Number, last Number, depth Number) Number
 	Doubling.Sum(Doubling.function, 3, 6, 0) is 8
@@ -54,7 +54,7 @@ Sum(inspected MlirFunction, first Number, last Number, depth Number) Number
 Instruction(inspected MlirFunction, at Number, depth Number) Number
 	Doubling.Instruction(Doubling.function, 3, 0) is 1
 	Doubling.Instruction(Doubling.function, 4, 0) is 6
-	let entry = inspected.method.instructions(at)
+	entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.LoopBegin
 		return 1 + Repeats * Sum(inspected, at + 1, inspected.method.LoopEndOf(at), depth)
 	entry.kind is InstructionType.Invoke then Called(inspected, at, depth) else 1
@@ -63,7 +63,7 @@ Called(inspected MlirFunction, at Number, depth Number) Number
 	Doubling.Called(Doubling.function, 4, 4) is Native
 	if TypeEntry.ShortName(PayloadDecoder(inspected.method.instructions(at)).Text(1)) is in External
 		return Outside
-	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	callees = MlirModule(inspected.types, "").Called(inspected, at)
 	if callees.Length is 0
 		return Native
 	depth >= 4 then Native else 2 + Sum(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
@@ -71,5 +71,5 @@ Shift Number
 	Doubling.Shift is 0
 	MlirCost(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Reading), 2).Shift is 11
 	constant maximumShift = 16
-	let relative = Iteration / Doubling.Iteration
+	relative = Iteration / Doubling.Iteration
 	(relative < 2 then 0 else (relative.Logarithm / 2.Logarithm).Floor).Minimum(maximumShift)

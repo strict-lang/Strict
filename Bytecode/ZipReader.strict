@@ -28,12 +28,12 @@ IsEntry(position Number) Boolean
 	Read(bytes.Length - EndRecordSize, 4) is EndHeader and Read(position, 4) is LocalHeader
 Entry(position Number) ZipEntry
 	Sample.Entry(0) is ZipWriter.Sample.entries.First
-	let size = Read(position + SizeOffset, 4)
-	let name = ByteEncoder(bytes).Spelled(position + LocalHeaderSize, Read(position + NameLengthOffset, 2))
+	size = Read(position + SizeOffset, 4)
+	name = ByteEncoder(bytes).Spelled(position + LocalHeaderSize, Read(position + NameLengthOffset, 2))
 	ZipEntry(name, Content(End(position) - size, size))
 End(position Number) Number
 	Sample.End(0) is 33
-	let lengths = Read(position + NameLengthOffset, 2) + Read(position + ExtraLengthOffset, 2)
+	lengths = Read(position + NameLengthOffset, 2) + Read(position + ExtraLengthOffset, 2)
 	position + LocalHeaderSize + lengths + Read(position + SizeOffset, 4)
 Read(start Number, size Number) Number
 	ZipReader(1, 2).Read(0, 2) is 513

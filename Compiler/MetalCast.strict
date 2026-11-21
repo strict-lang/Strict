@@ -26,7 +26,7 @@ Target MetalValue
 Integer Text
 	MetalCast(("i1", "%1", "to", "i32"), "sext").Integer is "(int)(v1 ? -1 : 0)"
 	MetalCast(("i64", "%1", "to", "i1"), "trunc").Integer is "(bool)(v1 & 1)"
-	let cast = "(" + Target.Type + ")"
+	cast = "(" + Target.Type + ")"
 	if operation is "zext"
 		return arguments(0) is "i1" then cast + Value else cast + "(" + Source.UnsignedType + ")" + Value
 	if operation is "sext"
@@ -36,7 +36,7 @@ Floating Text
 	MetalCast(("double", "%1", "to", "float"), "fptrunc").Floating is "strict_float(v1)"
 	MetalCast(("float", "%1", "to", "double"), "fpext").Floating is "strict_double(v1)"
 	MetalCast(("i32", "%1", "to", "double"), "sitofp").Floating is ""
-	let isDouble = arguments(0) is "double" or arguments(3) is "double"
+	isDouble = arguments(0) is "double" or arguments(3) is "double"
 	if operation is "fptrunc" and arguments(0) is "double"
 		return arguments(3) is "float" then "strict_float(" + Value + ")" else ""
 	if operation is "fpext" and arguments(3) is "double"

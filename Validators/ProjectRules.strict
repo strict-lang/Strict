@@ -18,11 +18,11 @@ Issues(rules Text, files Texts) Number native
 Ran(rule Text, files Texts) Number native
 	ProjectRules(".").Ran(Fixture + "Validators/GetPrefix.strict", List(Text)) is 0
 	ProjectRules(".").Ran(Fixture + "Validators/GetPrefix.strict", List(Text) + (Fixture + "Crate.strict")) is 1
-	let types = Execute.Loaded(rule, root, false)
+	types = Execute.Loaded(rule, root, false)
 	if types.Length is 0
 		return Error("ProjectRuleNotCompiled: " + rule)
-	let result = ProgramRun(Execute.Started(types, rule)).Result(types.First.Name, Arguments(files))
-	let isFailed = result.kind is in VmValue.ErrorKinds
+	result = ProgramRun(Execute.Started(types, rule)).Result(types.First.Name, Arguments(files))
+	isFailed = result.kind is in VmValue.ErrorKinds
 	isFailed then Error("ProjectRuleFailed: " + rule + ", " + (result to Text)) else result.number
 Arguments(files Texts) List(VmValue)
 	ProjectRules(".").Arguments(List(Text) + "A.strict").First.text is "A.strict"

@@ -16,8 +16,8 @@ Loaded(register Number) Text
 	MlirDying(Seeding, 4).Loaded(0) is "listResult0"
 	MlirDying(Seeding, 0).Loaded(5) is "start"
 	MlirDying(Dropping.function, 3).Loaded(2) is ""
-	let writer = MlirKinds(function).Writer(position, register)
-	let loaded = writer >= 0 then function.method.instructions(writer) else function.method.instructions(position)
+	writer = MlirKinds(function).Writer(position, register)
+	loaded = writer >= 0 then function.method.instructions(writer) else function.method.instructions(position)
 	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
 Seed(name Text) Text
 	MlirDying(Seeding, 0).Seed("moved") is "start"
@@ -26,7 +26,7 @@ Seed(name Text) Text
 	MlirDying(Seeding, 0).Seed("start") is ""
 	for function.method.instructions
 		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is name
-			let loaded = MlirDying(function, index).Loaded(value.payload(0))
+			loaded = MlirDying(function, index).Loaded(value.payload(0))
 			if loaded is in function.method.ParameterNames
 				return loaded
 	""
@@ -37,19 +37,19 @@ Guarded(lines Texts, seed Text) Texts
 	"    %t#sz = arith.cmpf oeq, %t#o, %zero : f64" is in MlirDying(Seeding, 4).Guarded(Guarding, "start")
 	if seed is ""
 		return lines
-	let skipped = lines(1).Replace("%t#same,", "%t#sk,")
+	skipped = lines(1).Replace("%t#same,", "%t#sk,")
 	((List(Text) + lines(0) + function.Load("%t#sv", "%v_" + seed)) + Kept + skipped) + lines.Slice(2, lines.Length - 2)
 IsSwept(name Text, kind = "") Boolean
 	MlirDying(Sweeping, 9).IsSwept("moved")
 	Dropping.IsSwept("moved") is false
 	Dropping.IsSwept("", "Tripling") is false
-	let known = kind is "" then MlirKinds(function).VariableKind(function.method.instructions.Length, name) else kind
+	known = kind is "" then MlirKinds(function).VariableKind(function.method.instructions.Length, name) else kind
 	MlirFlats(function, 0).Kind(known) is "Flat"
 IsReleased(name Text, seed Text) Boolean
 	Dropping.IsReleased("moved", "")
 	MlirDying(Sweeping, 9).IsReleased("moved", "") is false
 	MlirOwned(Sweeping, 9).Stored(Tripled(9)).Length is 2
-	let isOwned = MlirOwned(function, position).IsOwned(name, 0, seed) or MlirCarried(function).IsCarried(name)
+	isOwned = MlirOwned(function, position).IsOwned(name, 0, seed) or MlirCarried(function).IsCarried(name)
 	isOwned and IsSwept(name) is false
 Mutated Texts
 	Dropping.Mutated is ("moved")
@@ -67,19 +67,19 @@ Returned(entry InstructionEntry) Texts
 	Dropping.Returned(Dropped).First is "    %t10d0 = llvm.load %v_moved : !llvm.ptr -> f64"
 	Dropping.Returned(Dropped).Last is "    func.call @strict_rc_dead(%t10d0, %t10) : (f64, f64) -> ()"
 	Dropping.Returned(InstructionEntry.Return(7)).Length is 0
-	let returned = "%t" + position
-	let kept = Loaded(entry.payload(0))
+	returned = "%t" + position
+	kept = Loaded(entry.payload(0))
 	mutable lines = List(Text)
 	for Mutated
 		if value is not kept and IsSwept(value) is false
-			let old = returned + "d" + index
-			let dead = "    func.call @strict_rc_dead(" + old + ", " + Survivor + ") : (f64, f64) -> ()"
+			old = returned + "d" + index
+			dead = "    func.call @strict_rc_dead(" + old + ", " + Survivor + ") : (f64, f64) -> ()"
 			lines = lines + function.Load(old, "%v_" + value) + dead
 	lines
 Survivor Text
 	Dropping.Survivor is "%t10"
 	Numbered.Survivor is "%zero"
-	let kind = MlirLayout(function).Represented(TypeEntry.ShortName(function.method.returnType))
+	kind = MlirLayout(function).Represented(TypeEntry.ShortName(function.method.returnType))
 	kind is in ("Number", "Boolean", "Character") then "%zero" else "%t" + position
 Adder(name Text) Text
 	MlirDying(MlirOwned.Moving, 0).Adder("moved") is "strict_list_add_owned"
@@ -89,8 +89,8 @@ Adder(name Text) Text
 	MlirDying(Seeding, 0).Adder("forResult") is "strict_list_push"
 	MlirDying(Seeding, 0).Adder("listResult3") is "strict_list_push"
 	MlirDying(MlirAppended.Pushed.function, 3).Adder("text") is "strict_list_push"
-	let isOwned = MlirOwned(function, position).IsOwned(name) or MlirCarried(function).IsCarried(name)
-	let isFilled = isOwned then MlirAppended(function, position).IsFilled(name) else false
+	isOwned = MlirOwned(function, position).IsOwned(name) or MlirCarried(function).IsCarried(name)
+	isFilled = isOwned then MlirAppended(function, position).IsFilled(name) else false
 	if name is "forResult" or name.StartsWith("listResult") or isFilled
 		return "strict_list_push"
 	isOwned then "strict_list_add_owned" else "strict_list_add"

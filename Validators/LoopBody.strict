@@ -27,8 +27,8 @@ Found(node SyntaxNode, line Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Found(Hoisting.loop, 1, LoopNames.Steps).Length is 0
 	Hoisting.Found(Hoisting.loop.children.Last, 7, LoopNames.Steps).First.Line is 3
 	Edged.Found(Edged.loop.children.Last, 7, LoopNames(List(Text), List(Text))).Length is 1
-	let at = node.line > 0 then node.line else line
-	let own = Issue(node, at, names)
+	at = node.line > 0 then node.line else line
+	own = Issue(node, at, names)
 	if own.Length > 0
 		return own
 	mutable found = List(Mutable(ValidationIssue))
@@ -54,10 +54,10 @@ Hoisted(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 	LoopBody(Guarding.loop, List(Text), false).Issues.Length is 0
 	Hoisting.Hoisted(StatementParser(Tokenizer("1000 / 8").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
 	Hoisting.Hoisted(SyntaxNode("Call", "*", SyntaxNode("Identifier", "steps")), 1, LoopNames.Steps).Length is 0
-	let isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
-	let isNumeric = (node to Text).IndexOf("\"") < 0 and IsCostly(node)
-	let isHoisted = isShort and isArithmetic and isNumeric and names.IsInvariant(node) and LoopNames.HasName(node)
-	let issue = ValidationIssue("LoopInvariantMustBeOutsideLoop", node to Text + InvariantHint, at)
+	isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
+	isNumeric = (node to Text).IndexOf("\"") < 0 and IsCostly(node)
+	isHoisted = isShort and isArithmetic and isNumeric and names.IsInvariant(node) and LoopNames.HasName(node)
+	issue = ValidationIssue("LoopInvariantMustBeOutsideLoop", node to Text + InvariantHint, at)
 	isHoisted then List(ValidationIssue) + issue else List(ValidationIssue)
 Conditional(condition SyntaxNode, branches SyntaxNodes, at Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Conditional(SyntaxNode("Identifier", "steps"), List(SyntaxNode), 1, LoopNames.Steps).Length is 0
@@ -66,11 +66,11 @@ Conditional(condition SyntaxNode, branches SyntaxNodes, at Number, names LoopNam
 	Hoisting.Conditional(SyntaxNode("Number", "0"), SyntaxNode("Number", "0"), 1, LoopNames.Steps).Length is 0
 	if isNested is false
 		return List(ValidationIssue)
-	let edge = Edge(condition)
+	edge = Edge(condition)
 	if edge is not ""
 		return List(ValidationIssue) + ValidationIssue("LoopEdgeMustBeOutsideLoop", edge, at)
-	let isInvariant = loop.text is not "for as long as" and names.IsInvariant(condition) and LoopNames.HasName(condition)
-	let issue = ValidationIssue("LoopGuardMustBeOutsideLoop", condition to Text + GuardHint, at)
+	isInvariant = loop.text is not "for as long as" and names.IsInvariant(condition) and LoopNames.HasName(condition)
+	issue = ValidationIssue("LoopGuardMustBeOutsideLoop", condition to Text + GuardHint, at)
 	isInvariant and IsGuarding(branches) then List(ValidationIssue) + issue else List(ValidationIssue)
 IsCostly(node SyntaxNode) Boolean
 	Hoisting.IsCostly(SyntaxNode("Binary", "/"))
@@ -80,8 +80,8 @@ IsCostly(node SyntaxNode) Boolean
 	Hoisting.IsCostly(SyntaxNode("Binary", "+")) is false
 	Hoisting.IsCostly(StatementParser(Tokenizer("(steps - 1) + 2").Tokens).ParseStatement)
 	Hoisting.IsCostly(StatementParser(Tokenizer("2 + (steps - 1)").Tokens).ParseStatement)
-	let first = node.children.Length > 0 then node.children.First.Kind else ""
-	let last = node.children.Length > 0 then node.children.Last.Kind else ""
+	first = node.children.Length > 0 then node.children.First.Kind else ""
+	last = node.children.Length > 0 then node.children.Last.Kind else ""
 	node.text is in ("*", "/", "%", "^") or first is "Binary" or last is "Binary"
 IsGuarding(branches SyntaxNodes) Boolean
 	Hoisting.IsGuarding(List(SyntaxNode) + SyntaxNode("Number", "0"))
@@ -95,6 +95,6 @@ Edge(node SyntaxNode) Text
 	Hoisting.Edge(SyntaxNode("Identifier", "index")) is ""
 	Edged.Edge(Edged.loop.children.Last) is "index is steps" + LastHint
 	Edged.Edge(StatementParser(Tokenizer("index is 0").Tokens).ParseStatement) is "index is 0" + FirstHint
-	let edges = LoopEdge(loop)
-	let edge = edges.Found(node)
+	edges = LoopEdge(loop)
+	edge = edges.Found(node)
 	edge.Kind is "Missing" then "" else edge to Text + (edges.IsFirst(edge) then FirstHint else LastHint)

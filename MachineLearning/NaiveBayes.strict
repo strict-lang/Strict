@@ -11,7 +11,7 @@ Trained(samples List(Numbers), labels Numbers) NaiveBayes
 	mutable spreads = List(Mutable(Numbers))
 	mutable shares = List(Mutable(Number))
 	for labels.Maximum + 1
-		let members = Members(samples, labels, index)
+		members = Members(samples, labels, index)
 		centers.Add(Mean(members))
 		spreads.Add(Variance(members, centers.Last))
 		shares.Add(members.Length / samples.Length)
@@ -36,7 +36,7 @@ Squared(values Numbers, center Number) Numbers
 Classified(sample Numbers) Number
 	NaiveBayes.Trained(Points, Kinds).Classified((0.5, 0.5)) is 0
 	NaiveBayes.Trained(Points, Kinds).Classified((5, 5)) is 1
-	let scores = Scores(sample)
+	scores = Scores(sample)
 	scores.Index(scores.Maximum)
 Scores(sample Numbers) Numbers
 	NaiveBayes(List(Numbers) + (0, 0), List(Numbers) + (1, 1), List(Number) + 1).Scores((0, 0)).First.Round(3) is -1.838
@@ -47,7 +47,7 @@ LogLikelihood(sample Numbers, mean Numbers, variance Numbers) Number
 	NaiveBayes.LogLikelihood(List(Number) + 2, List(Number) + 0, List(Number) + 2).Round(3) is -2.266
 	mutable sum = 0
 	for sample
-		let difference = value - mean(index)
+		difference = value - mean(index)
 		sum = sum - 0.5 * (2 * Number.Pi * variance(index)).Logarithm - difference * difference / (2 * variance(index))
 	sum
 Predicted(tests List(Numbers)) Numbers

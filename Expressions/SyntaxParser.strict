@@ -24,7 +24,7 @@ ParseRange(start Number, end Number) SyntaxNode
 		return Leaf(tokens(start))
 	if end - start > 2 and tokens(start + 1) is "="
 		return SyntaxNode("Reassignment", "", (Leaf(tokens(start)), ParseRange(start + 2, end)))
-	let operatorIndex = LowestOperatorIndex(start, end)
+	operatorIndex = LowestOperatorIndex(start, end)
 	operatorIndex is -1 then ParseUnaryOrCall(start, end) else ParseOperator(operatorIndex, start, end)
 ParseUnaryOrCall(start Number, end Number) SyntaxNode
 	SyntaxParser("not", "a").ParseUnaryOrCall(0, 2).Kind is "Not"
@@ -33,7 +33,7 @@ ParseUnaryOrCall(start Number, end Number) SyntaxNode
 	SyntaxParser("-", "1").ParseUnaryOrCall(0, 1).Kind is "Negate"
 	if tokens(start) is "not"
 		return SyntaxNode("Not", "", Single(ParseRange(start + 1, end)))
-	let next = start + 1 < end then tokens(start + 1) else ""
+	next = start + 1 < end then tokens(start + 1) else ""
 	if tokens(start) is "-" and next is not "" and Tokenizer(next).IsDigit(next(0))
 		return Postfix(tokens).LastDot(start, end) > start then ParseCallOrMember(start, end) else Leaf("-" + next)
 	if tokens(start) is "-"
@@ -65,7 +65,7 @@ LowestOperatorIndex(start Number, end Number) Number
 	mutable bestPrecedence = 100
 	for end - start
 		depth = depth + BracketDelta(tokens(start + index))
-		let precedence = OperatorPrecedence(start + index, start)
+		precedence = OperatorPrecedence(start + index, start)
 		if depth < 1 and precedence > 0 and precedence <= bestPrecedence
 			best = start + index
 			bestPrecedence = tokens(best) is "else" then precedence - 0.5 else precedence
@@ -113,17 +113,17 @@ ParseOperator(operatorIndex Number, start Number, end Number) SyntaxNode
 	SyntaxParser(Tokenizer("a<1 and b>2").Tokens).Parse is SyntaxParser(Tokenizer("(a<1) and (b>2)").Tokens).Parse
 	SyntaxParser(Tokenizer("a is 1 and b is 2").Tokens).Parse.text is "and"
 	SyntaxParser("not", "a", "and", "b").Parse is SyntaxParser("(", "not", "a", ")", "and", "b").Parse
-	let operatorText = OperatorText(operatorIndex)
-	let rightStart = operatorIndex + operatorText.Split(" ").Length
+	operatorText = OperatorText(operatorIndex)
+	rightStart = operatorIndex + operatorText.Split(" ").Length
 	SyntaxNode("Binary", operatorText, (ParseRange(start, operatorIndex), ParseRange(rightStart, end)))
 ParseCallOrMember(start Number, end Number) SyntaxNode
 	SyntaxParser("x", ".", "y").ParseCallOrMember(0, 3) to Text is "x.y"
 	SyntaxParser(Tokenizer("f(1)(2)").Tokens).ParseCallOrMember(0, 7).Kind is "Index"
 	SyntaxParser(Tokenizer("Tree.Pose(2)(3).Length").Tokens).Parse to Text is "Tree.Pose(2)(3).Length"
-	let index = Postfix(tokens).IndexStart(start, end)
+	index = Postfix(tokens).IndexStart(start, end)
 	if index > start
 		return SyntaxNode("Index", "", Single(ParseRange(start, index)) + Parts(index + 1, end - 1))
-	let dot = Postfix(tokens).LastDot(start, end)
+	dot = Postfix(tokens).LastDot(start, end)
 	if dot is not -1 and dot + 2 < end
 		return SyntaxNode("MethodCall", tokens(dot + 1), Single(ParseRange(start, dot)) + Parts(dot + 3, end - 1))
 	dot is not -1 then SyntaxNode("Member", tokens(dot + 1), Single(ParseRange(start, dot))) else ParseCall(start, end)
@@ -133,7 +133,7 @@ ParseCall(start Number, end Number) SyntaxNode
 	SyntaxParser("(", "a", "+", "b", ")").ParseCall(0, 5) to Text is "a + b"
 	if tokens(start) is not "("
 		return SyntaxNode("Call", tokens(start), Parts(start + 2, end - 1))
-	let arguments = Parts(start + 1, end - 1)
+	arguments = Parts(start + 1, end - 1)
 	IsGrouping(arguments) then arguments(0) else SyntaxNode("List", "", arguments)
 IsGrouping(arguments SyntaxNodes) Boolean
 	SyntaxParser("1").IsGrouping(SyntaxNode("Identifier", "a"), SyntaxNode("Identifier", "b")) is false
@@ -155,5 +155,5 @@ Parts(start Number, end Number) SyntaxNodes
 Binding(operator Text) Number
 	SyntaxParser("a").Binding("is not") is 7
 	SyntaxParser("a").Binding("x") is 0
-	let at = SyntaxNode.operators.Index(operator)
+	at = SyntaxNode.operators.Index(operator)
 	at < 0 then 0 else SyntaxNode.precedences(at)

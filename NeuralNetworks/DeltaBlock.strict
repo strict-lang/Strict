@@ -16,25 +16,25 @@ constant Tiny = DeltaBlock.Loaded(Drafter.Model, "blk.0.", Layer.Zeros(16), Basi
 constant Pulse = (1, 2) + Layer.Zeros(30)
 Loaded(model Gguf, prefix Text, zeros Numbers, basis Basis) DeltaBlock slow
 	Tiny.inputs.weights.Length is 32
-	let mixing = Mixing(model, prefix, zeros, Experts(Qwen3Block.FeedForward(model, prefix), basis = basis))
-	let normed = model.Values(prefix + "attn_norm.weight")
-	let isApart = basis.IsFolded(prefix + "ssm_beta.weight") is false
-	let rating = 2 * mixing.decays.Length
-	let mixed = mixing.inputs.weights.Length - rating
-	let kept = isApart then Layer(mixing.inputs.weights.Slice(0, mixed), Layer.Unbiased) else mixing.inputs
-	let rated = isApart then Layer(mixing.inputs.weights.Slice(mixed, rating), Layer.Unbiased) else Layer.None
-	let after = model.Values(prefix + "post_attention_norm.weight")
+	mixing = Mixing(model, prefix, zeros, Experts(Qwen3Block.FeedForward(model, prefix), basis = basis))
+	normed = model.Values(prefix + "attn_norm.weight")
+	isApart = basis.IsFolded(prefix + "ssm_beta.weight") is false
+	rating = 2 * mixing.decays.Length
+	mixed = mixing.inputs.weights.Length - rating
+	kept = isApart then Layer(mixing.inputs.weights.Slice(0, mixed), Layer.Unbiased) else mixing.inputs
+	rated = isApart then Layer(mixing.inputs.weights.Slice(mixed, rating), Layer.Unbiased) else Layer.None
+	after = model.Values(prefix + "post_attention_norm.weight")
 	DeltaBlock(mixing, attentionNorm = normed, mlpNorm = after, inputs = kept, rates = rated)
 Mixing(model Gguf, prefix Text, zeros Numbers, feedForward Experts) DeltaBlock slow
 	DeltaBlock.Mixing(Drafter.Model, "blk.0.", Layer.Zeros(16), Tiny.experts).attentionNorm.Length is 0
-	let combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
-	let taps = model.Values(prefix + "ssm_conv1d.weight")
-	let logarithms = model.Values(prefix + "ssm_a")
-	let projected = Qwen3Block.Dense(model, prefix, List(Text) + "ssm_out")
-	let biases = model.Values(prefix + "ssm_dt.bias")
-	let headNorm = model.Values(prefix + "ssm_norm.weight")
-	let shifted = Layer.Zeros(taps.Length / 4 * 3)
-	let none = List(Number)
+	combined = Qwen3Block.Dense(model, prefix, ("attn_qkv", "attn_gate", "ssm_beta", "ssm_alpha"))
+	taps = model.Values(prefix + "ssm_conv1d.weight")
+	logarithms = model.Values(prefix + "ssm_a")
+	projected = Qwen3Block.Dense(model, prefix, List(Text) + "ssm_out")
+	biases = model.Values(prefix + "ssm_dt.bias")
+	headNorm = model.Values(prefix + "ssm_norm.weight")
+	shifted = Layer.Zeros(taps.Length / 4 * 3)
+	none = List(Number)
 	DeltaBlock(none, combined, taps, logarithms, biases, headNorm, projected, none, feedForward, shifted, zeros)
 Width Number
 	Tiny.Width is 32
@@ -45,34 +45,34 @@ KeyHeads Number
 	(convolution.Length / 4 / norm.Length - decays.Length) / 2
 Combined(input Numbers) Numbers
 	DeltaBlock(Tiny, rates = Layer(List(Numbers) + Layer.Zeros(8), Layer.Unbiased)).Combined(Drafter.Pair).Length is 66
-	let normed = Qwen3Block.Normalized(input, 0, input.Length, attentionNorm)
-	let mixed = experts.basis.Sums(inputs.weights, inputs.biases, normed)
+	normed = Qwen3Block.Normalized(input, 0, input.Length, attentionNorm)
+	mixed = experts.basis.Sums(inputs.weights, inputs.biases, normed)
 	if rates.weights.Length is 0
 		return mixed
-	let rated = Batch(rates.weights, rates.biases).Sums(normed)
-	let mixing = inputs.weights.Length
-	let rating = rates.weights.Length
+	rated = Batch(rates.weights, rates.biases).Sums(normed)
+	mixing = inputs.weights.Length
+	rating = rates.weights.Length
 	for rated.Length / rating * (mixing + rating)
-		let token = (index / (mixing + rating)).Floor
-		let at = index % (mixing + rating)
+		token = (index / (mixing + rating)).Floor
+		at = index % (mixing + rating)
 		at < mixing then mixed(token * mixing + at) else rated(token * rating + at - mixing)
 Cached(combined Numbers, sequences = 1) DeltaBlock slow
 	Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).Output(Drafter.Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
 	Tiny.Cached(Tiny.Combined(Drafter.Pair)).Output(Drafter.Pair)(8).IsNearlyEqual(1.773538, 0.00001)
-	let tokens = combined.Length / Width
-	let keyed = Keyed(Convolved(combined, tokens, tokens / sequences))
+	tokens = combined.Length / Width
+	keyed = Keyed(Convolved(combined, tokens, tokens / sequences))
 	constant Chunk = 16
-	let decayed = Decayed(combined, tokens)
-	let size = norm.Length
-	let chunks = DeltaChunks(decays.Length, KeyHeads, size, Chunk, tokens, keyed, decayed, memory, sequences = sequences)
-	let read = tokens is 1 then chunks.Stepped(value) else chunks.Read
+	decayed = Decayed(combined, tokens)
+	size = norm.Length
+	chunks = DeltaChunks(decays.Length, KeyHeads, size, Chunk, tokens, keyed, decayed, memory, sequences = sequences)
+	read = tokens is 1 then chunks.Stepped(value) else chunks.Read
 	DeltaBlock(value, memory = read.memory, window = Shifted(combined, tokens), merged = Gated(read.reads, combined))
 Rewound(combined Numbers) DeltaBlock slow
 	Tiny.Rewound(Tiny.Combined(Drafter.Rows(1))).memory is Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).memory
 	Tiny.Rewound(Tiny.Combined(Drafter.Pair)).window is Tiny.Cached(Tiny.Combined(Drafter.Pair)).window
-	let tokens = combined.Length / Width
-	let keyed = Keyed(Convolved(combined, tokens, tokens))
-	let decayed = Decayed(combined, tokens)
+	tokens = combined.Length / Width
+	keyed = Keyed(Convolved(combined, tokens, tokens))
+	decayed = Decayed(combined, tokens)
 	mutable current = value
 	for tokens
 		current = DeltaBlock(current, memory = current.Updated(keyed, decayed, current.Read(keyed, index, 1), index))
@@ -80,17 +80,17 @@ Rewound(combined Numbers) DeltaBlock slow
 Convolved(combined Numbers, tokens Number, seqLen Number) Numbers
 	Tiny.Convolved(Layer.Zeros(64), 2, 2) is Layer.Zeros(32)
 	Tiny.Convolved(Layer.Zeros(32) + Pulse, 2, 1)(16) is Tiny.Convolved(Pulse, 1, 1)(0)
-	let channels = convolution.Length / 4
-	let width = combined.Length / tokens
-	let isWhole = seqLen is tokens
+	channels = convolution.Length / 4
+	width = combined.Length / tokens
+	isWhole = seqLen is tokens
 	for tokens * channels
-		let token = (index / channels).Floor
-		let channel = index % channels
-		let pos = token % seqLen
-		let older = Tap(combined, width, Back(pos, token, 3, isWhole), channel, channels, 0)
-		let old = older + Tap(combined, width, Back(pos, token, 2, isWhole), channel, channels, 1)
-		let sum = old + Tap(combined, width, Back(pos, token, 1, isWhole), channel, channels, 2)
-		let all = sum + Tap(combined, width, token, channel, channels, 3)
+		token = (index / channels).Floor
+		channel = index % channels
+		pos = token % seqLen
+		older = Tap(combined, width, Back(pos, token, 3, isWhole), channel, channels, 0)
+		old = older + Tap(combined, width, Back(pos, token, 2, isWhole), channel, channels, 1)
+		sum = old + Tap(combined, width, Back(pos, token, 1, isWhole), channel, channels, 2)
+		all = sum + Tap(combined, width, token, channel, channels, 3)
 		all / (1 + (-all).Exponential)
 Tap(combined Numbers, width Number, token Number, channel Number, channels Number, weight Number) Number
 	Tiny.Tap((1, 2, 3, 4), 2, 1, 0, 1, 3) is 3 * Tiny.convolution(3)
@@ -106,56 +106,56 @@ Tapped(combined Numbers, width Number, token Number, channel Number, channels Nu
 Shifted(combined Numbers, tokens Number) Numbers
 	Hybrid.Single.Prepared(Drafter.Rows(2)).entered(0).IsNearlyEqual(1.773538, 0.00001)
 	Tiny.Shifted(Layer.Zeros(32), 1).Length is 48
-	let channels = convolution.Length / 4
-	let width = combined.Length / tokens
+	channels = convolution.Length / 4
+	width = combined.Length / tokens
 	for 3 * channels
 		Tapped(combined, width, tokens - 3 + (index / channels).Floor, index % channels, channels)
 Keyed(mixed Numbers) Numbers
 	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0))(3).IsNearlyEqual(0.7071064)
 	Tiny.Keyed((3, 4, 0, 1, 6, 8, 0, 0, 5, 0, 0, 0, 0, 0, 0, 0))(5).IsNearlyEqual(0.8)
-	let size = norm.Length
-	let channels = convolution.Length / 4
-	let keys = 2 * KeyHeads * size
-	let scales = Qwen3Block.Scales(mixed, size, Qwen3Block.Epsilon / size)
+	size = norm.Length
+	channels = convolution.Length / 4
+	keys = 2 * KeyHeads * size
+	scales = Qwen3Block.Scales(mixed, size, Qwen3Block.Epsilon / size)
 	for mixed
-		let within = index % channels
-		let query = within < keys / 2 then 1 / size else 1 / size.SquareRoot
+		within = index % channels
+		query = within < keys / 2 then 1 / size else 1 / size.SquareRoot
 		within >= keys then value else value * scales((index / size).Floor) * query
 Decayed(combined Numbers, tokens Number) Numbers
 	Tiny.Decayed(Layer.Zeros(64), 2).Length is 16
 	Tiny.Decayed(Layer.Zeros(32), 1)(4) is 0.5
-	let heads = decays.Length
-	let width = combined.Length / tokens
-	let betas = convolution.Length / 4 + heads * norm.Length
+	heads = decays.Length
+	width = combined.Length / tokens
+	betas = convolution.Length / 4 + heads * norm.Length
 	for 2 * tokens * heads
-		let start = (index / (2 * heads)).Floor * width
-		let head = index % heads
-		let rate = combined(start + betas + head)
-		let alpha = combined(start + betas + heads + head) + steps(head)
-		let decay = decays(head) * (1 + alpha.Exponential).Logarithm
+		start = (index / (2 * heads)).Floor * width
+		head = index % heads
+		rate = combined(start + betas + head)
+		alpha = combined(start + betas + heads + head) + steps(head)
+		decay = decays(head) * (1 + alpha.Exponential).Logarithm
 		index % (2 * heads) >= heads then 1 / (1 + (-rate).Exponential) else decay
 Updated(keyed Numbers, decayed Numbers, remembered Numbers, token Number) Numbers
 	Tiny.Updated(Layer.Zeros(16), (1, 1, 1, 1, 1, 1, 1, 1), Layer.Zeros(8), 0) is Layer.Zeros(16)
-	let size = norm.Length
-	let groups = KeyHeads
-	let heads = decays.Length
-	let start = token * convolution.Length / 4
+	size = norm.Length
+	groups = KeyHeads
+	heads = decays.Length
+	start = token * convolution.Length / 4
 	for memory
-		let head = (index / (size * size)).Floor
-		let column = head * size + index % size
-		let decay = decayed(2 * token * heads + head).Exponential
-		let change = keyed(start + 2 * groups * size + column) - remembered(column) * decay
-		let key = keyed(start + (groups + head % groups) * size + (index / size).Floor % size)
+		head = (index / (size * size)).Floor
+		column = head * size + index % size
+		decay = decayed(2 * token * heads + head).Exponential
+		change = keyed(start + 2 * groups * size + column) - remembered(column) * decay
+		key = keyed(start + (groups + head % groups) * size + (index / size).Floor % size)
 		value * decay + key * change * decayed((2 * token + 1) * heads + head)
 Read(keyed Numbers, token Number, part Number) Numbers
 	Tiny.Read(Layer.Zeros(16), 0, 0) is Layer.Zeros(8)
 	Tiny.Read(Layer.Zeros(16), 0, 1).Length is 8
-	let size = norm.Length
-	let groups = KeyHeads
+	size = norm.Length
+	groups = KeyHeads
 	for decays.Length * size
-		let head = (index / size).Floor
-		let first = token * convolution.Length / 4 + (part * groups + (head % groups)) * size
-		let column = head * size * size + (index % size)
+		head = (index / size).Floor
+		first = token * convolution.Length / 4 + (part * groups + (head % groups)) * size
+		column = head * size * size + (index % size)
 		mutable sum = 0
 		for size
 			sum = sum + keyed(first + index) * memory(column + index * size)
@@ -163,16 +163,16 @@ Read(keyed Numbers, token Number, part Number) Numbers
 Gated(raw Numbers, combined Numbers) Numbers
 	Tiny.Gated(Layer.Zeros(8), Layer.Zeros(32)) is Layer.Zeros(8)
 	DeltaBlock(Tiny, sigmoidGate = true).Gated((3, 4), Layer.Zeros(32)).First.IsNearlyEqual(0.424264 * Tiny.norm.First)
-	let size = norm.Length
-	let values = decays.Length * size
-	let width = combined.Length * values / raw.Length
-	let scales = Qwen3Block.Scales(raw, size, Qwen3Block.Epsilon)
+	size = norm.Length
+	values = decays.Length * size
+	width = combined.Length * values / raw.Length
+	scales = Qwen3Block.Scales(raw, size, Qwen3Block.Epsilon)
 	for raw
-		let gate = combined((index / values).Floor * width + convolution.Length / 4 + index % values)
-		let scaled = value * scales((index / size).Floor) * norm(index % size)
+		gate = combined((index / values).Floor * width + convolution.Length / 4 + index % values)
+		scaled = value * scales((index / size).Floor) * norm(index % size)
 		(sigmoidGate then scaled else scaled * gate) / (1 + (-gate).Exponential)
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.Combined(Drafter.Rows(1))).Output(Drafter.Rows(1)).Length is 8
-	let grouped = experts.basis.Grouped(merged, norm.Length, KeyHeads, decays.Length)
-	let attended = experts.basis.Sums(projection.weights, input, grouped)
+	grouped = experts.basis.Grouped(merged, norm.Length, KeyHeads, decays.Length)
+	attended = experts.basis.Sums(projection.weights, input, grouped)
 	experts.Added(Qwen3Block.Normalized(attended, 0, attended.Length, mlpNorm), attended)

@@ -11,8 +11,8 @@ Of(path Text, others Texts = List(Text)) Texts slow
 	for Added(List(Text) + path, others + Folder(path))
 		if File(value).Exists
 			start = Added(start, List(Text) + FileCompiler.Normalized(value))
-	let base = Directory.Files(root, "*.strict")
-	let reached = Reached(Added(Indexed(start), base), start, base)
+	base = Directory.Files(root, "*.strict")
+	reached = Reached(Added(Indexed(start), base), start, base)
 	TypeChoice(File(path).Exists then File(path).ReadLines else List(Text)).Chosen(reached, path)
 Folder(path Text) Texts
 	Plain.Folder("./Math").Length > 10
@@ -25,7 +25,7 @@ Folder(path Text) Texts
 	files
 Indexed(paths Texts) Texts
 	"./Math/Size.strict" is in SourceFiles(".").Indexed(List(Text) + "./Math/Vector2.strict")
-	let project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
+	project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
 	mutable local = List(Mutable(Text))
 	for paths
 		local = Added(local, List(Text) + Path(value).PathOnly.text)
@@ -40,21 +40,21 @@ Reached(known Texts, frontier Texts, reached Texts, searched = List(Text), folde
 	mutable names = List(Mutable(Text))
 	for frontier
 		names = names + Mentioned(value)
-	let mentioned = names.Unique
-	let unmatched = Mentions.Unmatched(mentioned, known) - searched
-	let indexed = unmatched.Length is 0 or folders.folders.Length > 0 then folders else TypeFolders.Of(root)
-	let grown = unmatched.Length is 0 then known else Added(known, TypeChoice(known).Unique(indexed.Files(unmatched)))
-	let visited = Added(reached, frontier)
+	mentioned = names.Unique
+	unmatched = Mentions.Unmatched(mentioned, known) - searched
+	indexed = unmatched.Length is 0 or folders.folders.Length > 0 then folders else TypeFolders.Of(root)
+	grown = unmatched.Length is 0 then known else Added(known, TypeChoice(known).Unique(indexed.Files(unmatched)))
+	visited = Added(reached, frontier)
 	Reached(grown, Matching(mentioned, grown) - visited, visited, searched + unmatched, indexed)
 Matching(names Texts, files Texts) Texts
 	SourceFiles(".").Reached(Imaging, List(Text), Imaging) is Imaging
 	SourceFiles(".").Matching(("Vector2s", "Missing"), Imaging + "./Math/Vector2.strict") is ("./Math/Vector2.strict")
-	let wanted = Mentions.Named(names)
+	wanted = Mentions.Named(names)
 	for files
-		let slashed = value.IndexOf("\\") >= 0 then value.Replace("\\", "/") else value
-		let slash = slashed.LastIndexOf("/")
-		let end = slashed.EndsWith(".strict") then slashed.Length - 7 else slashed.Length
-		let name = slash < 0 then slashed.Substring(0, end) else slashed.Substring(slash + 1, end - slash - 1)
+		slashed = value.IndexOf("\\") >= 0 then value.Replace("\\", "/") else value
+		slash = slashed.LastIndexOf("/")
+		end = slashed.EndsWith(".strict") then slashed.Length - 7 else slashed.Length
+		name = slash < 0 then slashed.Substring(0, end) else slashed.Substring(slash + 1, end - slash - 1)
 		if name is in wanted or name + "s" is in wanted
 			value
 Folders(folders Texts, depth Number, scanned = 0) Texts
@@ -90,19 +90,19 @@ Packages(file Text) Texts
 	SourceFiles(".").Packages("./Bytecode/SourceFiles.strict") is List(Text)
 	constant kind = "packages"
 	if Memo.Has(file, kind)
-		let cached = Memo.Texts(file, kind)
+		cached = Memo.Texts(file, kind)
 		return cached.First is Nothing then List(Text) else cached
-	let found = PackagesIn(File(file).ReadLines)
-	let stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
+	found = PackagesIn(File(file).ReadLines)
+	stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
 	found.Length is 0 then List(Text) else stored
 Mentioned(file Text) Texts
 	"Number" is in SourceFiles(".").Mentioned("./Math/Vector2.strict")
 	constant kind = "mentions"
-	let cached = Memo.Texts(file, kind)
+	cached = Memo.Texts(file, kind)
 	if cached.Length > 0
 		return cached.First is Nothing then List(Text) else cached
-	let found = Mentions(File(file).ReadLines).Types
-	let stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
+	found = Mentions(File(file).ReadLines).Types
+	stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
 	found.Length is 0 then found else stored
 PackagesIn(lines Texts) Texts
 	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"
@@ -117,7 +117,7 @@ PackageNames(tokens Texts) Texts
 	for tokens
 		if index + 1 < tokens.Length
 			if tokens(index + 1) is "/"
-				let package = Package(value)
+				package = Package(value)
 				if package is not ""
 					package
 Package(name Text) Text
@@ -130,10 +130,10 @@ Package(name Text) Text
 PackageWith(type Text, projects Text) Text
 	SourceFiles("C:/Missing").PackageWith("Adder", ".") is "./Examples/NativeAdd"
 	for Directory.Directories(projects)
-		let project = Path(value.Replace("\\", "/")).FileName.text
-		let first = project(0)
-		let sub = first is first.Upper and first is not first.Lower then projects + "/" + project else ""
-		let folder = sub is "" then "" else SubfolderWith(sub, type)
+		project = Path(value.Replace("\\", "/")).FileName.text
+		first = project(0)
+		sub = first is first.Upper and first is not first.Lower then projects + "/" + project else ""
+		folder = sub is "" then "" else SubfolderWith(sub, type)
 		if folder is not ""
 			return folder
 	""
@@ -141,7 +141,7 @@ SubfolderWith(parent Text, type Text) Text
 	SourceFiles(".").SubfolderWith(".", "Vector2") is "./Math"
 	SourceFiles(".").SubfolderWith(".", "Vector2s") is "./Math"
 	for Directory.Directories(parent)
-		let folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
+		folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
 		if File(folder + "/" + type + ".strict").Exists
 			return folder
 	type.EndsWith("s") then SubfolderWith(parent, type.Substring(0, type.Length - 1)) else ""

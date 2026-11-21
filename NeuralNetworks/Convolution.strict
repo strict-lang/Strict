@@ -8,58 +8,58 @@ constant Square = FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0)
 Rearranged(values Numbers, inputs Number, side Number) Float32s
 	Center.Rearranged((0, 1, 0, 0, 0, 0, 0, 0, 0), 1, 3) is (0, 1, 0, 0, 0, 0, 0, 0, 0)
 	Center.Rearranged((0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), 2, 3)(5) is 1
-	let size = side * side * inputs
-	let rowSize = side * inputs
+	size = side * side * inputs
+	rowSize = side * inputs
 	for values.Length
-		let rest = index % size
-		let row = (rest / rowSize).Floor
-		let column = (rest / inputs).Floor % side
+		rest = index % size
+		row = (rest / rowSize).Floor
+		column = (rest / inputs).Floor % side
 		values((((index / size).Floor * inputs + rest % inputs) * side + row) * side + column)
 Applied(map FeatureMap, affine Numbers, activation Activation) FeatureMap
 	Center.Applied(Square, (1, 0), Activation.Linear) is FeatureMap((1, 2, 3, 4), 2, 1, List(Number) + 0.5)
 	Above.Applied(Square, (1, 0), Activation.Linear).values is (0, 0, 1, 2)
 	Left.Applied(Square, (1, 0), Activation.Linear).values is (0, 1, 0, 3)
 	Center.Applied(Square, (1, -2), Activation.Relu).values is (0, 0, 1, 2)
-	let shape = (map.Height, map.width, map.channels, biases.Length, activation.kind, 1)
+	shape = (map.Height, map.width, map.channels, biases.Length, activation.kind, 1)
 	FeatureMap(Convolved(map.values, affine, weights, shape).Summed, map.width, biases.Length, biases)
 Doubled(map FeatureMap) FeatureMap
 	Convolution(Center.Folds, Center.biases).Doubled(Square).values is (1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4, 3, 3, 4, 4)
 	Convolution(Above.Folds, Above.biases).Doubled(Square).values is (0, 0, 0, 0, 1, 1, 2, 2, 1, 1, 2, 2, 3, 3, 4, 4)
 	Convolution(Box.Folds, Box.biases).Doubled(Square).values(5) is 18
-	let shape = (2 * map.Height, 2 * map.width, map.channels, biases.Length, Activation.Linear.kind, 2)
+	shape = (2 * map.Height, 2 * map.width, map.channels, biases.Length, Activation.Linear.kind, 2)
 	FeatureMap(Convolved(map.values, map.Identity, weights, shape).Summed, 2 * map.width, biases.Length, biases)
 Folds Float32s
 	Center.Folds is (0, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0)
 	Box.Folds(3) is 4
-	let inputs = weights.Length / biases.Length / 9
+	inputs = weights.Length / biases.Length / 9
 	constant FoldedTaps = 16
 	for FoldedTaps * weights.Length / 9
-		let tap = (index / inputs).Floor % 4
-		let parity = (index / (4 * weights.Length / 9)).Floor
-		let output = (index / (4 * inputs)).Floor % biases.Length
+		tap = (index / inputs).Floor % 4
+		parity = (index / (4 * weights.Length / 9)).Floor
+		output = (index / (4 * inputs)).Floor % biases.Length
 		Fold(output * 9 * inputs + index % inputs, inputs, (parity / 2).Floor, (tap / 2).Floor, parity % 2, tap % 2)
 Fold(start Number, inputs Number, rowParity Number, rowTap Number, columnParity Number, columnTap Number) Number
 	Box.Fold(0, 1, 0, 1, 0, 1) is 4
 	Center.Fold(0, 1, 1, 1, 0, 0) is 0
-	let rows = rowParity is rowTap then 1 else 2
-	let columns = columnParity is columnTap then 1 else 2
+	rows = rowParity is rowTap then 1 else 2
+	columns = columnParity is columnTap then 1 else 2
 	mutable sum = 0
 	for rows * columns
-		let row = rowTap * (1 + rowParity) + (index / columns).Floor
+		row = rowTap * (1 + rowParity) + (index / columns).Floor
 		sum = sum + weights(start + (row * 3 + columnTap * (1 + columnParity) + index % columns) * inputs)
 	sum
 Projected(map FeatureMap) FeatureMap
 	Convolution((1, 2, 3, 4), (0, 1)).Projected(FeatureMap((1, 0, 0, 1), 1, 2, (1, 1))).values is (1, 3, 2, 4)
 	Convolution((1, 2, 3, 4), (0, 1)).Projected(FeatureMap((1, 0, 0, 1), 1, 2, (1, 1))).offsets is (3, 8)
-	let shape = (1, map.values.Length / map.channels, map.channels, biases.Length)
-	let products = Products(map.values, weights, shape, (0, 0, map.channels, 1, 0, 0, 1, map.channels))
+	shape = (1, map.values.Length / map.channels, map.channels, biases.Length)
+	products = Products(map.values, weights, shape, (0, 0, map.channels, 1, 0, 0, 1, map.channels))
 	FeatureMap(products.Multiplied, map.width, biases.Length, Offsets(map.offsets))
 Offsets(offsets Numbers) Numbers
 	Convolution((1, 2, 3, 4), (0, 1)).Offsets((1, 1)) is (3, 8)
 	for biases.Length
-		let output = index
+		output = index
 		mutable sum = biases(output)
-		let first = output * offsets.Length
+		first = output * offsets.Length
 		for offsets
 			sum = sum + weights(first + index) * value
 		sum

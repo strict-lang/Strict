@@ -8,7 +8,7 @@ Host(name Text) Text
 	Peers.Host(Server) is "10.0.0.3"
 	Peers.Host(Home) is "10.0.0.1"
 	Peers.Host("missing") is ""
-	let at = Named.Index(name)
+	at = Named.Index(name)
 	at < 0 then "" else Hosts(at)
 IsAny(name Text) Boolean
 	Peers.IsAny("any")
@@ -25,13 +25,13 @@ Probed(line Text) Texts
 	open
 Answered(name Text, line Text) Boolean
 	Peers.Host("missing") is ""
-	let host = Host(name)
+	host = Host(name)
 	if host is ""
 		return false
-	let socket = Socket.Connect(host, Port)
+	socket = Socket.Connect(host, Port)
 	if socket is Error
 		return false
 	Resident("").Send(socket, line.Replace("need\t", "fit\t") + "\n")
-	let reply = Resident("").Received(socket, "\n")
+	reply = Resident("").Received(socket, "\n")
 	Socket.Close(socket)
 	reply.Trim.StartsWith("go")

@@ -24,13 +24,13 @@ Of(files Texts, path Text) KeptInference
 	Doctored.Of(Pair, "Logger.strict").joined.types.members(1) is KnownTypes.CountMembers
 	Empty.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
 	Writing.tested is "TextWriter.strict" and Writing.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
-	let at = files.Index(path)
+	at = files.Index(path)
 	if at >= 0 and IsCurrent(files, path)
 		return Replaced(files, at)
-	let rest = Rest(files, path)
-	let isKept = IsKept(rest)
-	let names = isKept then mentioned else Mentioned(rest)
-	let name = ResolveCheck.TypeName(path)
+	rest = Rest(files, path)
+	isKept = IsKept(rest)
+	names = isKept then mentioned else Mentioned(rest)
+	name = ResolveCheck.TypeName(path)
 	if at < 0 or name is in names or name + "s" is in names
 		return at < 0 then KeptInference(value, joined = ResolveCheck.Inference(files)) else Mentioned(files, at)
 	(isKept then value else Fresh(rest, names)).Joined(files, at)
@@ -47,7 +47,7 @@ Signature(lines Texts) Text
 	Empty.Signature(("Run", "\t1")) is Empty.Signature(("Run", "\t2"))
 	Empty.Signature(("has items Generics", "Run", "\t1")) is not Empty.Signature(("has items Numbers", "Run", "\t1"))
 	Empty.Signature(Reading) is not Empty.Signature(("mutable n Number", "Go Number", "\tn = 1"))
-	let marks = Changes(lines).Methods + "|" + Changes(lines, true).Methods
+	marks = Changes(lines).Methods + "|" + Changes(lines, true).Methods
 	Text.Combine(Unindented(lines) + marks, "\n")
 Unindented(lines Texts) Texts
 	Empty.Unindented(("Run", "\t1")) is ("Run")
@@ -56,20 +56,20 @@ Unindented(lines Texts) Texts
 			value
 Mentioned(files Texts, at Number) KeptInference
 	Writing.base.files is Pair and Writing.stamps.Length is 1
-	let shapes = BuildProfile.Shapes(files)
-	let inferring = Inferring(files, shapes, ResolveCheck.Generics(files, shapes))
-	let inferred = inferring.Raw
-	let typed = inferring.Refined(inferred)
-	let stamped = Stamps(Rest(files, files(at)))
-	let signed = Signature(shapes(at).lines)
+	shapes = BuildProfile.Shapes(files)
+	inferring = Inferring(files, shapes, ResolveCheck.Generics(files, shapes))
+	inferred = inferring.Raw
+	typed = inferring.Refined(inferred)
+	stamped = Stamps(Rest(files, files(at)))
+	signed = Signature(shapes(at).lines)
 	KeptInference(Directory.Current, inferring, stamped, inferred, typed, mentioned, typed, files(at), signed)
 Replaced(files Texts, at Number) KeptInference
 	Writing.Replaced(Pair, 1).joined is ResolveCheck.Inference(Pair)
-	let shape = ResolveCheck.Shapes(List(Text) + files(at)).First
-	let shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at + 1, base.shapes.Length - at - 1)
-	let indexed = TypeInference(KnownTypes(raw.types, positions = ResolveCheck.Positions(raw.types.names)), raw.constants)
-	let typed = Inferring(files, shapes, base.templates).Typed(indexed, at)
-	let methods = refined.types.methods.Slice(0, at) + typed + refined.types.methods.Slice(at + 1, files.Length - at - 1)
+	shape = ResolveCheck.Shapes(List(Text) + files(at)).First
+	shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at + 1, base.shapes.Length - at - 1)
+	indexed = TypeInference(KnownTypes(raw.types, positions = ResolveCheck.Positions(raw.types.names)), raw.constants)
+	typed = Inferring(files, shapes, base.templates).Typed(indexed, at)
+	methods = refined.types.methods.Slice(0, at) + typed + refined.types.methods.Slice(at + 1, files.Length - at - 1)
 	KeptInference(value, joined = TypeInference(KnownTypes(refined.types, methods = methods), refined.constants))
 IsKept(rest Texts) Boolean
 	Loggers.IsKept(Writer) and Empty.IsKept(List(Text)) is false
@@ -81,7 +81,7 @@ Fits(rest Texts) Boolean
 	folder is Directory.Current and rest is base.files
 Rest(files Texts, path Text) Texts
 	Empty.Rest(Pair, "Logger.strict") is Writer and Empty.Rest(Pair, "Text.strict") is Pair
-	let at = files.Index(path)
+	at = files.Index(path)
 	at < 0 then files else files.Slice(0, at) + files.Slice(at + 1, files.Length - at - 1)
 Stamps(sources Texts) Numbers
 	Empty.Stamps(List(Text) + "Missing.strict") is (0)
@@ -97,31 +97,31 @@ Mentioned(sources Texts) Texts
 Fresh(rest Texts, names Texts) KeptInference
 	Empty.Fresh(Writer, List(Text)).refined is ResolveCheck.Inference(Writer)
 	Empty.Fresh(Writer, List(Text)).IsKept(Writer)
-	let current = Stamps(rest)
-	let shapes = BuildProfile.Shapes(rest)
-	let inferring = Inferring(rest, shapes, ResolveCheck.Generics(rest, shapes))
-	let inferred = inferring.Raw
+	current = Stamps(rest)
+	shapes = BuildProfile.Shapes(rest)
+	inferring = Inferring(rest, shapes, ResolveCheck.Generics(rest, shapes))
+	inferred = inferring.Raw
 	KeptInference(Directory.Current, inferring, current, inferred, inferring.Refined(inferred), names, inferred)
 Joined(files Texts, at Number) KeptInference
 	Loggers.Joined(Swapped, 1).joined.types.names is ("TextWriter", "Logger")
-	let shape = ResolveCheck.Shapes(List(Text) + files(at)).First
-	let name = ResolveCheck.TypeName(files(at))
-	let templates = shape.UsesGenerics then base.templates + name else base.templates
-	let leaf = Inferring(List(Text) + files(at), List(TypeShape) + shape, templates).Raw
-	let shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at, base.shapes.Length - at)
-	let indexed = Whole(raw, leaf, at, files)
-	let typed = Inferring(files, shapes, templates).Typed(indexed, at)
-	let own = leaf.types
-	let overloaded = ResolveCheck.OverloadedMembers(indexed.types, shapes, own.members.First.types, own.parameters.First)
-	let renewed = KnownTypes(own, methods = List(Scope) + typed, parameters = List(Scope) + overloaded)
+	shape = ResolveCheck.Shapes(List(Text) + files(at)).First
+	name = ResolveCheck.TypeName(files(at))
+	templates = shape.UsesGenerics then base.templates + name else base.templates
+	leaf = Inferring(List(Text) + files(at), List(TypeShape) + shape, templates).Raw
+	shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at, base.shapes.Length - at)
+	indexed = Whole(raw, leaf, at, files)
+	typed = Inferring(files, shapes, templates).Typed(indexed, at)
+	own = leaf.types
+	overloaded = ResolveCheck.OverloadedMembers(indexed.types, shapes, own.members.First.types, own.parameters.First)
+	renewed = KnownTypes(own, methods = List(Scope) + typed, parameters = List(Scope) + overloaded)
 	KeptInference(value, joined = Whole(refined, TypeInference(renewed, leaf.constants), at, files))
 Whole(kept TypeInference, leaf TypeInference, at Number, files Texts) TypeInference
 	Loggers.Whole(Counted, Counted, 1, Pair).types.Index("TextWriter") is 1
-	let names = ResolveCheck.TypeNames(files)
-	let members = Among(kept.types.members, at, leaf.types.members)
-	let methods = Among(kept.types.methods, at, leaf.types.methods)
-	let parameters = Among(kept.types.parameters, at, leaf.types.parameters)
-	let types = KnownTypes(names, members, methods, parameters, ResolveCheck.Positions(names))
+	names = ResolveCheck.TypeNames(files)
+	members = Among(kept.types.members, at, leaf.types.members)
+	methods = Among(kept.types.methods, at, leaf.types.methods)
+	parameters = Among(kept.types.parameters, at, leaf.types.parameters)
+	types = KnownTypes(names, members, methods, parameters, ResolveCheck.Positions(names))
 	TypeInference(types, Among(kept.constants, at, leaf.constants))
 Among(scopes Scopes, at Number, added Scopes) Scopes
 	Empty.Among(KnownTypes.NoMemberPair, 1, List(Scope) + KnownTypes.CountMembers)(1) is KnownTypes.CountMembers

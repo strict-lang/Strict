@@ -21,7 +21,7 @@ constant Cleared = Descent(Once.Fresh).Epoch(Step, Down, 1)
 Probed(inputs List(Numbers), targets List(Numbers)) List(Network)
 	Descent(Network.Pair).Probed(Rows, Gate).Length is 4
 	mutable probes = List(Mutable(Network))
-	let fresh = network.Fresh
+	fresh = network.Fresh
 	for inputs
 		probes.Add(fresh.Trained(value, targets(index), 1))
 	probes
@@ -55,7 +55,7 @@ Averaged(probes List(Network)) Network
 BlendRow(current Numbers, mean Numbers, previous Numbers, rate Number) Numbers
 	Descent(Network.Pair).BlendRow((1, 1), (3, 5), List(Number), 0.5) is (2, 3)
 	Descent(Network.Pair).BlendRow((4, 4), (0, 0), (0, 0), 0) is (6, 6)
-	let stepped = Gpt2Block.Added(current * (1 - rate), mean * rate)
+	stepped = Gpt2Block.Added(current * (1 - rate), mean * rate)
 	if previous.Length is 0
 		return stepped
 	Gpt2Block.Added(stepped, Gpt2Block.Added(current, previous * -1) * Layer.Momentum)
@@ -63,9 +63,9 @@ BlendLayer(current Layer, mean Layer, rate Number) Layer
 	Descent(Network.Pair).BlendLayer(Layer.Halves, Layer.Halves, 0).weights is Layer.Halves.weights
 	mutable rows = List(Mutable(Numbers))
 	for current.weights
-		let previous = current.previousWeights.Length is 0 then List(Number) else current.previousWeights(index)
+		previous = current.previousWeights.Length is 0 then List(Number) else current.previousWeights(index)
 		rows.Add(BlendRow(value, mean.weights(index), previous, rate))
-	let earlier = current.previousBiases.Length is 0 then List(Number) else current.previousBiases
+	earlier = current.previousBiases.Length is 0 then List(Number) else current.previousBiases
 	Layer(rows, BlendRow(current.biases, mean.biases, earlier, rate), current.activation, current.weights, current.biases)
 Mixed(average Network, rate Number) List(Layer)
 	Descent(Network.Pair).Mixed(Network.Pair, 0).First.weights is Network.Pair.layers.First.weights

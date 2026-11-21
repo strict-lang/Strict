@@ -24,7 +24,7 @@ Part(name Text) Texts
 	(name, name + ".mlir", name + ".llvm.mlir")
 Deleted(path Text)
 	Intermediates.Deleted("Compiler/output/missing") is not Error
-	let started = Process.Elapsed
+	started = Process.Elapsed
 	for as long as File(path).Exists and Process.Elapsed - started < 5
 		File(path).Delete
 		if File(path).Exists
@@ -35,10 +35,10 @@ Replaced(executable Text, target Text) Text
 	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
 	Intermediates.Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
-	let unrunnable = Unrunnable(executable, target)
+	unrunnable = Unrunnable(executable, target)
 	if unrunnable is not ""
 		return unrunnable
-	let old = Free(executable)
+	old = Free(executable)
 	File(executable).Rename(old)
 	File(target).Rename(executable)
 	if File(target).Exists
@@ -53,13 +53,13 @@ Unrunnable(executable Text, target Text) Text
 	Intermediates.Unrunnable("Compiler/output/strict.exe", Process.Current.executable) is ""
 	if Path(executable).FileName.RemoveExtension.text is not "strict"
 		return ""
-	let ran = Process.RunTool(target, "version")
+	ran = Process.RunTool(target, "version")
 	ran.exitCode is 0 then "" else target + " does not run (version exit " + ran.exitCode + "), " + executable + " stays"
 Free(executable Text) Text
 	Intermediates.Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
 	IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0
 	IsWindows is false or Intermediates.Free(Held.base + ".exe") is Held.base + ".old2.exe"
-	let pattern = Path(executable).FileName.text.Replace(".exe", ".old*.exe")
+	pattern = Path(executable).FileName.text.Replace(".exe", ".old*.exe")
 	for Directory.Files(Path(executable).PathOnly.text, pattern)
 		File(value).Delete
 	mutable number = 1

@@ -16,26 +16,26 @@ Run Number
 	if Process.OperatingSystem is not "Windows"
 		logger.Log("CheckThrottling reads the power throttling of a Windows process")
 		return 0
-	let folder = "Compiler/output/ThrottlingCheck" + 1000000.Random.Floor
+	folder = "Compiler/output/ThrottlingCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	if result is Error
 		return result
 	logger.Log("CheckThrottling passed")
 	0
 Checked(folder Text) Boolean
-	let src = folder + "/ThrottlingCheck.strict"
+	src = folder + "/ThrottlingCheck.strict"
 	File(src).Write(ProbeLines)
-	let built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
 	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else CompiledAndRan(folder)
 CompiledAndRan(folder Text) Boolean
-	let cFile = folder + "/check.c"
+	cFile = folder + "/check.c"
 	File(cFile).Write(CodeA + CodeB + CodeC + CodeD + CodeE + CodeF + CodeG + CodeH + CodeI + CodeJ)
-	let checker = folder + "/check.exe"
-	let comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + checker + "\"", CompileSeconds)
+	checker = folder + "/check.exe"
+	comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + checker + "\"", CompileSeconds)
 	if comp.exitCode is not 0
 		return Error("CompileFailed: " + comp.Output + comp.error)
-	let ran = Process.RunTool(checker, "\"" + folder + "/ThrottlingCheck.exe\"", CheckSeconds)
+	ran = Process.RunTool(checker, "\"" + folder + "/ThrottlingCheck.exe\"", CheckSeconds)
 	ran.exitCode is not 0 then Error("ThrottlingFailed: " + ran.Output + ran.error) else true

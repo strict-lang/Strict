@@ -31,12 +31,12 @@ Indexed List(MemberEntry)
 	Reading.Indexed.Length is 0
 	Pairs.Indexed.Length is 0
 	MlirParameters(MlirFunction(List(TypeEntry) + Texting, Texting, Membered.function.method)).Indexed.Length is 0
-	let layout = MlirLayout(function)
-	let isWrapper = layout.Represented(TypeEntry.ShortName(function.type.Name)).StartsWith("List(")
+	layout = MlirLayout(function)
+	isWrapper = layout.Represented(TypeEntry.ShortName(function.type.Name)).StartsWith("List(")
 	if MlirFlats(function, 0).IsListed(function.type.Name) or (layout.IsStruct(function.type.Name) or isWrapper) is false
 		return List(MemberEntry)
 	for function.type.members
-		let kind = layout.Represented(TypeEntry.ShortName(value.typeName))
+		kind = layout.Represented(TypeEntry.ShortName(value.typeName))
 		if value.IsConstant is false and kind.StartsWith("List(") and IsLooped(value.Name)
 			value
 IsLooped(name Text) Boolean
@@ -46,7 +46,7 @@ IsLooped(name Text) Boolean
 		return false
 	mutable depth = 0
 	for function.method.instructions
-		let isEnd = value.kind is InstructionType.LoopEnd
+		isEnd = value.kind is InstructionType.LoopEnd
 		depth = depth + (value.kind is InstructionType.LoopBegin then 1 else (isEnd then -1 else 0))
 		if depth > 0 and value.kind is InstructionType.IndexCall and value.texts(0) is name
 			return true
@@ -55,14 +55,14 @@ IsFixed(name Text) Boolean
 	Reading.IsFixed("numbers")
 	for function.method.instructions
 		if value.kind is in Writers
-			let target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
+			target = value.kind is InstructionType.StoreConstantToVariable then value.texts.Last else value.texts.First
 			if target is name or target.StartsWith(name + "(")
 				return false
 	true
 Hoisted(entries List(MemberEntry)) Texts
 	Reading.Hoisted(Reading.function.method.parameters).Length is 4
 	Membered.Hoisted(Membered.Indexed).First is "    %q_numbers = llvm.load %v_numbers : !llvm.ptr -> f64"
-	let fixed = FixedLists
+	fixed = FixedLists
 	mutable lines = List(Mutable(Text))
 	for entries
 		if value.Name is in fixed
@@ -72,18 +72,18 @@ Started(name Text, parameter Text) Texts
 	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"
 	Reading.Started("numbers", "%p1").Last is "    %k_numbers = func.call @strict_list_version() : () -> i64"
 	Bytes.Started("pixels", "%p1").Last is "    %b_pixels = func.call @strict_list_host_bytes(%p1) : (f64) -> !llvm.ptr"
-	let items = "    %h_" + name + " = func.call @strict_list_hoisted(" + parameter + ") : (f64) -> !llvm.ptr"
-	let length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
-	let started = (items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
-	let bytes = "    %b_" + name + " = func.call @strict_list_host_bytes(" + parameter + ") : (f64) -> !llvm.ptr"
+	items = "    %h_" + name + " = func.call @strict_list_hoisted(" + parameter + ") : (f64) -> !llvm.ptr"
+	length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
+	started = (items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
+	bytes = "    %b_" + name + " = func.call @strict_list_host_bytes(" + parameter + ") : (f64) -> !llvm.ptr"
 	IsBytes(name) then started + bytes else started
 Read(name Text, list Text, position Text, nameBits Text, result Text) Text
 	Reading.Read("a", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_read(%h_a, %n_a, %i, %nb, %k_a, %l)") > 0
 	Bytes.Read("pixels", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_byte_read(%b_pixels, %h_pixels") > 0
-	let hoisted = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits
-	let operands = hoisted + ", %k_" + name + ", " + list + ")"
+	hoisted = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits
+	operands = hoisted + ", %k_" + name + ", " + list + ")"
 	if IsBytes(name)
-		let call = "    " + result + " = func.call @strict_hoisted_byte_read(%b_" + name + ", "
+		call = "    " + result + " = func.call @strict_hoisted_byte_read(%b_" + name + ", "
 		return call + operands.Substring(1) + ByteReadTypes
 	"    " + result + " = func.call @strict_hoisted_read" + operands + " : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64"
 Fetched(name Text, list Text, position Text, nameBits Text, result Text) Texts
@@ -95,9 +95,9 @@ Fetched(name Text, list Text, position Text, nameBits Text, result Text) Texts
 Deferred(name Text, position Text, result Text) Texts
 	Reading.Deferred("a", "%i", "%x")(0) is "    %xa = func.call @strict_deferred_at(%n_a, %i, %failed)" + DeferredTypes
 	Reading.Deferred("a", "%i", "%x").Last is "    %x = llvm.load %xp" + ReadScope + " : !llvm.ptr -> f64"
-	let call = " = func.call @strict_deferred_at(%n_" + name + ", " + position + ", %failed)" + DeferredTypes
-	let address = " = llvm.getelementptr %h_" + name + "[" + result + "a]" + MlirFastLoop.Pointer + "f64"
-	let loaded = "    " + result + " = llvm.load " + result + "p" + ReadScope + " : !llvm.ptr -> f64"
+	call = " = func.call @strict_deferred_at(%n_" + name + ", " + position + ", %failed)" + DeferredTypes
+	address = " = llvm.getelementptr %h_" + name + "[" + result + "a]" + MlirFastLoop.Pointer + "f64"
+	loaded = "    " + result + " = llvm.load " + result + "p" + ReadScope + " : !llvm.ptr -> f64"
 	("    " + result + "a" + call, "    " + result + "p" + address, loaded)
 Fixed(name Text) Text
 	Reading.Fixed("numbers") is "numbers"
@@ -107,7 +107,7 @@ Fixed(name Text) Text
 		return name
 	mutable source = ""
 	for function.method.instructions
-		let written = Source(index, name)
+		written = Source(index, name)
 		if written is "?" or written is not "" and source is not "" and written is not source
 			return ""
 		source = written is "" then source else written
@@ -116,20 +116,20 @@ Source(at Number, name Text) Text
 	Aliasing.Source(1, "copy") is "numbers"
 	Aliasing.Source(5, "other") is "?"
 	Aliasing.Source(5, "copy") is ""
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is not in Writers
 		return ""
-	let target = entry.kind is InstructionType.StoreConstantToVariable then entry.texts.Last else entry.texts.First
+	target = entry.kind is InstructionType.StoreConstantToVariable then entry.texts.Last else entry.texts.First
 	if target is not name
 		return target.StartsWith(name + "(") then "?" else ""
-	let loaded = entry.kind is InstructionType.StoreRegisterToVariable then Loaded(at, entry.payload(0)) else ""
+	loaded = entry.kind is InstructionType.StoreRegisterToVariable then Loaded(at, entry.payload(0)) else ""
 	loaded is in FixedLists then loaded else "?"
 Loaded(at Number, register Number) Text
 	Aliasing.Loaded(1, 0) is "numbers"
 	Aliasing.Loaded(5, 3) is ""
-	let reuse = LoadReuse(function.method.instructions)
+	reuse = LoadReuse(function.method.instructions)
 	for at
-		let earlier = function.method.instructions(at - 1 - index)
+		earlier = function.method.instructions(at - 1 - index)
 		if reuse.Written(earlier) is register
 			return earlier.kind is InstructionType.LoadVariableToRegister then earlier.texts(0) else ""
 	""

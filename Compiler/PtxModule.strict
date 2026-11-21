@@ -13,8 +13,8 @@ Functions List(PtxFunction)
 	Sample.Functions.Length is 2 and Sample.Functions.First.name is "A_B_1_gpu2"
 	Sample.Functions.First.lines is (".visible .entry A_B_1_gpu2(", ")", "{", "\tret;", "}")
 	Sample.Functions.Last.name is "strict_device_byte_read"
-	let found = Found
-	let names = Names(found)
+	found = Found
+	names = Names(found)
 	for found
 		if names.Index(value.name) is index
 			value
@@ -24,23 +24,23 @@ Names(found List(PtxFunction)) Texts
 		value.name
 Found List(PtxFunction)
 	Sample.Found.Length is 2
-	let heads = Heads
+	heads = Heads
 	for heads
-		let part = lines.Slice(value, End(heads, index) - value)
+		part = lines.Slice(value, End(heads, index) - value)
 		if ";" is not in part
 			PtxFunction(Named(lines(value)), Renumbered(Code(part.Slice(0, part.Index("}") + 1))))
 Renumbered(code Texts) Texts
 	Sample.Renumbered(("a", "$L__BB12_3:", "\tbra.uni \t$L__BB12_3;")) is ("a", "$L__BB0_3:", "\tbra.uni \t$L__BB0_3;")
 	Sample.Renumbered(List(Text) + "a") is List(Text) + "a"
-	let label = Label(Text.Combine(code, "\n"))
+	label = Label(Text.Combine(code, "\n"))
 	for code
 		label is "" then value else value.Replace(label, Block + "0_")
 Label(text Text) Text
 	Sample.Label("x $L__BB12_3;") is "$L__BB12_" and Sample.Label("x") is ""
-	let at = text.IndexOf(Block)
+	at = text.IndexOf(Block)
 	if at < 0
 		return ""
-	let rest = text.Substring(at + Block.Length, text.Length - at - Block.Length)
+	rest = text.Substring(at + Block.Length, text.Length - at - Block.Length)
 	Block + rest.Substring(0, rest.IndexOf("_") + 1)
 End(heads Numbers, at Number) Number
 	Sample.End((3, 9, 16), 0) is 9 and Sample.End((3, 9, 16), 2) is Sample.lines.Length
@@ -48,7 +48,7 @@ End(heads Numbers, at Number) Number
 Named(head Text) Text
 	Sample.Named(".visible .entry A_B_1_gpu2(") is "A_B_1_gpu2"
 	Sample.Named(".func  (.param .b32 r) strict_device_byte_read") is "strict_device_byte_read"
-	let declared = head.EndsWith("(") then head.Substring(0, head.Length - 1) else head
+	declared = head.EndsWith("(") then head.Substring(0, head.Length - 1) else head
 	declared.Substring(declared.LastIndexOf(" ") + 1)
 Code(part Texts) Texts
 	Sample.Code(("a", "\t// b", "", "  // c", "d  // e")) is ("a", "d")
@@ -57,7 +57,7 @@ Code(part Texts) Texts
 			Bare(value)
 Bare(line Text) Text
 	Sample.Bare("\t} // callseq 1") is "\t}" and Sample.Bare("\tret;") is "\tret;"
-	let at = line.IndexOf("//")
+	at = line.IndexOf("//")
 	at < 0 then line else line.Substring(0, at).TrimEnd
 Header Text
 	Sample.Header is "//\n.version 8.7\n"

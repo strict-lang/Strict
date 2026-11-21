@@ -16,8 +16,8 @@ Kind(parameter MemberEntry) Text
 	Many.Kind(Listed.First) is "Tline" and Many.Kind(Listed.Last) is "twords"
 	Many.Kind(Typed.First) is "Ofont Font"
 	Many.Kind(MemberEntry("sizes", "Strict/List(Number)", List(InstructionEntry), false)) is "nsizes"
-	let short = TypeEntry.ShortName(parameter.typeName)
-	let found = ("Number", "Boolean", "Text", "List(Number)", "List(Text)").Index(short)
+	short = TypeEntry.ShortName(parameter.typeName)
+	found = ("Number", "Boolean", "Text", "List(Number)", "List(Text)").Index(short)
 	found < 0 then "O" + parameter.Name + " " + short else ("N", "B", "T", "n", "t")(found) + parameter.Name
 Described Texts
 	Many.Described is ("Nseed", "BisFirst", "Tline", "twords", "O...")

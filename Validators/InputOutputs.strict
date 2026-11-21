@@ -28,26 +28,26 @@ Parsed(paths Texts, contents List(Texts)) List(Texts)
 	Reading.Parsed(List(Text) + "Demo/TextReader.strict", List(Texts) + Loading).First.First.StartsWith("File.Loaded")
 	"Reader.Loaded" is in Reading.Used(Flagging, Flagging.Statements, Flags, 0)
 	for paths
-		let name = Path(value).FileName.RemoveExtension.text
+		name = Path(value).FileName.RemoveExtension.text
 		Records(name is in Traits then "File" else name, contents(index))
 Records(type Text, lines Texts) Texts
 	Reading.Records("Reader", Loading) is ("Reader.Loaded||File.ReadLines", "Reader.Run||Reader.Loaded")
 	InputOutputs.Records("File", ("Name Text", "Exists Boolean slow")) is ("File.Name||", "File.Exists|slow|")
 	InputOutputs.Records("Reader", "Exists Boolean slow") is ("Reader.Exists||")
 	Reading.Records("Reader", Checking)(1) is "Reader.IsLoaded||List.Length,Reader.Loaded"
-	let shape = TypeShape(lines)
-	let bodies = MethodBodies(type, shape, inference)
-	let statements = bodies.Statements
+	shape = TypeShape(lines)
+	bodies = MethodBodies(type, shape, inference)
+	statements = bodies.Statements
 	for lines
 		if shape.IsMethodHeader(value)
-			let isSeed = HeaderTokens(Tokenizer(value).Tokens).ReturnsSlow and type is in Kinds
-			let calls = Text.Combine(Used(bodies, statements, lines, index), ",")
+			isSeed = HeaderTokens(Tokenizer(value).Tokens).ReturnsSlow and type is in Kinds
+			calls = Text.Combine(Used(bodies, statements, lines, index), ",")
 			type + "." + Tokenizer(value).Tokens.First + (isSeed then "|slow|" else "||") + calls
 Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Number) Texts
 	Reading.Used(Checks, Checks.Statements, Checking, 0).Length is 3
 	"Reader.Loaded" is in Reading.Used(Checks, Checks.Statements, Checking, 0)
 	Reading.Used(Checks, Checks.Statements, Checking, 5).Length is 2
-	let last = FileCheck.LastLine(lines, header)
+	last = FileCheck.LastLine(lines, header)
 	mutable isTesting = true
 	mutable keys = List(Mutable(Text))
 	for statements
@@ -60,7 +60,7 @@ IsTest(bodies MethodBodies, scoped ScopedStatement) Boolean
 	Reading.IsTest(Flagging, Flagging.Statements.First) and Reading.IsTest(Flagging, Flagging.Statements(1)) is false
 	Reading.IsTest(Flagging, ScopedStatement(Constants.Statement(1, 1), KnownTypes.NoMembers, 1))
 	Reading.IsTest(Flagging, ScopedStatement(Constants.Statement(2, 1), KnownTypes.NoMembers, 2)) is false
-	let isConstant = scoped.statement.text.StartsWith("constant ")
+	isConstant = scoped.statement.text.StartsWith("constant ")
 	(scoped.statement.Kind is not "Declaration" or isConstant) and bodies.StatementType(scoped) is "Boolean"
 Settled(records Texts) Texts
 	InputOutputs.Settled(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
@@ -94,9 +94,9 @@ Issues(path Text, lines Texts, reaching Texts) List(ValidationIssue)
 	InputOutputs.Issues("Demo/Reader.strict", Loading, "Reader.Loaded").Length is 1
 	InputOutputs.Issues("Compiler/Reader.strict", Loading, "Reader.Loaded").Length is 0
 	InputOutputs.Issues("Demo/Reader.strict", "has logger", "Reader.has").Length is 0
-	let isInternal = Path(Path(path).PathOnly.text).FileName.text is in TypeSource.InternalPackages
-	let type = Path(path).FileName.RemoveExtension.text
-	let shape = TypeShape(lines)
+	isInternal = Path(Path(path).PathOnly.text).FileName.text is in TypeSource.InternalPackages
+	type = Path(path).FileName.RemoveExtension.text
+	shape = TypeShape(lines)
 	for lines
 		if isInternal is false and shape.IsMethodHeader(value) and IsUnmarked(type, value, reaching)
 			ValidationIssue("InputOutputMustBeSlow", type + "." + Tokenizer(value).Tokens.First + Hint, index + 1)
@@ -105,5 +105,5 @@ IsUnmarked(type Text, line Text, reaching Texts) Boolean
 	InputOutputs.IsUnmarked("Reader", "Loaded Texts slow", "Reader.Loaded") is false
 	InputOutputs.IsUnmarked("Reader", "Run", "Reader.Run") is false
 	InputOutputs.IsUnmarked("Reader", "Shown Texts", "Reader.Loaded") is false
-	let header = HeaderTokens(Tokenizer(line).Tokens)
+	header = HeaderTokens(Tokenizer(line).Tokens)
 	header.tokens(0) is not "Run" and header.ReturnsSlow is false and type + "." + header.tokens(0) is in reaching

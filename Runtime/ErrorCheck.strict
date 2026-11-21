@@ -18,8 +18,8 @@ Value(checked VmValue, target VmValue, frame Frame, position Number) VmValue
 IsTracedIn(error VmValue, frame Frame) Boolean
 	Returning.IsTracedIn(Frame.Twice.Traced(VmValue.OfError("a"), 0, List(VmValue)), Frame.Twice)
 	Returning.IsTracedIn(VmValue.OfError("a"), Frame.Twice) is false
-	let traces = (error.kind is "Strict/ErrorWithValue" then error.items(0) else error).items(1).items
+	traces = (error.kind is "Strict/ErrorWithValue" then error.items(0) else error).items(1).items
 	if traces.Length is 0
 		return false
-	let name = TypeEntry.ShortName(frame.owner) + "." + frame.method.Name
+	name = TypeEntry.ShortName(frame.owner) + "." + frame.method.Name
 	traces.Last.items(0).text is name or traces.Last.items(0).text.StartsWith(name + "(")

@@ -10,15 +10,15 @@ Parts(path Text) Texts slow
 	ValidateCheck.Parts("./Math") is ResolveCheck.Tree("./Math")
 	path.EndsWith(".strict") then List(Text) + path else ResolveCheck.Tree(path)
 Checked(folder Text, root Text) Number slow
-	let problems = FileCompiler.Problems(Files(folder))
-	let files = Parsed(Files(folder), problems)
-	let mutations = Mutations(files + ResolveCheck.AllFiles(root))
-	let isBase = folder.Replace("\\", "/").Replace("/.", "") is root
-	let duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
-	let reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
-	let inference = ResolveCheck.Inference(reached)
-	let sure = SureMethods(inference).Named(reached)
-	let reaching = InputOutputs(inference).Named(reached)
+	problems = FileCompiler.Problems(Files(folder))
+	files = Parsed(Files(folder), problems)
+	mutations = Mutations(files + ResolveCheck.AllFiles(root))
+	isBase = folder.Replace("\\", "/").Replace("/.", "") is root
+	duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
+	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
+	inference = ResolveCheck.Inference(reached)
+	sure = SureMethods(inference).Named(reached)
+	reaching = InputOutputs(inference).Named(reached)
 	Reported(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching)).Sum
 Parsed(files Texts, problems Texts) Texts
 	ValidateCheck.Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
@@ -31,11 +31,11 @@ Files(folder Text) Texts slow
 	folder.EndsWith(".strict") then List(Text) + folder else Directory.Files(folder, "*.strict")
 Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, inference Expressions/TypeInference, known List(Texts)) Numbers slow
 	for files
-		let lines = File(value).ReadLines
-		let typeName = Path(value).FileName.RemoveExtension.text
-		let found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
-		let reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
-		let tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
+		lines = File(value).ReadLines
+		typeName = Path(value).FileName.RemoveExtension.text
+		found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
+		reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
+		tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
 		Logged(value, found + reached + tested + TestFiles(value, lines, known(1)).Issues) + Unresolved(value, inference)
 Unresolved(path Text, inference Expressions/TypeInference) Number slow
 	Reported(ResolveCheck.Unresolved(path, inference))
@@ -44,12 +44,12 @@ Reported(issues Texts) Number
 		logger.Log(value)
 	issues.Length
 CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean) List(ValidationIssue)
-	let limits = Limits(lines, isBase, Limits.Scale(path), typeName).Issues + SubstringLengths(lines).Issues
-	let rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
-	let names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
-	let based = (isBase then List(ValidationIssue) else BaseCalls(lines).Issues) + NotFoundResults(lines).Issues
-	let shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based + SingleLists(lines).Issues
-	let extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
+	limits = Limits(lines, isBase, Limits.Scale(path), typeName).Issues + SubstringLengths(lines).Issues
+	rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
+	names = Names(lines).Issues + Recursions(lines, typeName).Issues + Inlines(lines).Issues
+	based = (isBase then List(ValidationIssue) else BaseCalls(lines).Issues) + NotFoundResults(lines).Issues
+	shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based + SingleLists(lines).Issues
+	extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
 	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
 Logged(path Text, found List(ValidationIssue)) Number
 	for found
@@ -70,5 +70,5 @@ FileMutations(shape Expressions/TypeShape, typeName Text = "") Texts
 	for shape.lines
 		if shape.IsMethodHeader(value) and HeaderTokens(Tokenizer(value).Tokens).ReturnsMutable
 			mutations.Add(Tokenizer(value).Tokens.First)
-	let changing = Changes(shape.lines).Methods
+	changing = Changes(shape.lines).Methods
 	mutations + changing + (changing.Length is 0 or typeName is "" then List(Text) else List(Text) + typeName)

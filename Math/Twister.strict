@@ -8,7 +8,7 @@ Seeded(seed Number) Twister slow
 Grown(position Number) Numbers
 	Twister.Seeded(5489).Grown(0).Length is MersenneTwister.StateSize + MersenneTwister.Twists
 	Twister.Seeded(5489).Grown(227).Length is MersenneTwister.StateSize + 2 * MersenneTwister.Twists
-	let generated = words.Length - MersenneTwister.StateSize
+	generated = words.Length - MersenneTwister.StateSize
 	position < generated then words else words + MersenneTwister(words).Generation(words, generated)
 Number Number
 	Twister.Seeded(42).Skipped(624).Number is 108880612

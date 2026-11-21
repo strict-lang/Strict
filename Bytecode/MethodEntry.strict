@@ -42,11 +42,11 @@ Integers(names BinaryNames) Numbers
 	HelloRun.Integers(BinaryNames("Run", "None", "Hi")) is (0, 1, 0, 2, 7, 173, 1, 2, 2, 1, 0, 3, 4, 32, 0, 1, 0)
 	mutable integers = List(Number) + names.Index(Name) + names.Index(declaredType) + parameters.Length
 	for parameters
-		let member = value.Integers(names)
+		member = value.Integers(names)
 		integers = integers + member.Length + member
 	integers = integers + instructions.Length
 	for instructions
-		let instruction = value.Integers(names)
+		instruction = value.Integers(names)
 		integers = integers + instruction.Length + instruction
 	integers
 IsInitializer(members List(MemberEntry)) Boolean
@@ -73,7 +73,7 @@ Fit(name Text, count Number, target Text, names Texts) Number
 	Logged.Fit("Add", 1, "None", List(Text) + "other") is 2
 	GoRun.Fit("Go", 0, "None", List(Text)) is 0
 	Logged.Fit("Add", -1, "None", List(Text)) is 1
-	let check = name is "to" and target is not ""
+	check = name is "to" and target is not ""
 	if Name is not name or (check then TypeEntry.ShortName(target) is not TypeEntry.ShortName(returnType) else false)
 		return 0
 	if count < 0
@@ -112,7 +112,7 @@ Implied(entry InstructionEntry) Texts
 	Converting.Implied(Converting.instructions.Last) is ("Strict/Digit.to Text")
 	if entry.texts(1) is "to"
 		return List(Text) + (entry.texts(0) + ".to " + TypeEntry.ShortName(entry.texts(2)))
-	let isCode = entry.texts(0).StartsWith("Strict/Dictionary(") and entry.texts(1) is "Code"
+	isCode = entry.texts(0).StartsWith("Strict/Dictionary(") and entry.texts(1) is "Code"
 	isCode then List(Text) + "Strict/Text.Code" else List(Text)
 LoopBeginOf(position Number) Number
 	MlirKinds.Paired.function.method.LoopBeginOf(5) is 1
@@ -120,8 +120,8 @@ LoopBeginOf(position Number) Number
 	CountingLoop.LoopBeginOf(1) is 0
 	mutable depth = 0
 	for position
-		let candidate = position - 1 - index
-		let kind = instructions(candidate).kind
+		candidate = position - 1 - index
+		kind = instructions(candidate).kind
 		if kind is InstructionType.LoopBegin and depth is 0
 			return candidate
 		depth = depth + (kind is InstructionType.LoopEnd then 1 else kind is InstructionType.LoopBegin then -1 else 0)
@@ -144,7 +144,7 @@ LoopEndOf(position Number) Number
 	CountingLoop.LoopEndOf(0) is 1
 	mutable depth = 0
 	for Range(position + 1, instructions.Length)
-		let kind = instructions(value).kind
+		kind = instructions(value).kind
 		if kind is InstructionType.LoopEnd and depth is 0
 			return value
 		depth = depth + (kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0)
@@ -153,9 +153,9 @@ IsWritingResult(position Number) Boolean
 	MlirLoops.Collecting.function.method.IsWritingResult(1)
 	CountingLoop.IsWritingResult(0) is false
 	mutable at = position + 1
-	let end = LoopEndOf(position)
+	end = LoopEndOf(position)
 	for as long as at < end
-		let entry = instructions(at)
+		entry = instructions(at)
 		if entry.kind is InstructionType.InvokeWriteToList and entry.texts.Last is "forResult"
 			return true
 		at = entry.kind is InstructionType.LoopBegin then LoopEndOf(at) + 1 else at + 1

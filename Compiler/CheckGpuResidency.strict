@@ -29,36 +29,36 @@ constant PairB = "Squared Pair\n\tPair(1, 2).Squared is Pair(-3, 4)\n\tPair(real
 constant SimpleA = "has logger\nTable(count Number) Numbers\n\tSimpleRead(Logger).Table(2) is (0, 0.5)\n\tfor count\n\t\tindex / count\nRead(table Numbers, count Number) Numbers\n\tSimpleRead(Logger).Read((1, 2), 3) is (2, 4, 2)"
 constant SimpleB = "\tfor count\n\t\ttable(index % table.Length) * 2\nRun\n\tlet read = Read(Table(1000), 2000000)\n\tlogger.Log(\"read \" + read(0) + \" \" + read(1999999))"
 Run Number
-	let folder = "Compiler/output/ResidencyCheck" + 1000000.Random.Floor
+	folder = "Compiler/output/ResidencyCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	if result is Error
 		return result
 	logger.Log("A list computed on the GPU from numbers alone stays there until the CPU reads it")
 	0
 Checked(folder Text) Boolean
-	let first = CheckPrimary(folder)
+	first = CheckPrimary(folder)
 	if first is Error
 		return first
-	let second = CheckSmallAndPair(folder)
+	second = CheckSmallAndPair(folder)
 	if second is Error
 		return second
-	let third = CheckSimpleAndOrbit(folder)
+	third = CheckSimpleAndOrbit(folder)
 	third is Error then third else CheckViewingAndPending(folder)
 CheckPrimary(folder Text) Boolean
-	let out = BuiltAndRan(folder, "GpuResidency", PrimaryCode, true, true)
+	out = BuiltAndRan(folder, "GpuResidency", PrimaryCode, true, true)
 	if out is Error
 		return out
-	let checkedOut = CheckedStrings(out, ResWantsA + ResWantsB, ResBansA + ResBansB)
+	checkedOut = CheckedStrings(out, ResWantsA + ResWantsB, ResBansA + ResBansB)
 	if checkedOut is Error
 		return checkedOut
 	if out.Split("Strict GPU download of 4194304 numbers").Length is not 2
 		return Error("Averaged download count wrong")
 	CheckedBytes(File(folder + "/codes.bin").ReadBytes)
 PrimaryCode Text
-	let a = ResA1 + "\n" + ResA2 + "\n" + ResB1 + ResB2 + "\n" + ResC1 + "\n" + ResC2 + "\n" + ResD1
+	a = ResA1 + "\n" + ResA2 + "\n" + ResB1 + ResB2 + "\n" + ResC1 + "\n" + ResC2 + "\n" + ResD1
 	a + "\n" + ResD2 + "\n" + PrimaryTail
 PrimaryTail Text
 	ResE1 + "\n" + ResE2 + "\n" + ResF1 + "\n" + ResF2 + "\n" + ResG1 + "\n" + ResG2
@@ -70,45 +70,45 @@ CheckedBytes(bytes Bytes) Boolean
 			return Error("codes.bin byte mismatch at " + index)
 	true
 CheckSmallAndPair(folder Text) Boolean
-	let small = BuiltAndRan(folder, "SmallGpu", SmallA + "\n" + SmallB + "\n" + SmallC, false, false)
+	small = BuiltAndRan(folder, "SmallGpu", SmallA + "\n" + SmallB + "\n" + SmallC, false, false)
 	if small is Error or "gpu kernels 2, doubled 6, opened 2" is not in small
 		return Error("SmallGpu failed: " + (small to Text))
 	File(folder + "/Pair.strict").Write((PairA + "\n" + PairB).Split("\n"))
-	let pair = BuiltAndRan(folder, "PairEscape", EscapeSrc, false, false)
+	pair = BuiltAndRan(folder, "PairEscape", EscapeSrc, false, false)
 	pair is Error or "gpu kernels 1, 64 3" is not in pair then Error("PairEscape failed: " + (pair to Text)) else true
 CheckSimpleAndOrbit(folder Text) Boolean
-	let simple = BuiltAndRan(folder, "SimpleRead", SimpleA + "\n" + SimpleB, false, false)
+	simple = BuiltAndRan(folder, "SimpleRead", SimpleA + "\n" + SimpleB, false, false)
 	if simple is Error or "read 0 1.998" is not in simple
 		return Error("SimpleRead failed: " + (simple to Text))
 	File(folder + "/Orbiting.strict").Write(OrbitingSrc.Split("\n"))
-	let orbit = BuiltAndRan(folder, "OrbitGpu", OrbitGpuSrc, false, false)
+	orbit = BuiltAndRan(folder, "OrbitGpu", OrbitGpuSrc, false, false)
 	orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit then Error("OrbitGpu failed: " + (orbit to Text)) else true
 CheckViewingAndPending(folder Text) Boolean
 	File(folder + "/Pair.strict").Write(UpdatedPair.Split("\n"))
 	File(folder + "/Viewing.strict").Write((ViewA + ViewB).Split("\n"))
-	let built = Process.RunTool(Process.Current.executable, "build " + folder + "/Viewing.strict", ToolSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + folder + "/Viewing.strict", ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildViewingFailed: " + built.Output + built.error)
-	let ext = Process.OperatingSystem is "Windows" then ".exe" else ""
-	let tested = Process.RunTool(folder + "/obj/Viewing.test" + ext, "", ToolSeconds)
+	ext = Process.OperatingSystem is "Windows" then ".exe" else ""
+	tested = Process.RunTool(folder + "/obj/Viewing.test" + ext, "", ToolSeconds)
 	if tested.exitCode is not 0
 		return Error("Viewing native test failed: " + tested.Output + tested.error)
-	let pend = BuiltAndRan(folder, "PendingRead", PendingSrc, false, true)
-	let out = pend is Error then pend to Text else pend
+	pend = BuiltAndRan(folder, "PendingRead", PendingSrc, false, true)
+	out = pend is Error then pend to Text else pend
 	CheckedStrings(out, List(Text) + "halved 128 ", List(Text) + "Strict GPU download of 256 numbers")
 UpdatedPair Text
 	(PairA + "\n" + PairB).Replace("has imaginary Number\n", "has imaginary Number\nconstant Zero = Pair(0, 0)\n")
 BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean) Text
 	File(folder + "/" + name + ".strict").Write(code.Split("\n"))
-	let built = Process.RunTool(Process.Current.executable, "build " + folder + "/" + name + ".strict", ToolSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + folder + "/" + name + ".strict", ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed " + name + ": " + built.Output + built.error)
-	let win = Process.OperatingSystem is "Windows"
-	let dl = downloads then (win then "set STRICT_GPU_DOWNLOADS=1&& " else "STRICT_GPU_DOWNLOADS=1 ") else ""
-	let gStr = (win then "set STRICT_GPU=" + (allGpu then "all" else "") + "&& " else "STRICT_GPU= ") + dl
-	let target = "\"" + folder + "/" + name + (win then ".exe\"" else "\"")
-	let c1 = "cd " + (win then "/d " else "") + "\"" + folder + "\" && " + gStr + target
-	let ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + c1 else "-c \"" + c1 + "\"", ToolSeconds)
+	win = Process.OperatingSystem is "Windows"
+	dl = downloads then (win then "set STRICT_GPU_DOWNLOADS=1&& " else "STRICT_GPU_DOWNLOADS=1 ") else ""
+	gStr = (win then "set STRICT_GPU=" + (allGpu then "all" else "") + "&& " else "STRICT_GPU= ") + dl
+	target = "\"" + folder + "/" + name + (win then ".exe\"" else "\"")
+	c1 = "cd " + (win then "/d " else "") + "\"" + folder + "\" && " + gStr + target
+	ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + c1 else "-c \"" + c1 + "\"", ToolSeconds)
 	logger.Log(ran.Output.Trim)
 	ran.exitCode is not 0 then Error("RunFailed " + name + ": " + ran.Output + ran.error) else ran.Output
 CheckedStrings(output Text, wants Texts, bans Texts) Boolean

@@ -21,15 +21,15 @@ IsDeferring Boolean
 	Nesting.IsDeferring is false
 	mutable isChecked = false
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let kind = function.method.instructions(value).kind
+		kind = function.method.instructions(value).kind
 		if kind is InstructionType.LoopBegin or kind is InstructionType.CheckError and IsKept(value) is false
 			return false
 		isChecked = isChecked or kind is InstructionType.CheckError
 	isChecked
 IsKept(at Number) Boolean
 	Reading.IsKept(5)
-	let entry = function.method.instructions(at)
-	let kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(at, entry.payload(0)))
+	entry = function.method.instructions(at)
+	kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(at, entry.payload(0)))
 	entry.texts.Length is 0 and kind is "Number"
 Versioned(prefix Texts, original Texts) Texts
 	Doubling.Versioned(List(Text), Original) is Original
@@ -38,10 +38,10 @@ Versioned(prefix Texts, original Texts) Texts
 	Reading.Versioned(List(Text), Original).Last is "  original"
 	if IsDeferring is false or function.Packing is not ""
 		return original
-	let label = "^loop" + position
-	let entered = "    cf.cond_br " + Temp("rr") + ", ^fdloop" + position + "deferred, " + label + "retry"
-	let checked = (Checking, "    cf.cond_br %failedNow, " + label + "retry, " + label + "done")
-	let finished = ("  " + label + "done:", "    return %zero : f64", "  " + label + "retry:")
+	label = "^loop" + position
+	entered = "    cf.cond_br " + Temp("rr") + ", ^fdloop" + position + "deferred, " + label + "retry"
+	checked = (Checking, "    cf.cond_br %failedNow, " + label + "retry, " + label + "done")
+	finished = ("  " + label + "done:", "    return %zero : f64", "  " + label + "retry:")
 	(Failing + Ready + entered) + Copied(prefix) + checked + finished + original
 Packed(original Texts) Texts
 	Doubling.Packed(Original).Last is "  original"
@@ -51,10 +51,10 @@ Packed(original Texts) Texts
 	MlirDeferred(MlirFunction(Doubling.function, Packing = "for 32"), 2).Packed(Original) is Original
 	if function.Packing is not "" or MlirLoops(function, position).Collection is not "List(Number)" or IsNested
 		return original
-	let label = "^loop" + position
-	let halves = "^fhloop" + position + "packed"
-	let targets = "[default: " + label + "generic, 32: ^fsloop" + position + "packed, 16: " + halves + ", 17: " + halves
-	let switched = "    cf.switch " + Temp("zp") + " : i64, " + targets + "]"
+	label = "^loop" + position
+	halves = "^fhloop" + position + "packed"
+	targets = "[default: " + label + "generic, 32: ^fsloop" + position + "packed, 16: " + halves + ", 17: " + halves
+	switched = "    cf.switch " + Temp("zp") + " : i64, " + targets + "]"
 	(Formats + switched) + Variant("32", "s") + Variant("16", "h") + ("  " + label + "generic:") + original
 IsNested Boolean
 	Nesting.IsNested
@@ -72,13 +72,13 @@ IsItemized(isChunk Boolean) Boolean
 	isChunk and IsNested is false
 Formats Texts
 	Doubling.Formats.Last is "    %f2brain_for = arith.cmpi eq, %t2zp, %t2zb : i64"
-	let list = function.Load(Temp("zv"), "%r" + function.method.instructions(position).payload(0))
-	let packed = "    " + Temp("zp") + " = func.call @strict_list_packed(" + Temp("zv") + ") : (f64) -> i64"
-	let brain = "    %f" + position + "brain_for = arith.cmpi eq, " + Temp("zp") + ", " + Temp("zb") + " : i64"
+	list = function.Load(Temp("zv"), "%r" + function.method.instructions(position).payload(0))
+	packed = "    " + Temp("zp") + " = func.call @strict_list_packed(" + Temp("zv") + ") : (f64) -> i64"
+	brain = "    %f" + position + "brain_for = arith.cmpi eq, " + Temp("zp") + ", " + Temp("zb") + " : i64"
 	(list, packed, "    " + Temp("zb") + " = arith.constant 17 : i64", brain)
 Variant(width Text, letter Text) Texts
 	Doubling.Variant("16", "h").First is "  ^fhloop2packed:"
-	let packed = MlirParallel(MlirFunction(function, Packing = MlirFastLoop.Iterated + " " + width), position).Iterated
+	packed = MlirParallel(MlirFunction(function, Packing = MlirFastLoop.Iterated + " " + width), position).Iterated
 	Renamed(List(Text) + ("  ^loop" + position + "packed:") + packed, letter)
 Renamed(lines Texts, letter Text) Texts
 	Doubling.Renamed(List(Text) + "    %t2m = arith.cmpi slt, %t2ki, %to : i64", "s").Last.EndsWith("%fs2ki, %to : i64")
@@ -88,30 +88,30 @@ Renamed(lines Texts, letter Text) Texts
 Copied(prefix Texts) Texts
 	Reading.Copied(List(Text)).First is "  ^fdloop2deferred:"
 	Text.Combine(Reading.Copied(MlirParallel(Reading.function, 2).Checked)).IndexOf("%fd2ki, %to : i64") > 0
-	let parallel = MlirParallel(MlirFunction(function, IsDeferred = true), position)
+	parallel = MlirParallel(MlirFunction(function, IsDeferred = true), position)
 	Renamed((List(Text) + ("  ^loop" + position + "deferred:")) + prefix + parallel.Body + parallel.Next.Slice(0, 3), "d")
 Ready Texts
 	Reading.Ready.Last is "    %t2rr = arith.andi %t2rj0, %t2rj0 : i1"
 	mutable lines = ("    " + Temp("rz") + " = llvm.mlir.zero : !llvm.ptr", "    " + Temp("rt") + " = arith.constant true")
 	mutable ready = Temp("rt")
 	for Lists
-		let joined = "    " + Temp("rj" + index) + " = arith.andi " + ready + ", " + Temp("re" + index) + " : i1"
+		joined = "    " + Temp("rj" + index) + " = arith.andi " + ready + ", " + Temp("re" + index) + " : i1"
 		lines = lines + Present(value, index) + joined
 		ready = Temp("rj" + index)
 	lines + ("    " + Temp("rr") + " = arith.andi " + ready + ", " + ready + " : i1")
 Present(list Text, at Number) Texts
 	Reading.Present("numbers", 0).Last is "    %t2re0 = arith.andi %t2rp0, %t2rn0 : i1"
-	let pointer = "    " + Temp("rp" + at) + " = llvm.icmp \"ne\" %h_" + list + ", " + Temp("rz") + " : !llvm.ptr"
-	let filled = "    " + Temp("rn" + at) + " = arith.cmpf ogt, %n_" + list + ", %zero : f64"
+	pointer = "    " + Temp("rp" + at) + " = llvm.icmp \"ne\" %h_" + list + ", " + Temp("rz") + " : !llvm.ptr"
+	filled = "    " + Temp("rn" + at) + " = arith.cmpf ogt, %n_" + list + ", %zero : f64"
 	(pointer, filled, "    " + Temp("re" + at) + " = arith.andi " + Temp("rp" + at) + ", " + Temp("rn" + at) + " : i1")
 Lists Texts
 	Reading.Lists is ("numbers")
-	let parameters = MlirParameters(function)
+	parameters = MlirParameters(function)
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if entry.kind is InstructionType.IndexCall
-			let fixed = parameters.Fixed(entry.texts(0))
+			fixed = parameters.Fixed(entry.texts(0))
 			if fixed is not "" and parameters.IsBytes(fixed) is false and fixed is not in names
 				names.Add(fixed)
 	names
@@ -123,7 +123,7 @@ Scoped(lines Texts) Texts
 	Reading.Scoped(List(Text) + "    func.call @f() : () -> ()") is List(Text) + "    func.call @f() : () -> ()"
 	if MlirListDestined(function, position).IsDestined or lines.Last.StartsWith("    llvm.store ") is false
 		return lines
-	let store = lines.Last
-	let at = store.IndexOf(" : ")
-	let scoped = store.Substring(0, at) + MlirParameters.WriteScope + store.Substring(at)
+	store = lines.Last
+	at = store.IndexOf(" : ")
+	scoped = store.Substring(0, at) + MlirParameters.WriteScope + store.Substring(at)
 	lines.Slice(0, lines.Length - 1) + scoped

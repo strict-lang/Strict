@@ -22,17 +22,17 @@ IsKept(entry InstructionEntry, at Number) Boolean
 	Rebuilt.IsKept(MlirOwned.Rebuilding(3), 3) is false
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return IsRead(at, entry.payload(0))
-	let writer = MlirKinds(function).Writer(at, entry.payload(0))
-	let source = writer >= 0 then function.method.instructions(writer) else entry
-	let isBuilt = source.kind is InstructionType.Invoke then source.texts(1) is "from" else false
+	writer = MlirKinds(function).Writer(at, entry.payload(0))
+	source = writer >= 0 then function.method.instructions(writer) else entry
+	isBuilt = source.kind is InstructionType.Invoke then source.texts(1) is "from" else false
 	isBuilt then MlirConstants(function, writer).IsConstant is false else false
 IsRead(at Number, register Number) Boolean
 	Moving.IsRead(0, 3)
 	Moving.IsRead(5, 7)
 	MlirAlone(MlirOwned.Copying).IsRead(3, 1) is false
 	Checked.IsRead(0, 0)
-	let steps = function.method.instructions
-	let reuse = LoadReuse(steps)
+	steps = function.method.instructions
+	reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
 		if register is in reuse.Reads(steps(value)) and IsPlain(steps(value)) is false
 			return false
@@ -51,12 +51,12 @@ IsPlain(entry InstructionEntry) Boolean
 Check(name Text, position Number) Text
 	Moving.Check("moved", 3) is "    %t3re = arith.cmpf une, %t3old, %zero : f64"
 	Rebuilt.Check("moved", 7) is "    %t7re = func.call @strict_rc_unshared(%t7old) : (f64) -> i1"
-	let line = IsAlone(name) then "    %t#re = arith.cmpf une, %t#old, %zero : f64" else MlirOwned.Reusing(0)
+	line = IsAlone(name) then "    %t#re = arith.cmpf une, %t#old, %zero : f64" else MlirOwned.Reusing(0)
 	line.Replace("#", position to Text)
 IsAlias(name Text) Boolean
 	Aliased.IsAlias("inline1_self")
 	for function.method.instructions
-		let isLoad = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
+		isLoad = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
 		if isLoad and IsRead(index, value.payload(0)) is false
 			return false
 	true

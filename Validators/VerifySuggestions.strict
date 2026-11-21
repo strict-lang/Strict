@@ -13,25 +13,25 @@ constant LargerLines = ("has number", "from(first Number, second Number)", "	Lar
 constant Prefix = "Suggestion: "
 constant ToolSeconds = 30
 Run(arguments Texts) Number
-	let root = arguments.Length > 0 then arguments.First else "."
-	let folder = "Examples/SuggestCheck" + 1000000.Random.Floor
-	let result = Verified(folder, root)
+	root = arguments.Length > 0 then arguments.First else "."
+	folder = "Examples/SuggestCheck" + 1000000.Random.Floor
+	result = Verified(folder, root)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Verified(folder Text, root Text) slow
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	File(folder + "/Bogus.strict").Write(Bogus)
-	let first = CheckedCase(folder, root, "Suggesting", "Doubled", Suggest, "number + number")
+	first = CheckedCase(folder, root, "Suggesting", "Doubled", Suggest, "number + number")
 	if first is Error
 		return first
-	let second = CheckedCase(folder, root, "Temperature", "Clamped", Temp, "celsius.Clamp(minimum, maximum)")
+	second = CheckedCase(folder, root, "Temperature", "Clamped", Temp, "celsius.Clamp(minimum, maximum)")
 	if second is Error
 		return second
 	CheckedMore(folder, root)
 CheckedMore(folder Text, root Text) slow
-	let failing = File(folder + "/Temperature.strict").ReadLines + Extra
-	let third = RanSuggest(folder, root, "Temperature.strict Clamped -", failing)
+	failing = File(folder + "/Temperature.strict").ReadLines + Extra
+	third = RanSuggest(folder, root, "Temperature.strict Clamped -", failing)
 	if third is Error or "Suggestion: celsius.Clamp(minimum, maximum)" is not in third or OnlyPrefix(third) is false
 		return Error("UnsavedOrFailingMethodsBroken: " + (third to Text))
 	if File(folder + "/Temperature.strict").ReadLines is not Temp
@@ -41,55 +41,55 @@ CheckedMore(folder Text, root Text) slow
 CheckedEdges(folder Text, root Text) slow
 	File(folder + "/Wrapper.strict").Write(Wrapper)
 	File(folder + "/Dispatcher.strict").Write(Dispatcher)
-	let looped = RanSuggest(folder, root, "Wrapper.strict Clamped", List(Text))
+	looped = RanSuggest(folder, root, "Wrapper.strict Clamped", List(Text))
 	if looped is Error or looped.Trim is not "" or HasBinary(folder)
 		return Error("RecursiveDispatcherFailed: " + (looped to Text))
 	logger.Log("Recursive dispatcher: no passing suggestions")
 	File(folder + "/Dual.strict").Write(Dual)
-	let dual = RanSuggest(folder, root, "Dual.strict 5", List(Text))
+	dual = RanSuggest(folder, root, "Dual.strict 5", List(Text))
 	if dual is Error or "Suggestion: number + number" is not in dual
 		return Error("OverloadSelectionFailed: " + (dual to Text))
 	logger.Log("Overloaded method selected by header line: passed")
 	CheckedMissing(folder, root)
 CheckedMissing(folder Text, root Text) slow
-	let empty = RanSuggest(folder, root, "Suggesting.strict Doubled -", ("has number", "Doubled Number"))
+	empty = RanSuggest(folder, root, "Suggesting.strict Doubled -", ("has number", "Doubled Number"))
 	if empty is Error or empty.Trim is not ""
 		return Error("NoTestsCaseFailed: " + (empty to Text))
-	let missing = RanResult(folder, root, "Suggesting.strict Missing", List(Text))
+	missing = RanResult(folder, root, "Suggesting.strict Missing", List(Text))
 	if missing.exitCode is not 2 or "MethodNotFound" is not in missing.Output
 		return Error("UnknownMethodCaseFailed: " + (missing.exitCode to Text) + " " + missing.Output)
 	logger.Log("No tests and unknown method: passed")
-	let built = CheckedCase(folder, root, "Built", "from", Built, "number = first + second")
+	built = CheckedCase(folder, root, "Built", "from", Built, "number = first + second")
 	if built is Error
 		return built
 	logger.Log("from of one member: passed")
 	CheckedCalls(folder, root)
 CheckedCalls(folder Text, root Text) slow
-	let appended = CheckedCase(folder, root, "Appending", "from", AppendingLines, "text = first + second")
+	appended = CheckedCase(folder, root, "Appending", "from", AppendingLines, "text = first + second")
 	if appended is Error
 		return appended
-	let even = CheckedCase(folder, root, "Even", "from", EvenLines, "boolean = input % 2 is 0")
+	even = CheckedCase(folder, root, "Even", "from", EvenLines, "boolean = input % 2 is 0")
 	if even is Error
 		return even
-	let measured = CheckedCase(folder, root, "Measured", "from", MeasuredLines, "number = input.Length")
+	measured = CheckedCase(folder, root, "Measured", "from", MeasuredLines, "number = input.Length")
 	if measured is Error
 		return measured
-	let larger = CheckedCase(folder, root, "Larger", "from", LargerLines, "number = first.Maximum(second)")
+	larger = CheckedCase(folder, root, "Larger", "from", LargerLines, "number = first.Maximum(second)")
 	if larger is Error
 		return larger
 	logger.Log("One-call from bodies: passed")
 CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expected Text) slow
-	let path = folder + "/" + name + ".strict"
+	path = folder + "/" + name + ".strict"
 	File(path).Write(lines)
-	let started = Process.Elapsed
-	let output = RanSuggest(folder, root, name + ".strict " + method + " -", lines)
+	started = Process.Elapsed
+	output = RanSuggest(folder, root, name + ".strict " + method + " -", lines)
 	if output is Error
 		return output
-	let bodies = Bodies(output)
-	let bad = expected is not in bodies or HasBlocked(bodies) or OnlyPrefix(output) is false
+	bodies = Bodies(output)
+	bad = expected is not in bodies or HasBlocked(bodies) or OnlyPrefix(output) is false
 	if bad or File(path).ReadLines is not lines or HasBinary(folder)
 		return Error("CaseFailed " + name + "." + method + ": " + output)
-	let elapsed = ((Process.Elapsed - started) * 1000).Round
+	elapsed = ((Process.Elapsed - started) * 1000).Round
 	logger.Log(name + "." + method + ": " + (bodies to Text) + " (" + elapsed + " ms)")
 Bodies(output Text) Texts
 	Bodies("Suggestion: a\nSuggestion: b") is ("a", "b")
@@ -104,7 +104,7 @@ HasBlocked(bodies Texts) Boolean
 	HasBlocked(List(Text) + "Number.Epsilon") and HasBlocked(List(Text) + "Number.Pi")
 	HasBlocked(List(Text) + "Bogus.Zero")
 	for bodies
-		let bad = ".Epsilon" is in value or ".Pi" is in value
+		bad = ".Epsilon" is in value or ".Pi" is in value
 		if value is in ("number", "celsius", "minimum", "maximum") or "Bogus." is in value or bad
 			return true
 	false
@@ -119,20 +119,20 @@ OnlyPrefix(output Text) Boolean
 HasBinary(folder Text) Boolean slow
 	Directory.Exists(folder + "/obj") and Directory.Files(folder + "/obj", "*.strictbinary").Length > 0
 RanSuggest(folder Text, root Text, tail Text, input Texts) Text slow
-	let result = RanResult(folder, root, tail, input)
+	result = RanResult(folder, root, tail, input)
 	result.exitCode is 0 then result.Output else Error(result.Output + result.error)
 Command(root Text, tail Text) Text
-	let head = tail.Split(" ").First
+	head = tail.Split(" ").First
 	"\"" + Process.Current.executable + "\" suggest " + tail.Replace(head, head + " \"" + TypeSource.Absolute(root) + "\"")
 RanResult(folder Text, root Text, tail Text, input Texts) ProcessResult slow
-	let home = Directory.Current
-	let command = Command(root, tail)
+	home = Directory.Current
+	command = Command(root, tail)
 	if input.Length > 0
 		File(folder + "/stdin.txt").Write(Text.Combine(input, "\n").Lines)
 	Directory.Change(folder)
-	let isWindows = Process.OperatingSystem is "Windows"
-	let redirected = input.Length > 0 then command + " < stdin.txt" else command
-	let flag = isWindows then "/c \"" else "-c \""
-	let result = Process.RunTool(isWindows then "cmd" else "sh", flag + redirected + "\"", ToolSeconds)
+	isWindows = Process.OperatingSystem is "Windows"
+	redirected = input.Length > 0 then command + " < stdin.txt" else command
+	flag = isWindows then "/c \"" else "-c \""
+	result = Process.RunTool(isWindows then "cmd" else "sh", flag + redirected + "\"", ToolSeconds)
 	Directory.Change(home)
 	result

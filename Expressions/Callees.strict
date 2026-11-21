@@ -10,7 +10,7 @@ Lines(receiver Text, method Text, at Number) Texts
 	Blurring.Lines("bitmap", "Missing", 4).Length is 0
 	Blurring.Lines("pixel", "Floor", 4).Length is 0
 	Blurring.Lines("", "Sums", 4) is Sums
-	let found = receiver is "" then lines else Source(TypeOf(receiver, at))
+	found = receiver is "" then lines else Source(TypeOf(receiver, at))
 	for found
 		if value.StartsWith(method + "(") or value is method
 			return found.Slice(index, Callees(found, folder).BlockEnd(index) - index)
@@ -19,7 +19,7 @@ Source(type Text) Texts
 	Blurring.Source("Bitmap").First is "has Size"
 	Blurring.Source("").Length is 0
 	Blurring.Source("Missing").Length is 0
-	let path = folder + "/" + type + ".strict"
+	path = folder + "/" + type + ".strict"
 	type is not "" and folder is not "" and File(path).Exists then File(path).ReadLines else List(Text)
 TypeOf(name Text, at Number) Text
 	Blurring.TypeOf("bitmap", 2) is "Bitmap"
@@ -31,8 +31,8 @@ TypeOf(name Text, at Number) Text
 	mutable header = 0
 	for at
 		header = BodyParser.Indent(lines(index)) is 0 then index else header
-	let parameters = HeaderTokens(Tokenizer(lines(header)).Tokens)
-	let position = parameters.ParameterNames.Index(name)
+	parameters = HeaderTokens(Tokenizer(lines(header)).Tokens)
+	position = parameters.ParameterNames.Index(name)
 	position < 0 then TypeShape(lines).MemberScope.TypeOf(name) else parameters.ParameterTypes(position)
 Parts(text Text) Texts
 	Blurring.Parts("pixel, f(a, b), value") is ("pixel", "f(a, b)", "value")
@@ -40,7 +40,7 @@ Parts(text Text) Texts
 	mutable depth = 0
 	mutable start = 0
 	for text.Length
-		let character = text(index)
+		character = text(index)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
 		if depth < 1 and character is ","
 			parts.Add(text.Substring(start, index - start))
@@ -51,7 +51,7 @@ Closing(text Text, open Number) Number
 	Blurring.Closing("(a", 0) is -1
 	mutable depth = 0
 	for Range(open, text.Length)
-		let character = text(value)
+		character = text(value)
 		depth = depth + (character is "(" then 1 else (character is ")" then -1 else 0))
 		if depth < 1
 			return value

@@ -20,20 +20,20 @@ Selected(node SyntaxNode, block CodeBlock) CodeBlock
 Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Case(IsOne, SyntaxNode("ElseValue", "", One), CodeBlock.Empty).instructions.Length is 2
 	(Cased.instructions.Length, Cased.instructions(5).line) is (7, 3)
-	let typed = TypeCase(selector, line, block)
+	typed = TypeCase(selector, line, block)
 	if typed is "false"
 		return block
-	let isElse = line.Kind is "ElseValue" or typed is "true"
-	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
-	let condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
-	let generated = ErrorCodegen(values).Handled(line.children.Last, condition)
-	let added = generated.Add(InstructionEntry.Return(generated.Result))
-	let returned = MethodCodegen(values).Lined(added, condition.instructions.Length, line.line)
+	isElse = line.Kind is "ElseValue" or typed is "true"
+	comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
+	condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
+	generated = ErrorCodegen(values).Handled(line.children.Last, condition)
+	added = generated.Add(InstructionEntry.Return(generated.Result))
+	returned = MethodCodegen(values).Lined(added, condition.instructions.Length, line.line)
 	isElse then returned else returned.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text
 	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "A")) is "true"
 	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "B")) is "false"
 	Plain.TypeCase(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty) is ""
 	Plain.TypeCase(Typed, SyntaxNode("ElseValue", "", ACase.children), CodeBlock.Empty.Declare("x", "B")) is ""
-	let comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
+	comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
 	line.Kind is "ElseValue" then "" else OperatorCodegen(values).Decided(comparison, block)

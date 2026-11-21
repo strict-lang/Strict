@@ -18,5 +18,5 @@ Run
 	constant speedUpCalculationsDivisor = 80
 	constant width = 1280 / speedUpCalculationsDivisor
 	constant height = 720 / speedUpCalculationsDivisor
-	let image = AdjustBrightness(Increase).Process(Image.Blank(Size(width, height)))
+	image = AdjustBrightness(Increase).Process(Image.Blank(Size(width, height)))
 	logger.Log("Brightness adjustment successful: " + image.Colors(width / 2, height / 2))

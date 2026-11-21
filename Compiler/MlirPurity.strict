@@ -39,12 +39,12 @@ IsSafe(inspected MlirFunction, at Number, depth Number) Boolean
 	Timing.IsSafe(Timing.function, 4, 0) is false
 	Clamping.IsSafe(Clamping.function, 6, 0)
 	Filtering.IsSafe(Filtering.function, 7, 0)
-	let entry = inspected.method.instructions(at)
+	entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.Invoke
 		return IsPureCall(inspected, at, depth)
 	if entry.kind is in Writes
 		return depth > 0 then IsOwned(inspected, entry) else IsWritable(entry.texts(0))
-	let isLeaving = depth is 0 and (entry.kind is InstructionType.Return or entry.kind is in Branches)
+	isLeaving = depth is 0 and (entry.kind is InstructionType.Return or entry.kind is in Branches)
 	isLeaving is false and IsPlain(inspected, at, depth) and (depth > 0 or IsLocal(entry))
 IsCollected(at Number) Boolean
 	Clamping.IsCollected(17)
@@ -52,7 +52,7 @@ IsCollected(at Number) Boolean
 	Doubling.IsCollected(5) and Clamping.IsCollected(3) is false
 	mutable open = 0
 	for Range(position + 1, at)
-		let kind = function.method.instructions(value).kind
+		kind = function.method.instructions(value).kind
 		if kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 			open = open + 1
 		if kind is InstructionType.JumpEnd
@@ -66,7 +66,7 @@ IsPlain(inspected MlirFunction, at Number, depth Number) Boolean
 	Doubling.IsPlain(MlirTexts.Joined, 3, 0)
 	Doubling.IsPlain(Setting, 0, 0) is false
 	Doubling.IsPlain(MlirKinds.Paired.function, 1, 0)
-	let kind = inspected.method.instructions(at).kind
+	kind = inspected.method.instructions(at).kind
 	if kind is not InstructionType.LoopBegin
 		return kind is not InstructionType.Set
 	depth > 0 or MlirLoops(inspected, at).IsCollecting is false
@@ -89,8 +89,8 @@ IsLocal(entry InstructionEntry) Boolean
 	Clamping.IsLocal(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "conditional0"))
 	if entry.kind is not in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return true
-	let name = entry.texts.Last.Split("(").First
-	let end = function.method.LoopEndOf(position)
+	name = entry.texts.Last.Split("(").First
+	end = function.method.LoopEndOf(position)
 	for function.method.instructions
 		if (index <= position or index >= end) and name is in value.texts
 			return false
@@ -112,7 +112,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Reading.IsPureCall(Reading.function, 4, 0)
 	Doubling.IsPureCall(Making, 1, 0)
 	Doubling.IsPureCall(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 0))), 4, 0) is false
-	let callees = MlirModule(inspected.types, "").Called(inspected, at)
+	callees = MlirModule(inspected.types, "").Called(inspected, at)
 	if IsAllowed(inspected, at, callees) is false
 		return false
 	callees.Length is 0 then IsIntrinsic(inspected, at) else IsKnown(callees.First, inspected, depth)
@@ -126,8 +126,8 @@ IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	Doubling.IsExternalSafe("Process", "RunTools") is false
 	Doubling.IsExternalSafe("TestBudget", "Expired")
 	Doubling.IsExternalSafe("TestBudget", "Started") is false
-	let decoder = PayloadDecoder(inspected.method.instructions(at))
-	let isNever = IsExternalSafe(TypeEntry.ShortName(decoder.Text(1)), decoder.Text(2)) is false
+	decoder = PayloadDecoder(inspected.method.instructions(at))
+	isNever = IsExternalSafe(TypeEntry.ShortName(decoder.Text(1)), decoder.Text(2)) is false
 	isNever is false and (callees.Length is 0 or MlirForeign(callees.First).IsForeign is false)
 IsExternalSafe(kind Text, method Text) Boolean
 	Doubling.IsExternalSafe("File", "ReadLines") and Doubling.IsExternalSafe("TestBudget", "Entered")
@@ -146,11 +146,11 @@ IsIntrinsic(inspected MlirFunction, at Number) Boolean
 	Doubling.IsIntrinsic(Making, 1)
 	Reading.IsIntrinsic(Reading.function, 4)
 	Doubling.IsIntrinsic(MlirTexts.Joined, 7)
-	let entry = inspected.method.instructions(at)
-	let decoder = PayloadDecoder(entry)
-	let type = inspected.TypeOf(decoder.Text(1))
-	let isConstructor = decoder.Text(2) is "from" and type.members.Length > 0
-	let helper = MlirCalls(inspected, at).NativeHelper(entry, decoder)
+	entry = inspected.method.instructions(at)
+	decoder = PayloadDecoder(entry)
+	type = inspected.TypeOf(decoder.Text(1))
+	isConstructor = decoder.Text(2) is "from" and type.members.Length > 0
+	helper = MlirCalls(inspected, at).NativeHelper(entry, decoder)
 	MlirTexts(inspected, at).IsConversion then true else isConstructor or helper is not ""
 IsKnown(callee MlirFunction, inspected MlirFunction, depth Number) Boolean
 	Doubling.IsKnown(MlirFunction(Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), Doubling.function, 0)
@@ -183,9 +183,9 @@ IsReachingGpu Boolean
 	Doubling.IsKnown(Timing.function, MlirFunction(Making, safeCalls = Dictionary(("Rows_Timed_1", 2))), 0)
 	MlirPurity(MlirCost.Devices.function, 2).IsReachingGpu
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let isCall = function.method.instructions(value).kind is InstructionType.Invoke
-		let callees = isCall then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
-		let symbol = callees.Length > 0 then callees.First.Symbol else ""
+		isCall = function.method.instructions(value).kind is InstructionType.Invoke
+		callees = isCall then MlirModule(function.types, "").Called(function, value) else List(MlirFunction)
+		symbol = callees.Length > 0 then callees.First.Symbol else ""
 		if symbol is in function.safeCalls and function.safeCalls(symbol) is 2
 			return true
 	MlirCost(function, position).IsDevice(function, position + 1, function.method.LoopEndOf(position), 0)
@@ -203,7 +203,7 @@ IsSteady Boolean
 IsChanging(at Number) Boolean
 	MlirPurity(MlirLoops.Collecting.function, 1).IsChanging(2) is false
 	MlirPurity(MlirKernel.Calling.function, 1).IsChanging(2)
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.StoreRegisterToVariable
 		return entry.texts(0).IndexOf("(") > 0
 	if entry.kind is in Writes

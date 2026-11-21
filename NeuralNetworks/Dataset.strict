@@ -13,9 +13,9 @@ Images(folder Text, classes Number) Dataset slow
 	Dataset.Images("NeuralNetworks/images", 2).targets is ((1, 0), (0, 1))
 	mutable images = List(Mutable(Numbers))
 	mutable labeled = List(Mutable(Numbers))
-	let folders = Directory.Directories(folder)
+	folders = Directory.Directories(folder)
 	for classes
-		let files = Directory.Files(folders(index), "*.png") + Directory.Files(folders(index), "*.jpg")
+		files = Directory.Files(folders(index), "*.png") + Directory.Files(folders(index), "*.jpg")
 		images = images + Pictures(files)
 		labeled = labeled + Labels(OneHot(index, classes), files.Length)
 	Dataset(images, labeled)
@@ -40,13 +40,13 @@ Labels Numbers
 Labeled List(Numbers)
 	Pairs.Labeled.First.Last is 0
 	Pairs.Labeled.First.Length is 5
-	let labels = Labels
+	labels = Labels
 	for inputs
 		value + labels(index)
 Agreement(predicted Numbers) Number
 	Pairs.Agreement((0, 1)) is 1
 	Pairs.Agreement((0, 0)) is 0.5
-	let expected = Labels
+	expected = Labels
 	mutable matching = 0
 	for predicted
 		if value is expected(index)
@@ -59,22 +59,22 @@ Kept(rows List(Numbers), isTesting Boolean) List(Numbers)
 			value
 Evaluated(name Text, sizes Numbers, epochs Number, hidden = Activation.Sigmoid) Text
 	Pairs.Evaluated("Pairs", (4, 3, 2), 1).StartsWith("Pairs test accuracy ")
-	let started = Process.Elapsed
-	let network = Network.Random(sizes, hidden).Learned(Training, epochs)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	started = Process.Elapsed
+	network = Network.Random(sizes, hidden).Learned(Training, epochs)
+	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	name + " test accuracy " + network.Accuracy(Testing) + " after " + epochs + " epochs in " + milliseconds + " ms"
 Shuffled Dataset
 	Pairs.Shuffled.inputs.Length is Pairs.inputs.Length
 	Pairs.Shuffled.targets.Length is Pairs.targets.Length
-	let order = Order(inputs.Length)
+	order = Order(inputs.Length)
 	Dataset(Picked(inputs, order), Picked(targets, order))
 Order(count Number) Numbers
 	Pairs.Order(5).Sum is 10
 	Pairs.Order(5).Length is 5
 	mutable order = Indices(count)
 	for count
-		let other = index + (count - index).Random.Floor
-		let current = order(index)
+		other = index + (count - index).Random.Floor
+		current = order(index)
 		order(index) = order(other)
 		order(other) = current
 	order

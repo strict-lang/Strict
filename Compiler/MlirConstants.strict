@@ -11,8 +11,8 @@ IsConstant Boolean
 	MlirConstants(MlirTexts.Joined, 1).IsConstant is false
 	MlirConstants(MlirTexts.Joined, 2).IsConstant is false
 	MlirConstants(MlirLists.Literals, 0).IsConstant and MlirConstants(MlirInstances.Shapes, 1).IsConstant
-	let isMember = position >= function.method.instructions.Length
-	let kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
+	isMember = position >= function.method.instructions.Length
+	kind = isMember then InstructionType.LoadConstantToRegister else function.method.instructions(position).kind
 	if kind is InstructionType.Invoke
 		return IsShared
 	if kind is not in (InstructionType.LoadConstantToRegister, InstructionType.StoreConstantToVariable)
@@ -27,9 +27,9 @@ TextElements(literal Runtime/VmValue) Numbers
 Constant Runtime/VmValue
 	MlirConstants(MlirTexts.Joined, 0).Constant.text is "a%"
 	if position >= function.method.instructions.Length
-		let member = MlirInstances(function, 0).ReferencedConstants(position - MlirInstances.MemberBase)
+		member = MlirInstances(function, 0).ReferencedConstants(position - MlirInstances.MemberBase)
 		return Natives(function.types).Initial(member)
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	PayloadDecoder(entry).Value(entry.kind is InstructionType.LoadConstantToRegister then 1 else 0)
 Global Text
 	MlirConstants(MlirTexts.Joined, 0).Global.EndsWith("a%\\00\") : !llvm.array<19 x i8>")
@@ -46,14 +46,14 @@ IsShared Boolean
 	MlirConstants(MlirInstances.Shapes, 1).IsShared
 	MlirConstants(Varying, 1).IsShared is false
 	MlirConstants(MlirCalls.Hashes, 1).IsShared is false
-	let entry = function.method.instructions(position)
-	let decoder = PayloadDecoder(entry)
+	entry = function.method.instructions(position)
+	decoder = PayloadDecoder(entry)
 	decoder.Text(2) is not "from" then false else IsPlain(decoder) and AreConstants(entry)
 IsPlain(decoder PayloadDecoder) Boolean
 	MlirConstants(MlirInstances.Shapes, 1).IsPlain(PayloadDecoder(MlirInstances.Built))
 	MlirConstants(MlirCalls.Hashes, 1).IsPlain(PayloadDecoder(MlirCalls.Hashed)) is false
-	let typeName = decoder.Text(1)
-	let short = TypeEntry.ShortName(typeName)
+	typeName = decoder.Text(1)
+	short = TypeEntry.ShortName(typeName)
 	if MlirLayout(function).IsStruct(typeName) is false or short is in ("File", "Error", "ErrorWithValue")
 		return false
 	decoder.Callee(function.TypeOf(typeName)).instructions.Length is 0
@@ -68,9 +68,9 @@ IsLoaded(register Number) Boolean
 	MlirConstants(MlirInstances.Shapes, 1).IsLoaded(0)
 	MlirConstants(Varying, 1).IsLoaded(0) is false
 	MlirConstants(MlirInstances.Shapes, 2).IsLoaded(1) is false
-	let reuse = LoadReuse(function.method.instructions)
+	reuse = LoadReuse(function.method.instructions)
 	for position
-		let previous = function.method.instructions(position - 1 - index)
+		previous = function.method.instructions(position - 1 - index)
 		if reuse.IsBoundary(previous)
 			return false
 		if reuse.Written(previous) is register
@@ -82,8 +82,8 @@ Cache Text
 TextGlobal(text Text, symbol Text) Text
 	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(\"\\01\\00") > 0
 	MlirConstants(MlirTexts.Joined, 0, "@dA_b").TextGlobal("b", "_1").IndexOf("@dA_b_1(") > 0
-	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
-	let name = Base + symbol + "(\"" + Lengths(bytes) + Escaped(text, false) + "\\00\")"
+	bytes = ByteEncoder.Empty.UnicodeBytes(text)
+	name = Base + symbol + "(\"" + Lengths(bytes) + Escaped(text, false) + "\\00\")"
 	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (bytes.Length + Framing) + " x i8>"
 Lengths(bytes Numbers) Text
 	MlirConstants(MlirTexts.Joined, 0).Lengths((97, 195, 164)) is Word(3) + Word(2)
@@ -110,10 +110,10 @@ Literal(text Text, slot Text, suffix Text) Texts
 Address(text Text, symbol Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").First.IndexOf("@cShape_Run_0_0_2 ") > 0
 	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").Last.IndexOf("exf = func.call @strict_text_constant(") > 0
-	let memory = MlirMemory(function, position)
-	let name = text is "" then "@strict_empty_text" else Base + symbol
-	let address = "    " + memory.Temp(suffix + "c") + " = llvm.mlir.addressof " + name + " : !llvm.ptr"
-	let made = " = func.call @strict_text_constant(" + memory.Temp(suffix + "c") + ") : (!llvm.ptr) -> f64"
+	memory = MlirMemory(function, position)
+	name = text is "" then "@strict_empty_text" else Base + symbol
+	address = "    " + memory.Temp(suffix + "c") + " = llvm.mlir.addressof " + name + " : !llvm.ptr"
+	made = " = func.call @strict_text_constant(" + memory.Temp(suffix + "c") + ") : (!llvm.ptr) -> f64"
 	(address, "    " + memory.Temp(suffix + "xf") + made)
 Base Text
 	MlirConstants(MlirTexts.Joined, 0).Base is "@cShape_Run_0_0"
@@ -122,15 +122,15 @@ Base Text
 Escaped(text Text, isFormat Boolean) Text
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a\"%", true) is "a\\22%%"
 	MlirConstants(MlirTexts.Joined, 0).Escaped("a%", false) is "a%"
-	let percent = isFormat then "%%" else "%"
+	percent = isFormat then "%%" else "%"
 	mutable pieces = List(Mutable(Text))
 	for ByteEncoder.Empty.UnicodeBytes(text)
-		let isPlain = value >= Character.Space and value < Character.Delete and value is not in EscapedCodes
-		let hex = "\\" + MetalValue("").Hex(value, 2)
+		isPlain = value >= Character.Space and value < Character.Delete and value is not in EscapedCodes
+		hex = "\\" + MetalValue("").Hex(value, 2)
 		pieces.Add(isPlain then Character(value) to Text else value is PercentSign then percent else hex)
 	Text.Combine(pieces, "")
 EscapedLength(text Text, isFormat Boolean) Number
 	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", true) is 3
 	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", false) is 2
-	let bytes = ByteEncoder.Empty.UnicodeBytes(text)
+	bytes = ByteEncoder.Empty.UnicodeBytes(text)
 	isFormat then bytes.Length + bytes.Count(PercentSign) else bytes.Length

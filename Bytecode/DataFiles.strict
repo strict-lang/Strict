@@ -1,13 +1,13 @@
 has ignored Texts = List(Text)
 Canonical(path Text) Text
 	DataFiles.Canonical("Tools/../x").Length > 0
-	let normalized = FileCompiler.Normalized(path)
+	normalized = FileCompiler.Normalized(path)
 	Process.OperatingSystem is "Windows" then normalized.Lower else normalized
 Excluded(path Text) Boolean
 	DataFiles(("./Tools/", "./generated/")).Excluded("Tools")
 	DataFiles("./Tools/").Excluded("Toolset") is false
 	DataFiles.Excluded("folder/.git/objects")
-	let normalized = Canonical(path) + "/"
+	normalized = Canonical(path) + "/"
 	if normalized.IndexOf("/.git/") >= 0
 		return true
 	for ignored

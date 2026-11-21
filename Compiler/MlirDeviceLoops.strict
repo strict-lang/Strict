@@ -16,7 +16,7 @@ Emitted Texts
 	MlirDeviceLoops(MlirLoops.Ranging.function, 5).Emitted(2) is "    %d5n = arith.addi %d5k, %d5o : i64"
 	MlirDeviceLoops(MlirLoops.Ranging.function, 5).Emitted.Length is 11
 	Singled.Emitted(9) is "    %d3cf = llvm.load %r0 : !llvm.ptr -> f32"
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if MlirDeviceDot(function, at).IsDot
 		return MlirDeviceDot(function, at).Emitted
 	entry.kind is InstructionType.LoopBegin then Begin("%r" + entry.payload(0), entry) else End
@@ -38,18 +38,18 @@ Begin(register Text, entry InstructionEntry) Texts
 	Beginning.Begin("%r0", Opening)(16) is "    %d2m = arith.cmpi slt, %d2k, %d2c : i64"
 	Beginning.Begin("%r0", Opening)(15) is "    %d2k = llvm.load %loop2 : !llvm.ptr -> i64"
 	Beginning.Begin("%r0", Opening)(17) is "    cf.cond_br %d2m, ^d2body, ^d2exit"
-	let isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
-	let number = MlirExact(function, at).Position(register, Temp("c"))
-	let count = isList then List(Text) + MlirTyped.Integer.Load(Temp("c"), register + "_n") else number
-	let start = Started
-	let loop = ("    cf.br ^d" + at + "loop", "  ^d" + at + "loop:", MlirTyped.Integer.Load(Temp("k"), "%loop" + at))
-	let check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("c") + " : i64"
-	let branch = "    cf.cond_br " + Temp("m") + ", ^d" + at + "body, ^d" + at + "exit"
+	isList = MlirDeviceStatements(function, at).IsList(MlirKinds(function).KindOf(at, entry.payload(0)))
+	number = MlirExact(function, at).Position(register, Temp("c"))
+	count = isList then List(Text) + MlirTyped.Integer.Load(Temp("c"), register + "_n") else number
+	start = Started
+	loop = ("    cf.br ^d" + at + "loop", "  ^d" + at + "loop:", MlirTyped.Integer.Load(Temp("k"), "%loop" + at))
+	check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("c") + " : i64"
+	branch = "    cf.cond_br " + Temp("m") + ", ^d" + at + "body, ^d" + at + "exit"
 	Kept + count + start + loop + (check, branch, "  ^d" + at + "body:") + Current(register, isList)
 Started Texts
 	Beginning.Started.Last is "    llvm.store %lane, %loop2 : i64, !llvm.ptr"
 	MlirDeviceLoops(MlirDeviceChoice.Choosing, 4).Started is ("    llvm.store %lane, %loop4 : i64, !llvm.ptr")
-	let sums = MlirDeviceSums(function, at)
+	sums = MlirDeviceSums(function, at)
 	if MlirDeviceChoice(function, at).IsChoice
 		return List(Text) + MlirTyped.Integer.Store("%lane", "%loop" + at)
 	if sums.IsSum is false
@@ -66,10 +66,10 @@ Zeroed(name Text, number Number) Texts
 	Beginning.Zeroed("sum", 0)(1) is "    %d2a0c = arith.constant 0.0 : f64"
 	Beginning.Zeroed("sum", 0)(2) is "    %d2a0z = arith.select %d2f, %d2a0, %d2a0c : f64"
 	Ranging.Counted.Length is 3 and Ranging.Counted(1) is "    %ranged = llvm.bitcast %columns : i64 to f64"
-	let loaded = function.Load(Temp("a" + number), "%v_" + name)
-	let zero = MlirTyped(function.Float).Constant(Temp("a" + number + "c"), "0.0")
-	let operands = Temp("f") + ", " + Temp("a" + number) + ", " + Temp("a" + number + "c")
-	let chosen = "    " + Temp("a" + number + "z") + " = arith.select " + operands + " : " + function.Float
+	loaded = function.Load(Temp("a" + number), "%v_" + name)
+	zero = MlirTyped(function.Float).Constant(Temp("a" + number + "c"), "0.0")
+	operands = Temp("f") + ", " + Temp("a" + number) + ", " + Temp("a" + number + "c")
+	chosen = "    " + Temp("a" + number + "z") + " = arith.select " + operands + " : " + function.Float
 	(loaded, zero, chosen, function.Store(Temp("a" + number + "z"), "%v_" + name))
 Kept Texts
 	Beginning.Kept.First is "    %d2s = llvm.load %v_value : !llvm.ptr -> f64"
@@ -80,34 +80,34 @@ Kept Texts
 	Beginning.Current("%r0", false)(2) is "    llvm.store %d2x, %v_index : f64, !llvm.ptr"
 	Beginning.Current("%r0", false)(3) is "    llvm.store %d2x, %v_value : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
-	let exact = MlirExact(function, at)
+	exact = MlirExact(function, at)
 	for Saved + exact.Parts
 		lines = lines + Part(index).Load(Temp("s" + value), "%v_value" + value)
 	(lines + function.Load(Temp("sx"), "%v_index")) + exact.Loaded(exact.Temp("i"), "%v_index")
 Current(register Text, isList Boolean) Texts
 	Beginning.Current("%r0", true).First is "    %d2t = arith.trunci %d2k : i64 to i32"
-	let narrowed = "    " + Temp("t") + " = arith.trunci " + Temp("k") + " : i64 to i32"
-	let converted = "    " + Temp("x") + " = arith.sitofp " + Temp("t") + " : i32 to " + function.Float
-	let exact = MlirExact(function, at)
-	let index = (narrowed, converted, function.Store(Temp("x"), "%v_index")) + exact.Set(Temp("k"), "%one", "%v_index")
+	narrowed = "    " + Temp("t") + " = arith.trunci " + Temp("k") + " : i64 to i32"
+	converted = "    " + Temp("x") + " = arith.sitofp " + Temp("t") + " : i32 to " + function.Float
+	exact = MlirExact(function, at)
+	index = (narrowed, converted, function.Store(Temp("x"), "%v_index")) + exact.Set(Temp("k"), "%one", "%v_index")
 	if isList is false
 		return (index + function.Store(Temp("x"), "%v_value")) + exact.Set(Temp("k"), "%one", "%v_value")
-	let data = MlirTyped.Pointer.Load(Temp("ed"), register + "_d")
-	let sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "_b"), MlirTyped.Integer.Load(Temp("en"), register + "_n"))
-	let operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ", " + Temp("en") + ")"
+	data = MlirTyped.Pointer.Load(Temp("ed"), register + "_d")
+	sizes = (MlirTyped.Integer.Load(Temp("eb"), register + "_b"), MlirTyped.Integer.Load(Temp("en"), register + "_n"))
+	operands = "(" + Temp("ed") + ", " + Temp("eb") + ", " + Temp("k") + ", " + Temp("en") + ")"
 	index + data + sizes + (MlirTyped(function.Float).Read(Temp("e"), operands), function.Store(Temp("e"), "%v_value"))
 End Texts
 	Ending.End.Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
 	MlirDeviceLoops(MlirDeviceChoice.Choosing, 12).End.Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
-	let begin = function.method.LoopBeginOf(at)
-	let counter = "%loop" + begin
-	let isSum = MlirDeviceSums(function, begin).IsSum
-	let choice = MlirDeviceChoice(function, begin)
-	let step = isSum or choice.IsChoice then "%lanes" else Temp("o")
-	let added = "    " + Temp("n") + " = arith.addi " + Temp("k") + ", " + step + " : i64"
-	let next = (MlirTyped.Integer.Load(Temp("k"), counter), MlirTyped.Integer.Constant(Temp("o"), "1"), added)
-	let stored = (MlirTyped.Integer.Store(Temp("n"), counter), "    cf.br ^d" + begin + "loop", "  ^d" + begin + "exit:")
-	let reduced = isSum then Reduced(begin) else choice.IsChoice then choice.Reduced(at) else List(Text)
+	begin = function.method.LoopBeginOf(at)
+	counter = "%loop" + begin
+	isSum = MlirDeviceSums(function, begin).IsSum
+	choice = MlirDeviceChoice(function, begin)
+	step = isSum or choice.IsChoice then "%lanes" else Temp("o")
+	added = "    " + Temp("n") + " = arith.addi " + Temp("k") + ", " + step + " : i64"
+	next = (MlirTyped.Integer.Load(Temp("k"), counter), MlirTyped.Integer.Constant(Temp("o"), "1"), added)
+	stored = (MlirTyped.Integer.Store(Temp("n"), counter), "    cf.br ^d" + begin + "loop", "  ^d" + begin + "exit:")
+	reduced = isSum then Reduced(begin) else choice.IsChoice then choice.Reduced(at) else List(Text)
 	next + stored + Restored(begin) + reduced
 Reduced(begin Number) Texts
 	Ending.Reduced(2).Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
@@ -118,8 +118,8 @@ Reduced(begin Number) Texts
 	Singled.Current("%r0", false)(6) is "    llvm.store %d3k, %v_value_e : i64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for MlirDeviceSums(function, begin).Accumulated
-		let reduced = MlirTyped(function.Float).Summed(Temp("y" + index), Temp("x" + index))
-		let loaded = function.Load(Temp("x" + index), "%v_" + value)
+		reduced = MlirTyped(function.Float).Summed(Temp("y" + index), Temp("x" + index))
+		loaded = function.Load(Temp("x" + index), "%v_" + value)
 		lines = lines + loaded + reduced + function.Store(Temp("y" + index), "%v_" + value)
 	lines
 Restored(begin Number) Texts
@@ -131,7 +131,7 @@ Restored(begin Number) Texts
 	Beginning.Current("%r0", true).Length is 8
 	Beginning.Current("%r0", true)(3) is "    %d2ed = llvm.load %r0_d : !llvm.ptr -> !llvm.ptr"
 	mutable lines = List(Mutable(Text))
-	let exact = MlirExact(function, begin)
+	exact = MlirExact(function, begin)
 	for Saved + exact.Parts
 		lines = lines + Part(index).Store("%d" + begin + "s" + value, "%v_value" + value)
 	(lines + function.Store("%d" + begin + "sx", "%v_index")) + exact.Set(exact.Temp("i_e"), exact.Temp("i_q"), "%v_index")
@@ -140,13 +140,13 @@ Counted Texts
 	Ranging.Counted.Last is "    %index = arith.addf %counted, %ranged : f64"
 	Singled.Counted.Length is 4 and Singled.Counted(1) is "    %rangedw = llvm.bitcast %columns : i64 to f64"
 	Singled.Counted(2) is "    %ranged = arith.truncf %rangedw : f64 to f32"
-	let converted = " = arith.sitofp %narrow : i32 to " + function.Float
+	converted = " = arith.sitofp %narrow : i32 to " + function.Float
 	if function.method.instructions(at).payload(1) is not 1
 		return List(Text) + ("    %index" + converted)
 	constant bitcast = " = llvm.bitcast %columns : i64 to f64"
 	constant narrowed = ("    %rangedw" + bitcast, "    %ranged = arith.truncf %rangedw : f64 to f32")
-	let ranged = function.Float is "f64" then List(Text) + ("    %ranged" + bitcast) else narrowed
-	let counted = List(Text) + ("    %counted" + converted)
+	ranged = function.Float is "f64" then List(Text) + ("    %ranged" + bitcast) else narrowed
+	counted = List(Text) + ("    %counted" + converted)
 	counted + ranged + ("    %index = arith.addf %counted, %ranged : " + function.Float)
 Indexes Texts
 	Beginning.Indexes.Length is 0
@@ -155,11 +155,11 @@ Indexes Texts
 	Singled.Current("%r0", false).Length is 8
 	Singled.Indexes(0) is "    %startb = llvm.bitcast %rangedw : f64 to i64"
 	Summing.Indexes.Length is 3 and Summing.Indexes(0) is "    %start_e = arith.constant 0 : i64"
-	let exact = MlirExact(function, at)
+	exact = MlirExact(function, at)
 	if exact.Parts.Length is 0
 		return List(Text)
-	let isRanged = function.method.instructions(at).payload(1) is 1
-	let start = isRanged then exact.Exact("%rangedw", "f64", "%start") else exact.Whole("%start", "0")
+	isRanged = function.method.instructions(at).payload(1) is 1
+	start = isRanged then exact.Exact("%rangedw", "f64", "%start") else exact.Whole("%start", "0")
 	start + "    %index_e = arith.addi %at, %start_e : i64"
 Indexed(slot Text) Texts
 	Beginning.Indexed("%v_index") is ("    llvm.store %index, %v_index : f64, !llvm.ptr")

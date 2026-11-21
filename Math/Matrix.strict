@@ -14,9 +14,9 @@ Turned(direction Vector2) Matrix
 	Matrix.Turned(Vector2(0, 2)).Transformed(Vector3.UnitX) is Vector3.UnitY
 	Matrix.Turned(Vector2(0, 0)) is Identity
 	Matrix.Turned(Vector2(3, 4)).Transformed(Vector3(1, 2, 0)).DistanceTo(Vector3(-1, 2, 0)) < 0.000001
-	let length = direction.Length
-	let cosine = length > 0 then direction.X / length else 1
-	let sine = length > 0 then direction.Y / length else 0
+	length = direction.Length
+	cosine = length > 0 then direction.X / length else 1
+	sine = length > 0 then direction.Y / length else 0
 	Matrix((cosine, sine, 0, 0, -sine, cosine, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
 RotationZ(angle Degrees) Matrix
 	Matrix.RotationZ(Degrees(90)).Transformed(Vector3.UnitX).DistanceTo(Vector3.UnitY) < 0.000001
@@ -29,7 +29,7 @@ RotationZ(angle Degrees) Matrix
 Cell(row Number, column Number, other Matrix) Number
 	Identity.Cell(1, 1, Identity) is 1
 	Counting.Cell(1, 2, Counting) is 356
-	let first = values(row) * other.values(column * 4) + values(4 + row) * other.values(column * 4 + 1)
+	first = values(row) * other.values(column * 4) + values(4 + row) * other.values(column * 4 + 1)
 	first + values(8 + row) * other.values(column * 4 + 2) + values(LastColumn + row) * other.values(column * 4 + 3)
 Clip(point Vector3) Numbers
 	Moved.Clip(Vector3.One) is (2, 3, 4, 1)
@@ -47,18 +47,18 @@ Axis(column Number) Vector3
 LookAt(eye Vector3, target Vector3, up Vector3) Matrix
 	Matrix.LookAt(Vector3(0, -10, 0), Vector3.Zero, Vector3.UnitZ).Transformed(Vector3.Zero) is Vector3(0, 0, -10)
 	Matrix.LookAt(Vector3.One, Vector3(3, 4, 7), Vector3.UnitZ).Transformed(Vector3.One).Length < 0.00001
-	let forward = (target - eye).Normalize
-	let side = forward.Cross(up).Normalize
-	let top = side.Cross(forward)
-	let rotation = (side.X, top.X, -forward.X, 0, side.Y, top.Y, -forward.Y, 0, side.Z, top.Z, -forward.Z, 0)
+	forward = (target - eye).Normalize
+	side = forward.Cross(up).Normalize
+	top = side.Cross(forward)
+	rotation = (side.X, top.X, -forward.X, 0, side.Y, top.Y, -forward.Y, 0, side.Z, top.Z, -forward.Z, 0)
 	Matrix(rotation + (-(side * eye), -(top * eye), forward * eye, 1))
 Perspective(fieldOfView Degrees, aspect Number, near Number, far Number) Matrix
 	Matrix.Perspective(Degrees(90), 1, 1, 100).values(0).IsNearlyEqual(1)
 	Matrix.Perspective(Degrees(90), 1, 1, 100).Clip(Vector3(0, 0, -1)).Z.IsNearlyEqual(-1)
 	Matrix.Perspective(Degrees(60), 2, 2, 10).values(0).IsNearlyEqual(0.8660254)
 	Matrix.Perspective(Degrees(60), 2, 2, 10).Clip(Vector3(0, 0, -2)).Z.IsNearlyEqual(-2)
-	let focal = 1 / Degrees(fieldOfView.number / 2).Tan
-	let depth = (far + near) / (near - far)
+	focal = 1 / Degrees(fieldOfView.number / 2).Tan
+	depth = (far + near) / (near - far)
 	Matrix((focal / aspect, 0, 0, 0, 0, focal, 0, 0, 0, 0, depth, -1, 0, 0, 2 * far * near / (near - far), 0))
 Orthographic(width Number, height Number, near Number, far Number) Matrix
 	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1)).First is 1
@@ -69,17 +69,17 @@ Orthographic(width Number, height Number, near Number, far Number) Matrix
 Inverse Matrix
 	(Moved * Matrix.Scaling(2)).Inverse.Transformed(Vector3(1, 2, 3)) is Vector3.Zero
 	(Moved * Matrix.RotationZ(Degrees(90))).Inverse.Transformed(Vector3(1, 3, 3)).DistanceTo(Vector3.UnitX) < 0.000001
-	let x = Axis(0)
-	let y = Axis(1)
-	let z = Axis(2)
-	let determinant = x * y.Cross(z)
-	let first = y.Cross(z) / determinant
-	let second = z.Cross(x) / determinant
-	let third = x.Cross(y) / determinant
-	let shift = Axis(3)
-	let rotation = (first.X, second.X, third.X, 0, first.Y, second.Y, third.Y, 0, first.Z, second.Z, third.Z, 0)
+	x = Axis(0)
+	y = Axis(1)
+	z = Axis(2)
+	determinant = x * y.Cross(z)
+	first = y.Cross(z) / determinant
+	second = z.Cross(x) / determinant
+	third = x.Cross(y) / determinant
+	shift = Axis(3)
+	rotation = (first.X, second.X, third.X, 0, first.Y, second.Y, third.Y, 0, first.Z, second.Z, third.Z, 0)
 	Matrix(rotation + (-(first * shift), -(second * shift), -(third * shift), 1))
 Unscaled Matrix
 	(Moved * Matrix.Scaling(2)).Unscaled is Moved
-	let x = Axis(0).Normalize.Numbers + 0
+	x = Axis(0).Normalize.Numbers + 0
 	Matrix(x + Axis(1).Normalize.Numbers + 0 + Axis(2).Normalize.Numbers + 0 + Axis(3).Numbers + 1)

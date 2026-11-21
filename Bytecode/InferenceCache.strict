@@ -9,11 +9,11 @@ Of(files Texts, path Text) InferenceCache
 	Logged.entries.Length is 1 and Logged.Result.joined is ResolveCheck.Inference(KeptInference.Pair)
 	Written.entries.Length is 1 and Written.Of(KeptInference.Pair, "Logger.strict").entries.Length is 2
 	None.Of(KeptInference.Pair, "TextWriter.strict").entries.Length is 1
-	let joined = Fitting(files, path).Of(files, path)
+	joined = Fitting(files, path).Of(files, path)
 	if joined.folder is ""
 		return InferenceCache(entries, joined)
-	let others = Others(files, path)
-	let kept = others.Slice(0, others.Length < Limit then others.Length else Limit - 1)
+	others = Others(files, path)
+	kept = others.Slice(0, others.Length < Limit then others.Length else Limit - 1)
 	InferenceCache(List(KeptInference) + joined + kept, joined)
 Fitting(files Texts, path Text) KeptInference
 	Logged.Fitting(KeptInference.Pair, "Logger.strict").base.files is KeptInference.Writer

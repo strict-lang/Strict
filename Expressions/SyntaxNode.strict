@@ -91,15 +91,15 @@ ChildText(childIndex Number, minimumPrecedence Number) Text
 	SyntaxNode("Member", "Length", (sum, sum)).CallText is "(1 + 2).Length"
 	SyntaxNode("MethodCall", "Add", (sum, one)).CallText is "(1 + 2).Add(1)"
 	SyntaxNode("Index", "", (sum, one)).CallText is "(1 + 2)(1)"
-	let child = children(childIndex)
-	let childText = child to Text
+	child = children(childIndex)
+	childText = child to Text
 	child.Precedence > 0 and child.Precedence < minimumPrecedence then "(" + childText + ")" else childText
 ArgumentsText(firstIndex Number) Text
 	SyntaxNode("Call", "Add", (SyntaxNode("Number", "1"), SyntaxNode("Number", "2"))).ArgumentsText(1) is "2"
 	StatementParser(Tokenizer("f(1, (a then b else c))").Tokens).ParseStatement to Text is "f(1, (a then b else c))"
 	StatementParser(Tokenizer("f(a then b else c)").Tokens).ParseStatement to Text is "f(a then b else c)"
 	SyntaxNode("MethodCall", "f", (identifier, SyntaxNode("Binary", "then", (one, two)))).ArgumentsText(1) is "1 then 2"
-	let minimumPrecedence = children.Length - firstIndex > 1 then 2 else 0
+	minimumPrecedence = children.Length - firstIndex > 1 then 2 else 0
 	mutable result = ""
 	for children.Length - firstIndex
 		if index > 0

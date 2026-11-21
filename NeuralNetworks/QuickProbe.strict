@@ -2,10 +2,10 @@ constant Facts = ("What makes three side lengths a valid triangle?", "What is th
 constant Questions = Facts + ("At what temperature does water boil at sea level in Celsius?", "Who wrote Romeo and Juliet?")
 constant Answering = 48
 Run(path Text, bits = 4)
-	let file = Gguf(path)
-	let tokenizer = Gpt2Tokens.Loaded(file)
-	let isLiquid = file.Value("general.architecture").StartsWith("lfm")
-	let stop = tokenizer.ids("<|im_end|>")
+	file = Gguf(path)
+	tokenizer = Gpt2Tokens.Loaded(file)
+	isLiquid = file.Value("general.architecture").StartsWith("lfm")
+	stop = tokenizer.ids("<|im_end|>")
 	if isLiquid
 		LiquidAnswers(Lfm3(Lfm3.Loaded(path, bits), bos = Lfm3.Unloaded.Beginning(file)), tokenizer, stop)
 	else
@@ -13,11 +13,11 @@ Run(path Text, bits = 4)
 Chat(question Text, isLiquid Boolean) Text
 	QuickProbe.Chat("Hi?", true) is "<|im_start|>user\nHi?<|im_end|>\n<|im_start|>assistant\n<think></think>"
 	QuickProbe.Chat("Hi?", false).EndsWith("<think>\n\n</think>\n\n")
-	let thinking = isLiquid then "<think></think>" else "<think>\n\n</think>\n\n"
+	thinking = isLiquid then "<think></think>" else "<think>\n\n</think>\n\n"
 	"<|im_start|>user\n" + question + "<|im_end|>\n<|im_start|>assistant\n" + thinking
 LiquidAnswers(model Lfm3, tokenizer Gpt2Tokens, stop Number)
 	for Questions
-		let prompt = model.Prompted(tokenizer.Encoded(Chat(value, true)))
+		prompt = model.Prompted(tokenizer.Encoded(Chat(value, true)))
 		mutable step = model.Prefilled(prompt)
 		mutable answer = List(Mutable(Number))
 		mutable next = step.Next
@@ -28,7 +28,7 @@ LiquidAnswers(model Lfm3, tokenizer Gpt2Tokens, stop Number)
 		logger.Log(value + " -> " + tokenizer.Decoded(answer).Replace("\n", " "))
 QwenAnswers(model Qwen3, tokenizer Gpt2Tokens, stop Number)
 	for Questions
-		let prompt = tokenizer.Encoded(Chat(value, false))
+		prompt = tokenizer.Encoded(Chat(value, false))
 		mutable step = model.Prefilled(prompt, 0)
 		mutable answer = List(Mutable(Number))
 		mutable next = step.Next

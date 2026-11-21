@@ -13,8 +13,8 @@ IsFiltering Boolean
 	Filtering.IsFiltering
 	Doubling.IsFiltering is false
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
-		let isResult = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
+		entry = function.method.instructions(value)
+		isResult = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
 		if isResult and MlirPurity(function, position).IsCollected(value) is false
 			return true
 	false
@@ -23,22 +23,22 @@ IsFilteringValues Boolean
 	Keeping.IsFilteringValues is false
 	Doubling.IsFilteringValues is false
 	MlirParallel(Keeping.function, 2).IsParallel
-	let kinds = MlirKinds(function)
-	let flats = MlirFlats(function, position).Count(kinds.ElementKind(kinds.VariableKind(position, "forResult")))
+	kinds = MlirKinds(function)
+	flats = MlirFlats(function, position).Count(kinds.ElementKind(kinds.VariableKind(position, "forResult")))
 	IsFiltering and (MlirParallel(function, position).Filler is not "strict_list_filled" or flats > 0)
 Holed Texts
 	Keeping.Holed.Last is "    func.call @strict_list_holes(%t2ph, %t2n) : (f64, f64) -> ()"
 	Doubling.Holed.Length is 0
 	if IsFiltering is false
 		return List(Text)
-	let parallel = MlirParallel(function, position)
-	let list = parallel.Temp("ph")
-	let holes = "    func.call @strict_list_holes(" + list + ", " + parallel.Temp("n") + ") : (f64, f64) -> ()"
+	parallel = MlirParallel(function, position)
+	list = parallel.Temp("ph")
+	holes = "    func.call @strict_list_holes(" + list + ", " + parallel.Temp("n") + ") : (f64, f64) -> ()"
 	(List(Text) + function.Load(list, "%v_forResult")) + holes
 Filled(filler Text) Texts
 	Doubling.Filled("strict_list_filled_numbers").Last.EndsWith("_numbers(%t2pl, %t2n) : (f64, f64) -> f64")
 	Keeping.Filled("strict_list_filled").Last.EndsWith("@strict_list_filtered(%t2pl, %t2n) : (f64, f64) -> f64")
-	let parallel = MlirParallel(function, position)
-	let finisher = IsFiltering then "strict_list_filtered" else filler
-	let arguments = (parallel.Temp("pl"), parallel.Temp("n"))
+	parallel = MlirParallel(function, position)
+	finisher = IsFiltering then "strict_list_filtered" else filler
+	arguments = (parallel.Temp("pl"), parallel.Temp("n"))
 	List(Text) + MlirMemory(function, position).Called(parallel.Temp("pz"), finisher, arguments)

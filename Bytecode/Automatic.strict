@@ -53,9 +53,9 @@ Validations SyntaxNodes
 	Bitted.Validations.First to Text is "if x > 0 is false"
 	mutable result = List(Mutable(SyntaxNode))
 	for Stored
-		let constraint = Constraint.Of(value)
+		constraint = Constraint.Of(value)
 		if constraint is not ""
-			let checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
+			checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
 			result.Add(checked.Checked(constraint, lines.Index(value) + 1))
 	result
 IsWanted(name Text, names Texts) Boolean
@@ -69,7 +69,7 @@ IsWanted(name Text, names Texts) Boolean
 	for lines
 		if value is name or value.StartsWith(name + " ") or value.StartsWith(name + "(")
 			return false
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	shape.IsTrait is false or shape.ParameterScope.names.Length is 0
 Described Text
 	Point.Described.StartsWith("\tList(Variable) + Variable(\"X\", \"Number\" to Type, X to Text) + ")
@@ -77,22 +77,22 @@ Described Text
 	Paired.Described.EndsWith(" + Variable(\"second\", \"Number\" to Type, second to Text)")
 	mutable result = "\tList(Variable)"
 	for Stored
-		let name = Header(value).MemberName
-		let flag = value.StartsWith("mutable ") then ", true" else ""
-		let type = MemberType(value)
+		name = Header(value).MemberName
+		flag = value.StartsWith("mutable ") then ", true" else ""
+		type = MemberType(value)
 		result = result + " + Variable(\"" + name + "\", \"" + type + "\" to Type, " + name + " to Text" + flag + ")"
 	result
 MemberType(line Text) Text
 	Point.MemberType("mutable Y Number") is "Number"
 	Paired.MemberType("has first Generic") is "Text"
-	let header = Header(line)
-	let declared = header.DeclaredType(1)
+	header = Header(line)
+	declared = header.DeclaredType(1)
 	declared is "Generic" then instantiation.Argument(instance, header.MemberName) else declared
 Hashed Text
 	Point.Hashed is "\tHashCode((HashCode(X).number, HashCode(Y).number))"
 	Automatic(List(Text) + "has a Number", "A", Instantiation.Pairing).Hashed is "\tHashCode(a)"
 	Automatic(("Run", "\t1"), "B", Instantiation.Pairing).Hashed is "\tHashCode(0)"
-	let stored = Stored
+	stored = Stored
 	if stored.Length < 2
 		return stored.Length is 0 then "\tHashCode(0)" else "\tHashCode(" + Header(stored.First).MemberName + ")"
 	mutable hashes = List(Mutable(Text))
@@ -104,7 +104,7 @@ Coded Text
 	Paired.Coded.StartsWith("\t\"Couple(\" + first.Code")
 	Automatic(("Run", "\t1"), "B", Instantiation.Pairing).Coded is "\t\"B\""
 	Automatic(("has Width Number", "has iterator"), "S", Instantiation.Pairing).Coded is "\t\"S(\" + Width.Code + \")\""
-	let name = instance.Split("(").First
+	name = instance.Split("(").First
 	if Stored.Length is 0
 		return "\t\"" + name + "\""
 	mutable codes = List(Mutable(Text))
@@ -115,16 +115,16 @@ Coded Text
 MemberCode(line Text) Text
 	Point.MemberCode("has X Number") is "X.Code"
 	Point.MemberCode("has prices Dictionary(Text, Number)") is "(prices to Text)"
-	let member = Header(line).MemberName
+	member = Header(line).MemberName
 	MemberType(line).StartsWith("Dictionary(") then "(" + member + " to Text)" else member + ".Code"
 Stored Texts
 	Point.Stored is ("has X Number", "mutable Y Number")
 	Automatic(("has x Number", "has Counter"), "S", Instantiation(Closeness.Nested.types)).Stored is ("has x Number")
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	for lines
 		if shape.IsMemberLine(value) and value.StartsWith("constant ") is false
-			let type = Header(value).DeclaredType(1)
-			let isTrait = instantiation.types.ParameterScope(type).TypeOf(" trait") is "true"
+			type = Header(value).DeclaredType(1)
+			isTrait = instantiation.types.ParameterScope(type).TypeOf(" trait") is "true"
 			if type is not "Logger" and isTrait is false
 				value
 Header(line Text) HeaderTokens
@@ -134,11 +134,11 @@ Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
 	Greeter.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, Wanted).methods.Last.Name is "Members"
 	Greeter.instance is "HelloLogger"
-	let missing = Missing(entry, targets, main.fullName)
+	missing = Missing(entry, targets, main.fullName)
 	missing.Length is 0 then entry else Appended(main, entry, Lines(missing))
 Appended(main TypeCodegen, entry TypeEntry, all Texts) TypeEntry
 	Greeter.Appended(TypeCodegen.Hello, TypeEntry.HelloLogger, Greeter.lines) is TypeEntry.HelloLogger
-	let codegen = TypeCodegen(main, lines = all)
+	codegen = TypeCodegen(main, lines = all)
 	mutable methods = entry.methods
 	for Range(lines.Length, all.Length)
 		if TypeShape(all).IsMethodHeader(all(value))
@@ -151,6 +151,6 @@ Missing(entry TypeEntry, targets Texts, fullName Text) Texts
 	Point.Missing(Completing, Wanted, "Strict/HelloLogger").Length is 0
 	Point.Missing(Hashable, List(Text) + "Strict/HelloLogger.to HashCode", "Strict/HelloLogger").Length is 0
 	for Generating
-		let words = value.Split(" ")
+		words = value.Split(" ")
 		if (fullName + "." + value) is in targets and entry.Chosen(words.First, -1, words.Last, List(Text)) < 0
 			value

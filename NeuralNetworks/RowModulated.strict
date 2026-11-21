@@ -10,13 +10,13 @@ Modulated BFloat16s
 	RowModulated((3, 4), (1, 2), (0.5, 0, 0, 1), List(Number) + 0, 0, 0.00001).Modulated(1).IsNearlyEqual(4.525483)
 	RowModulated((3, 4), (1, 2), (9, 9, 0.5, 0, 0, 1), List(Number) + 1, 0, 0.00001).Modulated(0).IsNearlyEqual(1.348528)
 	RowModulated((3, 4), (1, 2), List(Number), List(Number), 0, 0.00001).Modulated(1).IsNearlyEqual(2.262742)
-	let width = weights.Length
-	let scales = Qwen3Block.Scales(input, width, epsilon)
+	width = weights.Length
+	scales = Qwen3Block.Scales(input, width, epsilon)
 	if modulation.Length is 0
 		return Normalized(scales)
 	for input.Length
-		let token = (index / width).Floor
-		let at = (starts(token) + part) * width + index % width
+		token = (index / width).Floor
+		at = (starts(token) + part) * width + index % width
 		input(index) * scales(token) * weights(index % width) * (1 + modulation(at + width)) + modulation(at)
 Normalized(scales Numbers) BFloat16s
 	RowModulated((3, 4), (1, 2), List(Number), List(Number), 0, 0.00001).Normalized((0.5, 0.5)) is (1.5, 4)

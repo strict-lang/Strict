@@ -18,39 +18,39 @@ IsUsed Boolean
 	MlirGroupBatched(MlirBatched.Single.function, 2).IsUsed is false
 	if function.Group < 0 or function.Guarded is not position or function.Float is not "f32"
 		return false
-	let check = MlirBatchCheck(function, position)
-	let collecting = MlirLoops(function, position).IsCollecting and check.IsFloat
-	let target = function.method.instructions(function.Group).payload(0)
-	let unchained = MlirFeeding(function, function.Group).IsFeeding(function.Group, target) is false
+	check = MlirBatchCheck(function, position)
+	collecting = MlirLoops(function, position).IsCollecting and check.IsFloat
+	target = function.method.instructions(function.Group).payload(0)
+	unchained = MlirFeeding(function, function.Group).IsFeeding(function.Group, target) is false
 	collecting and check.Reads.Length > 0 and check.Reads.First > function.Group and unchained and check.IsSafe
 Body Texts
 	Text.Combine(MlirDevice(Sample.function, 2, 1).Kernel).IndexOf("@strict_device_cached_four") > 0
 	Text.Combine(MlirDevice(Sample.function, 2, 1).Kernel).IndexOf("@strict_device_cached_stored") > 0
-	let reads = MlirBatchReads(function, position)
-	let loaded = Phase("quadLoad", "quadLoaded", true) + "  ^quadLoaded:" + reads.Loaded
-	let computed = Phase("quadCompute", "quadStored", false) + "  ^quadStored:" + reads.Stored
+	reads = MlirBatchReads(function, position)
+	loaded = Phase("quadLoad", "quadLoaded", true) + "  ^quadLoaded:" + reads.Loaded
+	computed = Phase("quadCompute", "quadStored", false) + "  ^quadStored:" + reads.Stored
 	Guard + Head + ChunkHeader + loaded + computed + LoopBack
 Head Texts
-	let groupCall = MlirDeviceStatements(function, function.Group)
-	let target = "%r" + function.method.instructions(function.Group).payload(0)
-	let saved = MlirGrouped(function, function.Group).Saved(target, "%groupMemo", "q")
-	let before = MlirDevice(function, position).Emitted(position + 1, function.Group)
-	let body = PlainStarted + before + groupCall.Labeled + groupCall.Emitted + saved
+	groupCall = MlirDeviceStatements(function, function.Group)
+	target = "%r" + function.method.instructions(function.Group).payload(0)
+	saved = MlirGrouped(function, function.Group).Saved(target, "%groupMemo", "q")
+	before = MlirDevice(function, position).Emitted(position + 1, function.Group)
+	body = PlainStarted + before + groupCall.Labeled + groupCall.Emitted + saved
 	HeadStart + MlirBatched(function, position).Computed(body, "quadHead")
 Phase(label Text, done Text, loading Boolean) Texts
-	let batched = MlirBatched(function, position)
-	let entry = "    cf.br ^" + label + "(%batchFirst, %batchZero : i64, i64)"
-	let header = "  ^" + label + "(%" + label + "_at: i64, %" + label + "_batchIndex: i64):"
-	let body = batched.Computed(PlainStarted + Emitted(loading), label)
-	let next = batched.Advanced(label, label + "_batchIndex", label + "_at", done)
+	batched = MlirBatched(function, position)
+	entry = "    cf.br ^" + label + "(%batchFirst, %batchZero : i64, i64)"
+	header = "  ^" + label + "(%" + label + "_at: i64, %" + label + "_batchIndex: i64):"
+	body = batched.Computed(PlainStarted + Emitted(loading), label)
+	next = batched.Advanced(label, label + "_batchIndex", label + "_at", done)
 	(entry, header, "    cf.br ^" + label + "_body") + body + next
 Emitted(loading Boolean) Texts
 	mutable lines = List(Mutable(Text))
-	let reads = MlirBatchReads(function, position)
-	let target = "%r" + function.method.instructions(function.Group).payload(0)
-	let groupRead = loading then List(Text) else MlirGrouped(function, function.Group).Saved("%groupMemo", target, "m")
+	reads = MlirBatchReads(function, position)
+	target = "%r" + function.method.instructions(function.Group).payload(0)
+	groupRead = loading then List(Text) else MlirGrouped(function, function.Group).Saved("%groupMemo", target, "m")
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let step = loading then reads.Prefetched(value) else reads.Computed(value)
+		step = loading then reads.Prefetched(value) else reads.Computed(value)
 		lines = lines + (value is function.Group then groupRead else step)
 	lines
 PlainStarted Texts

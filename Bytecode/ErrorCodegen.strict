@@ -28,8 +28,8 @@ constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(SizeTypes, CallTarget.
 Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
 	Plain.Folded(SyntaxParser(Tokenizer("outer.B.Greet").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Type"
-	let folding = ConstantFolding(values.target.TypeName, values.inference, values.isOptimizing)
-	let typed = block.scope.TypeOf("outer") is "" then folding.Outer(node) else node
+	folding = ConstantFolding(values.target.TypeName, values.inference, values.isOptimizing)
+	typed = block.scope.TypeOf("outer") is "" then folding.Outer(node) else node
 	ConversionCodegen(values).Typed(folding.Folded(typed), block)
 Handled(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Handled(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
@@ -61,17 +61,17 @@ Checked(node SyntaxNode, block CodeBlock, isRemainder = false) CodeBlock
 	Plain.Checked(ValueCodegen.One, CodeBlock.Empty).instructions.Length is 1
 	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar, true).instructions.Last.kind is InstructionType.CheckError
 	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar).instructions.Last.kind is not InstructionType.CheckError
-	let folded = Folded(node, block)
-	let generated = Dispatched(folded, block)
+	folded = Folded(node, block)
+	generated = Dispatched(folded, block)
 	isRemainder or MayFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
 Check(register Number, block CodeBlock) InstructionEntry
 	Plain.Check(2, CodeBlock.Empty).payload is List(Number) + 2
 	Plain.Check(2, InTest).payload is (2, 7)
 	Plain.Check(2, InTest).texts is List(Text) + Tested
-	let failure = block.scope.TypeOf(FailureMarker)
+	failure = block.scope.TypeOf(FailureMarker)
 	if failure is ""
 		return InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + register)
-	let jump = ByteEncoder.Empty.SevenBit(failure to Number).bytes
+	jump = ByteEncoder.Empty.SevenBit(failure to Number).bytes
 	InstructionEntry(InstructionType.CheckError, List(Text) + Tested, List(Number) + register + jump)
 IsLog(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsLog(LogHi, Logging)
@@ -106,12 +106,12 @@ IsFailing(node SyntaxNode, block CodeBlock) Boolean
 		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
 	if node.text is in ("to", "then") or IsOverloaded(node, block)
 		return true
-	let isList = ListFits(values.inference.types).IsList(values.TypeOf(node, block))
+	isList = ListFits(values.inference.types).IsList(values.TypeOf(node, block))
 	node.text is in ("+", "-", "*", "/", "%", "^") and isList
 IsOverloaded(node SyntaxNode, block CodeBlock) Boolean
 	ErrorCodegen(OperatorCodegen.Texts.values).IsOverloaded(SyntaxNode("Binary", "<", (A, A)), TextA)
 	Plain.IsOverloaded(SyntaxNode("Binary", "xor", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
-	let operators = OperatorCodegen(values)
+	operators = OperatorCodegen(values)
 	operators.IsCustom(node, block) and operators.IsBits(node, block) is false
 Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Narrowed(IsError, Counted).scope.TypeOf("a") is "Error"
@@ -120,7 +120,7 @@ Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Narrowed(SyntaxNode("Binary", "is", (Greeting, BareError)), Counted) is Counted
 	if IsErrorComparison(condition, block) is false
 		return block
-	let target = condition.children(0)
+	target = condition.children(0)
 	condition.text is "is" and target.Kind is "Identifier" then block.Declare(target.text, "Error") else block
 AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.AnyError(IsError, CodeBlock.Empty) to Text is "a is Error(\"\")"
@@ -129,8 +129,8 @@ AnyError(node SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.AnyError(SyntaxNode("Binary", "+", IsError.children), CodeBlock.Empty) to Text is "a + Error"
 	Plain.AnyError(IsError, CodeBlock.Empty.Declare("Error", "Number")) to Text is "a is Error"
 	Plain.AnyError(SyntaxNode("Binary", "is", (A, SyntaxNode("Text", "Error"))), CodeBlock.Empty) to Text is "a is Error"
-	let wanted = node.children.Last
-	let isBare = wanted.Kind is "Identifier" and wanted.text is "Error" and block.scope.TypeOf("Error") is ""
+	wanted = node.children.Last
+	isBare = wanted.Kind is "Identifier" and wanted.text is "Error" and block.scope.TypeOf("Error") is ""
 	if node.text is not in ("is", "is not") or isBare is false
 		return node
 	SyntaxNode(node.Kind, node.text, (node.children(0), AnyCall), node.line)
@@ -162,8 +162,8 @@ Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.IsFailing(SyntaxNode("Binary", "then", (A, A)), CodeBlock.Empty)
 	Plain.IsFailing(SyntaxNode("Binary", "+", (A, A)), CodeBlock.Empty.Declare("a", "List(Number)"))
 	Plain.IsFailing(SyntaxNode("Binary", "is", (A, A)), ErrorScope.Numbered) is false
-	let any = AnyError(node, block)
-	let convert = isConverted and IsErrorComparison(node, block) is false
+	any = AnyError(node, block)
+	convert = isConverted and IsErrorComparison(node, block) is false
 	Compared(node, convert then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
 Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
 	Plain.Kept(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
@@ -183,7 +183,7 @@ Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
 		return Checked(operand, block, ErrorScope(values).IsRemainder(Folded(operand, block)))
 	if operand is not comparison.children(0) or operand.children.Length is 0
 		return operand is AnyCall then block.Load(InstructionEntry.LoadAnyError(block.register)) else Handled(operand, block)
-	let caught = Caught(comparison, operand, block).Declare(Tested, values.TypeOf(operand, block))
+	caught = Caught(comparison, operand, block).Declare(Tested, values.TypeOf(operand, block))
 	caught.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, caught.register, Tested))
 Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Caught(IsError, Greeting, InTest).instructions.Last is InstructionEntry.Jump(InstructionType.JumpEnd, 0)
@@ -191,22 +191,22 @@ Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Caught(IsOne, GreetingPlusOne, InTest).instructions(1).payload is (0, 7)
 	Plain.Caught(IsError, Greeting, InTest).scope.TypeOf(FailureMarker) is "7"
 	Plain.Caught(IsOne, Greeting, InTest).instructions.Last.texts is List(Text) + Tested
-	let isError = IsErrorComparison(comparison, block)
-	let caught = isError then block.WithNextId.Declare(FailureMarker, block.nextId to Text) else block
-	let stored = Handled(node, caught).Stored(Tested).At(block.register)
+	isError = IsErrorComparison(comparison, block)
+	caught = isError then block.WithNextId.Declare(FailureMarker, block.nextId to Text) else block
+	stored = Handled(node, caught).Stored(Tested).At(block.register)
 	if isError is false
 		return stored
-	let joined = stored.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
+	joined = stored.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
 	joined.Declare(FailureMarker, block.scope.TypeOf(FailureMarker))
 Validated(node SyntaxNode, block CodeBlock, constructed CodeBlock) CodeBlock
 	Sizing.Validated(NewSize, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.texts(1) is "Validated"
 	Plain.Validated(Greeting, CodeBlock.Empty, CodeBlock.Empty).instructions.Length is 0
 	Sizing.Validated(SyntaxNode("Call", "Size", IsOne.children), CodeBlock.Empty, CodeBlock.Empty) is CodeBlock.Empty
-	let type = values.TypeOf(node, block)
-	let types = values.inference.types
-	let isConstructor = node.Kind is "Call" and types.BaseName(type) is node.text
-	let constrained = types.ParameterScope(type).TypeOf(TypeShape.Constrained)
-	let isMet = constrained is node.children.Length to Text and node.children.Length > 1
+	type = values.TypeOf(node, block)
+	types = values.inference.types
+	isConstructor = node.Kind is "Call" and types.BaseName(type) is node.text
+	constrained = types.ParameterScope(type).TypeOf(TypeShape.Constrained)
+	isMet = constrained is node.children.Length to Text and node.children.Length > 1
 	if isConstructor is false or constrained is "" or isMet
 		return constructed
 	values.Invoke(SyntaxNode("Member", "Validated", List(SyntaxNode) + node), constructed, constructed.Result, type)

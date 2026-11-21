@@ -21,8 +21,8 @@ Step(token Number, position Number) Activity slow
 	mutable updated = List(Mutable(Gpt2Block))
 	mutable activations = List(Mutable(Numbers))
 	for model.blocks
-		let cached = value.Cached(state)
-		let attended = cached.Attended(state)
+		cached = value.Cached(state)
+		attended = cached.Attended(state)
 		activations.Add(cached.Activated(attended))
 		state = cached.Contracted(attended, activations.Last)
 		updated.Add(cached)
@@ -38,18 +38,18 @@ Zeros List(Numbers) slow
 Accumulated(previous Numbers, activated Numbers) Numbers slow
 	Activity(Gpt2.Tiny).Accumulated((1, 0, 0, 3), (1, -2)) is (2, 4, 1, 1)
 	for previous
-		let activation = activated(index % activated.Length)
+		activation = activated(index % activated.Length)
 		value + (index < activated.Length then activation * activation else activation)
 Means(block Number) Numbers slow
 	Activity(Gpt2.Tiny, List(Numbers) + (0, 0, 2, 4), 2).Means(0) is (1, 2)
-	let neurons = sums(block).Length / 2
+	neurons = sums(block).Length / 2
 	for neurons
 		sums(block)(neurons + index) / count
 Scores(block Number) Numbers
 	Activity(Gpt2.Tiny, Activity(Gpt2.Tiny).Zeros).Continued((1, 2)).Scores(0).Length is 48
 	Activity(Gpt2.Tiny, List(Numbers) + (2, 10, 2, 4), 2).Scores(0).First is 0
 	Activity(Gpt2.Tiny, List(Numbers) + (2, 10, 2, 4), 2).Scores(0)(1) > 0
-	let weights = model.blocks(block).contraction.weights
+	weights = model.blocks(block).contraction.weights
 	for Means(block)
 		(sums(block)(index) - count * value * value) * ColumnSquares(weights, index)
 ColumnSquares(rows List(Numbers), column Number) Number

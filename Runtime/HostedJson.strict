@@ -17,7 +17,7 @@ Result VmValue
 	HostedJson(Getting).Result.text is "[1, 2.5]"
 	HostedJson(Listing).Result.items.Last.text is "name"
 	HostedJson(Valued).Result.items.Last.number is 2.5 and HostedJson(Elementing).Result.items.Last.text is "[2]"
-	let json = Json(call.Instance.text)
+	json = Json(call.Instance.text)
 	if call.MethodName is "get"
 		return VmValue.OfText(json(call.Arguments.First.text).text)
 	if call.MethodName is in ("Keys", "Elements")

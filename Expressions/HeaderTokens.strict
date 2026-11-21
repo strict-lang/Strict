@@ -9,7 +9,7 @@ DeclaredType(nameIndex Number) Text
 	HeaderTokens("has", "count", "=", "0").DeclaredType(1) is "Number"
 	HeaderTokens(Tokenizer("has numbers = List(Number)").Tokens).DeclaredType(1) is "Numbers"
 	HeaderTokens("has", "ops", "Bytecode", "/", "InstructionList").DeclaredType(1) is "InstructionList"
-	let next = nameIndex + 1
+	next = nameIndex + 1
 	if next < tokens.Length and tokens(next) is "/"
 		return TypeName(nameIndex)
 	if next + 1 < tokens.Length and tokens(next) is "="
@@ -31,14 +31,14 @@ ValueType(start Number) Text
 	HeaderTokens("constant", "a", "=", "(", "1", ",", "2", ")").ValueType(3) is "Numbers"
 	HeaderTokens("constant", "a", "=", "-", "1").ValueType(3) is "Number"
 	HeaderTokens(Tokenizer("constant a = IsWindows then \"x\" else \"\"").Tokens).ValueType(3) is "Text"
-	let isWhole = tokens(0) is in ("constant", "has")
-	let lowest = isWhole then SyntaxParser(tokens).LowestOperatorIndex(start, tokens.Length) else -1
+	isWhole = tokens(0) is in ("constant", "has")
+	lowest = isWhole then SyntaxParser(tokens).LowestOperatorIndex(start, tokens.Length) else -1
 	if lowest > 0 and tokens(lowest) is "else"
 		return ValueType(lowest + 1)
-	let first = tokens(start)
+	first = tokens(start)
 	if first is "("
 		return ValueType(start + 1) + "s"
-	let kind = first is "-" then "Number" else SyntaxParser(tokens).Leaf(first).Kind
+	kind = first is "-" then "Number" else SyntaxParser(tokens).Leaf(first).Kind
 	kind is "Identifier" then (first is in ("List", "Dictionary") then TypeName(start) else first) else kind
 MemberName Text
 	HeaderTokens("has", "x", "/").MemberName is "x"
@@ -62,7 +62,7 @@ TypeName(start Number) Text
 		return tokens(start) + " or " + TypeName(start + 2)
 	if start + 2 >= tokens.Length or tokens(start + 1) is not in ("/", "(")
 		return tokens(start)
-	let inner = TypeName(start + 2)
+	inner = TypeName(start + 2)
 	if tokens(start + 1) is "/" or tokens(start) is "Mutable"
 		return inner
 	if inner.IndexOf(" or ") > 0
@@ -77,13 +77,13 @@ Arguments(start Number, inner Text) Text
 	HeaderTokens(Tokenizer("Dictionary(Text, Number)").Tokens).Arguments(0, "Text") is "Dictionary(Text, Number)"
 	HeaderTokens("Range", "(", "Number", ")").Arguments(0, "Number") is "Range"
 	HeaderTokens(Tokenizer("Wrapped(Halver)").Tokens).Arguments(0, "Halver") is "Wrapped(Halver)"
-	let further = inner.Lower is inner or tokens(start) is "Range" then "" else Further(start)
-	let isKept = tokens(start) is not "Range" and tokens(start + 3) is in (")", "(")
+	further = inner.Lower is inner or tokens(start) is "Range" then "" else Further(start)
+	isKept = tokens(start) is not "Range" and tokens(start + 3) is in (")", "(")
 	tokens(start) + (isKept or further is not "" then "(" + inner + further + ")" else "")
 Further(start Number) Text
 	HeaderTokens(Tokenizer("Box(List(Text), Number, Map(Text, Size)) a").Tokens).Further(0) is ", Number, Map(Text, Size)"
 	HeaderTokens(Tokenizer("Iterator(Vector2) Couple(Text, Number)").Tokens).Further(0) is ""
-	let brackets = SyntaxParser(tokens)
+	brackets = SyntaxParser(tokens)
 	mutable depth = 0
 	mutable further = ""
 	for Range(start + 1, tokens.Length)
@@ -110,7 +110,7 @@ ParametersEnd Number
 	HeaderTokens("Add", "(", "x", "Iterator", "(", "Text", ")", ")").ParametersEnd is 7
 	if tokens.Length < 2 or tokens(1) is not "("
 		return 0
-	let brackets = SyntaxParser(tokens)
+	brackets = SyntaxParser(tokens)
 	mutable depth = 0
 	mutable end = 0
 	for tokens
@@ -121,10 +121,10 @@ ParametersEnd Number
 IsParameterStart(position Number) Boolean
 	HeaderTokens(Tokenizer("Add(x Dictionary(Text, Number))").Tokens).IsParameterStart(7) is false
 	HeaderTokens("Add", "(", "x", ")").IsParameterStart(2)
-	let previous = tokens(position - 1)
+	previous = tokens(position - 1)
 	if previous is "mutable"
 		return true
-	let isAfterComma = previous is "," and Depth(position) is 1
+	isAfterComma = previous is "," and Depth(position) is 1
 	(position is 2 or isAfterComma) and tokens(position) is not "mutable"
 ParameterPosition(name Text) Number
 	HeaderTokens(Tokenizer("B(a N with value < b, b N)").Tokens).ParameterPosition("b") is 9
@@ -135,7 +135,7 @@ ParameterPosition(name Text) Number
 	Number.NotFound
 Depth(position Number) Number
 	HeaderTokens(Tokenizer("Link(entries List(Entry), depth Number)").Tokens).Depth(5) is 2
-	let brackets = SyntaxParser(tokens)
+	brackets = SyntaxParser(tokens)
 	mutable depth = 0
 	for position
 		depth = depth + brackets.BracketDelta(tokens(index))

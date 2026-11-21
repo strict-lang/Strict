@@ -26,8 +26,8 @@ to Text
 digits Numbers
 	1.digits is (1)
 	123.digits is (1, 2, 3)
-	let nextPart = (value / 10).Floor
-	let currentDigit = value % 10
+	nextPart = (value / 10).Floor
+	currentDigit = value % 10
 	nextPart is 0 then (currentDigit) else nextPart.digits + currentDigit
 to Character
 	5 to Character is "5"
@@ -40,20 +40,20 @@ Floor Number
 	-2.4.Floor is -3
 	0.1.Floor is 0
 	(1 / 0).Floor is 1 / 0
-	let fraction = value % 1
+	fraction = value % 1
 	fraction < 0 then value - fraction - 1 else fraction > 0 then value - fraction else value
 Ceiling Number
 	1.Ceiling is 1
 	2.4.Ceiling is 3
 	-2.4.Ceiling is -2
-	let fraction = value % 1
+	fraction = value % 1
 	fraction > 0 then value - fraction + 1 else value - fraction
 Round(decimals = 0) Number
 	2.4.Round is 2
 	2.6.Round is 3
 	3.5.Round is 4
 	3.14159.Round(2) is 3.14
-	let scale = 10 ^ decimals
+	scale = 10 ^ decimals
 	(value * scale + 0.5).Floor / scale
 Stepped(step Number, rounding Text = "Even") Number
 	0.30000000000000004.Stepped(0.01) is 0.3
@@ -61,7 +61,7 @@ Stepped(step Number, rounding Text = "Even") Number
 	-0.125.Stepped(0.01) is -0.12
 	0.129.Stepped(0.01, "Floor") is 0.12
 	0.75.Stepped(0.25) is 0.75
-	let inverse = (1 / step).Round(6)
+	inverse = (1 / step).Round(6)
 	(value * inverse).Counted(rounding) / inverse
 Counted(rounding Text) Number
 	12.5.Counted("Even") is 12
@@ -71,10 +71,10 @@ Counted(rounding Text) Number
 	1234567812345678.Counted("Even") is 1234567812345678
 	if Absolute > ExactCountLimit
 		return Error("DecimalOverflow")
-	let tolerance = Absolute * RelativeTolerance + 0.000000001
-	let floor = (value + tolerance).Floor
-	let fraction = value - floor
-	let isEvenUp = fraction > 0.5 + tolerance or (fraction - 0.5).Absolute <= tolerance and (floor % 2).Absolute is 1
+	tolerance = Absolute * RelativeTolerance + 0.000000001
+	floor = (value + tolerance).Floor
+	fraction = value - floor
+	isEvenUp = fraction > 0.5 + tolerance or (fraction - 0.5).Absolute <= tolerance and (floor % 2).Absolute is 1
 	floor + ((rounding is "Ceiling" then fraction > tolerance else rounding is "Even" and isEvenUp) then 1 else 0)
 Absolute Number
 	-1.Absolute is 1
@@ -88,8 +88,8 @@ IsNearlyEqual(other, difference = 0) Boolean
 	(1 / 0).IsNearlyEqual(5) is false
 	34.9.IsNearlyEqual(34.943, 0.5)
 	0.IsNearlyEqual(0.0000100001) and 0.0000100001.IsNearlyEqual(0)
-	let delta = (value - other).Absolute
-	let scale = value.Absolute > other.Absolute then value.Absolute else other.Absolute
+	delta = (value - other).Absolute
+	scale = value.Absolute > other.Absolute then value.Absolute else other.Absolute
 	value is other or delta < 1 / 0 and (delta <= difference or delta <= Epsilon * (1 + scale))
 Maximum(other Number) Number
 	3.Maximum(5) is 5 and 5.Maximum(3) is 5 and -2.Maximum(-7) is -2
@@ -117,8 +117,8 @@ Wrap(minimum Number, maximum Number) Number
 	360.Wrap(0, 360) is 0
 	190.Wrap(-180, 180) is -170
 	25.Wrap(7, 17) is 15
-	let range = maximum - minimum
-	let offset = (value - minimum) % range
+	range = maximum - minimum
+	offset = (value - minimum) % range
 	minimum + (offset < 0 then offset + range else offset)
 Fixed(decimals Number) Text
 	3.14159.Fixed(2) is "3.14"
@@ -171,11 +171,11 @@ is(other) Boolean
 and(other) Number
 	(12 and 10) is 8
 	(-1 and 255) is 255
-	let left = value < 0 then value + 2 ^ IntegerBits else value
-	let right = other < 0 then other + 2 ^ IntegerBits else other
+	left = value < 0 then value + 2 ^ IntegerBits else value
+	right = other < 0 then other + 2 ^ IntegerBits else other
 	mutable result = 0
 	for IntegerBits
-		let bit = 2 ^ index
+		bit = 2 ^ index
 		if (left / bit).Floor % 2 is 1 and (right / bit).Floor % 2 is 1
 			result = result + bit
 	result >= 2 ^ (IntegerBits - 1) then result - 2 ^ IntegerBits else result
@@ -237,7 +237,7 @@ Rounded(bits Number) Number
 	3.Rounded(32) is 3
 	if bits is not SingleBits or IsFinite is false or value is 0
 		return value
-	let step = 2 ^ ((Absolute.Logarithm / 2.Logarithm).Floor - SingleMantissaBits)
+	step = 2 ^ ((Absolute.Logarithm / 2.Logarithm).Floor - SingleMantissaBits)
 	(value / step).Counted("Even") * step
 Random Number
 	10.Random < 10

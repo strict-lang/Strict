@@ -18,9 +18,9 @@ Added(scope Scope) Scope
 	mutable names = List(Mutable(Text))
 	mutable values = List(Mutable(Text))
 	for lines
-		let start = value.IndexOf(" = ")
+		start = value.IndexOf(" = ")
 		if (value.StartsWith("has ") or value.StartsWith("mutable ")) and start > 0
-			let end = Constraint.WithStart(value) > start then Constraint.WithStart(value) else value.Length
+			end = Constraint.WithStart(value) > start then Constraint.WithStart(value) else value.Length
 			names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " default")
 			values.Add(value.Substring(start + 3, end - start - 3))
 	scope.WithAll(names, values)
@@ -40,12 +40,12 @@ Parameters(methods Scope, isContract Boolean) Scope
 	Defaults(("A(x Number) N", "\tx")).Parameters(Scope("A", "N"), false).TypeOf("A types") is "Number"
 	"\t types" is not in Defaults(("A(x Number) N", "\tx")).Parameters(Scope("A", "N"), false).names
 	mutable scope = isContract then Scope(List(Text) + " trait", List(Text) + "true") else Scope(List(Text), List(Text))
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	for lines
 		if shape.IsMethodHeader(value)
-			let entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
+			entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
 			scope = scope.WithAll(entries.names, entries.types)
-	let added = Changes(lines).Added(Changes(lines, true).Added(Steps(List(Text)).Members(lines)))
+	added = Changes(lines).Added(Changes(lines, true).Added(Steps(List(Text)).Members(lines)))
 	scope.WithAll(added.names, added.types)
 Of(methods Scope, members Scope, names Texts) Scope
 	Sampled.Of(Scope("Add", "Number"), Scope("x", "Number"), "x").TypeOf("from") is "x"
@@ -53,8 +53,8 @@ Of(methods Scope, members Scope, names Texts) Scope
 	Widths.Of(KnownTypes.NoMembers, KnownTypes.NoMembers, List(Text)).TypeOf(" constrained") is "true"
 	Adding.Parameters(Named, true).TypeOf(" trait") is "true" and Adding.Parameters(Named, false).TypeOf(" trait") is ""
 	Defaults(("A(x Number) N", "\tA(1) is 1", "\tx")).Parameters(Named, false).TypeOf("A types") is "Number"
-	let parameters = Added(Parameters(methods, TypeShape(lines).IsContract))
-	let kind = Constraint.Kind(lines)
+	parameters = Added(Parameters(methods, TypeShape(lines).IsContract))
+	kind = Constraint.Kind(lines)
 	Constructors(kind is "" then parameters else parameters.With(TypeShape.Constrained, kind), names, members)
 ConstantScope(end Number) Scope
 	Defaults(("constant A", "constant B = 10", "constant C")).ConstantScope(3).TypeOf("C") is "11"
@@ -62,7 +62,7 @@ ConstantScope(end Number) Scope
 	mutable values = List(Mutable(Text))
 	mutable next = 0
 	for Constants(end)
-		let literal = ConstantAt(value, next)
+		literal = ConstantAt(value, next)
 		next = NextEnum(value, next)
 		if literal is not ""
 			names.Add(value.Substring(9, value.Length - 9).Split(" ").First)
@@ -81,14 +81,14 @@ ConstantAt(line Text, next Number) Text
 	Empty.NextEnum("constant A = B", 4) is 4 and Empty.NextEnum("constant A =", 4) is 4
 	if line.IndexOf("=") < 0
 		return next to Text
-	let equal = line.IndexOf(" = ")
+	equal = line.IndexOf(" = ")
 	equal < 0 then "" else line.Substring(equal + 3, line.Length - equal - 3)
 NextEnum(line Text, current Number) Number
 	Defaults(List(Text)).NextEnum("constant A", 0) is 1
 	Defaults(List(Text)).NextEnum("constant A = 10", 0) is 11
 	if line.IndexOf("=") < 0
 		return current + 1
-	let tokens = Tokenizer(line).Tokens
+	tokens = Tokenizer(line).Tokens
 	if tokens.Length > 3
 		if SyntaxParser(tokens).Leaf(tokens(3)).Kind is "Number"
 			return tokens(3) to Number + 1

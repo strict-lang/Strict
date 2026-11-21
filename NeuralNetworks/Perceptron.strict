@@ -15,7 +15,7 @@ Output(input Numbers with value.Bits is 32) Number
 Trained(input Numbers, target Number) Perceptron
 	Untrained.Trained((1, 1), 1).bias is Rate
 	Both.Trained((1, 1), 1) is Both
-	let step = (target - Output(input)) * Rate
+	step = (target - Output(input)) * Rate
 	Perceptron(Moved(input, step), bias + step)
 Moved(input Numbers, step Number) Numbers
 	Untrained.Moved((1, 0), 0.5) is (0.5, 0)

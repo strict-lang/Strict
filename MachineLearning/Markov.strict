@@ -23,7 +23,7 @@ Next(context Text) Text
 	Sample.Next("bc") is "a"
 	Sample.Next("bd") is ""
 	Sample.Next("ca") is "b"
-	let count = Count(context)
+	count = Count(context)
 	count is 0 then "" else text(Position(context, count.Random.Floor) + context.Length) to Text
 Generated(start Text, length Number) Text
 	Sample.Generated("bc", 1) is "bca"

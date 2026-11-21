@@ -34,7 +34,7 @@ LoopValueIssues(node SyntaxNode, isLooped Boolean) ValidationIssues
 	Assigning.LoopValueIssues(Assigning.statements(0), false).First to Text is "LoopValueMustNotBeAssigned: value"
 	Assigning.LoopValueIssues(Assigning.statements(0).children.Last.children(0), false).Length is 0
 	Sample.LoopValueIssues(Branching, false).Length is 0
-	let isAssigned = isLooped and node.Kind is "Reassignment" and node.children(0) to Text is in LoopValues
+	isAssigned = isLooped and node.Kind is "Reassignment" and node.children(0) to Text is in LoopValues
 	mutable issues = List(Mutable(ValidationIssue))
 	if isAssigned
 		issues.Add(ValidationIssue("LoopValueMustNotBeAssigned", node.children(0) to Text, node.line))
@@ -47,7 +47,7 @@ DeclarationIssues(declaration SyntaxNode) ValidationIssues
 	Sample.DeclarationIssues(Sample.statements(0)).First.Line is 2
 	Shadowing.DeclarationIssues(Shadowing.statements(0)).First.ruleName is "VariableHidesMemberUseDifferentName"
 	Sample.DeclarationIssues(Sample.statements(0)).Last.ruleName is "UnusedMethodVariableMustBeRemoved"
-	let name = Tokenizer(declaration.text).Tokens.Last
+	name = Tokenizer(declaration.text).Tokens.Last
 	mutable issues = KindIssues(declaration, name) + HidingIssues(declaration, name)
 	if not IsUsed(name)
 		issues.Add(ValidationIssue("UnusedMethodVariableMustBeRemoved", name, declaration.line))
@@ -77,7 +77,7 @@ IsLent(declaration SyntaxNode, name Text) Boolean
 	Ticking.IsLent(Ticking.statements(0), "total") is false
 	Ticking.IsLent(Ticking.statements(3), "outer") is false
 	Ticking.IsLent(Ticking.statements(4), "outer") is false
-	let initial = declaration.children(0)
+	initial = declaration.children(0)
 	if initial.Kind is not "Call" or initial.text is not in mutations
 		return false
 	for statements
@@ -91,9 +91,9 @@ Passes(node SyntaxNode, name Text) Boolean
 	Ticking.Passes(Ticking.statements(2), "outer") is false
 	(Ticking.Passes(Ticking.statements(3), "Count") or Ticking.Passes(Ticking.statements(3), "total")) is false
 	Lending.Passes(SyntaxParser(Tokenizer("Add(1, ticker)").Tokens).Parse, "ticker")
-	let first = node.Kind is "Call" then 0 else 1
+	first = node.Kind is "Call" then 0 else 1
 	for node.children
-		let isArgument = node.Kind is in ("Call", "MethodCall") and index >= first
+		isArgument = node.Kind is in ("Call", "MethodCall") and index >= first
 		if isArgument and value.Kind is "Identifier" and value.text is name or Passes(value, name)
 			return true
 	false
@@ -141,7 +141,7 @@ UsedNames(statement SyntaxNode) Texts
 	Sample.UsedNames(BodyParser("Run", "\tlist(index) = count").Block(1, 1).children(0)) is ("list", "index", "count")
 	if statement.Kind is not "Reassignment"
 		return statement.HeadNames
-	let assigned = statement.children(1).HeadNames
+	assigned = statement.children(1).HeadNames
 	statement.children(0).Kind is "Call" then statement.children(0).HeadNames + assigned else assigned
 IsChanged(name Text) Boolean
 	Sample.IsChanged("bb") is false
@@ -175,5 +175,5 @@ IsMutatingCall(call SyntaxNode, name Text) Boolean
 RootName(node SyntaxNode) Text
 	Sample.RootName(Sample.statements(3)) is "count"
 	Sample.RootName(SyntaxNode("Number", "3")) is ""
-	let names = node.HeadNames
+	names = node.HeadNames
 	names.Length is 0 then "" else names(0)

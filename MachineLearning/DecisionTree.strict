@@ -15,11 +15,11 @@ Grown(rows List(Numbers), depth Number, picked Number) DecisionTree
 	Empty.Grown(Rows, 0, 2) is DecisionTree(-1, 0, -1, 0)
 	Empty.Grown(Alternating, 1, 1) is DecisionTree((0, -1, -1), (0, 0, 0), (2, -1, -1), (-1, 0, 1))
 	Empty.Grown(Reversed, 1, 1) is DecisionTree((0, -1, -1), (4, 0, 0), (2, -1, -1), (-1, 1, 0))
-	let split = BestSplit(rows, picked)
+	split = BestSplit(rows, picked)
 	if depth is 0 or split.Length is 0
 		return Leaf(Majority(Kinds(rows)))
-	let position = features.Length
-	let left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
+	position = features.Length
+	left = Node(split).Grown(Side(rows, split, true), depth - 1, picked)
 	left.Grown(Side(rows, split, false), depth - 1, picked).Linked(position, left.features.Length)
 Leaf(label Number) DecisionTree
 	Empty.Leaf(1) is DecisionTree(-1, 0, -1, 1)
@@ -34,7 +34,7 @@ Linked(position Number, right Number) DecisionTree
 	DecisionTree(features, thresholds, linked, labels)
 Majority(kinds Numbers) Number
 	Empty.Majority((0, 1, 1)) is 1
-	let counts = Counts(kinds)
+	counts = Counts(kinds)
 	counts.Index(counts.Maximum)
 BestSplit(rows List(Numbers), picked Number) Numbers
 	Empty.BestSplit(Rows, 2) is (0, 1)
@@ -42,7 +42,7 @@ BestSplit(rows List(Numbers), picked Number) Numbers
 	mutable best = List(Number)
 	mutable lowest = Gini(Kinds(rows)) - 0.000001
 	for Features(rows.First.Length - 1, picked)
-		let candidate = BestThreshold(rows, value)
+		candidate = BestThreshold(rows, value)
 		if candidate(1) < lowest
 			lowest = candidate(1)
 			best = (value, candidate(0))
@@ -51,7 +51,7 @@ Features(count Number, picked Number) Numbers
 	Empty.Features(3, 3) is (0, 1, 2)
 	Empty.Features(3, 2).Length is 2
 	Empty.Features(30, 29) is not Dataset.Pairs.Indices(29)
-	let order = picked < count then Dataset.Pairs.Order(count) else Dataset.Pairs.Indices(count)
+	order = picked < count then Dataset.Pairs.Order(count) else Dataset.Pairs.Indices(count)
 	for picked
 		order(index)
 BestThreshold(rows List(Numbers), feature Number) Numbers
@@ -59,7 +59,7 @@ BestThreshold(rows List(Numbers), feature Number) Numbers
 	mutable threshold = 0
 	mutable lowest = 2
 	for rows
-		let score = SplitGini(rows, (feature, value(feature)))
+		score = SplitGini(rows, (feature, value(feature)))
 		if score < lowest
 			lowest = score
 			threshold = value(feature)
@@ -69,8 +69,8 @@ SplitGini(rows List(Numbers), split Numbers) Number
 	Empty.SplitGini(Rows, (0, 5)) is 2
 	Empty.SplitGini(Rows, (0, -1)) is 2
 	Empty.SplitGini(Rows, (0, 0)) is 0.2666667
-	let left = Side(rows, split, true)
-	let right = Side(rows, split, false)
+	left = Side(rows, split, true)
+	right = Side(rows, split, false)
 	if left.Length is 0 or right.Length is 0
 		return 2
 	(left.Length * Gini(Kinds(left)) + right.Length * Gini(Kinds(right))) / rows.Length

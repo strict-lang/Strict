@@ -12,5 +12,5 @@ Rounded(unrounded Number, mantissa Number) Number
 	Float32.Rounded(41473, 7) is 41472
 	if unrounded.IsFinite is false
 		return unrounded
-	let step = 2 ^ ((unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor) - mantissa)
+	step = 2 ^ ((unrounded is 0 then 0 else (unrounded.Absolute.Logarithm / 2.Logarithm).Floor) - mantissa)
 	(unrounded / step).Counted("Even") * step

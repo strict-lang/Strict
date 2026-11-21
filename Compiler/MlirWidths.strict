@@ -17,36 +17,36 @@ Width(source Text) Text
 	Halving.Width("numbers") is "16"
 	Doubling.Width("numbers") is ""
 	MlirWidths(MlirFunction(Halving.function, Packing = "for 16 numbers 8"), 2).Width("numbers") is "8"
-	let parts = function.Packing.Split(" ")
-	let at = parts.Index(source)
+	parts = function.Packing.Split(" ")
+	at = parts.Index(source)
 	at < 0 then "" else parts(at + 1)
 Element(source Text) Text
 	Halving.Element("numbers") is "f16"
 	(Quartering.Element("numbers"), Fours.Element("numbers"), Sixes.Element("numbers")) is ("i8", "f32", "f32")
 	Doubling.Element("numbers") is "f64"
-	let width = Width(source)
+	width = Width(source)
 	width is "" then "f64" else width is "16" then "f16" else width is in ("32", "6", "4") then "f32" else "i8"
 Loaded(result Text, address Text, items Text, source Text) Texts
 	Doubling.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = llvm.load %p : !llvm.ptr -> f64"
 	Quartering.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.mulf %xq, %xw : f64"
 	Fours.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f32 to f64"
 	MlirWidths(Fours.function, 2, "f32").Loaded("%x", "%p", "%h", "numbers").Last.EndsWith("-> f32")
-	let type = Element(source)
-	let slot = items + "[" + Temp(index) + "]" + MlirFastLoop.Pointer + type
-	let pointer = "    " + address + " = llvm.getelementptr " + slot
-	let target = result + (type is float then "" else "n")
-	let loaded = "    " + target + " = llvm.load " + address + scope + " : !llvm.ptr -> " + type
+	type = Element(source)
+	slot = items + "[" + Temp(index) + "]" + MlirFastLoop.Pointer + type
+	pointer = "    " + address + " = llvm.getelementptr " + slot
+	target = result + (type is float then "" else "n")
+	loaded = "    " + target + " = llvm.load " + address + scope + " : !llvm.ptr -> " + type
 	(pointer, loaded) + Widened(result, items, source)
 Read(result Text, at Number) Texts
 	Doubling.Read("%x", 4) is Doubling.Loaded("%x", "%t4p", "%t2h_numbers", "numbers")
 	MlirWidths(MlirFastLoop.Squaring.function, 2).Read("%x", 7).Last is "    %x = llvm.load %t7p : !llvm.ptr -> f64"
 	MlirWidths(MlirFastLoop.Shifting.function, 2).Read("%x", 13).First is "    %t2k13 = arith.addi %t2ki, %t2oi_13 : i64"
-	let source = function.method.instructions(at).texts(0)
-	let pointer = "%t" + at + "p"
-	let items = Temp("h_" + source)
+	source = function.method.instructions(at).texts(0)
+	pointer = "%t" + at + "p"
+	items = Temp("h_" + source)
 	if MlirKernel(function, position).Offsets(at).Length is 0
 		return Loaded(result, pointer, items, source)
-	let shifted = "    " + Temp("k" + at) + " = arith.addi " + Temp("ki") + ", " + Temp("oi_" + at) + " : i64"
+	shifted = "    " + Temp("k" + at) + " = arith.addi " + Temp("ki") + ", " + Temp("oi_" + at) + " : i64"
 	List(Text) + shifted + MlirWidths(function, position, float, "k" + at).Loaded(result, pointer, items, source)
 Widened(result Text, items Text, source Text) Texts
 	Halving.Widened("%x", "%h", "numbers").Last is "    %x = arith.select %f2brain_numbers, %xg, %xw : f64"
@@ -54,36 +54,36 @@ Widened(result Text, items Text, source Text) Texts
 	Doubling.Widened("%x", "%h", "numbers").Length is 0
 	Singles.Widened("%x", "%h", "numbers").Last is "    %x = arith.select %f2brain_numbers, %xb, %xw : f32"
 	Narrowing.Widened("%x", "%h", "numbers") is ("    %x = arith.truncf %xn : f64 to f32")
-	let type = Element(source)
+	type = Element(source)
 	if type is float
 		return List(Text)
-	let operation = type is "f64" then " = arith.truncf " else " = arith.extf "
-	let converted = "    " + result + operation + result + "n : " + type + " to " + float
-	let other = type is "f16" then Halved(result, source) else List(Text) + converted
+	operation = type is "f64" then " = arith.truncf " else " = arith.extf "
+	converted = "    " + result + operation + result + "n : " + type + " to " + float
+	other = type is "f16" then Halved(result, source) else List(Text) + converted
 	type is "i8" then Scaled(result, items) else other
 Halved(result Text, source Text) Texts
 	Halving.Halved("%x", "numbers")(4) is "    %xu = arith.shli %xe, %xc : i32"
 	Singles.Halved("%x", "numbers").Length is 7
-	let at = "    " + result
-	let half = at + "w = arith.extf " + result + "n : f16 to " + float
-	let bits = (at + "h = arith.bitcast " + result + "n : f16 to i16", at + "e = arith.extui " + result + "h : i16 to i32")
-	let shifted = (at + "c = arith.constant 16 : i32", at + "u = arith.shli " + result + "e, " + result + "c : i32")
-	let brain = at + "b = arith.bitcast " + result + "u : i32 to f32"
-	let widened = float is "f32" then List(Text) else List(Text) + (at + "g = arith.extf " + result + "b : f32 to f64")
-	let flag = "%f" + position + "brain_" + source
-	let picked = flag + ", " + result + (float is "f32" then "b, " else "g, ") + result + "w : " + float
+	at = "    " + result
+	half = at + "w = arith.extf " + result + "n : f16 to " + float
+	bits = (at + "h = arith.bitcast " + result + "n : f16 to i16", at + "e = arith.extui " + result + "h : i16 to i32")
+	shifted = (at + "c = arith.constant 16 : i32", at + "u = arith.shli " + result + "e, " + result + "c : i32")
+	brain = at + "b = arith.bitcast " + result + "u : i32 to f32"
+	widened = float is "f32" then List(Text) else List(Text) + (at + "g = arith.extf " + result + "b : f32 to f64")
+	flag = "%f" + position + "brain_" + source
+	picked = flag + ", " + result + (float is "f32" then "b, " else "g, ") + result + "w : " + float
 	(List(Text) + half + bits + shifted + brain + widened) + (at + " = arith.select " + picked)
 Scaled(result Text, items Text) Texts
 	Quartering.Scaled("%x", "%h").First is "    %xf = arith.constant 5 : i64"
 	Scaling.Scaled("%x", "%h").Last is "    %x = arith.mulf %xq, %xs : f32"
-	let block = "    " + result + "b = arith.shrui " + Temp(index) + ", " + result + "f : i64"
-	let address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + MlirFastLoop.Pointer + "f32"
-	let scale = "    " + result + "s = llvm.load " + result + "a : !llvm.ptr -> f32"
-	let widened = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
-	let byte = "    " + result + "q = arith.sitofp " + result + "n : i8 to " + float
-	let factor = result + (float is "f32" then "s" else "w")
-	let product = "    " + result + " = arith.mulf " + result + "q, " + factor + " : " + float
-	let first = (MlirTyped.Integer.Constant(result + "f", "5"), block, address, scale)
+	block = "    " + result + "b = arith.shrui " + Temp(index) + ", " + result + "f : i64"
+	address = "    " + result + "a = llvm.getelementptr " + items + "s[" + result + "b]" + MlirFastLoop.Pointer + "f32"
+	scale = "    " + result + "s = llvm.load " + result + "a : !llvm.ptr -> f32"
+	widened = "    " + result + "w = arith.extf " + result + "s : f32 to f64"
+	byte = "    " + result + "q = arith.sitofp " + result + "n : i8 to " + float
+	factor = result + (float is "f32" then "s" else "w")
+	product = "    " + result + " = arith.mulf " + result + "q, " + factor + " : " + float
+	first = (MlirTyped.Integer.Constant(result + "f", "5"), block, address, scale)
 	(float is "f32" then first else first + widened) + (byte, product)
 Pointed(result Text, list Text, source Text, plain Text) Texts
 	Halving.Pointed("%h", "%l", "numbers", "strict_list_start").First.IndexOf("@strict_holder_data(%f2k_numbers)") > 0
@@ -92,17 +92,17 @@ Pointed(result Text, list Text, source Text, plain Text) Texts
 	Fours.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_holder_floats(%f2k_numbers)") > 0
 	Sixes.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_holder_floats(%f2k_numbers)") > 0
 	Paired.Pointed("%h", "%l", "numbers", "strict_list_start").Last.IndexOf("@strict_holder_second_floats(") > 0
-	let holder = "(%f" + position + "k_" + source + ") : (!llvm.ptr) -> !llvm.ptr"
-	let called = Element(source) is "f64" then plain + "(" + list + ")" + MlirFastLoop.Items else Decoder(source) + holder
-	let pointed = "    " + result + " = func.call @" + called
-	let scales = "    " + result + "s = func.call @strict_holder_scales" + holder
+	holder = "(%f" + position + "k_" + source + ") : (!llvm.ptr) -> !llvm.ptr"
+	called = Element(source) is "f64" then plain + "(" + list + ")" + MlirFastLoop.Items else Decoder(source) + holder
+	pointed = "    " + result + " = func.call @" + called
+	scales = "    " + result + "s = func.call @strict_holder_scales" + holder
 	Element(source) is "i8" then (pointed, scales) else List(Text) + pointed
 Decoder(source Text) Text
 	Fours.Decoder("numbers") is "strict_holder_floats"
 	Paired.Decoder("numbers") is "strict_holder_second_floats"
 	Quartering.Decoder("numbers") is "strict_holder_data"
-	let isSecond = function.Packing.Split(" ").Index(source) > 0
-	let floats = isSecond then "strict_holder_second_floats" else "strict_holder_floats"
+	isSecond = function.Packing.Split(" ").Index(source) > 0
+	floats = isSecond then "strict_holder_second_floats" else "strict_holder_floats"
 	Width(source) is in ("6", "4") then floats else "strict_holder_data"
 Temp(suffix Text) Text
 	Doubling.Temp("ki") is "%t2ki"

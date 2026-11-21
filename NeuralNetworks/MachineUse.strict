@@ -29,8 +29,8 @@ Models(logging Logger, name Text, model Number, encoder Number, growth Number, f
 	MachineUse(name, (encoder * growth).Maximum(model), model + Gigabyte, forced)
 Weights(logging Logger, name Text, path Text) MachineUse slow
 	MachineUse.Weights(Logger, "Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
-	let parts = path.Split("-00001-of-")
-	let single = File(path).Exists then File(path).Length else 0
+	parts = path.Split("-00001-of-")
+	single = File(path).Exists then File(path).Length else 0
 	if parts.Length < 2
 		return MachineUse(name, single, single is 0 then 0 else single + Gigabyte, IsForced(List(Text)))
 	mutable size = 0
@@ -46,18 +46,18 @@ IsChecked(arguments Texts, root Text) Boolean slow
 	(Local is in arguments is false and File(root + Resident.Stamp).Exists or arguments is (Resident.Stopping)) is false
 Needed Text
 	MachineUse("H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
-	let mode = isForced then "force" else "wait"
+	mode = isForced then "force" else "wait"
 	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
 Admitted Boolean slow
 	MachineUse("H3Video", 0, 0, true, Nowhere).Admitted
-	let reply = Coordinator(coordinator).Resolved(Needed)
+	reply = Coordinator(coordinator).Resolved(Needed)
 	if reply.StartsWith("refused")
 		Explained(reply)
 		return false
 	reply is "" then Checked else true
 Checked Boolean slow
-	let device = Device
-	let problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
+	device = Device
+	problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
 	if problem is not "" and isForced
 		logger.Log(problem)
 		logger.Log("Running anyway (--force), this can be very slow while other programs hold the memory")
@@ -67,11 +67,11 @@ Checked Boolean slow
 	Explained
 	false
 Explained(reply = "") slow
-	let device = Device
-	let parts = reply.Split("\t")
-	let given = parts.Length > 2 then "Not enough memory for " + program + ": " + parts(2) else ""
-	let local = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0), true)
-	let problem = given is "" then local else given
+	device = Device
+	parts = reply.Split("\t")
+	given = parts.Length > 2 then "Not enough memory for " + program + ": " + parts(2) else ""
+	local = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0), true)
+	problem = given is "" then local else given
 	logger.Log(problem + (device(2) > BusyPercent then ", the GPU is " + device(2) + " % busy" else ""))
 	logger.Log("Programs using them:")
 	for Users
@@ -84,10 +84,10 @@ Problem(hostFree Number, hostTotal Number, deviceFree Number, deviceTotal Number
 	Sample.Problem(20 * Gigabyte, 32 * Gigabyte, 9 * Gigabyte, 10 * Gigabyte) is ""
 	Sample.Problem(0, 0, 0, 0) is ""
 	Sample.Problem(30 * Gigabyte, 64 * Gigabyte, 20 * Gigabyte, 24 * Gigabyte, true).StartsWith("Not enough")
-	let isShort = IsShort(ram, hostFree, hostTotal, HostShare) or IsShort(vram, deviceFree, deviceTotal, VideoShare)
-	let needs = Sized(Usable(ram, hostTotal, HostShare)) + " RAM and " + Sized(Usable(vram, deviceTotal, VideoShare))
-	let frees = Sized(hostFree) + " of " + Sized(hostTotal) + " RAM and " + Sized(deviceFree) + " of " + Sized(deviceTotal)
-	let text = "Not enough free memory for " + program + ", it needs " + needs + " VRAM, " + frees
+	isShort = IsShort(ram, hostFree, hostTotal, HostShare) or IsShort(vram, deviceFree, deviceTotal, VideoShare)
+	needs = Sized(Usable(ram, hostTotal, HostShare)) + " RAM and " + Sized(Usable(vram, deviceTotal, VideoShare))
+	frees = Sized(hostFree) + " of " + Sized(hostTotal) + " RAM and " + Sized(deviceFree) + " of " + Sized(deviceTotal)
+	text = "Not enough free memory for " + program + ", it needs " + needs + " VRAM, " + frees
 	isShort or isShown then text + " VRAM are free" else ""
 IsShort(needed Number, free Number, total Number, share Number) Boolean
 	Sample.IsShort(25 * Gigabyte, 7 * Gigabyte, 128 * Gigabyte, HostShare)
@@ -100,7 +100,7 @@ Usable(needed Number, total Number, share Number) Number
 	Sample.Usable(22 * Gigabyte, 24 * Gigabyte, VideoShare) is 18 * Gigabyte
 	Sample.Usable(6 * Gigabyte, 24 * Gigabyte, VideoShare) is 6 * Gigabyte
 	Sample.Usable(6 * Gigabyte, 0, VideoShare) is 6 * Gigabyte
-	let usable = total - total / share
+	usable = total - total / share
 	total is 0 or needed < usable then needed else usable
 Noted(deviceTotal Number)
 	Sample.Noted(0) is not Error
@@ -112,8 +112,8 @@ Sized(bytes Number) Text
 	(bytes / Gigabyte).Round(1) + " GB"
 Device Numbers slow
 	Sample.Device.Length is 3
-	let result = Process.RunTool("nvidia-smi", Query)
-	let parts = result.Output.Split("\n").First.Split(",")
+	result = Process.RunTool("nvidia-smi", Query)
+	parts = result.Output.Split("\n").First.Split(",")
 	result.Failed or parts.Length < 3 then (0, 0, 0) else Measured(parts)
 Measured(parts Texts) Numbers
 	Sample.Measured(("24564", " 24049", " 3")) is (24564 * Mebibyte, 24049 * Mebibyte, 3)
@@ -121,7 +121,7 @@ Measured(parts Texts) Numbers
 Users Texts slow
 	if Process.OperatingSystem is not "Windows"
 		return List(Text) + "  (see the task manager or nvidia-smi)"
-	let users = Listed(Process.RunTool("powershell", Listing).Output.Split("\n")) - ""
+	users = Listed(Process.RunTool("powershell", Listing).Output.Split("\n")) - ""
 	users.Length is 0 then List(Text) + "  (none found, see the task manager)" else users
 Listed(lines Texts) Texts
 	Sample.Listed(("", "5|python.exe|32212254720|0|False")).Last is "  python (pid 5): 30 GB RAM, 0 GB VRAM"
@@ -132,11 +132,11 @@ User(line Text) Text
 	Sample.User("5|python.exe|32212254720|12884901888|False") is "  python (pid 5): 30 GB RAM, 12 GB VRAM"
 	Sample.User("3|Ben.exe|1073741824|0|True").IndexOf("backend") > 0
 	Sample.User("") is ""
-	let parts = line.Trim.Split("|")
+	parts = line.Trim.Split("|")
 	if parts.Length < 5
 		return ""
-	let name = parts(1).Replace(".exe", "")
-	let isBackend = name is in Programs and parts(4) is "True"
-	let usage = ": " + Sized(parts(2) to Number) + " RAM, " + Sized(parts(3) to Number) + " VRAM"
-	let stop = isBackend then ", type '" + name + " stop' to free them" else ""
+	name = parts(1).Replace(".exe", "")
+	isBackend = name is in Programs and parts(4) is "True"
+	usage = ": " + Sized(parts(2) to Number) + " RAM, " + Sized(parts(3) to Number) + " VRAM"
+	stop = isBackend then ", type '" + name + " stop' to free them" else ""
 	"  " + name + (isBackend then " backend" else "") + " (pid " + parts(0) + ")" + usage + stop

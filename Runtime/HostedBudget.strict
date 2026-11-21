@@ -1,7 +1,7 @@
 has call Invocation
 Result VmValue
 	TestBudget.Finished(TestBudget.Started("a", false) + TestBudget.Finished(0) * 0) < 9 + TestBudget.Started("", true) * 0
-	let arguments = call.Arguments
+	arguments = call.Arguments
 	if call.MethodName is in ("Started", "Watched")
 		return VmValue.OfNumber(TestBudget.Watched(arguments(0).text, arguments(1).IsTrue))
 	if call.MethodName is "Entered"
@@ -17,5 +17,5 @@ Measured(arguments List(VmValue)) VmValue
 		return VmValue.OfText(SlowTests.Overran(arguments(0).number, arguments(1).text))
 	if call.MethodName is "Busy"
 		return VmValue.OfNumber(TestBudget.Busy(arguments(0).number, arguments(1).number))
-	let elapsed = arguments(0).number
+	elapsed = arguments(0).number
 	VmValue.OfNumber(call.MethodName is "Overrun" then SlowTests.Overrun(elapsed) else TestBudget.Finished(elapsed))

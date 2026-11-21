@@ -22,14 +22,14 @@ Right(words Texts) Number
 	right
 Kept(count Number) Number
 	Spans.Kept(Many) is Many
-	let words = Words(count)
+	words = Words(count)
 	Process.Collected
-	let others = Words(count * 2)
+	others = Words(count * 2)
 	Process.Collected
 	Right(words) + Right(others) - count * 2
 Scanned(count Number) Number
 	Spans.Scanned(Big) is Big
-	let words = Words(count)
+	words = Words(count)
 	Process.Collected
 	Process.Collected
 	Right(words)

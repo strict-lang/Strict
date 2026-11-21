@@ -24,11 +24,11 @@ Folded(node SyntaxNode) SyntaxNode
 	Limits.Folded(SyntaxNode("Binary", "*", (Limit, Two))).text is "6"
 	Limits.Folded(SyntaxNode("Binary", "/", (Limit, SyntaxNode("Number", "0")))).Kind is "Binary"
 	Limits.Folded(SyntaxNode("Binary", "+", (SyntaxNode("Identifier", "x"), Two))).Kind is "Binary"
-	let negated = Negated(Constant(node))
+	negated = Negated(Constant(node))
 	if negated.Kind is not "Binary" or negated.text is not in ("+", "-", "*", "/", "%")
 		return negated
-	let left = Folded(negated.children(0))
-	let right = Folded(negated.children(1))
+	left = Folded(negated.children(0))
+	right = Folded(negated.children(1))
 	if left.Kind is not "Number" or right.Kind is not "Number" or right.text is in ("0", "-0")
 		return Appended(negated, left, right)
 	SyntaxNode("Number", Calculated(negated.text, left.text to Number, right.text to Number) to Text)
@@ -36,11 +36,11 @@ Appended(binary SyntaxNode, list SyntaxNode, element SyntaxNode) SyntaxNode
 	Limits.Folded(SyntaxParser(Tokenizer("List(Number) + 0 + 2").Tokens).Parse) to Text is "(0, 2)"
 	Limits.Appended(Plus, SyntaxParser(Tokenizer("List(Text)").Tokens).Parse, Two).Kind is "Binary"
 	Limits.Appended(Plus, SyntaxParser(Tokenizer("(1, \"a\")").Tokens).Parse, Two).Kind is "Binary"
-	let isEmpty = list.Kind is "Call" and list.text is "List" and list.children.Length is 1
-	let isTyped = isEmpty and list.children(0).text is element.Kind or list.Kind is "List"
+	isEmpty = list.Kind is "Call" and list.text is "List" and list.children.Length is 1
+	isTyped = isEmpty and list.children(0).text is element.Kind or list.Kind is "List"
 	if binary.text is not "+" or element.IsLiteral is false or isTyped is false
 		return binary
-	let elements = isEmpty then List(SyntaxNode) else list.children
+	elements = isEmpty then List(SyntaxNode) else list.children
 	for elements
 		if value.Kind is not element.Kind
 			return binary
@@ -52,7 +52,7 @@ Inlined(body SyntaxNode) SyntaxNode
 	mutable constants = List(Mutable(SyntaxNode))
 	mutable code = List(Mutable(SyntaxNode))
 	for body.children
-		let line = Literal(Substituted(value, constants))
+		line = Literal(Substituted(value, constants))
 		if line.Kind is "Constant"
 			constants.Add(line)
 		else
@@ -68,8 +68,8 @@ Literal(line SyntaxNode) SyntaxNode
 	Limits.Literal(Local.children(1)).Kind is "Declaration"
 	if line.Kind is not "Declaration" or line.text.StartsWith("constant ") is false
 		return line
-	let folded = Folded(line.children(0))
-	let isLiteral = folded.Kind is in ("Number", "Text", "Boolean")
+	folded = Folded(line.children(0))
+	isLiteral = folded.Kind is in ("Number", "Text", "Boolean")
 	isLiteral then SyntaxNode("Constant", Tokenizer(line.text).Tokens.Last, List(SyntaxNode) + folded) else line
 Substituted(node SyntaxNode, constants SyntaxNodes) SyntaxNode
 	Limits.Substituted(SyntaxNode("Call", "a"), List(SyntaxNode) + Limits.Literal(Local.children(0))).Kind is "Call"
@@ -94,18 +94,18 @@ Constant(node SyntaxNode) SyntaxNode
 	Owned.Constant(SyntaxNode("Member", "Alias", Count)).text is "3"
 	Owned.Constant(SyntaxNode("Member", "Loop", Count)).Kind is "Member"
 	Owned.Constant(SyntaxNode("Member", "Missing", Count)) to Text is "Error(\"Missing\")"
-	let aliased = Aliased(node, List(Text))
-	let isError = aliased.Kind is "Identifier" and aliased.text is "Error" and node.text is not "Error"
+	aliased = Aliased(node, List(Text))
+	isError = aliased.Kind is "Identifier" and aliased.text is "Error" and node.text is not "Error"
 	isError then SyntaxNode("Call", "Error", SyntaxNode("Text", "\"" + node.text + "\"")) else aliased
 Aliased(node SyntaxNode, aliases Texts) SyntaxNode
 	Limits.Aliased(Limit, List(Text) + "Count.Limit").Kind is "Identifier"
-	let isOther = node.Kind is "Member" and node.children(0).Kind is in ("Identifier", "Type")
+	isOther = node.Kind is "Member" and node.children(0).Kind is in ("Identifier", "Type")
 	if node.Kind is not "Identifier" and isOther is false
 		return node
-	let owner = isOther then node.children(0).text else typeName
+	owner = isOther then node.children(0).text else typeName
 	if inference.ConstantOf(owner, node.text) is "" or owner + "." + node.text is in aliases
 		return node
-	let parsed = ConstantMethods(inference).Definition(owner, node.text)
+	parsed = ConstantMethods(inference).Definition(owner, node.text)
 	if ConstantMethods(inference, isOptimizing or owner is not typeName).IsCached(owner, node.text)
 		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", owner), node.line)
 	parsed.Kind is "Member" then Aliased(parsed, aliases + (owner + "." + node.text)) else parsed
@@ -131,7 +131,7 @@ Unhidden(node SyntaxNode) SyntaxNode
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		children.Add(Unhidden(value))
-	let isHidden = node.Kind is "Call" and inference.types.MethodsOf(typeName).TypeOf(node.text) is not ""
+	isHidden = node.Kind is "Call" and inference.types.MethodsOf(typeName).TypeOf(node.text) is not ""
 	if isHidden and inference.types.IsKnown(node.text)
 		return SyntaxNode("MethodCall", node.text, List(SyntaxNode) + SyntaxNode("Type", node.text) + children, node.line)
 	SyntaxNode(node.Kind, node.text, children, node.line)
@@ -140,7 +140,7 @@ Outer(node SyntaxNode) SyntaxNode
 	Limits.Outer(SyntaxParser(Tokenizer("outer.index").Tokens).Parse).children(0).Kind is "Identifier"
 	Limits.Outer(SyntaxParser(Tokenizer("outer.Count(1)").Tokens).Parse).children(0).Kind is "Type"
 	if node.Kind is in ("Member", "MethodCall")
-		let isOuter = node.children.Length > 0 then node.children(0) to Text is "outer" else false
+		isOuter = node.children.Length > 0 then node.children(0) to Text is "outer" else false
 		if isOuter then inference.types.IsKnown(node.text) else false
 			return OuterNode(node)
 	mutable children = List(Mutable(SyntaxNode))
@@ -175,7 +175,7 @@ Constructed(node SyntaxNode) SyntaxNode
 	Limits.Constructed(SyntaxNode("Call", "Count", (SyntaxNode("Type", "Count"), Two))).children.Length is 2
 	Limits.Constructed(Limits.Qualified(SyntaxNode("Call", "Count", Two))) to Text is "Count(2)"
 	Limits.Constructed(Two) is Two
-	let isTyped = node.Kind is "MethodCall" and node.children.Length > 0 and node.children(0).Kind is "Type"
+	isTyped = node.Kind is "MethodCall" and node.children.Length > 0 and node.children(0).Kind is "Type"
 	if isTyped is false or node.children(0).text is not node.text
 		return node
 	SyntaxNode("Call", node.text, Rest(node.children), node.line)
@@ -203,7 +203,7 @@ Negated(node SyntaxNode) SyntaxNode
 	Limits.Negated(Two).text is "2"
 	if node.Kind is not "Negate"
 		return node
-	let inner = Folded(node.children(0))
+	inner = Folded(node.children(0))
 	inner.Kind is "Number" then SyntaxNode("Number", -(inner.text to Number) to Text) else node
 Calculated(operator Text, left Number, right Number) Number
 	Limits.Calculated("+", 7, 2) is 9
@@ -223,9 +223,9 @@ Unwrapped(node SyntaxNode) SyntaxNode
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Vector2(Limit)").Tokens).Parse) to Text is "Limit"
 	Wrapping.Unwrapped(SyntaxParser(Tokenizer("Angle(90)").Tokens).Parse) to Text is "Angle(90)"
 	Limits.Unwrapped(Limit).text is "3"
-	let folded = Constructed(Folded(node))
-	let members = inference.types.MembersOf(folded.text).types
-	let isWrapper = folded.Kind is "Call" and members.Length is 1 and TypeEntry.IsBaseName(folded.text) is false
+	folded = Constructed(Folded(node))
+	members = inference.types.MembersOf(folded.text).types
+	isWrapper = folded.Kind is "Call" and members.Length is 1 and TypeEntry.IsBaseName(folded.text) is false
 	if isWrapper is false or inference.types.MethodsOf(folded.text).TypeOf("from") is not ""
 		return folded
 	folded.children.Length is 1 then Folded(folded.children(0)) else SyntaxNode("List", "", folded.children)

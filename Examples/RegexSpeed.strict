@@ -1,15 +1,15 @@
 constant Pattern = "constant \\w+ = "
 Run
-	let lines = Lines("Compiler")
-	let reused = Regex(Pattern)
-	let started = Process.Elapsed
-	let built = Matches(lines, "")
-	let parsed = Process.Elapsed
-	let kept = Kept(lines, reused)
-	let matched = Process.Elapsed
-	let found = Found(lines)
-	let ended = Process.Elapsed
-	let perLine = Milliseconds(parsed - started) + " ms, one Regex " + Milliseconds(matched - parsed)
+	lines = Lines("Compiler")
+	reused = Regex(Pattern)
+	started = Process.Elapsed
+	built = Matches(lines, "")
+	parsed = Process.Elapsed
+	kept = Kept(lines, reused)
+	matched = Process.Elapsed
+	found = Found(lines)
+	ended = Process.Elapsed
+	perLine = Milliseconds(parsed - started) + " ms, one Regex " + Milliseconds(matched - parsed)
 	logger.Log(lines.Length + " lines, a Regex per line " + perLine + " ms, IndexOf " + Milliseconds(ended - matched))
 	logger.Log("hits: " + built + ", " + kept + ", " + found)
 Lines(folder Text) Texts slow

@@ -4,5 +4,5 @@ Parsed(label Text, bonus Number) Number
 	number + bonus + (label to Number)
 Shown Text
 	TracedValues(5).Shown.IndexOf("at TracedValues.Parsed(label \"none\", bonus 2) in ") > 0
-	let failed = Parsed("none", 2)
+	failed = Parsed("none", 2)
 	failed is Error then failed to Text else ""

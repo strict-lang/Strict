@@ -37,7 +37,7 @@ IsCarried(name Text) Boolean
 		return false
 	for function.method.instructions
 		if value.kind is in MlirAlone.Named and value.texts(0) is name
-			let isLoad = value.kind is InstructionType.LoadVariableToRegister
+			isLoad = value.kind is InstructionType.LoadVariableToRegister
 			if (isLoad then IsKeptRead(index, name, 0) else IsKeptValue(index, value.payload(0), name, 0)) is false
 				return false
 	true
@@ -47,16 +47,16 @@ IsPlain(name Text) Boolean
 	Carrying.IsPlain("listResult0") is false and Carrying.IsPlain("index") is false
 	Mixed.IsCarried("kept") and Mixed.IsCarried("count") is false and Reading.IsCarried("kept")
 	Escaping.IsCarried("kept") is false and Looping.IsCarried("kept") is false and Summed.IsCarried("kept") is false
-	let isTemporary = name is in MlirOwned.Temporaries or name.StartsWith("listResult") or name.StartsWith("conditional")
-	let isOuter = name is in function.Parameters or name is in MlirInstances(function, 0).StoredNames(function.type)
+	isTemporary = name is in MlirOwned.Temporaries or name.StartsWith("listResult") or name.StartsWith("conditional")
+	isOuter = name is in function.Parameters or name is in MlirInstances(function, 0).StoredNames(function.type)
 	(isTemporary or isOuter) is false
 IsKeptRead(at Number, name Text, depth Number) Boolean
 	Carrying.IsKeptRead(4, "kept", 0) and Leaking.IsKeptRead(4, "kept", 0) is false
 	Branching.IsKeptRead(7, "kept", 0) and Branching.IsKeptRead(4, "kept", 0)
 	Escaping.IsKeptRead(4, "kept", 0) is false and Looping.IsKeptRead(4, "kept", 0) is false
-	let instructions = function.method.instructions
-	let register = instructions(at).payload(0)
-	let reuse = LoadReuse(instructions)
+	instructions = function.method.instructions
+	register = instructions(at).payload(0)
+	reuse = LoadReuse(instructions)
 	for Range(at + 1, instructions.Length)
 		if IsSafeUse(value, register, name, depth) is false
 			return false
@@ -67,12 +67,12 @@ IsSafeUse(at Number, register Number, name Text, depth Number) Boolean
 	Carrying.IsSafeUse(6, 4, "kept", 0) and Carrying.IsSafeUse(5, 3, "kept", 7) is false
 	Leaking.IsSafeUse(5, 3, "kept", 0) is false
 	Escaping.IsSafeUse(5, 3, "kept", 0) is false and Looping.IsSafeUse(5, 3, "kept", 0) is false
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.StoreRegisterToVariable and entry.payload(0) is register
 		return IsBack(entry.texts(0), name, depth)
 	if entry.kind is InstructionType.LoopBegin and entry.payload(0) is register or depth > 6
 		return false
-	let isPassed = entry.kind is InstructionType.Invoke and MlirOwned(function, 0).IsLeaked(at, register)
+	isPassed = entry.kind is InstructionType.Invoke and MlirOwned(function, 0).IsLeaked(at, register)
 	isPassed is false or IsKeepingCall(at, name, depth + 1) and IsKeptRead(at, name, depth + 1)
 IsBack(target Text, name Text, depth Number) Boolean
 	Branching.IsBack("conditional0", "kept", 0) and Branching.IsBack("kept", "kept", 0)
@@ -90,11 +90,11 @@ IsKeptValue(at Number, register Number, allowed Texts, depth Number) Boolean
 	Branching.IsKeptValue(10, 6, Kept, 0) and Carrying.IsKeptValue(6, 4, Kept, 7) is false
 	if depth > 6 or MlirOwned(function, 0).IsFresh(function, at, register, 0)
 		return depth <= 6
-	let writer = MlirKinds(function).Writer(at, register)
-	let entry = writer < 0 then InstructionEntry.Return(0) else function.method.instructions(writer)
+	writer = MlirKinds(function).Writer(at, register)
+	entry = writer < 0 then InstructionEntry.Return(0) else function.method.instructions(writer)
 	if entry.kind is InstructionType.Invoke
 		return IsKeepingCall(writer, allowed, depth + 1)
-	let loaded = entry.kind is InstructionType.LoadVariableToRegister then entry.texts(0) else ""
+	loaded = entry.kind is InstructionType.LoadVariableToRegister then entry.texts(0) else ""
 	if loaded is "" or loaded is in allowed
 		return loaded is not ""
 	(isOwner is false or loaded.StartsWith("conditional")) and IsHeld(loaded, allowed + loaded, depth)
@@ -110,20 +110,20 @@ IsHeld(local Text, allowed Texts, depth Number) Boolean
 IsKeepingCall(at Number, allowed Texts, depth Number) Boolean
 	Carrying.IsKeepingCall(5, Kept, 0) and Leaking.IsKeepingCall(5, Kept, 0) is false
 	Carrying.IsKeepingCall(2, Kept, 0) is false
-	let callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Called(function, at)
 	if callees.Length is 0 or depth > 6
 		return false
-	let callee = MlirCarried(callees.First, false)
+	callee = MlirCarried(callees.First, false)
 	callee.IsPassing(value, at, allowed, depth) and callee.IsReturning(callee.Typed, depth)
 IsPassing(caller MlirCarried, at Number, allowed Texts, depth Number) Boolean
 	Returning.IsPassing(Carrying, 5, Kept, 0)
 	Returning.IsPassing(Carrying, 5, Kept, 7) is false
 	MlirCarried(MlirFunction(Types, Holder, Itself), false).IsPassing(Selfing, 1, Kept, 0) is false
-	let entry = caller.function.method.instructions(at)
-	let positions = LoadReuse(caller.function.method.instructions).InvokeReads(entry)
-	let count = PayloadDecoder(entry).ArgumentCount
+	entry = caller.function.method.instructions(at)
+	positions = LoadReuse(caller.function.method.instructions).InvokeReads(entry)
+	count = PayloadDecoder(entry).ArgumentCount
 	for positions
-		let parameter = index < count then function.Parameters(index + 1) else "value"
+		parameter = index < count then function.Parameters(index + 1) else "value"
 		if parameter is in Typed and caller.IsKeptValue(at, entry.payload(value), allowed, depth) is false
 			return false
 	true
@@ -138,7 +138,7 @@ IsReturning(allowed Texts, depth Number) Boolean
 Typed Texts
 	Returning.Typed is ("outer")
 	MlirCarried(MlirFunction(Types, MlirInstances.Outer, Same)).Typed is ("value", "outer")
-	let returned = TypeEntry.ShortName(function.method.returnType)
+	returned = TypeEntry.ShortName(function.method.returnType)
 	(TypeEntry.ShortName(function.type.Name) is returned then ("value") else List(Text)) + Named(returned)
 Named(returned Text) Texts
 	Returning.Named("Outer") is ("outer")

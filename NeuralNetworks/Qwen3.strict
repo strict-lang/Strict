@@ -20,43 +20,43 @@ Loaded(path Text, bits = 8, isGenerating = true) Qwen3 slow
 	Tiny.theta is 1000000
 	TinyMixture.outputs is not TinyMixture.tokens
 	Qwen3.Loaded("NeuralNetworks/tinyqwen3moe.gguf", 32, false).outputs is TinyMixture.tokens
-	let model = Gguf(path, bits)
-	let base = model.Value(model.Value("general.architecture") + ".rope.freq_base") to Number
-	let embedding = model.Rows("token_embd.weight")
-	let output = isGenerating and model.Shape("output.weight").Length > 0 then model.Rows("output.weight") else embedding
-	let normed = model.Values("output_norm.weight")
-	let folding = Basis.Loaded(model)
+	model = Gguf(path, bits)
+	base = model.Value(model.Value("general.architecture") + ".rope.freq_base") to Number
+	embedding = model.Rows("token_embd.weight")
+	output = isGenerating and model.Shape("output.weight").Length > 0 then model.Rows("output.weight") else embedding
+	normed = model.Values("output_norm.weight")
+	folding = Basis.Loaded(model)
 	Qwen3(Blocks(model, folding), embedding, output, normed, base, rotary = Rotary(model), basis = folding)
 Rotary(model Gguf) Number slow
 	Tiny.Rotary(Gguf("NeuralNetworks/tinyqwen3.gguf")) is 0
 	Tiny.Rotary(Gguf("NeuralNetworks/tinyqwen35.gguf")) is 2
-	let dimensions = model.Value(model.Value("general.architecture") + ".rope.dimension_count")
+	dimensions = model.Value(model.Value("general.architecture") + ".rope.dimension_count")
 	dimensions is "" then 0 else dimensions to Number
 Blocks(model Gguf, folding Basis) List(Qwen3Block) slow
 	Tiny.Blocks(Gguf("NeuralNetworks/tinyqwen3.gguf"), Basis.None).First.heads is 2
 	TinyHybrid.blocks.First.hybrid.layers.Length is 3
-	let architecture = model.Value("general.architecture")
-	let heads = model.Value(architecture + ".attention.head_count") to Number
-	let given = model.Value(architecture + ".full_attention_interval")
-	let interval = given is "" then 1 else given to Number
-	let extra = model.Value(architecture + ".nextn_predict_layers")
-	let layers = (model.Value(architecture + ".block_count") to Number) - (extra is "" then 0 else extra to Number)
-	let memory = Hybrid.Memory(model)
+	architecture = model.Value("general.architecture")
+	heads = model.Value(architecture + ".attention.head_count") to Number
+	given = model.Value(architecture + ".full_attention_interval")
+	interval = given is "" then 1 else given to Number
+	extra = model.Value(architecture + ".nextn_predict_layers")
+	layers = (model.Value(architecture + ".block_count") to Number) - (extra is "" then 0 else extra to Number)
+	memory = Hybrid.Memory(model)
 	for layers / interval
-		let attention = Qwen3Block.Loaded(model, "blk." + (index * interval + interval - 1) + ".", heads, folding)
+		attention = Qwen3Block.Loaded(model, "blk." + (index * interval + interval - 1) + ".", heads, folding)
 		Qwen3Block(attention, hybrid = Hybrid.Loaded(model, index * interval, interval - 1, memory, folding))
 Rotations(positions Numbers, heights = List(Number), widths = List(Number)) Numbers slow
 	Tiny.Rotations(List(Number) + 0) is (1, 1, 1, 1, 0, 0, 0, 0)
 	Tiny.Rotations(List(Number) + 1)(4).IsNearlyEqual(-0.8414709848078965)
 	Tiny.Rotations((0, 1))(13).IsNearlyEqual(-0.0009999998333333417)
 	Qwen3(Tiny, rotary = 2).Rotations(List(Number) + 1)(1) is 1
-	let half = blocks.First.queryNorm.Length / 2
-	let pairs = rotary > 0 then rotary / 2 else half
+	half = blocks.First.queryNorm.Length / 2
+	pairs = rotary > 0 then rotary / 2 else half
 	for positions.Length * 4 * half
-		let at = index % (4 * half)
-		let pair = at % half
-		let position = Placed(pair, (index / (4 * half)).Floor, positions, heights, widths)
-		let angle = Radians(pair < pairs then position * theta ^ (-pair / pairs) else 0) to Degrees
+		at = index % (4 * half)
+		pair = at % half
+		position = Placed(pair, (index / (4 * half)).Floor, positions, heights, widths)
+		angle = Radians(pair < pairs then position * theta ^ (-pair / pairs) else 0) to Degrees
 		at < 2 * half then angle.Cos else (at < 3 * half then -angle.Sin else angle.Sin)
 Step(token Number, position Number) Qwen3 slow
 	Tiny.Step(1, 0).Scored.First.IsNearlyEqual(2.664049302641475)
@@ -79,10 +79,10 @@ Prefilled(prompt Numbers, start Number, chunk = 8192) Qwen3
 	Tiny.Prefilled((1, 2, 3), 0, 2).hidden.Length is 8
 	Tiny.Prefilled((1, 2, 3), 0, 2).Next is Tiny.Prefilled((1, 2, 3), 0).Next
 	mutable current = value
-	let size = (chunk / blocks.First.experts.used).Ceiling
+	size = (chunk / blocks.First.experts.used).Ceiling
 	for (prompt.Length / size).Ceiling
-		let first = index * size
-		let count = (prompt.Length - first).Clamp(0, size)
+		first = index * size
+		count = (prompt.Length - first).Clamp(0, size)
 		current = current.Steps(Safetensors.Part(prompt, first, count, 1), Positions(start + first, count), 1)
 	current
 PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) native
@@ -91,19 +91,19 @@ PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) nat
 	TinyHybrid.PrefilledBatch(Uneven).Last.Last.IsNearlyEqual(TinyHybrid.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
 	if prompts.Length < 2
 		return prompts.Length is 0 then List(Numbers) else List(Numbers) + Prefilled(prompts.First, start).hidden
-	let seqLen = SequenceLength(prompts).Aligned(blocks.First.hybrid.layers.Length > 0 then 16 else 1)
-	let perBatch = (chunk / blocks.First.experts.used / seqLen).Floor.Clamp(1, prompts.Length)
+	seqLen = SequenceLength(prompts).Aligned(blocks.First.hybrid.layers.Length > 0 then 16 else 1)
+	perBatch = (chunk / blocks.First.experts.used / seqLen).Floor.Clamp(1, prompts.Length)
 	mutable results = List(Mutable(Numbers))
 	for (prompts.Length / perBatch).Ceiling
-		let first = index * perBatch
-		let count = (prompts.Length - first).Clamp(0, perBatch)
-		let batched = Batched(prompts.Slice(first, count), seqLen, start)
+		first = index * perBatch
+		count = (prompts.Length - first).Clamp(0, perBatch)
+		batched = Batched(prompts.Slice(first, count), seqLen, start)
 		for count
 			results.Add(batched.Slice(index * seqLen * norm.Length, prompts(first + index).Length * norm.Length))
 	results
 Batched(prompts List(Numbers), length Number, start Number) Numbers
 	Tiny.Batched(Uneven, 3, 0).Length is 2 * 3 * Tiny.norm.Length
-	let part = SequenceLength(prompts)
+	part = SequenceLength(prompts)
 	Steps(part.Padded(length), part.Positions(length, start), prompts.Length).hidden
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
@@ -113,25 +113,25 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 	Tiny.Forwarded(Tiny.Embedded((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
 	mutable current = input
 	mutable updated = List(Mutable(Qwen3Block))
-	let completion = Completion(progress, blocks.Length, Process.Elapsed)
+	completion = Completion(progress, blocks.Length, Process.Elapsed)
 	for blocks
-		let prepared = value.hybrid.Prepared(current, sequences)
-		let cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits, sequences)
-		let output = cached.Output(prepared.entered, sequences)
+		prepared = value.hybrid.Prepared(current, sequences)
+		cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits, sequences)
+		output = cached.Output(prepared.entered, sequences)
 		current = index < deepstack.Length then Stacked(output, deepstack(index), rows) else output
 		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))
 		completion.Report(index + 1)
 	Qwen3(value, blocks = updated, hidden = current)
 Stacked(numbers Numbers, features Numbers, rows Numbers) Numbers
 	Qwen3(Tiny, norm = (1, 1)).Stacked((1, 2, 3, 4, 5, 6), (10, 20), (-1, 0, -1)) is (1, 2, 13, 24, 5, 6)
-	let width = norm.Length
+	width = norm.Length
 	for numbers
-		let row = rows((index / width).Floor)
+		row = rows((index / width).Floor)
 		row < 0 then value else value + features(row * width + index % width)
 Placed(pair Number, row Number, positions Numbers, heights Numbers, widths Numbers) Number
 	(Tiny.Placed(1, 0, 5, 6, 7), Tiny.Placed(2, 0, 5, 6, 7), Tiny.Placed(3, 0, 5, 6, 7)) is (6, 7, 5)
 	(Tiny.Placed(1, 0, 5, List(Number), List(Number)), Tiny.Placed(61, 0, 5, 6, 7)) is (5, 5)
-	let axis = heights.Length is 0 or pair >= Interleaved then 0 else pair % 3
+	axis = heights.Length is 0 or pair >= Interleaved then 0 else pair % 3
 	axis is 0 then positions(row) else (axis is 1 then heights(row) else widths(row))
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
@@ -141,12 +141,12 @@ Next Number
 	Greedy.Largest(Scored)
 Nexts Numbers
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Prompted.Step(3, 2).Next, Prompted.Step(4, 2).Next)
-	let logits = basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
+	logits = basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
 	Greedy.Rows(logits, outputs.Length)
 Embedded(chosen Numbers) Numbers
 	Tiny.Embedded((1, 2)).Length is 16
 	Tiny.Embedded((1, 2))(8) is Tiny.tokens(2).First
-	let width = norm.Length
+	width = norm.Length
 	for chosen.Length * width
 		tokens(chosen((index / width).Floor))(index % width)
 Copies(count Number) Qwen3

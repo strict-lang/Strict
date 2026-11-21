@@ -28,7 +28,7 @@ Assigned(samples List(Numbers)) Numbers
 		Nearest(value)
 Updated(samples List(Numbers)) KMeans
 	Corners.Updated(Square).centers.First is (0.1, 0)
-	let assigned = Assigned(samples)
+	assigned = Assigned(samples)
 	mutable moved = List(Mutable(Numbers))
 	for centers
 		moved.Add(Mean(samples, assigned, index))
@@ -56,7 +56,7 @@ Trained(samples List(Numbers), iterations Number) KMeans
 Purity(samples List(Numbers), labels Numbers) Number
 	Corners.Purity(Square, (0, 0, 1, 1)) is 1
 	Corners.Purity(Square, (0, 1, 1, 1)) is 0.75
-	let assigned = Assigned(samples)
+	assigned = Assigned(samples)
 	mutable matching = 0
 	for centers
 		matching = matching + Majority(assigned, labels, index)

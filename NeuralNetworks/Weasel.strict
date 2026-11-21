@@ -3,10 +3,10 @@ constant Letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ "
 constant Offspring = 100
 constant MutationRate = 0.05
 Run
-	let started = Process.Elapsed
-	let first = Random(Target.Length)
-	let generations = Generations(first)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	started = Process.Elapsed
+	first = Random(Target.Length)
+	generations = Generations(first)
+	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	logger.Log("Evolved \"" + Target + "\" from \"" + first + "\"")
 	logger.Log("in " + generations + " generations, " + milliseconds + " ms")
 Random(length Number) Text
@@ -37,7 +37,7 @@ Fittest(parent Text) Text
 	Weasel.Fitness(Weasel.Fittest("A")) >= Weasel.Fitness("A")
 	mutable best = parent
 	for Offspring
-		let child = Mutated(parent)
+		child = Mutated(parent)
 		if Fitness(child) > Fitness(best)
 			best = child
 	best

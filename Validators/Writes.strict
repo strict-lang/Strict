@@ -12,7 +12,7 @@ Issues List(ValidationIssue)
 	Writes(("Save(path Text) Number", "\t1")).Issues.Length is 0
 	Created.Issues.Length is 0
 	Numbered.Issues.Length is 2
-	let isExternal = IsExternal(TypeShape(lines))
+	isExternal = IsExternal(TypeShape(lines))
 	for lines
 		if isExternal and IsWriting(value)
 			ValidationIssue("WriteMustReturnNothing", Tokenizer(value).Tokens.First + Hint, index + 1)
@@ -20,7 +20,7 @@ IsExternal(shape TypeShape) Boolean
 	Saving.IsExternal(TypeShape("Run", "\t1", "Save Number"))
 	Saving.IsExternal(TypeShape("Area = Width * Height", "Run", "\t1")) is false
 	for shape.lines
-		let next = index + 1 < shape.lines.Length then shape.lines(index + 1) else ""
+		next = index + 1 < shape.lines.Length then shape.lines(index + 1) else ""
 		if shape.IsMethodHeader(value) and shape.IsComputed(value) is false and next.StartsWith("\t") is false
 			return true
 	false
@@ -28,9 +28,9 @@ IsWriting(line Text) Boolean
 	Saving.IsWriting("SaveJpeg(path Text) Number")
 	Saving.IsWriting("Settings Number") is false
 	Saving.IsWriting("Delete(path Text)") is false
-	let tokens = Tokenizer(line).Tokens
-	let returned = HeaderTokens(tokens).ReturnType
-	let isHandle = returned is typeName or returned.EndsWith("Handle")
+	tokens = Tokenizer(line).Tokens
+	returned = HeaderTokens(tokens).ReturnType
+	isHandle = returned is typeName or returned.EndsWith("Handle")
 	returned is not "None" and isHandle is false and Verb(tokens.First) is in Verbs
 Verb(name Text) Text
 	Saving.Verb("SetPixel") is "Set"

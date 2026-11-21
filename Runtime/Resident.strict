@@ -29,23 +29,23 @@ IsCurrent(request Text, expected = "") Boolean
 	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", Resident.Variables))
 	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", "other")) is false
 	Resident.IsCurrent(Resident.Request("C:/a", List(Text) + "test", "expected"), "expected")
-	let lines = request.Split("\n")
+	lines = request.Split("\n")
 	lines.Length > 3 and lines(3) is (expected is "" then Variables else expected)
 Arguments(request Text) Texts
 	Resident.Arguments(Resident.Request("C:/a", ("test", "a.strict"))) is ("test", "a.strict")
 	Resident.Arguments("strict 1\nC:/a\ntest\n\n") is List(Text)
 	Resident.Arguments(Version + "\nC:/a") is List(Text)
-	let lines = request.Split("\n")
+	lines = request.Split("\n")
 	lines.Length < 3 or lines(0) is not Version then List(Text) else lines(2).Split("\t")
 Folder(request Text) Text
 	Resident.Folder(Resident.Request("C:/a", List(Text) + "test")) is "C:/a"
 	Resident.Folder("broken") is ""
-	let lines = request.Split("\n")
+	lines = request.Split("\n")
 	lines.Length < 3 then "" else lines(1)
 Claim(request Text) Text
 	Resident.Claim(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is "7"
 	Resident.Claim("broken") is ""
-	let lines = request.Split("\n")
+	lines = request.Split("\n")
 	lines.Length < 5 then "" else lines(4)
 Stamped Text
 	Sample.Stamped is "Compiler/output/obj/strict.server"
@@ -57,7 +57,7 @@ Freed Text
 Released(request Text)
 	Resident("Compiler/output/Missing").Released(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is not Error
 	Resident("Compiler/output/Missing").Released("broken") is not Error
-	let port = Claim(request) to Number
+	port = Claim(request) to Number
 	if port is not Error
 		File(Freed + "." + port).Rename(Freed)
 Send(socket Number, text Text)
@@ -68,17 +68,17 @@ Received(socket Number, ending Text) Text
 	mutable gathered = ""
 	mutable isOpen = true
 	for as long as isOpen and gathered.EndsWith(ending) is false
-		let available = Socket.Pending(socket)
+		available = Socket.Pending(socket)
 		isOpen = (available is Error) is false
-		let chunk = isOpen then Socket.Receive(socket, available > 0 then available else 1) else List(Number)
+		chunk = isOpen then Socket.Receive(socket, available > 0 then available else 1) else List(Number)
 		isOpen = isOpen and chunk is Error is false
 		gathered = isOpen then gathered + ByteEncoder(chunk).Spelled(0, chunk.Length) else gathered
 	gathered
 Opened Number
-	let server = Socket.Local(0)
+	server = Socket.Local(0)
 	if server is Error
 		return server
-	let port = Socket.Port(server) to Text
+	port = Socket.Port(server) to Text
 	File(Stamped).Write(port)
 	File(Freed).Write(port)
 	server
@@ -87,16 +87,16 @@ Accepted(server Number, built Number, limit = IdleSeconds) Number
 	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, 0) is Unaccepted
 	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, WakeSeconds) is Unaccepted
 	mutable idle = 0
-	let own = File(Process.Current.executable)
-	let stamp = File(Stamped)
+	own = File(Process.Current.executable)
+	stamp = File(Stamped)
 	for as long as idle < limit and own.Modified is built and Socket.Port(server) to Text is in stamp.ReadLines
-		let waited = Socket.Waiting(server, WakeSeconds)
+		waited = Socket.Waiting(server, WakeSeconds)
 		if waited is not 0
 			return waited is Error then Unaccepted else Taken(server, built)
 		idle = idle + WakeSeconds
 	Unaccepted
 Taken(server Number, built Number) Number
-	let socket = Socket.Accept(server)
+	socket = Socket.Accept(server)
 	if File(Process.Current.executable).Modified is built
 		return socket
 	Ended(socket, Refused)
@@ -120,7 +120,7 @@ Closed(server Number)
 	Sample.Opened > 0
 	Sample.Closed(Socket.Local(0)) is not Error
 	File(Sample.Stamped).Exists
-	let stamp = File(Stamped)
+	stamp = File(Stamped)
 	if stamp.Exists and stamp.ReadLines.First is (Socket.Port(server) to Text)
 		stamp.Delete
 		File(Freed).Delete

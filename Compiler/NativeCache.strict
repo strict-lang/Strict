@@ -10,7 +10,7 @@ IsEnabled Boolean
 	NativeCache("build", ("Examples/Sum.strict", ".", "fast")).IsEnabled
 	if rest.Length < 2
 		return false
-	let isSource = Directory.Exists(rest(0)) or File(rest(0)).Exists and File(rest(0)).Modified is not 0
+	isSource = Directory.Exists(rest(0)) or File(rest(0)).Exists and File(rest(0)).Modified is not 0
 	if isSource is false or command is "test" and TestRequest(rest).Selection is not in ("", "*")
 		return false
 	(NativeCompiler.Options(rest) - "native" - "unit" - "fast" - "windows" - "linux" - "web").Length is 0
@@ -22,8 +22,8 @@ Key Text
 	"3\t" + Directory.Current + "\t" + command + "\t" + Text.Combine(rest, "\t")
 Output Text
 	NativeCache("build", ("Examples/Sum.strict", ".", "web")).Output is "./Examples/Release/Web/Sum.html"
-	let program = command is "build" and NativeBuild.IsProgram(rest(0))
-	let base = NativeBuild.Output(rest(0), program)
+	program = command is "build" and NativeBuild.IsProgram(rest(0))
+	base = NativeBuild.Output(rest(0), program)
 	if "web" is in NativeCompiler.Options(rest)
 		return Release(base).Parent + "/Release/Web/" + Path(base).FileName.text + ".html"
 	Toolchain(Platform.Current, rest(1)).Executable(base)
@@ -31,24 +31,24 @@ Stamp(path Text) Text
 	NativeCache.Stamp("Compiler/output/missing") is "unknown"
 	NativeCache.Stamp(Process.Current.executable).Length is 16
 	constant minuteLength = 16
-	let built = Process(path).Built
+	built = Process(path).Built
 	built.Length < minuteLength then "unknown" else built.Substring(0, minuteLength)
 Message Text
-	let source = rest(0)
-	let executable = Output
-	let changed = " (last changed " + Stamp(source) + ")"
-	let built = " (last build " + Stamp(executable) + ")"
-	let prefix = command is "test" then "Tests up to date: " else "Up to date: "
+	source = rest(0)
+	executable = Output
+	changed = " (last changed " + Stamp(source) + ")"
+	built = " (last build " + Stamp(executable) + ")"
+	prefix = command is "test" then "Tests up to date: " else "Up to date: "
 	prefix + source + changed + " < " + Path(executable).FileName.text + built
 IsCurrent Boolean
 	if IsEnabled is false or File(CacheFile).Exists is false or File(Output).Exists is false
 		return false
-	let lines = File(CacheFile).ReadLines
+	lines = File(CacheFile).ReadLines
 	lines.Length > 1 and lines.Length % 2 is 1 and lines.First is Key and Matches(lines.Slice(1, lines.Length - 1))
 Matches(lines Texts) Boolean
 	NativeCache("build", ("A.strict", "C:/s")).Matches(("C:/s/strict.exe", "1")) is false
 	for Range(0, lines.Length / 2)
-		let position = value * 2
+		position = value * 2
 		if Value(lines(position)) is not lines(position + 1)
 			return false
 	true
@@ -58,14 +58,14 @@ Saved(inputs Texts)
 Inputs(sources Texts) Texts
 	"./Content/**" is not in NativeCache("test", ("Math", ".", "native")).Inputs(List(Text))
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
-	let source = FileCompiler.Normalized(rest(0))
-	let runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
-	let tools = List(Text) + (rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension)
-	let web = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true))
-	let shell = web.Shell(NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))))
-	let extra = shell.EndsWith(".shell.html") then List(Text) + shell else List(Text)
-	let webInputs = "web" is in NativeCompiler.Options(rest) then (rest(1) + Wgsl, rest(1) + Script, shell) else extra
-	let inputs = sources + runtimes + (tools - Output - Output.Lower) + webInputs + NativeInputs(Folders(sources))
+	source = FileCompiler.Normalized(rest(0))
+	runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
+	tools = List(Text) + (rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension)
+	web = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true))
+	shell = web.Shell(NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0))))
+	extra = shell.EndsWith(".shell.html") then List(Text) + shell else List(Text)
+	webInputs = "web" is in NativeCompiler.Options(rest) then (rest(1) + Wgsl, rest(1) + Script, shell) else extra
+	inputs = sources + runtimes + (tools - Output - Output.Lower) + webInputs + NativeInputs(Folders(sources))
 	command is "test" then inputs else inputs + (Path(source).PathOnly.text + "/Content/**")
 Files Texts slow
 	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
@@ -78,13 +78,13 @@ Folders(sources Texts) Texts
 	folders.Unique
 NativeInputs(folders Texts) Texts
 	mutable files = List(Text)
-	let tools = Toolchain(Platform.Current, rest(1))
+	tools = Toolchain(Platform.Current, rest(1))
 	for Toolchain.Needed + ("llvm-split", "lld-link", "llvm-rc")
 		files = files + Process.Find(tools.Located(value)).executable
 	for folders
-		let native = value + "/native"
-		let sources = NativeSources(List(Text) + native)
-		let tokens = sources.Flags(Platform.Current, rest(1)).Split(" ")
+		native = value + "/native"
+		sources = NativeSources(List(Text) + native)
+		tokens = sources.Flags(Platform.Current, rest(1)).Split(" ")
 		files = files + sources.Files + sources.Inputs(Platform.Current, rest(1)) + sources.Sources(tokens)
 		files = files + (value + "/README.md", value + "/.origin", value + "/*", value + "/", native + "/*")
 	files
@@ -101,18 +101,18 @@ Value(path Text) Text
 		return Text.Combine(Directory.Directories(path).Sorted, "\t")
 	if path.EndsWith("/*") is false
 		return "" + File(path).Modified
-	let folder = path.Substring(0, path.Length - 2)
+	folder = path.Substring(0, path.Length - 2)
 	mutable files = List(Text)
 	for ("*.strict", "*.c", "*.h", "*.m", "*.flags", "*.ico")
 		files = files + Directory.Files(folder, value)
 	Text.Combine(files.Sorted, "\t")
 Outputs Texts
-	let base = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
-	let release = Release(base)
+	base = NativeBuild.Output(rest(0), command is "build" and NativeBuild.IsProgram(rest(0)))
+	release = Release(base)
 	mutable files = List(Text) + Output
 	if "web" is in NativeCompiler.Options(rest)
 		for (".wasm", ".js")
-			let sidecar = Output.Replace(".html", value)
+			sidecar = Output.Replace(".html", value)
 			if File(sidecar).Exists
 				files = files + sidecar
 	for Release.Sidecars
@@ -125,15 +125,15 @@ Released(parent Text) Texts
 	NativeCache("build", ("Examples/Sum.strict", ".", "linux")).IsEnabled
 	NativeCache("build", ("Examples/Sum.strict", ".", "web")).IsEnabled
 	mutable files = List(Text)
-	let name = Path(Output).FileName.text
+	name = Path(Output).FileName.text
 	for (parent + "/Release", parent + "/Release/" + Platform.NameOf(Platform.Current))
 		files = files + (value + "/Content/**")
 		if File(value + "/" + name).Exists
 			files = files + (value + "/" + name)
-	let linux = parent + "/Release/Linux/" + name.Replace(".exe", "")
+	linux = parent + "/Release/Linux/" + name.Replace(".exe", "")
 	File(linux).Exists then files + linux else files
 Written(text Text)
-	let temporary = CacheFile + "." + 1000000000.Random.Floor + ".tmp"
+	temporary = CacheFile + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(text)
 	if Text.Combine(File(temporary).ReadLines, "\n") is text
 		File(temporary).Rename(CacheFile)

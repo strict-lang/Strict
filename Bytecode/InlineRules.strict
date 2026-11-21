@@ -24,11 +24,11 @@ Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
 	Listing.Fits(Inliner.Caller, Inliner.Caller, Inliner.Calling.instructions(1)) is false
 	Listing.Fits(Inliner.Caller, Cached, Inliner.Calling.instructions(1)) is false
 	Boxing.Fits(Inliner.Caller, Inliner.Boxed, Inliner.BoxedCall) is false
-	let isOwn = IsOwn(call)
-	let own = isOwn and type.Name is owner.Name and IsContained(MemberNames(owner))
-	let member = isOwn or StructLanes(types).Members(type).Length > 0 then "" else Wrapped(type)
-	let wrapped = member is not "" and HasOwnCall is false and IsContained((member, "value"))
-	let isCached = type.ConstantSlot(callee) >= 0
+	isOwn = IsOwn(call)
+	own = isOwn and type.Name is owner.Name and IsContained(MemberNames(owner))
+	member = isOwn or StructLanes(types).Members(type).Length > 0 then "" else Wrapped(type)
+	wrapped = member is not "" and HasOwnCall is false and IsContained((member, "value"))
+	isCached = type.ConstantSlot(callee) >= 0
 	(own or wrapped) and isCached is false and IsSmall and IsComputed and IsReplaceable(type) and IsReturningComputed
 IsOwn(call InstructionEntry) Boolean
 	Listing.IsOwn(Inliner.Calling.instructions(1)) is false
@@ -52,7 +52,7 @@ Wrapped(type TypeEntry) Text
 	InlineRules(Reloaded).IsComputed and InlineRules(Reloaded).IsSmall and InlineRules(Twice).IsComputed
 	if type.Name.StartsWith("Strict/List(")
 		return "elements"
-	let changing = type.Changing
+	changing = type.Changing
 	changing.Length is 1 then changing.First.Name else ""
 MemberNames(type TypeEntry) Texts
 	Placeholder.Name is "Cos" and Placeholder.declaredType is "Strict/Number"
@@ -71,11 +71,11 @@ IsSmall Boolean
 	InlineRules(MethodEntry.CountingLoop).IsSmall is false
 	InlineRules(StructLanes.Squared).IsSmall is false
 	InlineRules(Mixing).IsSmall and InlineRules(Long).IsSmall is false
-	let instructions = callee.instructions
+	instructions = callee.instructions
 	if instructions.Length is 0 or instructions.Length > 10 or instructions.Last.kind is not InstructionType.Return
 		return false
 	for instructions
-		let isEarly = value.kind is InstructionType.Return and index < instructions.Length - 1
+		isEarly = value.kind is InstructionType.Return and index < instructions.Length - 1
 		if value.kind is not in Inliner.Kinds or isEarly
 			return false
 	true
@@ -94,12 +94,12 @@ HasOwnCall Boolean
 IsContained(names Texts) Boolean
 	Listing.IsContained(("elements", "value"))
 	Listing.IsContained(("numbers", "value")) is false
-	let allowed = callee.ParameterNames + names
+	allowed = callee.ParameterNames + names
 	mutable stored = List(Text)
 	for callee.instructions
 		if value.kind is Inliner.Store
 			stored = stored + value.texts.First
-		let isRead = value.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
+		isRead = value.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
 		if isRead and value.texts.First is not in allowed + stored
 			return false
 	true
@@ -110,8 +110,8 @@ IsComputed Boolean
 	InlineRules(Valued).IsLaned(StructLanes.Pair, StructLanes.Calling(4), true) is false
 	Listing.IsLaned(StructLanes.Pair, StructLanes.Constructed, true) is false
 	for callee.instructions
-		let kind = value.kind
-		let isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
+		kind = value.kind
+		isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		if isCalculated or value.kind is in (InstructionType.IndexCall, InstructionType.Invoke)
 			return true
 	false
@@ -130,8 +130,8 @@ IsReturningComputed Boolean
 	InlineRules(Placeholder).IsReturningComputed is false
 	InlineRules(Adding).IsLaned(Linker.Go, Inliner.Scaled, false) is false
 	InlineRules(Twice).IsLaned(StructLanes.Pair, StructLanes.Calling(4), false) is false
-	let instructions = callee.instructions
-	let reuse = LoadReuse(instructions)
+	instructions = callee.instructions
+	reuse = LoadReuse(instructions)
 	mutable isLoaded = false
 	for instructions
 		if reuse.Written(value) is instructions.Last.payload(0)
@@ -153,12 +153,12 @@ IsLaned(type TypeEntry, call InstructionEntry, isReturning Boolean) Boolean
 IsStraight(isInstance Boolean) Boolean
 	InlineRules(StructLanes.Squared).IsStraight(true)
 	InlineRules(Inliner.Again).IsStraight(true) is false
-	let instructions = callee.instructions
+	instructions = callee.instructions
 	if instructions.Length is 0 or instructions.Last.kind is not InstructionType.Return
 		return false
 	for instructions
-		let isOwnCall = isInstance and IsOwnCall(value)
-		let isEarly = value.kind is InstructionType.Return and index < instructions.Length - 1
+		isOwnCall = isInstance and IsOwnCall(value)
+		isEarly = value.kind is InstructionType.Return and index < instructions.Length - 1
 		if isOwnCall or isEarly or value.kind is not in Inliner.Kinds + InstructionType.FieldLoad + InlineSplice.Jumps
 			return false
 	true

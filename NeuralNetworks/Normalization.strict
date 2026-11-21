@@ -5,8 +5,8 @@ constant Gradient = (0.1, -0.2, 0.3, 0.5, 0.4, -0.1)
 Normed Numbers
 	Sample.Normed(0).IsNearlyEqual(-1.0690415315)
 	Sample.Normed(4).IsNearlyEqual(-1.2247356859)
-	let centered = Gpt2Block.Centered(input, gain.Length)
-	let scales = Scales(centered)
+	centered = Gpt2Block.Centered(input, gain.Length)
+	scales = Scales(centered)
 	for centered
 		value * scales((index / gain.Length).Floor)
 Scales(centered Numbers) Numbers
@@ -24,7 +24,7 @@ Squared(numbers Numbers with value.Bits is 32, first Number, size Number) Number
 Chunked(numbers Numbers, size Number, epsilon Number, parts Number) Float32s
 	Sample.Chunked((3, 4, 0, 1), 2, 0.000001, 2)(1).IsNearlyEqual(1.41421215)
 	Sample.Chunked((3, 4, 0, 1), 4, 0.000001, 2)(0).IsNearlyEqual(Sample.Scale(26, 4, 0.000001))
-	let partials = Partials(numbers, size / parts)
+	partials = Partials(numbers, size / parts)
 	for numbers.Length / size
 		Scale(Gpt2Block.Mean(partials, index * parts, parts) * parts, size, epsilon)
 Partials(numbers Numbers, chunk Number) Float32s
@@ -34,13 +34,13 @@ Partials(numbers Numbers, chunk Number) Float32s
 Inputs(gradient Numbers) Numbers
 	Sample.Inputs(Gradient)(0).IsNearlyEqual(0.17753688616769236)
 	Sample.Inputs(Gradient)(5).IsNearlyEqual(-0.5715433200905821)
-	let normed = Normed
-	let scales = Scales(Gpt2Block.Centered(input, gain.Length))
-	let scaled = Scaled(gradient)
-	let firstMeans = Means(scaled)
-	let secondMeans = Means(scaled * normed)
+	normed = Normed
+	scales = Scales(Gpt2Block.Centered(input, gain.Length))
+	scaled = Scaled(gradient)
+	firstMeans = Means(scaled)
+	secondMeans = Means(scaled * normed)
 	for gradient.Length
-		let token = (index / gain.Length).Floor
+		token = (index / gain.Length).Floor
 		scales(token) * (scaled(index) - firstMeans(token) - normed(index) * secondMeans(token))
 Scaled(gradient Numbers) Numbers
 	Sample.Scaled((1, 1, 1)) is (1, 2, 0.5)

@@ -27,9 +27,9 @@ Integers(names BinaryNames) Numbers
 	MemberEntry("a", "b", List(InstructionEntry), false, 32).Integers(BinaryNames("a", "b")) is (0, 1, 64, 0)
 	MemberEntry("a", "b", List(InstructionEntry), false, 32, 3).Integers(BinaryNames("a", "b")) is (0, 1, 832, 0)
 	MemberEntry("a", "b", List(InstructionEntry), false, 64).Integers(BinaryNames("a", "b")) is (0, 1, 128, 0)
-	let flag = (IsConstant then 1 else 0) + Bits * 2 + Count * Byte.Values
+	flag = (IsConstant then 1 else 0) + Bits * 2 + Count * Byte.Values
 	mutable integers = List(Number) + names.Index(Name) + names.Index(typeName) + flag + initial.Length
 	for initial
-		let instruction = value.Integers(names)
+		instruction = value.Integers(names)
 		integers = integers + instruction.Length + instruction
 	integers

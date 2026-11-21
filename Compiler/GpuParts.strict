@@ -11,14 +11,14 @@ Kernels Texts
 Texts(module GpuModule, stamp Text) Texts
 	Sample.Texts(GpuModule.Sample, "s").First.StartsWith("// s\n// device kernels\nmodule")
 	Sample.Texts(GpuModule.Sample, "s").First.EndsWith(GpuFunction.Device.text + "\n}\n")
-	let common = "// " + stamp + "\n" + Text.Combine(module.Head + module.Shared + Helpers, "\n") + "\n"
-	let devices = Devices
+	common = "// " + stamp + "\n" + Text.Combine(module.Head + module.Shared + Helpers, "\n") + "\n"
+	devices = Devices
 	for Types
 		common + Text.Combine(Members(value, devices), "\n") + "\n}\n"
 Members(type Text, devices List(GpuFunction)) Texts
 	Sample.Members("A", Sample.Devices).Length is 2
-	let own = Own(type)
-	let names = Titles(own) + Reached(own, devices)
+	own = Own(type)
+	names = Titles(own) + Reached(own, devices)
 	for functions
 		if value.name is in names
 			value.text
@@ -29,7 +29,7 @@ Own(type Text) List(GpuFunction)
 			value
 Reached(own List(GpuFunction), devices List(GpuFunction)) Texts
 	Sample.Reached(Sample.Own("A"), Sample.Devices) is List(Text) + "C_D_2_devices"
-	let known = Titles(devices)
+	known = Titles(devices)
 	mutable reached = Wanted(own, known)
 	mutable at = 0
 	for as long as at < reached.Length

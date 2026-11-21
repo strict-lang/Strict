@@ -27,14 +27,14 @@ Names BinaryNames
 	result
 Bytes Numbers
 	HelloLogger.Bytes.Length is 74
-	let names = Names
+	names = Names
 	mutable integers = names.Integers + names.Index(Name) + members.Length
 	for members
-		let member = value.Integers(names)
+		member = value.Integers(names)
 		integers = integers + member.Length + member
 	integers = integers + methods.Length
 	for methods
-		let method = value.Integers(names)
+		method = value.Integers(names)
 		integers = integers + method.Length + method
 	ByteEncoder.Empty.SevenBits(integers).bytes
 Chosen(name Text, count Number, returnType Text, names Texts) Number
@@ -44,7 +44,7 @@ Chosen(name Text, count Number, returnType Text, names Texts) Number
 	mutable chosen = -1
 	mutable best = 0
 	for methods
-		let fit = value.Fit(name, count, returnType, names)
+		fit = value.Fit(name, count, returnType, names)
 		if fit > best
 			chosen = index
 			best = fit
@@ -55,7 +55,7 @@ Callee(name Text, count Number, returnType Text, names Texts) MethodEntry
 	Converting.Callee("to", 0, "Strict/Number", List(Text)).parameters.Length is 0
 	Scaling.Callee("*", 1, "Strict/Vector", List(Text) + "scale").returnType is "Strict/Vector"
 	HelloLogger.Callee("Go", 0, "", List(Text)) is MethodEntry("Go", List(MemberEntry), "None", List(InstructionEntry))
-	let chosen = Chosen(name, count, returnType, names)
+	chosen = Chosen(name, count, returnType, names)
 	chosen < 0 then MethodEntry(name, List(MemberEntry), "None", List(InstructionEntry)) else methods(chosen)
 OverloadSuffix(method MethodEntry) Text
 	Scaling.OverloadSuffix(Scaling.methods.Last) is "_scale"
@@ -73,31 +73,31 @@ ShortName(typeName Text) Text
 	HelloLogger.ShortName("Strict/List(TypeEntry)") is "List(TypeEntry)"
 	HelloLogger.ShortName("Number") is "Number"
 	HelloLogger.ShortName("Strict/List(Mutable(Text))") is "List(Text)"
-	let open = typeName.IndexOf("(")
+	open = typeName.IndexOf("(")
 	if open < 0
-		let slash = typeName.LastIndexOf("/")
+		slash = typeName.LastIndexOf("/")
 		return slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
 	if typeName.IndexOf("Mutable(") >= 0
 		return ShortName(typeName.Replace("Mutable(", "").Substring(0, typeName.Length - 9))
-	let slash = typeName.Substring(0, open).LastIndexOf("/")
+	slash = typeName.Substring(0, open).LastIndexOf("/")
 	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
 Based(typeName Text) Text
 	HelloLogger.Based("Strict/List(Strict/Number)") is "List"
 	HelloLogger.Based("Strict/Number") is "Number"
 	if typeName is in ("Number", "Text", "Boolean", "List", "None")
 		return typeName
-	let short = ShortName(typeName)
-	let open = short.IndexOf("(")
+	short = ShortName(typeName)
+	open = short.IndexOf("(")
 	open < 0 then short else short.Substring(0, open)
 Wrapped Text
 	HelloLogger.Wrapped is "Logger"
 	Converting.Wrapped is "" and CharacterEntry.Wrapped is ""
 	TypeEntry("Strict/Shade", List(MemberEntry) + Lighting, List(MethodEntry)).Wrapped is "Number"
-	let short = ShortName(Name)
+	short = ShortName(Name)
 	if IsBaseName(short) or short is in ("Logger", "File")
 		return ""
-	let changing = Changing
-	let numbered = members.Length > 0 and members.First.typeName is "Strict/Number" and methods.Length is 0
+	changing = Changing
+	numbered = members.Length > 0 and members.First.typeName is "Strict/Number" and methods.Length is 0
 	if changing.Length is 1
 		return ShortName(changing.First.typeName)
 	numbered and changing.Length is 0 then "Number" else ""
@@ -107,10 +107,10 @@ IsStruct Boolean
 	TypeEntry("Strict/File", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry)).IsStruct
 	Initialized.IsStruct and TypeEntry("Strict/S", List(MemberEntry) + Lighting, MethodEntry.HelloRun).IsStruct
 	TypeEntry("Strict/S", (CharacterEntry.members.First, CharacterEntry.members.First), List(MethodEntry)).IsStruct
-	let short = ShortName(Name)
+	short = ShortName(Name)
 	if IsBaseName(short) or short is in ("Logger", "File")
 		return short is in ("Logger", "File")
-	let changing = Changing.Length
+	changing = Changing.Length
 	if members.Length is 0 or methods.Length > 0
 		return members.Length is 0 or changing is not 1
 	changing is not 1 and (changing > 0 or members.First.typeName is not "Strict/Number")
@@ -178,5 +178,5 @@ IsRealtime Boolean
 Source Text
 	CharacterEntry.Source is "Character.strict"
 	CharacterEntry.ConstantSlot(MethodEntry("number", List(MemberEntry), "C", List(InstructionEntry))) is -1
-	let folder = Name.IndexOf("/") + 1
+	folder = Name.IndexOf("/") + 1
 	Name.Substring(folder, Name.Length - folder) + ".strict"

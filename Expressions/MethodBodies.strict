@@ -19,11 +19,11 @@ Statements ScopedStatements
 	MethodBodies("Demo", Sample, NoInference).Statements.Length is 2
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.line is 3
 	MethodBodies("Demo", TypeShape("has a Number", "constant Twice = a * 2"), NoInference).Statements.Last.line is 1
-	let members = shape.MemberScope.With("self type", typeName)
+	members = shape.MemberScope.With("self type", typeName)
 	mutable statements = List(Mutable(ScopedStatement))
 	for shape.lines
 		if shape.IsMethodHeader(value)
-			let parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
+			parameters = HeaderScope(HeaderTokens(Tokenizer(value).Tokens), members)
 			statements = statements + Flatten(BodyParser(shape.lines).Method(index + 1), parameters)
 		if value.StartsWith("constant ") and value.IndexOf(" = ") > 0
 			statements.Add(ScopedStatement(BodyParser(shape.lines).Statement(index, 0), members, index))
@@ -31,12 +31,12 @@ Statements ScopedStatements
 HeaderScope(header HeaderTokens, members Scope) Scope
 	(Adding.TypeOf("other"), Adding.TypeOf("self type")) is ("Demo", "Demo")
 	MethodBodies("Demo(Number)", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Number"
-	let open = typeName.IndexOf("(")
-	let argument = open < 0 then "Generic" else typeName.Substring(open + 1, typeName.Length - open - 2)
+	open = typeName.IndexOf("(")
+	argument = open < 0 then "Generic" else typeName.Substring(open + 1, typeName.Length - open - 2)
 	mutable types = List(Mutable(Text))
 	for HeaderEntries(header, Methods).ParameterTypes
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
-	let concrete = Instantiation(inference.types).Members(typeName, members)
+	concrete = Instantiation(inference.types).Members(typeName, members)
 	mutable scope = concrete.With("value", InstanceType).With("self type", typeName).WithAll(header.ParameterNames, types)
 	for header.MutableParameters + Changes(shape.lines).Members + RefParameters(header) + Initialized(header)
 		scope = scope.With(value + " mutable", "mutable")
@@ -66,8 +66,8 @@ Flatten(body SyntaxNode, outerScope Scope, start = 0) ScopedStatements
 	mutable statements = List(Mutable(ScopedStatement))
 	mutable scope = outerScope
 	for body.children
-		let line = value.line > 0 then value.line - 1 else start + statements.Length
-		let isDropped = index < body.children.Length - 1
+		line = value.line > 0 then value.line - 1 else start + statements.Length
+		isDropped = index < body.children.Length - 1
 		statements.Add(ScopedStatement(value, isDropped then scope.With(" dropped", "dropped") else scope, line))
 		if value.HasBody
 			statements = statements + Flatten(value.children.Last, LoopScope(value, scope), line + 1)
@@ -91,7 +91,7 @@ LoopScope(statement SyntaxNode, scope Scope) Scope
 		return ErrorNarrowing(inference).Narrowed(statement.children(0), scope, Methods)
 	if statement.Kind is not "For"
 		return scope
-	let iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
+	iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
 	scope.With("outer", scope.TypeOf("value")).With("value", Element(iterated)).With("index", "Number")
 Element(iterated Text) Text
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Number)") is "List(Text, Number)"
@@ -111,7 +111,7 @@ Item(arguments Text) Text
 	MethodBodies.Item("List(Text, Number), List(Text, Number)") is "List(Text, Number)s"
 	if arguments.IndexOf(", ") < 0
 		return arguments
-	let first = arguments.Substring(0, ((arguments.Length - 2) / 2).Floor)
+	first = arguments.Substring(0, ((arguments.Length - 2) / 2).Floor)
 	first + ", " + first is arguments then first + "s" else "List(" + arguments + ")"
 Pair(type Text) Texts
 	MethodBodies.Pair("List(Text, Number)") is ("Text", "Number")
@@ -119,8 +119,8 @@ Pair(type Text) Texts
 	MethodBodies.Pair("Texts, Number").Length is 0
 	MethodBodies.Pair("List(Text)").Length is 0
 	MethodBodies.Pair("List(Text, List(Number))") is ("Text", "List(Number)")
-	let comma = type.IndexOf(", ")
-	let isPair = type.StartsWith("List(") and comma > 0 and type.Substring(5, comma - 5).IndexOf("(") < 0
+	comma = type.IndexOf(", ")
+	isPair = type.StartsWith("List(") and comma > 0 and type.Substring(5, comma - 5).IndexOf("(") < 0
 	isPair then (type.Substring(5, comma - 5), type.Substring(comma + 2, type.Length - comma - 3)) else List(Text)
 Declare(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).StatementType(Looped(0)) is "Number"
@@ -129,19 +129,19 @@ Declare(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Demo", Sample, NoInference).Statements.Last.scope.TypeOf("b let") is "let"
 	if statement.Kind is not "Declaration"
 		return scope
-	let name = Tokenizer(statement.text).Tokens.Last
-	let keyword = Tokenizer(statement.text).Tokens.First
+	name = Tokenizer(statement.text).Tokens.Last
+	keyword = Tokenizer(statement.text).Tokens.First
 	scope.With(name, inference.TypeOf(statement.children(0), scope, Methods)).With(name + " " + keyword, keyword)
 StatementType(scoped ScopedStatement) Text
 	StatementType(ScopedStatement(SyntaxNode("Number", "1"), NoScope, 0)) is "Number"
-	let statement = scoped.statement
+	statement = scoped.statement
 	if statement.Kind is in ("If", "For")
 		return BlockType(statement, scoped.scope)
 	if statement.Kind is in ("ElseIf", "Else", "ElseValue") or statement.Kind is "Return" and not statement.HasValue
 		return ""
 	if statement.Kind is "Reassignment"
 		return Reassigned(statement, scoped.scope)
-	let result = statement.Kind is in ("Declaration", "Return") then statement.children(0) else statement
+	result = statement.Kind is in ("Declaration", "Return") then statement.children(0) else statement
 	inference.TypeOf(result, scoped.scope, Methods)
 Reassigned(statement SyntaxNode, scope Scope) Text
 	Adding.TypeOf("value") is "Demo"
@@ -149,7 +149,7 @@ Reassigned(statement SyntaxNode, scope Scope) Text
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Generic"
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(Picking, NoScope).TypeOf("count") is "Number"
 	MethodBodies("Demo", Sample, Ticking).HeaderScope(Picking, NoScope).TypeOf("random mutable") is "mutable"
-	let target = inference.TypeOf(statement.children(0), scope, Methods)
+	target = inference.TypeOf(statement.children(0), scope, Methods)
 	inference.Assigned(target, inference.TypeOf(statement.children(1), scope, Methods))
 BlockType(statement SyntaxNode, scope Scope) Text
 	BlockType(SyntaxNode("For", "for"), NoScope) is ""
@@ -157,7 +157,7 @@ BlockType(statement SyntaxNode, scope Scope) Text
 		return statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else typeName
 	if not IsSelector(statement)
 		return ""
-	let lastCase = statement.children.Last.children.Last
+	lastCase = statement.children.Last.children.Last
 	inference.TypeOf(lastCase.Kind is "ElseValue" then lastCase.children(0) else lastCase.children(1), scope, Methods)
 IsSelector(statement SyntaxNode) Boolean
 	IsSelector(BodyParser("Run", "\tif a is", "\t\t1 then 2").Block(1, 1).children(0))
@@ -167,12 +167,12 @@ IsSelector(statement SyntaxNode) Boolean
 	IsSelector(SyntaxNode("If", "", (SyntaxNode("Body", ""), SyntaxNode("Body", "")))) is false
 	if not statement.HasBody
 		return false
-	let condition = statement.children(0)
+	condition = statement.children(0)
 	condition.Kind is "Binary" and condition.children(1).Kind is "Missing"
 RefParameters(header HeaderTokens) Texts
 	MethodBodies("Demo", Sample, Ticking).RefParameters(Picking) is ("random")
 	MethodBodies("Demo", Sample, NoInference).RefParameters(AddOther).Length is 0
-	let types = header.ParameterTypes
+	types = header.ParameterTypes
 	for header.ParameterNames
 		if Changes.HasChanges(inference.types.ParameterScope(types(index)))
 			value

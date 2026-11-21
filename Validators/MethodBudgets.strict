@@ -13,7 +13,7 @@ Issues List(ValidationIssue)
 	Busy.Issues.First to Text is "ProductionLinesMustNotExceedTen: Run has 11"
 	Busy.Issues.First.Line is 1 and Tested.Issues.Length is 0 and MethodBudgets(Busy.lines, 2).Issues.Length is 0
 	MethodBudgets(Looping, 1, "Frame").Issues.Length is 0 and MethodBudgets(Looping, 1, "Other").Issues.Length is 1
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if shape.IsMethodHeader(value)
@@ -23,31 +23,33 @@ Exceeded(header Number, counts Numbers) List(ValidationIssue)
 	Busy.Exceeded(0, (11, 11, 1)).First to Text is "TestLinesMustNotExceedTen: Run has 11"
 	Busy.Exceeded(0, (11, 11, 1)).Last to Text is "LetLinesMustNotExceedTen: Run has 11"
 	Busy.Exceeded(0, (10, 10, 10)).Length is 0
-	let name = Tokenizer(lines(header)).Tokens.First
+	name = Tokenizer(lines(header)).Tokens.First
 	constant rules = ("TestLinesMustNotExceedTen", "LetLinesMustNotExceedTen", "ProductionLinesMustNotExceedTen")
-	let limits = (MaxTests, MaxLets, typeName + "." + name is in VmLoops then MaxVmLoop else MaxProduction)
+	limits = (MaxTests, MaxLets, typeName + "." + name is in VmLoops then MaxVmLoop else MaxProduction)
 	for counts
 		if value > limits(index) * scale
 			ValidationIssue(rules(index), name + " has " + value, header + 1)
 Counts(header Number) Numbers
 	Tested.Counts(0) is (2, 2, 4) and Busy.Counts(0) is (0, 0, 11)
-	let last = FileCheck.LastLine(lines, header)
-	let tests = Tests(header, last)
-	let lets = Lets(header, last).Length
+	last = FileCheck.LastLine(lines, header)
+	tests = Tests(header, last)
+	lets = Lets(header, last).Length
 	(tests, lets, last - header - tests - lets)
 Tests(header Number, last Number) Number
 	Tested.Tests(0, 8) is 2 and Busy.Tests(0, 11) is 0
 	mutable tests = 0
 	mutable isTesting = true
 	for Range(header + 1, last + 1)
-		let code = lines(value).Trim
-		let isConstant = code.StartsWith("constant ")
+		code = lines(value).Trim
+		isConstant = code.StartsWith("constant ")
 		isTesting = isTesting and value < last and (isConstant or Duplicates.IsTest(code))
 		tests = tests + (isTesting and isConstant is false then 1 else 0)
 	tests
 Lets(header Number, last Number) Numbers
 	Tested.Lets(0, 8) is (2, 4) and Busy.Lets(0, 11).Length is 0
 	for Range(header + 1, last + 1)
-		let code = lines(value).Trim
-		if code.StartsWith("constant ") or lines(value).StartsWith("\t\t") is false and code.StartsWith("let ")
+		code = lines(value).Trim
+		tokens = Tokenizer(code).Tokens
+		isLet = tokens.Length > 1 and tokens(1) is "=" or code.StartsWith("let ")
+		if code.StartsWith("constant ") or lines(value).StartsWith("\t\t") is false and isLet
 			value

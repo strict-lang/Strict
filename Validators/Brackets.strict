@@ -21,9 +21,9 @@ LineIssues(tokens Texts, line Number) List(ValidationIssue)
 	mutable issues = List(Mutable(ValidationIssue))
 	for tokens.Length - 2
 		if tokens(index) is "(" and IsGroupOpen(tokens, index)
-			let close = Closing(tokens, index)
+			close = Closing(tokens, index)
 			if close < tokens.Length and HasComma(tokens, index, close) is false
-				let detail = RedundantDetail(tokens, index, close)
+				detail = RedundantDetail(tokens, index, close)
 				if detail is not ""
 					issues.Add(ValidationIssue("BracketsMustBeNecessary", detail, line))
 	issues
@@ -59,7 +59,7 @@ InnerLowest(tokens Texts, open Number, close Number) Number
 	for Range(open + 1, close)
 		depth = depth + (tokens(value) is "(" then 1 else tokens(value) is ")" then -1 else 0)
 		if depth < 1 and (tokens(value) is not "-" or tokens(value - 1) is not in Openers)
-			let precedence = Precedence(tokens(value))
+			precedence = Precedence(tokens(value))
 			if precedence > 0 and precedence < lowest
 				lowest = precedence
 	lowest
@@ -70,7 +70,7 @@ LeftPrecedence(tokens Texts, open Number) Number
 	Sample.LeftPrecedence(("a", "+", "-", "(", "b", ")"), 3) is -1
 	if open is 0
 		return 0
-	let previous = tokens(open - 1)
+	previous = tokens(open - 1)
 	if IsCompoundIs(tokens, open, previous)
 		return Precedence("is")
 	if previous is "not" or previous is "-" and (open is 1 or tokens(open - 2) is in Openers)
@@ -87,18 +87,18 @@ IsCompoundIs(tokens Texts, open Number, previous Text) Boolean
 	Sample.IsCompoundIs(("a", "x", "not", "in", "(", "b", ")"), 4, "in") is false
 	Sample.IsCompoundIs(("a", "is", "x", "in", "(", "b", ")"), 4, "in") is false
 	Sample.IsCompoundIs(("a", "is", "not", "x", "(", "b", ")"), 4, "x") is false
-	let isTwo = open >= 2 and tokens(open - 2) is "is" and previous is in ("not", "in")
+	isTwo = open >= 2 and tokens(open - 2) is "is" and previous is in ("not", "in")
 	isTwo or open >= 3 and tokens(open - 3) is "is" and tokens(open - 2) is "not" and previous is "in"
 RedundantDetail(tokens Texts, open Number, close Number) Text
 	Sample.RedundantDetail(("(", "not", "a", ")", "and", "b"), 0, 3) is "( not a )" + NotHint
 	Sample.RedundantDetail(("(", "a", "+", "b", ")", ".", "Length"), 0, 4) is ""
 	Sample.RedundantDetail(("(", "a", "*", "b", ")", "+", "c"), 0, 4) is ""
-	let after = close + 1 < tokens.Length then tokens(close + 1) else ""
-	let left = LeftPrecedence(tokens, open)
+	after = close + 1 < tokens.Length then tokens(close + 1) else ""
+	left = LeftPrecedence(tokens, open)
 	if left < 0 or after is in (".", "(") or IsProtectedNot(tokens, open) or IsWrappedGroup(tokens, open, after)
 		return ""
-	let inner = InnerLowest(tokens, open, close)
-	let snippet = Text.Combine(tokens.Slice(open, close - open + 1), " ")
+	inner = InnerLowest(tokens, open, close)
+	snippet = Text.Combine(tokens.Slice(open, close - open + 1), " ")
 	if inner is NoPrecedence and (tokens(open + 1) is "not" or IsDouble(tokens, open, close))
 		return snippet + (tokens(open + 1) is "not" then NotHint else UnneededHint)
 	InnerRedundant(tokens, open, after, inner, left) then snippet + UnneededHint else ""
@@ -133,13 +133,13 @@ InnerRedundant(tokens Texts, open Number, after Text, inner Number, left Number)
 	Sample.InnerRedundant(("(", ","), 0, "", 1, 0) and Sample.InnerRedundant(("x", "("), 1, ",", 7, 0)
 	Sample.InnerRedundant(("x", "("), 1, ",", 1, 0) is false and Sample.InnerRedundant((",", "("), 1, "", 1, 0) is false
 	Sample.InnerRedundant(("x", "("), 1, "", 4, 6) is false and Sample.InnerRedundant(("x", "("), 1, "", 13, 11) is false
-	let right = Precedence(after)
-	let needsRight = inner < right or inner is 1 and right is 1
-	let hasComma = after is "," or open > 0 and tokens(open - 1) is ","
+	right = Precedence(after)
+	needsRight = inner < right or inner is 1 and right is 1
+	hasComma = after is "," or open > 0 and tokens(open - 1) is ","
 	if inner is NoPrecedence or inner <= left or needsRight or hasComma and inner is 1
 		return false
 	left is in BooleanPrecedences or right is in BooleanPrecedences or left is 0 and right is 0
 Precedence(operator Text) Number
 	Sample.Precedence("and") is 6 and Sample.Precedence("x") is 0
-	let at = SyntaxNode.operators.Index(operator)
+	at = SyntaxNode.operators.Index(operator)
 	at < 0 then 0 else SyntaxNode.precedences(at)

@@ -13,8 +13,8 @@ Multiplied Numbers slow
 	Tall.Multiplied(4899).IsNearlyEqual(Softmax.Weighted(Tall.left, 2760, 40, Tall.right, 2760, 1), 0.0001)
 	Wide.Multiplied(4898).IsNearlyEqual(Softmax.Weighted(Wide.left, 2760, 40, Wide.right, 68, 70), 0.0001)
 	for shape(0) * shape(1) * shape(3)
-		let batch = (index / (shape(1) * shape(3))).Floor
-		let first = strides(0) + batch * strides(1) + ((index / shape(3)).Floor % shape(1)) * strides(2)
+		batch = (index / (shape(1) * shape(3))).Floor
+		first = strides(0) + batch * strides(1) + ((index / shape(3)).Floor % shape(1)) * strides(2)
 		Sum(first, strides(4) + batch * strides(5) + (index % shape(3)) * strides(7))
 Sum(first Number, second Number) Number
 	Pair.Sum(1, 0) is 31

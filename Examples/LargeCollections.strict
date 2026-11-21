@@ -1,7 +1,7 @@
 Copied(times Number) Number slow
 	LargeCollections.Copied(2) is 2 * 67108865
 	constant Doublings = 25
-	let large = Doubled("ab", Doublings)
+	large = Doubled("ab", Doublings)
 	mutable length = 0
 	for times
 		length = length + (large + "!").Length

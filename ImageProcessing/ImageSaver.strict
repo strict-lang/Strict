@@ -12,7 +12,7 @@ Save(image Image) slow
 Ramp(count Number) List(ColorValue)
 	ImageSaver("").Ramp(2)(1) is ColorValue(1 / Byte.Max, (Byte.Max - 1) / Byte.Max, 1 / Byte.Max)
 	for count
-		let shade = index % Byte.Values
+		shade = index % Byte.Values
 		ColorValue(shade / Byte.Max, (Byte.Max - shade) / Byte.Max, (index * index % Byte.Values) / Byte.Max)
 Flat(image Image) Numbers
 	ImageSaver("").Flat(Image.Blank(Size(1, 1))) is (0, 0, 0, 1)
@@ -22,5 +22,5 @@ Flat(image Image) Numbers
 Channel(color ColorValue, channel Number) Number
 	ImageSaver("").Channel(ColorValue(1, 0.5, 0), 1) is 0.5
 	ImageSaver("").Channel(ColorValue(0.2, 0.4, 0.6, 0.8), 3) is 0.8
-	let rgb = channel is 0 then color.Red else channel is 1 then color.Green else color.Blue
+	rgb = channel is 0 then color.Red else channel is 1 then color.Green else color.Blue
 	channel is 3 then color.Alpha else rgb

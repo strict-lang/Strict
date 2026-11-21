@@ -38,8 +38,8 @@ Bits(member MemberEntry, natives Natives) Number
 		return Number.DoubleBits
 	if member.typeName.StartsWith("Strict/Dictionary")
 		return Number.DoubleBits
-	let type = natives.TypeOf(member.typeName)
-	let own = type.Changing.Length is 1 then type.Changing.First.Bits else 0
+	type = natives.TypeOf(member.typeName)
+	own = type.Changing.Length is 1 then type.Changing.First.Bits else 0
 	own is 0 then Number.DoubleBits else own
 RoundedValue(member MemberEntry, raw VmValue, natives Natives) VmValue
 	Single.RoundedValue(Natives.Width, VmValue.OfNumber(3), Natives.Shapes).number is 3
@@ -47,7 +47,7 @@ RoundedValue(member MemberEntry, raw VmValue, natives Natives) VmValue
 		return raw
 	if member.Bits is 0 and member.typeName is "Strict/Number"
 		return raw
-	let bitWidth = Bits(member, natives)
+	bitWidth = Bits(member, natives)
 	bitWidth is in (0, Number.DoubleBits) then raw else Rounding(bitWidth).Of(raw)
 IsPlainStruct(member MemberEntry, raw VmValue) Boolean
 	Single.IsPlainStruct(Natives.Width, VmValue.OfNumber(3)) is false
@@ -70,8 +70,8 @@ Wrapped(type TypeEntry, call Invocation) VmValue
 	Single.Wrapped(Empty, Invocation(Natives.NewDegree.entry, List(VmValue), VmValue.None)).kind is "None"
 	if call.Arguments.Length is 0
 		return type.members.Length is 0 then VmValue.None else Natives(List(TypeEntry)).Initial(type.members.First)
-	let memberBits = type.members.Length is 0 then Number.DoubleBits else type.members.First.Bits
-	let argument = call.Arguments.First
+	memberBits = type.members.Length is 0 then Number.DoubleBits else type.members.First.Bits
+	argument = call.Arguments.First
 	(memberBits is in (0, Number.DoubleBits) then argument else Rounding(memberBits).Of(argument)).As(call.TypeName)
 Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)
 	Single.Members(Natives.Shape, Natives.NewShape, Natives.Shapes).First.number is 3
@@ -79,10 +79,10 @@ Members(type TypeEntry, call Invocation, natives Natives) List(VmValue)
 	Single.Members(Natives.Byted, ByteCall, Bytes)(1).kind is "None" and Single.bits is 32
 	Single.Members(Natives.Byted, ByteCall, Bytes).First.number is 3 and Single.bits is 32
 	Single.Members(Natives.Shape, ByteCall, Natives.Shapes)(1).number is 9
-	let arguments = call.Arguments
-	let names = arguments.Length > 0 then call.ParameterNames else List(Text)
+	arguments = call.Arguments
+	names = arguments.Length > 0 then call.ParameterNames else List(Text)
 	for type.members
-		let chosen = value.IsConstant then arguments.Length else Positional(names, value.Name, index)
+		chosen = value.IsConstant then arguments.Length else Positional(names, value.Name, index)
 		chosen < arguments.Length then RoundedValue(value, arguments(chosen), natives) else natives.Initial(value)
 Positional(names Texts, name Text, position Number) Number
 	Single.Positional(("a", "b"), "b", 1) is 1
@@ -90,5 +90,5 @@ Positional(names Texts, name Text, position Number) Number
 	if position < names.Length
 		if names(position) is name
 			return position
-	let found = names.Index(name)
+	found = names.Index(name)
 	found < 0 then position else found

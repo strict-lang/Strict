@@ -7,7 +7,7 @@ Issues List(ValidationIssue)
 	Zeroed.Issues.First to Text is "ErrorMustNotBecomeAValue: found is Error then 0" + Hint
 	Zeroed.Issues.First.Line is 4 and Sentinel.Issues.First.Line is 5 and Passed.Issues.Length is 0
 	ErrorDrops(("Count Number", "	found is Error then 0 else 1", "	2")).Issues.Length is 0
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if shape.IsMethodHeader(value)
@@ -15,17 +15,17 @@ Issues List(ValidationIssue)
 	issues
 Body(header Number) List(ValidationIssue)
 	Zeroed.Body(0).Length is 1 and Sentinel.Body(0).Length is 1
-	let code = Code(header)
-	let start = FileCheck.LastLine(lines, header) - code.Length + 2
+	code = Code(header)
+	start = FileCheck.LastLine(lines, header) - code.Length + 2
 	mutable issues = List(Mutable(ValidationIssue))
 	for code
-		let next = index + 1 < code.Length then code(index + 1) else ""
-		let line = start + index
+		next = index + 1 < code.Length then code(index + 1) else ""
+		line = start + index
 		issues = issues + Dropped(Tokenizer(value).Tokens, line, code - value) + Returned(value, next, line + 1)
 	issues
 Code(header Number) Texts
 	Zeroed.Code(0) is ("let found = Find(1)", "found is Error then 0 else found")
-	let last = FileCheck.LastLine(lines, header)
+	last = FileCheck.LastLine(lines, header)
 	mutable isTest = true
 	for Range(header + 1, last + 1)
 		isTest = isTest and value < last and Duplicates.IsTest(lines(value).Trim)
@@ -38,10 +38,10 @@ Dropped(tokens Texts, line Number, others Texts) List(ValidationIssue)
 	Zeroed.Dropped(("x", "is", "Error", "then", "Other", "(", ")", "else", "0"), 3, List(Text)).Length is 0
 	Zeroed.Dropped(("x", "is", "Error", "then", "1", "else", "0"), 3, List(Text) + "Log(x)").Length is 0
 	for tokens
-		let isChecked = index + 3 < tokens.Length then tokens.Slice(index, 2) is ("is", "Error") else false
-		let isNot = index + 4 < tokens.Length then tokens.Slice(index, 3) is ("is", "not", "Error") else false
-		let negated = isNot then Branch(tokens, Else(tokens, index + 4) + 1) else ""
-		let branch = isChecked then Branch(tokens, index + 3) else negated
+		isChecked = index + 3 < tokens.Length then tokens.Slice(index, 2) is ("is", "Error") else false
+		isNot = index + 4 < tokens.Length then tokens.Slice(index, 3) is ("is", "not", "Error") else false
+		negated = isNot then Branch(tokens, Else(tokens, index + 4) + 1) else ""
+		branch = isChecked then Branch(tokens, index + 3) else negated
 		if branch is not "" and IsLiteral(branch) and IsUnused(tokens(index - 1), others)
 			ValidationIssue("ErrorMustNotBecomeAValue", tokens(index - 1) + " is Error then " + branch + Hint, line)
 Branch(tokens Texts, after Number) Text
@@ -67,23 +67,26 @@ Returned(code Text, next Text, line Number) List(ValidationIssue)
 	Zeroed.Returned("if found is Error", "return 0", 4).First.Line is 4
 	Zeroed.Returned("if found is Error", "return found", 4).Length is 0
 	Zeroed.Returned("if found is 2", "return 0", 4).Length is 0
-	let returned = next.StartsWith("return ") then next.Substring(7) else ""
+	returned = next.StartsWith("return ") then next.Substring(7) else ""
 	if code.StartsWith("if ") is false or code.EndsWith(" is Error") is false or IsLiteral(returned) is false
 		return List(ValidationIssue)
-	let message = code.Substring(3) + " then " + returned + Hint
+	message = code.Substring(3) + " then " + returned + Hint
 	List(ValidationIssue) + ValidationIssue("ErrorMustNotBecomeAValue", message, line)
 IsUnused(name Text, others Texts) Boolean
 	Zeroed.IsUnused("x", ("let x = A", "B(y)")) and Zeroed.IsUnused("x", List(Text) + "B(x)") is false
+	Zeroed.IsUnused("x", ("x = A", "B(y)"))
 	for others
-		if name is in Tokenizer(value).Tokens and value.StartsWith("let " + name + " ") is false
+		code = value.Trim
+		isDeclared = code.StartsWith("let " + name + " ") or code.StartsWith(name + " = ")
+		if name is in Tokenizer(value).Tokens and isDeclared is false
 			return false
 	true
 IsLiteral(text Text) Boolean
 	Zeroed.IsLiteral("0") and Zeroed.IsLiteral("-1") and Zeroed.IsLiteral("2.5") and Zeroed.IsLiteral("\"\"")
 	Zeroed.IsLiteral("value") and Zeroed.IsLiteral("true") is false and Zeroed.IsLiteral("false") is false
 	Zeroed.IsLiteral("found") is false and Zeroed.IsLiteral("") is false and Zeroed.IsLiteral("\"a\" + b") is false
-	let digits = text.StartsWith("-") then text.Substring(1) else text
-	let isNumber = digits.Length > 0 and Tokenizer.IsDigit(digits(0)) and digits to Number is not Error
-	let isQuoted = text.Length > 1 and text.StartsWith("\"") and text.EndsWith("\"")
-	let isText = isQuoted and text.IndexOf("\"", 1) is text.Length - 1
+	digits = text.StartsWith("-") then text.Substring(1) else text
+	isNumber = digits.Length > 0 and Tokenizer.IsDigit(digits(0)) and digits to Number is not Error
+	isQuoted = text.Length > 1 and text.StartsWith("\"") and text.EndsWith("\"")
+	isText = isQuoted and text.IndexOf("\"", 1) is text.Length - 1
 	isNumber or isText or text is "value"

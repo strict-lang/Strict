@@ -15,9 +15,9 @@ Random(inputs Number, outputs Number) Gru
 	Gru.Random(7, 3).update.weights.First.Length is 7 + Hidden
 	Gru.Random(7, 3).output.weights.Length is 3
 	Gru.Random(7, 3).update.biases.First is Remembering
-	let size = inputs + Hidden
-	let tanh = Layer.Random(size, Hidden, Activation.Tanh)
-	let keeping = Layer(Layer.Halves.Rows(size, Hidden), Filled(Remembering))
+	size = inputs + Hidden
+	tanh = Layer.Random(size, Hidden, Activation.Tanh)
+	keeping = Layer(Layer.Halves.Rows(size, Hidden), Filled(Remembering))
 	Gru(keeping, Layer.Random(size, Hidden), tanh, Layer.Random(Hidden, outputs))
 States(inputs List(Numbers)) List(Numbers)
 	Tiny.States(List(Numbers) + One).First is Zero
@@ -31,71 +31,71 @@ Next(previous Numbers, step Numbers) Numbers
 	Wide.Next((0, 0), One).Last.IsNearlyEqual(0.5567699411459397)
 	Tiny.Next(One, One).First.IsNearlyEqual(0.9599791836277165)
 	Tiny.Next(Zero, One).First.IsNearlyEqual(0.5567699411459397)
-	let gates = Gates(previous, step)
-	let candidates = 2 * previous.Length
+	gates = Gates(previous, step)
+	candidates = 2 * previous.Length
 	for previous
 		value + gates(index) * (gates(candidates + index) - value)
 Gates(previous Numbers, step Numbers) Numbers
 	Tiny.Gates(Zero, One).First.IsNearlyEqual(0.7310585786300049)
 	Tiny.Gates(Zero, One).Last.IsNearlyEqual(0.7615941559557649)
-	let joined = step + previous
-	let resetting = reset.Forward(joined)
+	joined = step + previous
+	resetting = reset.Forward(joined)
 	update.Forward(joined) + resetting + candidate.Forward(step + resetting * previous)
 Trained(inputs List(Numbers), targets List(Numbers), rate Number) Gru
 	Tiny.Trained(List(Numbers) + One, List(Numbers) + Zero, 2).output.weights.First.First < 1
-	let states = States(inputs)
-	let outputs = Recurrent.OutputDeltas(output, states, targets)
-	let deltas = HiddenDeltas(inputs, states, outputs)
+	states = States(inputs)
+	outputs = Recurrent.OutputDeltas(output, states, targets)
+	deltas = HiddenDeltas(inputs, states, outputs)
 	mutable trained = value
 	for inputs
 		trained = trained.Updated(value, states(index), deltas(index), outputs(index), states(index + 1), rate)
 	trained
 HiddenDeltas(inputs List(Numbers), states List(Numbers), outputs List(Numbers)) List(Numbers)
 	Tiny.HiddenDeltas(List(Numbers) + One, (Zero, One), List(Numbers) + One).First.Length is 5
-	let size = update.biases.Length
+	size = update.biases.Length
 	mutable future = Layer.Halves.Zeros(size)
 	mutable deltas = List(Mutable(Numbers))
 	for inputs.Length
-		let time = inputs.Length - 1 - index
-		let gradient = Network.Difference(output.Spread(outputs(time)), future * -1)
-		let step = Step(inputs(time), states(time), Clipped(gradient))
+		time = inputs.Length - 1 - index
+		gradient = Network.Difference(output.Spread(outputs(time)), future * -1)
+		step = Step(inputs(time), states(time), Clipped(gradient))
 		future = step.Slice(4 * size, size)
 		deltas.Add(step)
 	deltas.Reverse
 Step(step Numbers, previous Numbers, gradient Numbers) Numbers
 	Tiny.Step(One, List(Number) + 2, One)(3).IsNearlyEqual(1.9051482536448667)
 	Tiny.Step(One, Zero, One).Length is 5
-	let size = previous.Length
-	let gates = Gates(previous, step)
-	let updates = UpdateDeltas(gates, previous, gradient)
-	let candidates = CandidateDeltas(gates, gradient)
-	let fromCandidate = candidate.Spread(candidates).Slice(step.Length, size)
-	let resets = ResetDeltas(gates, previous, fromCandidate)
-	let fromGates = update.Spread(updates).Slice(step.Length, size) + reset.Spread(resets).Slice(step.Length, size)
-	let earlier = PreviousDeltas(gates, gradient, fromCandidate, fromGates)
+	size = previous.Length
+	gates = Gates(previous, step)
+	updates = UpdateDeltas(gates, previous, gradient)
+	candidates = CandidateDeltas(gates, gradient)
+	fromCandidate = candidate.Spread(candidates).Slice(step.Length, size)
+	resets = ResetDeltas(gates, previous, fromCandidate)
+	fromGates = update.Spread(updates).Slice(step.Length, size) + reset.Spread(resets).Slice(step.Length, size)
+	earlier = PreviousDeltas(gates, gradient, fromCandidate, fromGates)
 	updates + resets + candidates + gates.Slice(size, size) * previous + earlier
 UpdateDeltas(gates Numbers, previous Numbers, gradient Numbers) Numbers
 	Tiny.UpdateDeltas((0.5, 0.25, 0, 0, 1, 2), (0.5, 1), (2, 3)) is (0.25, 0.5625)
 	Tiny.UpdateDeltas((0.5, 0.5, 1), Zero, One) is List(Number) + 0.25
-	let candidates = 2 * previous.Length
+	candidates = 2 * previous.Length
 	for gradient
 		value * (gates(candidates + index) - previous(index)) * gates(index) * (1 - gates(index))
 CandidateDeltas(gates Numbers, gradient Numbers) Numbers
 	Tiny.CandidateDeltas((0.5, 0.25, 0, 0, 0.5, 0.2), (1, 2)) is (0.375, 0.48)
 	Tiny.CandidateDeltas(Halves, One) is List(Number) + 0.375
-	let candidates = 2 * gradient.Length
+	candidates = 2 * gradient.Length
 	for gradient
 		value * gates(index) * (1 - gates(candidates + index) * gates(candidates + index))
 ResetDeltas(gates Numbers, previous Numbers, fromCandidate Numbers) Numbers
 	Tiny.ResetDeltas((0, 0, 0.5, 0.25), (2, 1), (1, 2)) is (0.5, 0.375)
 	Tiny.ResetDeltas(Halves, List(Number) + 2, One) is List(Number) + 0.5
-	let size = previous.Length
+	size = previous.Length
 	for previous
 		fromCandidate(index) * value * gates(size + index) * (1 - gates(size + index))
 PreviousDeltas(gates Numbers, gradient Numbers, fromCandidate Numbers, fromGates Numbers) Numbers
 	Tiny.PreviousDeltas((0.5, 0.25, 0.5, 0.75), (1, 2), (1, 2), (1, 2, 3, 4)) is (5, 9)
 	Tiny.PreviousDeltas(Halves, One, One, (1, 1)) is List(Number) + 3
-	let size = gradient.Length
+	size = gradient.Length
 	for gradient
 		value * (1 - gates(index)) + fromCandidate(index) * gates(size + index) + fromGates(index) + fromGates(size + index)
 Filled(bias Number) Numbers
@@ -110,9 +110,9 @@ Clipped(gradient Numbers) Numbers
 Updated(step Numbers, previous Numbers, delta Numbers, outputDelta Numbers, state Numbers, rate Number) Gru
 	Wide.Updated(One, (0, 0), (0, 1, 2, 3, 4, 5, 6, 7, 8, 9), One, (0, 0), 1).candidate.weights.First is (-3, -23, -27)
 	Tiny.Updated(One, Zero, (1, 1, 1, 0, 1), One, One, 1).output.weights is List(Numbers) + Zero
-	let size = previous.Length
-	let joined = step + previous
-	let updated = update.Updated(joined, delta.Slice(0, size), rate)
-	let resetted = reset.Updated(joined, delta.Slice(size, size), rate)
-	let candidated = candidate.Updated(step + delta.Slice(3 * size, size), delta.Slice(2 * size, size), rate)
+	size = previous.Length
+	joined = step + previous
+	updated = update.Updated(joined, delta.Slice(0, size), rate)
+	resetted = reset.Updated(joined, delta.Slice(size, size), rate)
+	candidated = candidate.Updated(step + delta.Slice(3 * size, size), delta.Slice(2 * size, size), rate)
 	Gru(updated, resetted, candidated, output.Updated(state, outputDelta, rate))

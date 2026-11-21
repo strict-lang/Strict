@@ -25,14 +25,14 @@ Linked(entries List(TypeEntry), signatures Texts) LinkRound slow
 	Linker(Sample, isFast = true).Linked(Go, List(Text)).linker.Homes.Length is 0
 	mutable round = LinkRound(value, entries, signatures)
 	for as long as true
-		let started = Process.Elapsed
-		let next = Next(round)
+		started = Process.Elapsed
+		next = Next(round)
 		if Settled(next, round.IsSettled(next), started)
 			return isFast then next else next.With(next.Checked)
 		round = next
 	round
 Settled(next LinkRound, complete Boolean, started Number) Boolean
-	let phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
+	phase = "Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")"
 	BuildProfile.Reported(phase, started)
 	complete
 Next(round LinkRound) LinkRound slow
@@ -40,19 +40,19 @@ Next(round LinkRound) LinkRound slow
 	Hello.Next(LinkRound.Greeting).signatures is ("Strict/Logger:")
 	Hello.Next(LinkRound(Hello, LinkRound.Forwarding, List(Text) + "Strict/W:Code")).entries.First.methods.Length is 2
 	Linker(Hello, isFast = true).Next(LinkRound.Greeting).linker.Homes.Length is 0
-	let invoked = round.Targets.Unique
-	let completed = LinkRound(round, entries = Completed(round.entries, invoked))
-	let targets = invoked + completed.Forwarded(invoked)
-	let signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
-	let homed = isFast then completed else LinkHomes(completed).Homing(signed)
+	invoked = round.Targets.Unique
+	completed = LinkRound(round, entries = Completed(round.entries, invoked))
+	targets = invoked + completed.Forwarded(invoked)
+	signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
+	homed = isFast then completed else LinkHomes(completed).Homing(signed)
 	homed.Advanced((List(TypeEntry) + Completed(completed.entries, targets).First) + homed.Entries(signed), signed)
 Completed(entries List(TypeEntry), targets Texts) List(TypeEntry) slow
 	Sample.Completed(Go, List(Text)).Length is 1
 	Sample.Completed((Go, Counted), List(Text))(1) is Counted
-	let automatic = Automatic(main.lines, TypeEntry.ShortName(main.fullName), Instantiation(main.inference.types))
-	let options = OptionsCodegen(automatic, Path(SourcePath(main.fullName)).PathOnly.text)
-	let completed = options.Completed(main, automatic.Completed(main, entries.First, targets), targets)
-	let first = Specialization(main.Generator).Completed(main, completed, targets)
+	automatic = Automatic(main.lines, TypeEntry.ShortName(main.fullName), Instantiation(main.inference.types))
+	options = OptionsCodegen(automatic, Path(SourcePath(main.fullName)).PathOnly.text)
+	completed = options.Completed(main, automatic.Completed(main, entries.First, targets), targets)
+	first = Specialization(main.Generator).Completed(main, completed, targets)
 	(List(TypeEntry) + first) + entries.Slice(1, entries.Length - 1)
 Linkable(types Texts, signatures Texts) Texts
 	Hello.Linkable(("Strict/Logger", "Strict/Missing"), List(Text)) is ("Strict/Logger")
@@ -68,7 +68,7 @@ Linkable(types Texts, signatures Texts) Texts
 IsLinkable(type Text) Boolean
 	Hello.IsLinkable("Strict/Logger")
 	Hello.IsLinkable("Strict/Missing") is false
-	let source = File(SourcePath(type))
+	source = File(SourcePath(type))
 	source.Exists and (type.IndexOf("(") is -1 or TypeShape(source.ReadLines).IsTrait is false)
 Signatures(types Texts, targets Texts) Texts
 	Sample.Signatures("Strict/B", "Strict/B.Go") is ("Strict/B:Go")
@@ -93,10 +93,10 @@ UsedMethods(targets Texts, type Text) Texts
 	Sample.UsedMethods(("Strict/B.Go", "Strict/C.Go", "Strict/B.to Text"), "Strict/B") is ("Go", "to Text")
 	Sample.UsedMethods(("Strict/Number.to Text", "Strict/Number.Floor"), "Strict/Number") is ("Floor")
 	Sample.UsedMethods(("Strict/B.Go", "Strict/B.Go"), "Strict/B") is ("Go")
-	let prefix = type + "."
+	prefix = type + "."
 	mutable used = List(Mutable(Text))
 	for targets
-		let method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
+		method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
 		if method is not "" and method is not in used and IsNative(type, value.Split(".").Last) is false
 			used.Add(method)
 	used
@@ -111,7 +111,7 @@ IsNative(type Text, method Text) Boolean
 		return TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
 	if method is in ("Length", "Count") or SourceName(type) is "Dictionary"
 		return SourceName(type) is in ("List", "File", "Dictionary") or type is "Strict/Text" and method is "Length"
-	let isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or SourceName(type) is in ("File", "Directory")
+	isOwn = TypeEntry.IsBaseName(TypeEntry.ShortName(type)) or SourceName(type) is in ("File", "Directory")
 	method.Split(" ").First is in Natives and isOwn
 SourceName(type Text) Text
 	Sample.IsNative("Strict/List(Number)", "Length")
@@ -120,13 +120,13 @@ SourceName(type Text) Text
 	Sample.IsNative("Strict/Text", "Count") is false
 	Sample.SourceName("Strict/List(Number)") is "List"
 	Sample.SourceName("Strict/Process") is "Process"
-	let name = type.Substring(7)
+	name = type.Substring(7)
 	name.IndexOf("(") is -1 then name else name.Substring(0, name.IndexOf("("))
 SourcePath(type Text) Text
 	Sample.IsNative("Strict/File", "ReadLines")
 	Sample.IsNative("Strict/Directory", "Exists")
 	Sample.SourcePath("Strict/Process") is "./Process.strict"
-	let local = "./" + SourceName(type) + ".strict"
+	local = "./" + SourceName(type) + ".strict"
 	File(local).Exists then local else root + "/" + SourceName(type) + ".strict"
 UsedTypes(entries List(TypeEntry)) Texts
 	Sample.UsedTypes(TypeEntry("A", Parameters.members, List(MethodEntry))).Last is "Strict/Bytecode/MemberEntry"
@@ -135,7 +135,7 @@ UsedTypes(entries List(TypeEntry)) Texts
 	Sample.UsedTypes(Reading) is ("Strict/List(Byte)", "Strict/Byte")
 	mutable types = List(Mutable(Text))
 	for entries
-		let name = value.Name.IndexOf("/") < 0 then main.fullName else value.Name
+		name = value.Name.IndexOf("/") < 0 then main.fullName else value.Name
 		types = types + Elements(value.UsedTypes.Unique, name.Substring(0, name.LastIndexOf("/")))
 	types
 Elements(types Texts, package Text) Texts
@@ -154,7 +154,7 @@ Qualified(element Text, package Text) Text
 	Sample.Elements(List(Text) + "Strict/List(List(Byte))", "Strict") is ("Strict/List(List(Byte))")
 	Sample.Qualified("MemberEntry", "Strict/Bytecode") is "Strict/Bytecode/MemberEntry"
 	Sample.Qualified("Logger", "Strict/Bytecode") is "Strict/Logger"
-	let nearby = package + "/" + element
+	nearby = package + "/" + element
 	nearby is in main.typeNames then nearby else "Strict/" + element
 Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")

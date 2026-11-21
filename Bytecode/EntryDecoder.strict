@@ -3,7 +3,7 @@ has names Texts
 constant Hello = EntryDecoder.Of(TypeEntry.HelloLogger.Bytes)
 Of(bytes Numbers) EntryDecoder
 	EntryDecoder.Of(TypeEntry.HelloLogger.Bytes).names is TypeEntry.HelloLogger.Names.names
-	let integers = ByteEncoder(bytes).Integers
+	integers = ByteEncoder(bytes).Integers
 	EntryDecoder(integers, EntryDecoder(integers, List(Text)).Names)
 Names Texts
 	EntryDecoder((5, 2, 1, 97, 1, 98), List(Text)).Names is ("a", "b")
@@ -11,14 +11,14 @@ Names Texts
 	EntryDecoder(1, List(Text)).Names.Length is 0
 	mutable position = 2
 	for stream.Length > 1 then stream(1) else 0
-		let length = position < stream.Length then stream(position) else 0
+		length = position < stream.Length then stream(position) else 0
 		position = position + 1 + length
 		ByteEncoder(stream).Spelled(position - length, length)
 Type TypeEntry
 	Hello.Type is TypeEntry.HelloLogger
 	EntryDecoder.Of(TypeEntry.Scaling.Bytes).Type is TypeEntry.Scaling
 	EntryDecoder.Of(TypeEntry.Converting.Bytes).Type is TypeEntry.Converting
-	let start = 1 + stream(0)
+	start = 1 + stream(0)
 	TypeEntry(names(stream(start)), Members(start + 1), Methods(After(start + 1)))
 Method(start Number) MethodEntry
 	EntryDecoder((0, 1, 0, 0), ("Run", "None")).Method(0).returnType is "None"
@@ -29,20 +29,20 @@ Member(start Number) MemberEntry
 	EntryDecoder((0, 1, 832, 0), ("a", "b")).Member(0).Count is 3
 	EntryDecoder((0, 1, 0, 0), ("a", "b")).Member(0).Bits is 0
 	EntryDecoder((0, 1, 128, 0), ("a", "b")).Member(0).Bits is 64
-	let flag = stream(start + 2)
-	let rest = flag % Byte.Values
-	let bits = (rest / 2).Floor
-	let initial = Instructions(start + 3)
+	flag = stream(start + 2)
+	rest = flag % Byte.Values
+	bits = (rest / 2).Floor
+	initial = Instructions(start + 3)
 	MemberEntry(names(stream(start)), names(stream(start + 1)), initial, rest % 2 is 1, bits, (flag / Byte.Values).Floor)
 Instruction(start Number) InstructionEntry
 	EntryDecoder((45, 1, 0, 2, 1, 0), List(Text) + "Hi").Instruction(0) is InstructionEntry.Print("Hi")
 	EntryDecoder((160, 0, 1, 6, 7), List(Text)).Instruction(0) is InstructionEntry.ReturnLined
-	let textCount = stream(start + 1)
-	let payloadStart = start + 3 + textCount
-	let payloadCount = stream(payloadStart - 1)
-	let hasLine = stream(start) >= InstructionType.IncludesSourceLine
-	let kind = hasLine then stream(start) - InstructionType.IncludesSourceLine else stream(start)
-	let line = hasLine then stream(payloadStart + payloadCount) else 0
+	textCount = stream(start + 1)
+	payloadStart = start + 3 + textCount
+	payloadCount = stream(payloadStart - 1)
+	hasLine = stream(start) >= InstructionType.IncludesSourceLine
+	kind = hasLine then stream(start) - InstructionType.IncludesSourceLine else stream(start)
+	line = hasLine then stream(payloadStart + payloadCount) else 0
 	InstructionEntry(kind, TextsAt(start + 2, textCount), Payload(payloadStart, payloadCount), line)
 TextsAt(start Number, count Number) Texts
 	EntryDecoder((1, 0), ("a", "b")).TextsAt(0, 2) is ("b", "a")
@@ -68,11 +68,11 @@ Starts(start Number) Numbers
 	EntryDecoder((2, 1, 7, 2, 8, 9), List(Text)).Starts(0) is (2, 4)
 	mutable position = start + 1
 	for stream(start)
-		let record = position + 1
+		record = position + 1
 		position = record + stream(position)
 		record
 After(start Number) Number
 	EntryDecoder((2, 1, 7, 2, 8, 9), List(Text)).After(0) is 6
 	EntryDecoder(List(Number) + 0, List(Text)).After(0) is 1
-	let starts = Starts(start)
+	starts = Starts(start)
 	starts.Length is 0 then start + 1 else starts.Last + stream(starts.Last - 1)

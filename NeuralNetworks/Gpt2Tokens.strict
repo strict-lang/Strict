@@ -15,7 +15,7 @@ Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Tiny.tokens is ("a", "b", " ", "ab", " ab")
 	Tiny.ids(" ab") is 4
 	Gpt2Tokens.Parsed(Spaced, ("#version: 0.2", "a b")).Merged("ab") is (2)
-	let ordered = Vocabulary(vocabulary)
+	ordered = Vocabulary(vocabulary)
 	mutable known = Dictionary(Text, Number)
 	for ordered
 		known(value) = index
@@ -30,9 +30,9 @@ Loaded(model Gguf) Gpt2Tokens
 	for model.Value("tokenizer.ggml.tokens").Lines
 		raw.Add(Raw(value))
 		known(raw.Last) = index
-	let ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known, raw.Length)
-	let splitting = model.Value("tokenizer.ggml.pre")
-	let isQwenLike = splitting is in ("qwen2", "qwen35") or Digits(splitting) > 1
+	ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known, raw.Length)
+	splitting = model.Value("tokenizer.ggml.pre")
+	isQwenLike = splitting is in ("qwen2", "qwen35") or Digits(splitting) > 1
 	Gpt2Tokens(raw, known, ranked, isQwenLike, Controls(model, raw), Digits(splitting))
 Digits(splitting Text) Number
 	Gpt2Tokens.Digits("lfm2") is 3 and Gpt2Tokens.Digits("llama-bpe") is 3 and Gpt2Tokens.Digits("qwen2") is 1
@@ -49,20 +49,20 @@ Folder(folder Text) Gpt2Tokens slow
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").tokens is ("a", "b", " ", "ab", " ab")
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").Encoded("<s>ab ab") is (5, 3, 4)
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").isQwen
-	let vocabulary = Text.Combine(File(folder + "/vocab.json").ReadLines, "\n")
-	let parsed = Gpt2Tokens.Parsed(vocabulary, File(folder + "/merges.txt").ReadLines)
-	let config = folder + "/tokenizer_config.json"
+	vocabulary = Text.Combine(File(folder + "/vocab.json").ReadLines, "\n")
+	parsed = Gpt2Tokens.Parsed(vocabulary, File(folder + "/merges.txt").ReadLines)
+	config = folder + "/tokenizer_config.json"
 	if File(config).Exists is false
 		return parsed
-	let settings = Json.Read(config)
-	let qwen = settings.get("tokenizer_class") to Text is "Qwen2Tokenizer"
+	settings = Json.Read(config)
+	qwen = settings.get("tokenizer_class") to Text is "Qwen2Tokenizer"
 	Gpt2Tokens(parsed, isQwen = qwen, specials = Specials(settings.get("added_tokens_decoder")))
 Vocabulary(json Text) Texts
 	Vocabulary("{\"\\\"\": 0, \"\\\\\": 1, \"\\u0120a\": 2}") is ("\"", "\\", " a")
 	Vocabulary("{\n  \"a\": 0,\n  \"b\": 1\n}") is ("a", "b")
 	Vocabulary("{\"a\":0,\"b\":1}") is ("a", "b")
 	mutable parsed = List(Mutable(Text))
-	let colon = json.IndexOf("\": 0") >= 0 then "\": " else "\":"
+	colon = json.IndexOf("\": 0") >= 0 then "\": " else "\":"
 	mutable start = json.IndexOf("\"") + 1
 	mutable ending = json.IndexOf(colon + 0, start)
 	for as long as ending >= 0
@@ -81,7 +81,7 @@ Unmapped(code Number) Number
 	Unmapped(323) is 173
 	if code < Byte.Values
 		return code
-	let skipped = code - Byte.Values
+	skipped = code - Byte.Values
 	skipped < Printable then skipped else skipped < SoftHyphenIndex then skipped + DeleteOffset else SoftHyphen
 Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Number, Number)
 	Tiny.ranks(1) is 0
@@ -89,7 +89,7 @@ Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Nu
 	mutable ranked = Dictionary(Number, Number)
 	for merges
 		if " " is in value and value.StartsWith("#version") is false
-			let parts = value.Split(" ")
+			parts = value.Split(" ")
 			ranked(known(Raw(parts(0))) * width + known(Raw(parts(1)))) = index - 1
 	ranked
 Raw(mapped Text) Text
@@ -107,10 +107,10 @@ Decoded(tokenIds Numbers) Text
 Encoded(text Text) Numbers
 	Tiny.Encoded(" ab a") is (4, 2, 0)
 	Gpt2Tokens(Tiny, specials = Dictionary(("<s>", 5))).Encoded("ab<s> ab") is (3, 5, 4)
-	let special = Special(text)
+	special = Special(text)
 	if special is not ""
-		let at = text.IndexOf(special)
-		let rest = text.Substring(at + special.Length, text.Length - at - special.Length)
+		at = text.IndexOf(special)
+		rest = text.Substring(at + special.Length, text.Length - at - special.Length)
 		return (Encoded(text.Substring(0, at)) + specials(special)) + Encoded(rest)
 	mutable encoded = List(Mutable(Number))
 	for TokenSplitter(isQwen, digits).Words(text)
@@ -122,7 +122,7 @@ Special(text Text) Text
 	mutable earliest = ""
 	mutable at = text.Length
 	for specials
-		let found = text.IndexOf(value.Key)
+		found = text.IndexOf(value.Key)
 		if found >= 0 and (found < at or found is at and value.Key.Length > earliest.Length)
 			earliest = value.Key
 			at = found
@@ -151,14 +151,14 @@ Best(symbols Numbers) Number
 	mutable best = -1
 	mutable lowest = ranks.Length
 	for Range(1, symbols.Length)
-		let pair = symbols(value - 1) * tokens.Length + symbols(value)
+		pair = symbols(value - 1) * tokens.Length + symbols(value)
 		if pair is in ranks and ranks(pair) < lowest
 			best = value - 1
 			lowest = ranks(pair)
 	best
 Joined(symbols Numbers, at Number) Numbers
 	Tiny.Joined((2, 0, 1), 1) is (2, 3)
-	let merged = ids(tokens(symbols(at)) + tokens(symbols(at + 1)))
+	merged = ids(tokens(symbols(at)) + tokens(symbols(at + 1)))
 	for symbols
 		if index is not at + 1
 			index is at then merged else value

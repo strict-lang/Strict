@@ -4,8 +4,8 @@ Formatted(lines Texts) Texts
 	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
 	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
 	RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1") and RoundTrip.Formatted(("has x", "\t1")) is ("has x")
-	let shape = TypeShape(lines)
-	let end = Ended(lines)
+	shape = TypeShape(lines)
+	end = Ended(lines)
 	mutable formatted = List(Mutable(Text))
 	for lines
 		if value.StartsWith("	") is false and index < end
@@ -33,7 +33,7 @@ Tabbed(lines Texts) Texts
 	mutable indented = List(Mutable(Text))
 	for lines
 		indented.Add(Indented(value))
-	let shared = Shared(indented)
+	shared = Shared(indented)
 	for indented
 		value.Length < shared then "" else value.Substring(shared)
 Shared(lines Texts) Number
@@ -54,6 +54,6 @@ Indented(line Text) Text
 		return "\t" + Indented(line.Substring(1, line.Length - 1))
 	if line.StartsWith(" ") is false
 		return line
-	let wide = line.StartsWith("    ") then 4 else (line.StartsWith("   ") then 3 else 2)
-	let spaces = line.StartsWith("  ") then wide else 1
+	wide = line.StartsWith("    ") then 4 else (line.StartsWith("   ") then 3 else 2)
+	spaces = line.StartsWith("  ") then wide else 1
 	"\t" + Indented(line.Substring(spaces, line.Length - spaces))

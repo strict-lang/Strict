@@ -17,13 +17,13 @@ Issues List(ValidationIssue)
 	GeometryTypes(("has x Number", "has y Number", "has width Number", "has height Number"), "Box").Issues.Length is 2
 	if typeName is in Exempt or IsOptions
 		return List(ValidationIssue)
-	let scope = TypeShape(lines).MemberScope
+	scope = TypeShape(lines).MemberScope
 	SizeOrRectangleIssues(Lowered(scope.names), scope.types) + CoordinateIssues(Lowered(scope.names), scope.types)
 SizeOrRectangleIssues(names Texts, types Texts) List(ValidationIssue)
 	Sample.SizeOrRectangleIssues(("center", "size"), ("Vector2", "Size")).Length is 1
 	Sample.SizeOrRectangleIssues(("center", "width"), ("Vector2", "Number")).Length is 0
 	Sample.SizeOrRectangleIssues(List(Text) + "height", List(Text) + "Number").Length is 0
-	let hasWidthHeight = IsNumber(names, types, "width") and IsNumber(names, types, "height")
+	hasWidthHeight = IsNumber(names, types, "width") and IsNumber(names, types, "height")
 	if IsTyped(names, types, "center", "Vector2") and (IsTyped(names, types, "size", "Size") or hasWidthHeight)
 		return Issue("CenterAndSizeMustBeRectangle", RectangleHint, ("center", "size", "width"))
 	hasWidthHeight then Issue("WidthAndHeightMustBeSize", WidthHint, ("width", "height")) else List(ValidationIssue)
@@ -59,13 +59,13 @@ IsTyped(names Texts, types Texts, target Text, expected Text) Boolean
 	Sample.IsTyped("center", List(Text) + "Math/Vector2", "center", "Vector2")
 	Sample.IsTyped("center", List(Text) + "Number", "center", "Vector2") is false
 	Sample.IsTyped("center", List(Text) + "MyVector2", "center", "Vector2") is false
-	let at = names.Index(target)
+	at = names.Index(target)
 	at >= 0 and (types(at) is expected or types(at).EndsWith("/" + expected))
 MemberLine(targets Texts) Number
 	Sample.MemberLine(List(Text) + "height") is 2
 	Sample.MemberLine(List(Text) + "missing") is 1
 	GeometryTypes(("Run", "\treturn height", "has height Number"), "Box").MemberLine(List(Text) + "height") is 3
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	for lines
 		if shape.IsMemberLine(value) and HeaderTokens(Tokenizer(value).Tokens).MemberName.Lower is in targets
 			return index + 1

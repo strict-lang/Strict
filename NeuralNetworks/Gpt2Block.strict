@@ -16,12 +16,12 @@ constant Embedded = Weights.Rows("wte.weight").First
 Loaded(weights Safetensors, prefix Text) Gpt2Block slow
 	Tiny.attention.weights.Length is 36
 	Tiny.attention.weights.First.Length is 12
-	let combine = Dense(weights, prefix + "attn.c_attn")
-	let project = Dense(weights, prefix + "attn.c_proj")
-	let first = (weights.Values(prefix + "ln_1.weight"), weights.Values(prefix + "ln_1.bias"))
-	let second = (weights.Values(prefix + "ln_2.weight"), weights.Values(prefix + "ln_2.bias"))
-	let expand = Dense(weights, prefix + "mlp.c_fc")
-	let contract = Dense(weights, prefix + "mlp.c_proj")
+	combine = Dense(weights, prefix + "attn.c_attn")
+	project = Dense(weights, prefix + "attn.c_proj")
+	first = (weights.Values(prefix + "ln_1.weight"), weights.Values(prefix + "ln_1.bias"))
+	second = (weights.Values(prefix + "ln_2.weight"), weights.Values(prefix + "ln_2.bias"))
+	expand = Dense(weights, prefix + "mlp.c_fc")
+	contract = Dense(weights, prefix + "mlp.c_proj")
 	Gpt2Block(first(0), first(1), combine, project, second(0), second(1), expand, contract)
 Dense(weights Safetensors, name Text) Layer slow
 	Tiny.Dense(Weights, "h.0.mlp.c_fc").biases.Length is 48
@@ -29,14 +29,14 @@ Dense(weights Safetensors, name Text) Layer slow
 Cached(input Numbers) Gpt2Block slow
 	Tiny.Cached(Embedded).keys.Length is 12
 	Tiny.Cached(Embedded).Cached(Embedded).values.Length is 24
-	let combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
-	let size = combined.Length / 3
-	let keyed = Safetensors.Part(combined, size, size, 1)
-	let valued = Safetensors.Part(combined, 2 * size, size, 1)
+	combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
+	size = combined.Length / 3
+	keyed = Safetensors.Part(combined, size, size, 1)
+	valued = Safetensors.Part(combined, 2 * size, size, 1)
 	Gpt2Block(value, keys = keys + keyed, values = values + valued, queries = Safetensors.Part(combined, 0, size, 1))
 Output(input Numbers) Numbers slow
 	Tiny.Cached(Embedded).Output(Embedded).Length is 12
-	let attended = Attended(input)
+	attended = Attended(input)
 	Contracted(attended, Activated(attended))
 Attended(input Numbers) Numbers
 	Tiny.Cached(Embedded).Attended(Embedded).Length is 12
@@ -50,23 +50,23 @@ Contracted(attended Numbers, activated Numbers) Numbers
 Vectors List(Numbers)
 	Tiny.Vectors.Length is 8
 	Tiny.Vectors(2).Length is 36
-	let combined = (attentionGain, attentionBias, attention.biases, projection.biases)
+	combined = (attentionGain, attentionBias, attention.biases, projection.biases)
 	combined + (mlpGain, mlpBias, expansion.biases, contraction.biases)
 Changed(vectors List(Numbers), first Number) Gpt2Block
 	Tiny.Changed(Tiny.Vectors, 0).Vectors is Tiny.Vectors
-	let combine = Layer(attention.weights, vectors(first + 2))
-	let project = Layer(projection.weights, vectors(first + 3))
-	let expand = Layer(expansion.weights, vectors(first + 6))
-	let contract = Layer(contraction.weights, vectors(first + 7))
-	let second = (vectors(first + 4), vectors(first + 5))
+	combine = Layer(attention.weights, vectors(first + 2))
+	project = Layer(projection.weights, vectors(first + 3))
+	expand = Layer(expansion.weights, vectors(first + 6))
+	contract = Layer(contraction.weights, vectors(first + 7))
+	second = (vectors(first + 4), vectors(first + 5))
 	Gpt2Block(vectors(first), vectors(first + 1), combine, project, second(0), second(1), expand, contract)
 Normalized(input Numbers, gain Numbers, bias Numbers, epsilon = 0.00001) Numbers
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902)
 	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902)
-	let size = gain.Length
-	let centered = Centered(input, size)
+	size = gain.Length
+	centered = Centered(input, size)
 	for centered.Length
-		let scale = Normalization.Scale(Normalization.Squared(centered, (index / size).Floor * size, size), size, epsilon)
+		scale = Normalization.Scale(Normalization.Squared(centered, (index / size).Floor * size, size), size, epsilon)
 		gain(index % size) * centered(index) * scale + bias(index % size)
 Centered(input Numbers, size Number) Numbers
 	Tiny.Centered((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)
@@ -81,7 +81,7 @@ Mean(input Numbers with value.Bits is 32, first Number, size Number) Number
 Gelu(input Numbers) Numbers
 	Tiny.Gelu((0, 1)).Last.IsNearlyEqual(0.8411919906082768)
 	for input
-		let inner = Activation.GeluScale * (value + Activation.GeluCubic * value * value * value)
+		inner = Activation.GeluScale * (value + Activation.GeluCubic * value * value * value)
 		0.5 * value * (1 + Activation.Tanh.Output(inner))
 Added(left Numbers, right Numbers) Numbers
 	Tiny.Added((1, 2), (3, 4)) is (4, 6)

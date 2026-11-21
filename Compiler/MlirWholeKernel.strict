@@ -36,11 +36,11 @@ IsKernel Boolean
 	Measure.IsKernel
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsKernel is false
 	MlirWholeKernel(Kernel.function, 0).IsKernel is false
-	let isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
+	isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
 	if isBegin is false or Call < 0 or MlirLayout(function).Packed(position) is not MlirDoubles.LanesFormat
 		return false
-	let callee = Callee
-	let isWhole = MlirWholeFunction(callee).IsWhole and MlirWholeFlat(callee).IsFlat
+	callee = Callee
+	isWhole = MlirWholeFunction(callee).IsWhole and MlirWholeFlat(callee).IsFlat
 	isWhole and IsPlain and IsSourced and MlirParallel(function, position).IsParallel
 Call Number
 	Kernel.Call is 8
@@ -60,22 +60,22 @@ Callee MlirFunction
 IsPlain Boolean
 	Kernel.IsPlain
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsPlain is false
-	let invoke = function.method.instructions(Call)
+	invoke = function.method.instructions(Call)
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
-		let isWrite = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
-		let isCollected = isWrite and entry.payload(0) is invoke.payload(0)
-		let isMove = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is not "value"
+		entry = function.method.instructions(value)
+		isWrite = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"
+		isCollected = isWrite and entry.payload(0) is invoke.payload(0)
+		isMove = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is not "value"
 		if (isMove or isCollected or value is Call or entry.kind is InstructionType.CheckError) is false
 			return false
 	true
 IsSourced Boolean
 	Kernel.IsSourced
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsSourced is false
-	let kinds = MlirWholeFunction(Callee).Kinds
+	kinds = MlirWholeFunction(Callee).Kinds
 	for Reads
-		let name = MlirWholeFlat(function).Source(value, Call)
-		let isIndexed = name is "" and Source(value) is "index"
+		name = MlirWholeFlat(function).Source(value, Call)
+		isIndexed = name is "" and Source(value) is "index"
 		if kinds(index) is "o" and (name is "" or MemberKinds(index).Length is 0)
 			return false
 		if kinds(index) is "i" and isIndexed is false and name is ""
@@ -84,22 +84,22 @@ IsSourced Boolean
 Reads Numbers
 	Kernel.Reads is (3, 4)
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).Free is List(Text) + "value"
-	let invoke = function.method.instructions(Call)
+	invoke = function.method.instructions(Call)
 	for LoadReuse(function.method.instructions).InvokeReads(invoke)
 		invoke.payload(value)
 Source(register Number) Text
 	Kernel.Source(4) is "index"
 	Kernel.Source(5) is ""
-	let writer = MlirKinds(function).Writer(Call, register)
-	let loaded = function.method.instructions(writer < 0 then Call else writer)
+	writer = MlirKinds(function).Writer(Call, register)
+	loaded = function.method.instructions(writer < 0 then Call else writer)
 	loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
 MemberKinds(input Number) Texts
 	Kernel.MemberKinds(0) is List(Text) + "d"
 	Measure.MemberKinds(0) is ("d", "c")
-	let callee = Callee
+	callee = Callee
 	mutable kinds = List(Mutable(Text))
 	for MlirWholeInstance(callee).Members(input)
-		let kind = MlirWholeInstance(callee).MemberKind(MlirWholeFlat(callee).Owner(input), value)
+		kind = MlirWholeInstance(callee).MemberKind(MlirWholeFlat(callee).Owner(input), value)
 		if kind is not in ("i", "d", "c")
 			return List(Text)
 		kinds.Add(kind)
@@ -107,8 +107,8 @@ MemberKinds(input Number) Texts
 Free Texts
 	Kernel.Free is List(Text) + "board_cells"
 	Pairing.Free is List(Text) + "board_cells"
-	let kinds = MlirWholeFunction(Callee).Kinds
-	let reads = Reads
+	kinds = MlirWholeFunction(Callee).Kinds
+	reads = Reads
 	mutable names = List(Mutable(Text))
 	for position, name in Range(0, reads.Length), Inputs(Source(reads(position)), kinds(position), position)
 		if name is not "index" and name is not in names
@@ -128,10 +128,10 @@ IsList(name Text) Boolean
 Kind(name Text) Text
 	Kernel.Kind("board_width") is "i"
 	Kernel.Kind("x") is "i"
-	let dot = name.IndexOf("_")
+	dot = name.IndexOf("_")
 	if dot < 0
 		return "i"
-	let member = name.Substring(dot + 1, name.Length - dot - 1)
+	member = name.Substring(dot + 1, name.Length - dot - 1)
 	MlirWholeInstance(function).MemberKind(TypeName(name.Substring(0, dot)), member)
 TypeName(variable Text) Text
 	Kernel.TypeName("board") is "Strict/Board"

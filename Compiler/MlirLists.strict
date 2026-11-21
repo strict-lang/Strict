@@ -34,8 +34,8 @@ Temp(suffix Text) Text
 	"%t" + position + suffix
 Emitted Texts
 	MlirLists(Listed, 3).Emitted.Length is 4
-	let entry = function.method.instructions(position)
-	let isFlat = entry.kind is InstructionType.IndexCall and MlirCouples(function, position).IsFlatRead(entry)
+	entry = function.method.instructions(position)
+	isFlat = entry.kind is InstructionType.IndexCall and MlirCouples(function, position).IsFlatRead(entry)
 	if function.FastLoop >= 0 and isFlat is false
 		return MlirFastLoop(function, function.FastLoop).Emitted(position)
 	if entry.kind is InstructionType.CopyList
@@ -51,10 +51,10 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").First is "    %t0g = llvm.mlir.addressof @lShape_Run_0_0 : !llvm.ptr"
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").Last is "    llvm.store %t0r, %r0 : f64, !llvm.ptr"
 	Text.Combine(MlirLists(Literals, 0).Literal(Pair, "%r0", "")).Length is 938
-	let count = literal.items.Length
+	count = literal.items.Length
 	if count is 0
 		return MlirPairs(function, position).Started(slot, suffix)
-	let result = Temp(suffix + "e" + (count - 1) + "l")
+	result = Temp(suffix + "e" + (count - 1) + "l")
 	if suffix is not "" or MlirConstants(function, position).IsConstant is false
 		return Built(literal, suffix) + function.Store(result, slot)
 	Cached(Built(literal, suffix), result, "strict_list_pin") + function.Store(Temp("r"), slot)
@@ -62,27 +62,27 @@ Built(literal Runtime/VmValue, suffix Text) Texts
 	MlirLists(Literals, 0).Cached(List(Text), "%x", "pin").Index("    func.call @pin(%x) : (f64) -> ()") is 7
 	MlirLists(Listed, 0).Built(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0
 	Text.Combine(MlirLists(Listed, 0).Built(Pair, "")).Length is 469
-	let memory = MlirMemory(function, position)
+	memory = MlirMemory(function, position)
 	mutable lines = Created(literal.items.Length, suffix)
 	mutable current = Temp(suffix + "l")
 	for literal.items
-		let element = suffix + "e" + index
-		let added = memory.Called(Temp(element + "l"), "strict_list_add", (current, ElementName(value, element)))
+		element = suffix + "e" + index
+		added = memory.Called(Temp(element + "l"), "strict_list_add", (current, ElementName(value, element)))
 		lines = lines + Element(value, index, element) + added
 		current = Temp(element + "l")
 	lines
 Cached(built Texts, result Text, pin Text) Texts
 	Text.Combine(MlirLists(Literals, 0).Cached(List(Text), "%x", "pin")).IndexOf("@strict_cache_claim") > 0
 	MlirLists(Literals, 0).Cached(List(Text), "%x", "pin").Index("    cf.cond_br %t0u, ^l0, ^q0") is 2
-	let address = "    " + Temp("g") + " = llvm.mlir.addressof " + MlirConstants(function, position).Cache + " : !llvm.ptr"
-	let claimed = "    " + Temp("u") + " = func.call @strict_cache_claim(" + Temp("g") + ") : (!llvm.ptr) -> i1"
-	let branch = "    cf.cond_br " + Temp("u") + ", ^l" + position + ", ^q" + position
-	let read = ("  ^q" + position + ":", function.Load(Temp("v"), Temp("g")))
-	let ready = "    cf.br ^m" + position + "(" + Temp("v") + " : f64)"
-	let starts = (address, claimed, branch) + read + ready + ("  ^l" + position + ":")
-	let pinned = "    func.call @" + pin + "(" + result + ") : (f64) -> ()"
-	let stored = "    func.call @strict_cache_publish(" + Temp("g") + ", " + result + ") : (!llvm.ptr, f64) -> ()"
-	let joined = ("    cf.br ^m" + position + "(" + result + " : f64)", "  ^m" + position + "(" + Temp("r") + ": f64):")
+	address = "    " + Temp("g") + " = llvm.mlir.addressof " + MlirConstants(function, position).Cache + " : !llvm.ptr"
+	claimed = "    " + Temp("u") + " = func.call @strict_cache_claim(" + Temp("g") + ") : (!llvm.ptr) -> i1"
+	branch = "    cf.cond_br " + Temp("u") + ", ^l" + position + ", ^q" + position
+	read = ("  ^q" + position + ":", function.Load(Temp("v"), Temp("g")))
+	ready = "    cf.br ^m" + position + "(" + Temp("v") + " : f64)"
+	starts = (address, claimed, branch) + read + ready + ("  ^l" + position + ":")
+	pinned = "    func.call @" + pin + "(" + result + ") : (f64) -> ()"
+	stored = "    func.call @strict_cache_publish(" + Temp("g") + ", " + result + ") : (!llvm.ptr, f64) -> ()"
+	joined = ("    cf.br ^m" + position + "(" + result + " : f64)", "  ^m" + position + "(" + Temp("r") + ": f64):")
 	starts + built + pinned + stored + joined
 Created(count Number, suffix Text) Texts
 	MlirLists(Listed, 0).Created(0, "").First is "    %t0l = func.call @strict_list_empty() : () -> f64"
@@ -91,11 +91,11 @@ Created(count Number, suffix Text) Texts
 	Text.Combine(MlirLists(Listed, 0).Literal(VmValue.OfList(List(VmValue)), "%v_a", "")).Length is 97
 	MlirLists(MlirPairs.Built.function, 0).Literal(VmValue.OfList(List(VmValue)), "%v_listResult0", "")(0).Length is 53
 	MlirLists(MlirPairs.Built.function, 0).Literal(VmValue.OfList(List(VmValue)), "%v_listResult0", "").Length is 1
-	let memory = MlirMemory(function, position)
+	memory = MlirMemory(function, position)
 	if count is 0
 		return List(Text) + memory.Called(Temp(suffix + "l"), "strict_list_empty", List(Text))
-	let size = MlirStatements(function, position).Hex(count + 4)
-	let capacity = "    " + Temp(suffix + "q") + " = arith.constant " + size + " : f64"
+	size = MlirStatements(function, position).Hex(count + 4)
+	capacity = "    " + Temp(suffix + "q") + " = arith.constant " + size + " : f64"
 	(capacity, memory.Called(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
 Element(item Runtime/VmValue, index Number, element Text) Texts
 	MlirLists(Listed, 0).Element(VmValue.OfNumber(2), 0, "e0") is ("    %t0e0c = arith.constant 0x4000000000000000 : f64")
@@ -104,9 +104,9 @@ Element(item Runtime/VmValue, index Number, element Text) Texts
 	if item.kind is "Text"
 		return MlirConstants(function, position, named).Address(item.text, "_" + index, element)
 	if item.kind is not in ("Number", "Boolean")
-		let unsupported = MlirStatements(function, position).Unsupported("nested " + item.kind + " constant")
+		unsupported = MlirStatements(function, position).Unsupported("nested " + item.kind + " constant")
 		return List(Text) + unsupported
-	let number = MlirStatements(function, position).Hex(item.number)
+	number = MlirStatements(function, position).Hex(item.number)
 	List(Text) + ("    " + Temp(element + "c") + " = arith.constant " + number + " : f64")
 ElementName(item Runtime/VmValue, element Text) Text
 	MlirLists(Listed, 0).ElementName(VmValue.OfText("a"), "e1") is "%t0e1xf"
@@ -119,24 +119,24 @@ Appended(entry InstructionEntry) Texts
 	Text.Combine(MlirLists(Listed, 3).Appended(Removal)).IndexOf("@strict_list_remove(") > 0
 	Text.Combine(MlirLists(Listed, 3).Appended(Pushing)).IndexOf("@strict_list_push(") > 0
 	Text.Combine(MlirLists(Listed, 3).Appended(MlirPairs.Building.instructions(2))).IndexOf("@strict_list_push(") > 0
-	let name = "%v_" + entry.texts(0)
-	let kinds = MlirKinds(function)
-	let elements = MlirLayout(function).Represented(kinds.ElementKind(kinds.VariableKind(position, entry.texts(0))))
-	let adder = MlirDying(function, position).Adder(entry.texts(0))
-	let helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else adder
-	let added = MlirMemory(function, position).Passed(Temp("n"), helper, (Temp("l"), Temp("e")), elements)
-	let element = function.Load(Temp("e"), "%r" + entry.payload(0))
+	name = "%v_" + entry.texts(0)
+	kinds = MlirKinds(function)
+	elements = MlirLayout(function).Represented(kinds.ElementKind(kinds.VariableKind(position, entry.texts(0))))
+	adder = MlirDying(function, position).Adder(entry.texts(0))
+	helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else adder
+	added = MlirMemory(function, position).Passed(Temp("n"), helper, (Temp("l"), Temp("e")), elements)
+	element = function.Load(Temp("e"), "%r" + entry.payload(0))
 	(function.Load(Temp("l"), name), element) + added + function.Store(Temp("n"), name)
 Indexed(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).Indexed(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
 	Text.Combine(Hoisting.Indexed(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0
 	Text.Combine(Lettered.Indexed(LetterRead(1))).IndexOf("text_read(") > 0
-	let isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
-	let helper = isText then "strict_text_read" else "strict_list_read"
-	let access = MlirMemory(function, position).Called(Temp("x"), helper, (Temp("l"), Temp("i"), Temp("nb")))
-	let loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
-	let stored = function.Store(Temp("x"), "%r" + entry.payload(0))
-	let list = MlirParameters(function).Fixed(entry.texts(0))
+	isText = MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, entry.texts(0))) is "Text"
+	helper = isText then "strict_text_read" else "strict_list_read"
+	access = MlirMemory(function, position).Called(Temp("x"), helper, (Temp("l"), Temp("i"), Temp("nb")))
+	loads = (function.Load(Temp("l"), "%v_" + entry.texts(0)), function.Load(Temp("i"), "%r" + entry.payload(1)))
+	stored = function.Store(Temp("x"), "%r" + entry.payload(0))
+	list = MlirParameters(function).Fixed(entry.texts(0))
 	if list is not ""
 		return loads + NameBits + MlirParameters(function).Fetched(list, Temp("l"), Temp("i"), Temp("nb"), Temp("x")) + stored
 	loads + NameBits + access + stored
@@ -146,7 +146,7 @@ NameBits Texts
 	MlirLists(Listed, 2).NameBits.First is "    %t2n = llvm.mlir.addressof @sShape_Run_1_2 : !llvm.ptr"
 	MlirLists(Listed, 2).NameBits(1) is "    %t2nb = func.call @strict_bits(%t2n) : (!llvm.ptr) -> f64"
 	Text.Combine(MlirLists(MlirPairs.Built.function, 0).Literal(Pair, "%v_listResult0", "")).Length is 531
-	let address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
+	address = "    " + Temp("n") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	(address, "    " + Temp("nb") + " = func.call @strict_bits(" + Temp("n") + ") : (!llvm.ptr) -> f64")
 IsElementStore Boolean
 	MlirLists(Written, 1).IsElementStore
@@ -155,47 +155,47 @@ IsElementStore Boolean
 	MlirLists(MlirFastLoop.Doubling.function, 2).Emitted is MlirFastLoop.Doubling.Emitted(2)
 	MlirLists(Written, 1).Emitted is MlirLists(Written, 1).ElementStored(Written.method.instructions(1))
 	MlirLists(Written, 2).Emitted is MlirLists(Written, 2).Copied(Written.method.instructions(2))
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	entry.kind is not InstructionType.StoreRegisterToVariable then false else entry.texts(0).IndexOf("(") > 0
 ElementStored(entry InstructionEntry) Texts
 	Text.Combine(MlirLists(Written, 1).ElementStored(Written.method.instructions(1))).IndexOf("strict_is_failure") > 0
 	MlirLists(Written, 1).ElementStored(Versioning).Last is "    llvm.store %t1s, %v_numbers : f64, !llvm.ptr"
-	let parts = PayloadDecoder(entry).ElementParts
-	let indexed = MlirElements(function, position).Index(parts(1), Temp("i"))
-	let loads = Target(parts(0)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))
-	let isVersioned = entry.payload.Length > 2
-	let helper = isVersioned then "strict_list_write" else "strict_list_set"
-	let call = MlirMemory(function, position).Called(Temp("s"), helper, (Temp("l"), Temp("i"), Temp("e")))
+	parts = PayloadDecoder(entry).ElementParts
+	indexed = MlirElements(function, position).Index(parts(1), Temp("i"))
+	loads = Target(parts(0)) + indexed + function.Load(Temp("e"), "%r" + entry.payload(0))
+	isVersioned = entry.payload.Length > 2
+	helper = isVersioned then "strict_list_write" else "strict_list_set"
+	call = MlirMemory(function, position).Called(Temp("s"), helper, (Temp("l"), Temp("i"), Temp("e")))
 	isVersioned then loads + call + function.Store(Temp("s"), "%v_" + parts(0)) else loads + call + Failed
 Failed Texts
 	MlirLists(Written, 1).Failed.First is "    %t1f = func.call @strict_is_failure(%t1s) : (f64) -> i1"
 	MlirLists(Written, 1).Failed(2) is "  ^bb1w:"
 	MlirLists(Written, 1).Failed.Last is "  ^bb1c:"
-	let failed = "    " + Temp("f") + " = func.call @strict_is_failure(" + Temp("s") + ") : (f64) -> i1"
-	let branch = "    cf.cond_br " + Temp("f") + ", ^bb" + position + "w, ^bb" + position + "c"
-	let traced = MlirMemory(function, position).Traced(Temp("s"), Temp("tr"), "strict_trace_checked")
-	let returned = MlirLines(function).End + ("    return " + Temp("tr") + " : f64", "  ^bb" + position + "c:")
+	failed = "    " + Temp("f") + " = func.call @strict_is_failure(" + Temp("s") + ") : (f64) -> i1"
+	branch = "    cf.cond_br " + Temp("f") + ", ^bb" + position + "w, ^bb" + position + "c"
+	traced = MlirMemory(function, position).Traced(Temp("s"), Temp("tr"), "strict_trace_checked")
+	returned = MlirLines(function).End + ("    return " + Temp("tr") + " : f64", "  ^bb" + position + "c:")
 	(failed, branch, "  ^bb" + position + "w:") + traced + returned
 Target(path Text) Texts
 	MlirLists(Written, 1).Target("numbers") is ("    %t1l = llvm.load %v_numbers : !llvm.ptr -> f64")
 	MlirLists(Written, 1).Target("numbers.width").Last is "    %t1l = llvm.load %t1ls : !llvm.ptr -> f64"
 	Text.Combine(MlirLists(Written, 1).Target("numbers.width")).Length is 233
-	let memory = MlirMemory(function, position)
-	let target = memory.Unwrapped(path)
-	let dot = target.IndexOf(".")
+	memory = MlirMemory(function, position)
+	target = memory.Unwrapped(path)
+	dot = target.IndexOf(".")
 	if dot < 0
 		return List(Text) + function.Load(Temp("l"), "%v_" + target)
-	let slot = memory.Slot(Temp("op"), memory.Member(target).First, "ls")
-	let owner = function.Load(Temp("o"), "%v_" + target.Substring(0, dot))
+	slot = memory.Slot(Temp("op"), memory.Member(target).First, "ls")
+	owner = function.Load(Temp("o"), "%v_" + target.Substring(0, dot))
 	(List(Text) + owner + memory.Pointer(Temp("o"), "o")) + slot + function.Load(Temp("l"), Temp("ls"))
 Copied(entry InstructionEntry) Texts
 	MlirLists(Written, 2).Copied(Written.method.instructions(2)).Length is 3
 	MlirLists(Written, 2).Copied(MemberCopy).Last is "    llvm.store %t2oc, %v_numbers : f64, !llvm.ptr"
 	Text.Combine(MlirLists(Written, 2).Copied(MemberCopy)).Length is 535
 	Text.Combine(MlirLists(Written, 2).Copied(Written.method.instructions(2))).Length is 173
-	let path = MlirMemory(function, position).Unwrapped(entry.texts(0))
-	let copy = MlirMemory(function, position).Called(Temp("c"), "strict_list_copy", (Temp("l"), "%zero"))
+	path = MlirMemory(function, position).Unwrapped(entry.texts(0))
+	copy = MlirMemory(function, position).Called(Temp("c"), "strict_list_copy", (Temp("l"), "%zero"))
 	if path.IndexOf(".") < 0
 		return (function.Load(Temp("l"), "%v_" + path), copy, function.Store(Temp("c"), "%v_" + path))
-	let changed = MlirMemory(function, position).Changed(path, Temp("c"), Temp("oc"))
+	changed = MlirMemory(function, position).Changed(path, Temp("c"), Temp("oc"))
 	Target(path) + copy + changed + function.Store(Temp("oc"), "%v_" + path.Substring(0, path.IndexOf(".")))

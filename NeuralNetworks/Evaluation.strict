@@ -3,12 +3,12 @@ constant Book = "https://gutenberg.pglaf.org/1/6/6/1661/1661-0.txt"
 constant Novel = "https://gutenberg.pglaf.org/1/3/4/1342/1342-0.txt"
 constant Width = 1500
 Run(path Text)
-	let texts = Heldout(8)
-	let isQwen = path.EndsWith(".gguf")
-	let tokenizer = isQwen then Gpt2Tokens.Loaded(Gguf(path)) else Gpt2Tokens.Folder(path)
-	let weights = path + "/model.safetensors"
-	let gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, BFloat16.Bits)).Reports(tokenizer, texts)
-	let reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
+	texts = Heldout(8)
+	isQwen = path.EndsWith(".gguf")
+	tokenizer = isQwen then Gpt2Tokens.Loaded(Gguf(path)) else Gpt2Tokens.Folder(path)
+	weights = path + "/model.safetensors"
+	gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, BFloat16.Bits)).Reports(tokenizer, texts)
+	reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
 	logger.Log(path + " English: " + Described(reports(0)))
 	logger.Log(path + " Strict: " + Described(reports(1)))
 Heldout(count Number) List(Texts) slow
@@ -21,8 +21,8 @@ Downloaded(path Text, address Text) Text slow
 	Evaluation.Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
 	Evaluation.Downloaded("NeuralNetworks/corpus/missing-download.txt", "") is Error
 	if File(path).Exists is false
-		let partial = path + ".part"
-		let download = Process.RunTool("curl", "-sfL --create-dirs -o \"" + partial + "\" \"" + address + "\"")
+		partial = path + ".part"
+		download = Process.RunTool("curl", "-sfL --create-dirs -o \"" + partial + "\" \"" + address + "\"")
 		if download.Failed
 			return Error("Corpus download failed for " + path + ": " + download to Text)
 		File(partial).Rename(path)
@@ -35,7 +35,7 @@ Spans(text Text, anchor Text, count Number) Texts
 	Evaluation.Spans(Text.Combine(("x", "To Sherlock"), "\n"), "To", 0).Length is 0
 	Evaluation.Spans(Sources("Math"), "", 2)(1).Length is Width
 	Evaluation.Spans("short", "missing", 1) is Error
-	let start = anchor is "" then 0 else text.IndexOf(anchor)
+	start = anchor is "" then 0 else text.IndexOf(anchor)
 	if start < 0
 		return Error("Corpus anchor not found: " + anchor)
 	if count < 0 or count % 1 is not 0 or start + count * Width > text.Length
@@ -50,8 +50,8 @@ Sources(folder Text) Text slow
 	joined
 Described(report Numbers) Text
 	Evaluation.Described((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
-	let perplexity = (report(0) / report(1)).Exponential.Round(3)
+	perplexity = (report(0) / report(1)).Exponential.Round(3)
 	constant NatsPerBit = 0.6931471805599453
-	let bits = (report(0) / NatsPerBit / report(2)).Round(4)
-	let speed = (report(3) * 1000 / report(1)).Round(2)
+	bits = (report(0) / NatsPerBit / report(2)).Round(4)
+	speed = (report(3) * 1000 / report(1)).Round(2)
 	"perplexity " + perplexity + ", " + bits + " bits per character, " + speed + " ms per token (" + report(1) + " tokens)"

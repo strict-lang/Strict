@@ -21,9 +21,9 @@ Hashed(types List(TypeEntry)) Dictionary(Text, Number)
 	Graph.Hashed(Types)("A.Run") > 1000000007
 	mutable hashed = Dictionary(Text, Number)
 	for type, method in types, type.methods
-		let key = Key(type, method)
-		let earlier = key is in hashed then hashed(key) else 0
-		let wide = HashCode(method.instructions).number * Shift + HashCode(method.instructions.Reverse).number
+		key = Key(type, method)
+		earlier = key is in hashed then hashed(key) else 0
+		wide = HashCode(method.instructions).number * Shift + HashCode(method.instructions.Reverse).number
 		hashed = hashed.set(key, (earlier + wide % Range) % Range)
 	hashed
 Called(types List(TypeEntry)) Dictionary(Text, Text)
@@ -68,8 +68,8 @@ Closure(start Text) Text
 	mutable pending = List(Mutable(Text)) + start
 	mutable sum = 0
 	for as long as pending.Length > 0
-		let current = pending.Last
-		let fresh = Unvisited(Listed(current, callees), seen)
+		current = pending.Last
+		fresh = Unvisited(Listed(current, callees), seen)
 		sum = (sum + Hash(current)) % Range
 		pending = pending.Slice(0, pending.Length - 1) + fresh
 		seen = Marked(fresh, seen)

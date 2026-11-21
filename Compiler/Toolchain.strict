@@ -33,10 +33,10 @@ Folders Texts
 	Toolchain(OnWindows, isWeb = true).Folders.Last is "C:/s/Tools/emsdk/upstream/emscripten/"
 	Toolchain(OnWindows, isWeb = true).Folders.First is "C:/s/Tools/emsdk/upstream/bin/"
 	Toolchain(OnWindows, isWeb = true).Folders.Length is 4
-	let release = platform is Platform.MacOS then MacOSTools.Release else LinuxRelease
-	let unix = List(Text) + (root + "/Tools/" + release + "/bin/")
-	let folders = platform is Platform.Windows then WindowsFolders else unix
-	let emsdk = root + "/Tools/emsdk/upstream/"
+	release = platform is Platform.MacOS then MacOSTools.Release else LinuxRelease
+	unix = List(Text) + (root + "/Tools/" + release + "/bin/")
+	folders = platform is Platform.Windows then WindowsFolders else unix
+	emsdk = root + "/Tools/emsdk/upstream/"
 	isWeb then List(Text) + (emsdk + "bin/") + folders + (emsdk + "emscripten/") else folders
 Extension Text
 	OnWindows.Extension is ".exe"
@@ -49,8 +49,8 @@ Executable(base Text) Text
 	Toolchain(OnWindows, isWeb = true).Executable("./A/obj/B") is "./A/Release/Web/B.html"
 	if isWeb
 		return BuildOutput.Released(base, "Web") + ".html"
-	let program = BuildOutput.Delivered(base)
-	let isCommand = Path(program).FileName.text is "Strict"
+	program = BuildOutput.Delivered(base)
+	isCommand = Path(program).FileName.text is "Strict"
 	(isCommand then program.Substring(0, program.Length - 6) + "strict" else program) + Extension
 Missing(names Texts) Texts
 	OnLinux.Missing("noSuchStrictTool") is ("noSuchStrictTool")
@@ -60,10 +60,10 @@ Missing(names Texts) Texts
 InstallLines(missing Texts) Texts
 	OnLinux.InstallLines("clang").Length is 2
 	Toolchain(OnWindows, isWeb = true).InstallLines("emcc").First.StartsWith("git clone --depth 1 ")
-	let others = missing - "emcc"
-	let unixLines = platform is Platform.MacOS then MacOSTools(root).Lines else LinuxLines
-	let hostLines = platform is Platform.Windows then WindowsTools.Lines(others) else unixLines
-	let host = others.Length is 0 then List(Text) else hostLines
+	others = missing - "emcc"
+	unixLines = platform is Platform.MacOS then MacOSTools(root).Lines else LinuxLines
+	hostLines = platform is Platform.Windows then WindowsTools.Lines(others) else unixLines
+	host = others.Length is 0 then List(Text) else hostLines
 	host + ("emcc" is in missing then WebBuild(value).InstallLines else List(Text))
 LinuxLines Texts
 	OnLinux.LinuxLines.First is "mkdir -p /s/Tools"
@@ -73,9 +73,9 @@ LinuxLines Texts
 	OnLinux.LinuxLines.Last.IndexOf("/Tools " + LinuxRelease + "/bin/clang " + LinuxRelease + "/bin/clang-23 ") > 0
 	constant Tools = ("clang", "clang-23", "mlir-opt", "mlir-translate", "opt", "llc")
 	constant Offload = ("lld", "ld.lld", "clang-offload-bundler", "amdgpu-arch")
-	let bin = " " + LinuxRelease + "/bin/"
-	let members = bin + Text.Combine(Tools + Offload, bin) + " " + LinuxRelease + "/lib/clang/23/include"
-	let download = LinuxDownload + LinuxRelease + ".tar.xz"
+	bin = " " + LinuxRelease + "/bin/"
+	members = bin + Text.Combine(Tools + Offload, bin) + " " + LinuxRelease + "/lib/clang/23/include"
+	download = LinuxDownload + LinuxRelease + ".tar.xz"
 	("mkdir -p " + root + "/Tools", "curl -sL " + download + (" | tar -xJ --occurrence -C " + root + "/Tools" + members))
 Launch(script Text) Text
 	OnWindows.Launch("C:/s/Tools/Install.cmd") is "/c start \"Strict tools\" cmd /k \"C:\\s\\Tools\\Install.cmd\""
@@ -87,26 +87,26 @@ Installing(missing Texts) Text
 	OnWindows.Installing(List(Text)) is ""
 	if missing.Length is 0
 		return ""
-	let isWindows = platform is Platform.Windows
-	let script = root + "/Tools/" + (isWindows then "Install.cmd" else "install.sh")
+	isWindows = platform is Platform.Windows
+	script = root + "/Tools/" + (isWindows then "Install.cmd" else "install.sh")
 	Directory.Create(root + "/Tools")
 	File(script).Write(Text.Combine(InstallLines(missing), "\n"))
-	let started = Process.RunTool(isWindows then "cmd" else "sh", Launch(script))
-	let where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
-	let problem = started.Failed then ", could not start it: " + started.error else ""
+	started = Process.RunTool(isWindows then "cmd" else "sh", Launch(script))
+	where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
+	problem = started.Failed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text) Text
 	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
-	let lowered = BuildProfile.Lowered(value, base)
+	lowered = BuildProfile.Lowered(value, base)
 	if lowered is not ""
 		return lowered
-	let system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
-	let files = NativeSources(natives).Objects(platform, root, cpu)
-	let resource = files.StartsWith("clang") then files else NativeSources(natives).Resource(base, platform, root)
+	system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
+	files = NativeSources(natives).Objects(platform, root, cpu)
+	resource = files.StartsWith("clang") then files else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	let linking = Inputs(base) + files + resource + " -o " + Quoted(executable) + Optimized.Replace("native", cpu) + system
-	let linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
+	linking = Inputs(base) + files + resource + " -o " + Quoted(executable) + Optimized.Replace("native", cpu) + system
+	linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
 	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text) Text
 	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
@@ -114,8 +114,8 @@ Inputs(base Text) Text
 		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	if PartsCompiled(base) is false
 		return Quoted(base + ".ll")
-	let parts = PartObjects(base)
-	let cache = " -Xlinker " + Quoted("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
+	parts = PartObjects(base)
+	cache = " -Xlinker " + Quoted("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
 	parts + Thin.Replace("native", cpu) + Importing(base) + cache + " -Wno-unused-command-line-argument"
 Importing(base Text) Text
 	OnWindows.Importing("a/obj/Tests.test") is NoImports
@@ -127,15 +127,15 @@ Bitcode(part Text) Text
 	Toolchain(Platform.Windows, ".", target = " --target=x").Bitcode("p").IndexOf(" --target=x -march=") > 0
 	Toolchain(OnWindows, isWeb = true).Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\"" + WebBuild.Target)
 	Toolchain(OnWindows, isWeb = true).Bitcode("p").EndsWith(WebBuild.Lowering + Optimization)
-	let native = target + Optimized.Replace("native", cpu)
-	let flags = isWeb then WebBuild.Target + WebBuild.Lowering + Optimization else native
+	native = target + Optimized.Replace("native", cpu)
+	flags = isWeb then WebBuild.Target + WebBuild.Lowering + Optimization else native
 	"-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + flags
 PartsCompiled(base Text) Boolean
 	PtxCache("Compiler/output/Broken-0").Saved("", "not llvm") is not Error
 	OnWindows.PartsCompiled("Compiler/output/Broken") is false
 	mutable compiling = List(Mutable(Text))
 	for Parts
-		let part = base + "-" + value
+		part = base + "-" + value
 		if File(part).Exists and File(part + ".o").Exists is false
 			compiling.Add(Bitcode(part))
 	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + compiling.Length + " jobs)")
@@ -155,20 +155,20 @@ WslPath(path Text) Text
 	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
 	OnWindows.WslPath("./Examples/Sum") is "./Examples/Sum"
 	OnWindows.WslPath("") is ""
-	let slashed = path.Replace("\\", "/")
+	slashed = path.Replace("\\", "/")
 	slashed.IndexOf(":") is 1 then "/mnt/" + slashed(0).Lower + slashed.Substring(2) else slashed
 Lowered(base Text, kept = "", parts = 1) Text
 	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if parts > 1 and File(base + ".mlir").Exists
-		let split = MlirSplit(File(base + ".mlir").ReadLines)
+		split = MlirSplit(File(base + ".mlir").ReadLines)
 		return MlirParts(split).Laid.Lowered(base, Toolchain(platform, root, natives, isWeb, cpu))
-	let privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	let lowering = Quoted(base + ".mlir") + privatized + MlirSplit.Passes + " -o " + Quoted(base + ".llvm.mlir")
-	let lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
+	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
+	lowering = Quoted(base + ".mlir") + privatized + MlirSplit.Passes + " -o " + Quoted(base + ".llvm.mlir")
+	lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
 	if lowered.Failed
 		return "mlir-opt failed: " + lowered.error
-	let translation = MlirSplit.Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
-	let translated = ToolRunner(Located("mlir-translate")).Execute(translation)
+	translation = MlirSplit.Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
+	translated = ToolRunner(Located("mlir-translate")).Execute(translation)
 	translated.Failed then "mlir-translate failed: " + translated.error else ""
 Quoted(path Text) Text
 	OnWindows.Quoted("a b") is "\"a b\""

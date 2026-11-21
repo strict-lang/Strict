@@ -10,14 +10,14 @@ Rotated BFloat16s
 Activated BFloat16s
 	SituRotated((2, 1, 3, 0), 1, 4).Activated(1) is 0
 	for expanded.Length / 2
-		let first = (index / width).Floor * 2 * width + index % width
+		first = (index / width).Floor * 2 * width + index % width
 		Situ(expanded(first), expanded(first + width))
 Situ(hidden Number, gate Number) Number
 	SituRotated.Situ(0, 1) is 0
 	SituRotated.Situ(1, 0) is 0
 	SituRotated.Situ(2, 3).IsNearlyEqual(4.8299123)
 	SituRotated.Situ(100, -100).IsNearlyEqual(0)
-	let half = (-gate / 2).Exponential
-	let squashed = 4 * (1 - half) / ((1 + half) * (1 + half * half))
-	let bounded = (-hidden * 2 / Cap).Exponential
+	half = (-gate / 2).Exponential
+	squashed = 4 * (1 - half) / ((1 + half) * (1 + half * half))
+	bounded = (-hidden * 2 / Cap).Exponential
 	squashed * Cap * (1 - bounded) / (1 + bounded)

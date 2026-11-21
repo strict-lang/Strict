@@ -23,29 +23,29 @@ KindOf(position Number, register Number) Text
 	Graded.KindOf(0, 7) is "Number"
 	MlirKinds(MlirPacking.Listing.function).KindOf(1, 0) is "List(Number)"
 	MlirKinds(MlirChanged.Taking.function).KindOf(1, 1) is "Ticker"
-	let writer = Writer(position, register)
+	writer = Writer(position, register)
 	if writer >= 0 and IsChanged(writer, register)
 		return MlirChanged(function, writer).Kind(register)
-	let written = writer < 0 then "Number" else WrittenKind(writer)
+	written = writer < 0 then "Number" else WrittenKind(writer)
 	writer < 0 then written else MlirPacking(function, writer).Kind(written)
 IsChanged(at Number, register Number) Boolean
 	MlirKinds(MlirChanged.Taking.function).IsChanged(0, 1)
 	MlirKinds(MlirChanged.Taking.function).IsChanged(0, 0) is false
-	let entry = function.method.instructions(at)
-	let offset = register - entry.payload(0)
+	entry = function.method.instructions(at)
+	offset = register - entry.payload(0)
 	if entry.kind is not InstructionType.Invoke or offset < 1 or offset > 1 + PayloadDecoder(entry).ArgumentCount
 		return false
-	let changed = MlirChanged(function, at)
+	changed = MlirChanged(function, at)
 	(offset is 1 or offset - 2 < changed.Callee.parameters.Length) and changed.IsRead(register)
 WrittenKind(writer Number) Text
 	Graded.WrittenKind(3) is "Boolean"
 	Graded.WrittenKind(6) is "Shape"
 	Graded.WrittenKind(7) is "Number"
-	let entry = function.method.instructions(writer)
+	entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return ConstantKind(PayloadDecoder(entry).Value(1), entry.texts)
 	if entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
-		let variable = VariableKind(writer, entry.texts(0))
+		variable = VariableKind(writer, entry.texts(0))
 		return entry.kind is InstructionType.IndexCall then ElementKind(variable) else variable
 	if entry.kind is InstructionType.Invoke
 		return TypeEntry.ShortName(PayloadDecoder(entry).ReturnType)
@@ -58,13 +58,13 @@ Calculated(writer Number, entry InstructionEntry) Text
 		return "Boolean"
 	if entry.kind < InstructionType.StoreSeparator or entry.kind >= InstructionType.Modulo
 		return "Number"
-	let left = MlirLayout(function).Represented(KindOf(writer, entry.payload(1)))
+	left = MlirLayout(function).Represented(KindOf(writer, entry.payload(1)))
 	if left.StartsWith("List(") or entry.kind is InstructionType.Add and left is "Text"
 		return left
 	entry.kind is InstructionType.Add then AddedRight(writer, entry) else "Number"
 AddedRight(writer Number, entry InstructionEntry) Text
 	Graded.AddedRight(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
-	let right = MlirLayout(function).Represented(KindOf(writer, entry.payload(2)))
+	right = MlirLayout(function).Represented(KindOf(writer, entry.payload(2)))
 	right.StartsWith("List(") or right is "Text" then right else "Number"
 IsText(position Number, register Number) Boolean
 	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (0, 4, 9))) is "Text"
@@ -79,19 +79,19 @@ IsText(position Number, register Number) Boolean
 Writer(position Number, register Number) Number
 	Graded.Writer(5, 1) is 2
 	Graded.Writer(1, 7) is -1
-	let reuse = LoadReuse(function.method.instructions)
+	reuse = LoadReuse(function.method.instructions)
 	for position
-		let at = position - 1 - index
+		at = position - 1 - index
 		if reuse.Written(function.method.instructions(at)) is register or IsChanged(at, register)
 			return at
 	Number.NotFound
 VariableKind(position Number, name Text) Text
 	Graded.VariableKind(2, "letter") is "Text"
 	Graded.VariableKind(2, "width") is "Number"
-	let found = Stored(position, name)
+	found = Stored(position, name)
 	if found < 0
 		return DeclaredKind(position, name)
-	let store = function.method.instructions(found)
+	store = function.method.instructions(found)
 	if store.kind is InstructionType.StoreConstantToVariable
 		return ConstantKind(PayloadDecoder(store).Value(0), store.texts)
 	KindOf(found, store.payload(0))
@@ -99,9 +99,9 @@ Stored(position Number, name Text) Number
 	Graded.Stored(2, "letter") is 1
 	Graded.Stored(2, "width") is -1
 	for position
-		let at = position - 1 - index
-		let entry = function.method.instructions(at)
-		let isStore = entry.kind is InstructionType.StoreRegisterToVariable and entry.texts(0) is name
+		at = position - 1 - index
+		entry = function.method.instructions(at)
+		isStore = entry.kind is InstructionType.StoreRegisterToVariable and entry.texts(0) is name
 		if isStore or entry.kind is InstructionType.StoreConstantToVariable and entry.texts.Last is name
 			return at
 	Number.NotFound
@@ -110,24 +110,24 @@ DeclaredKind(position Number, name Text) Text
 	Graded.DeclaredKind(0, "value") is "Shape"
 	Graded.DeclaredKind(11, "value") is "Number"
 	Paired.DeclaredKind(3, "outer") is "Shape"
-	let parameter = MembersKind(function.method.parameters, name)
+	parameter = MembersKind(function.method.parameters, name)
 	if parameter is not ""
 		return parameter
 	if name is in ("value", "outer", "characters", "elements")
 		return OwnValueKind(position, name)
-	let member = MembersKind(function.type.members, name)
-	let own = TypeEntry.ShortName(function.type.Name)
+	member = MembersKind(function.type.members, name)
+	own = TypeEntry.ShortName(function.type.Name)
 	member is "" then "Number" else MlirFlats(function, position).IsListed(own) then own else member
 OwnValueKind(position Number, name Text) Text
 	Graded.OwnValueKind(0, "value") is "Shape"
 	Graded.OwnValueKind(11, "value") is "Number"
-	let own = TypeEntry.ShortName(function.type.Name)
+	own = TypeEntry.ShortName(function.type.Name)
 	if name is in ("value", "outer")
-		let looped = LoopValueKind(name is "value" then position else function.method.LoopBeginOf(position))
+		looped = LoopValueKind(name is "value" then position else function.method.LoopBeginOf(position))
 		return looped is "" then own else looped
 	if own is "Text" or own.StartsWith("List(")
 		return own
-	let member = MembersKind(function.type.members, name)
+	member = MembersKind(function.type.members, name)
 	member is "" then "Number" else member
 LoopValueKind(position Number) Text
 	Graded.LoopValueKind(12) is ""
@@ -136,8 +136,8 @@ LoopValueKind(position Number) Text
 	MlirKinds(MlirPacking.Listing.function).WrittenKind(2) is "Number"
 	Graded.LoopValueKind(11) is "Number"
 	Graded.LoopValueKind(3) is ""
-	let begin = function.method.LoopBeginOf(position)
-	let entry = function.method.instructions(begin)
+	begin = function.method.LoopBeginOf(position)
+	entry = function.method.instructions(begin)
 	if entry.kind is not InstructionType.LoopBegin or function.method.LoopEndOf(begin) < position
 		return ""
 	entry.payload(1) is 1 then "Number" else ElementKind(KindOf(begin, entry.payload(0)))
@@ -147,12 +147,12 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	Lettered.FieldKind(2, Coded) is "Number"
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, ("Name", "Error"), (5, 6, -1))) is "Text"
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, ("Stacktraces", "Error"), (5, 6, -1))) is not "Text"
-	let kind = KindOf(writer, entry.payload(1))
-	let wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrapped(kind)
+	kind = KindOf(writer, entry.payload(1))
+	wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrapped(kind)
 	if entry.texts(0) is "value" or wrapped is not ""
 		return entry.texts(0) is "value" then kind else wrapped
-	let member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
-	let isStruct = MlirLayout(function).IsStruct(kind) or MlirLanes(function, 0).IsPacked(kind)
+	member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
+	isStruct = MlirLayout(function).IsStruct(kind) or MlirLanes(function, 0).IsPacked(kind)
 	isStruct then (member is "" then "Number" else member) else (member is "Number" then member else kind)
 MembersKind(members List(MemberEntry), name Text) Text
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, "value", (5, 6, -1))) is "Shape"
@@ -172,7 +172,7 @@ ElementKind(container Text) Text
 	Graded.ElementKind("List(TypeEntry)") is "TypeEntry"
 	Graded.ElementKind("Text") is "Character"
 	Graded.ElementKind("Number") is "Number"
-	let represented = MlirLayout(function).Represented(container)
+	represented = MlirLayout(function).Represented(container)
 	if represented is "Text"
 		return "Character"
 	represented.StartsWith("List(") then represented.Substring(5, represented.Length - 6) else "Number"
@@ -186,13 +186,13 @@ ConstantKind(literal Runtime/VmValue, texts Texts) Text
 		return TypeEntry.ShortName(literal.kind)
 	if literal.items.Length is 0
 		return texts.Length is 0 then "List(Number)" else TypeEntry.ShortName(texts(0))
-	let first = ConstantKind(literal.items.First, List(Text))
-	let last = ConstantKind(literal.items.Last, List(Text))
+	first = ConstantKind(literal.items.First, List(Text))
+	last = ConstantKind(literal.items.Last, List(Text))
 	"List(" + first + (literal.items.Length is 2 and last is not first then ", " + last else "") + ")"
 ElementSuffix(kind Text) Text
 	Graded.ElementSuffix("List(Text, Number)") is ""
 	Graded.ElementSuffix("List(Text)") is "text"
 	Graded.ElementSuffix("List(Shape)") is ""
 	MlirKinds(MlirFlats.Sample.function).ElementSuffix("List(Tripling)") is "flat"
-	let element = MlirLayout(function).Represented(ElementKind(kind))
+	element = MlirLayout(function).Represented(ElementKind(kind))
 	element is in ("Text", "Number", "Flat") then element.Lower else ""

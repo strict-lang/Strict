@@ -14,45 +14,45 @@ Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Text.Combine(Moved.Destined(Remaking, Moving(3), List(Text) + "call")).IndexOf("destine_list_element(") > 0
 	Kept.Destined(Remaking, Keeping(4), List(Text) + "call") is ("call")
 	Moved.Destined(Remaking, Moving(4), List(Text) + "call") is ("call")
-	let returned = FlatResult
+	returned = FlatResult
 	if (returned is "" then false else MlirStructs(function, position).IsTarget(entry, next, returned)) is false
 		return compiled
-	let parts = PayloadDecoder(next).ElementParts
+	parts = PayloadDecoder(next).ElementParts
 	if IsKept(parts(0)) is false
 		return compiled
-	let temp = "%t" + position + "x"
-	let destined = "    func.call @strict_flat_destine_list_element(" + temp + "l, " + temp + "i) : (f64, f64) -> ()"
+	temp = "%t" + position + "x"
+	destined = "    func.call @strict_flat_destine_list_element(" + temp + "l, " + temp + "i) : (f64, f64) -> ()"
 	(function.Load(temp + "l", "%v_" + parts(0)), Index(parts(1), temp + "i"), destined) + compiled
 IsKept(list Text) Boolean
 	Moved.IsKept("items")
 	Kept.IsKept("items") is false
 	Later.IsKept("items")
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	for steps
-		let isRead = value.kind is InstructionType.IndexCall then value.texts(0) is list else false
-		let isConsumed = isRead then MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) else true
-		let isLater = isRead and index > position then IsStored(index, value.payload(0)) is false else false
+		isRead = value.kind is InstructionType.IndexCall then value.texts(0) is list else false
+		isConsumed = isRead then MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) else true
+		isLater = isRead and index > position then IsStored(index, value.payload(0)) is false else false
 		if (isConsumed or isLater or MlirMembered(function, position).Reader(index, value.payload(0)) is position) is false
 			return false
 	true
 Index(text Text, temp Text) Text
 	Moved.Index("0", "%i") is "    %i = arith.constant 0.0 : f64"
 	Moved.Index("at", "%i") is "    %i = llvm.load %v_at : !llvm.ptr -> f64"
-	let isNumber = "0123456789".IndexOf(text(0)) is not -1
+	isNumber = "0123456789".IndexOf(text(0)) is not -1
 	isNumber then "    " + temp + " = arith.constant " + text + ".0 : f64" else function.Load(temp, "%v_" + text)
 FlatResult Text
 	Moved.FlatResult is "Tripling"
 	MlirElements(Moved.function, 0).FlatResult is ""
-	let callees = MlirModule(function.types, "").Called(function, position)
-	let isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
+	callees = MlirModule(function.types, "").Called(function, position)
+	isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
 	isFlat then TypeEntry.ShortName(callees.First.method.returnType) else ""
 IsStored(at Number, register Number) Boolean
 	Kept.IsStored(1, 1)
 	Later.IsStored(4, 1) is false
-	let steps = function.method.instructions
-	let reuse = LoadReuse(steps)
+	steps = function.method.instructions
+	reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
-		let isKeeping = steps(value).kind is in (Inliner.Store, InstructionType.InvokeWriteToList)
+		isKeeping = steps(value).kind is in (Inliner.Store, InstructionType.InvokeWriteToList)
 		if isKeeping and register is in reuse.Reads(steps(value))
 			return true
 		if reuse.Written(steps(value)) is register

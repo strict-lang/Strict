@@ -15,7 +15,7 @@ Tokens Texts
 	mutable tokens = List(Mutable(Text))
 	mutable position = 0
 	for as long as position < line.Length
-		let length = line.characters(position).number is Character.Space then 0 else TokenLength(position)
+		length = line.characters(position).number is Character.Space then 0 else TokenLength(position)
 		if length > 0
 			tokens.Add(line.Substring(position, length))
 		position = position + (length is 0 then 1 else length)
@@ -26,12 +26,12 @@ TokenLength(start Number) Number
 	Tokenizer("a<=b").TokenLength(1) is 2
 	Tokenizer("1.5)").TokenLength(0) is 3
 	Tokenizer("a>=b").TokenLength(1) is 2 and Tokenizer("a<b").TokenLength(1) is 1
-	let code = line.characters(start).number
+	code = line.characters(start).number
 	if code is Character.Quote
 		return (TextEnd(start + 1) + 1).Clamp(0, line.Length) - start
 	if IsWordCode(code)
 		return WordLength(start)
-	let isCompared = (code is LessThan or code is GreaterThan) and start + 1 < line.Length
+	isCompared = (code is LessThan or code is GreaterThan) and start + 1 < line.Length
 	isCompared and line.characters(start + 1).number is EqualsSign then 2 else 1
 TextEnd(position Number) Number
 	Tokenizer("\"a\"").TextEnd(1) is 2
@@ -40,7 +40,7 @@ TextEnd(position Number) Number
 	Tokenizer("\"\\\\\"").TextEnd(1) is 3
 	mutable escaped = false
 	for Range(position, line.Length)
-		let code = line.characters(value).number
+		code = line.characters(value).number
 		if not escaped and code is Character.Quote
 			return value
 		escaped = not escaped and code is Character.Backslash
@@ -54,7 +54,7 @@ HasOpenText Boolean
 	Tokenizer("").HasOpenText is false
 	if line.IndexOf("\"") < 0
 		return false
-	let last = Tokens.Last
+	last = Tokens.Last
 	last.StartsWith("\"") and TextEnd(line.LastIndexOf(last) + 1) is line.Length
 WordLength(start Number) Number
 	Tokenizer("abc d").WordLength(0) is 3
@@ -64,8 +64,8 @@ WordLength(start Number) Number
 	Tokenizer("Vector2.One").WordLength(0) is 7
 	Tokenizer("1e-5)").WordLength(0) is 4
 	for Range(start, line.Length)
-		let code = line.characters(value).number
-		let isNumberPart = code is Dot and IsDecimalPoint(value) or code is Minus and IsExponentSign(start, value)
+		code = line.characters(value).number
+		isNumberPart = code is Dot and IsDecimalPoint(value) or code is Minus and IsExponentSign(start, value)
 		if IsWordCode(code) is false and not isNumberPart
 			return value - start
 	line.Length - start
@@ -84,7 +84,7 @@ IsExponentSign(start Number, position Number) Boolean
 	Tokenizer("1e-").IsExponentSign(0, 2) is false
 	Tokenizer("1e-x").IsExponentSign(0, 2) is false
 	Tokenizer("ae-5").IsExponentSign(0, 2) is false
-	let isNumber = line.characters(position - 1).number is LowercaseE and IsDigitCode(line.characters(start).number)
+	isNumber = line.characters(position - 1).number is LowercaseE and IsDigitCode(line.characters(start).number)
 	isNumber and position + 1 < line.Length and IsDigitCode(line.characters(position + 1).number)
 IsWordCharacter(character Text) Boolean
 	IsWordCharacter("a")
@@ -109,8 +109,8 @@ Words Booleans
 	Tokenizer("").Words(65) and Tokenizer("").Words(90) and Tokenizer("").Words(91) is false
 	Tokenizer("").Words(64) is false and Tokenizer("").Words(96) is false
 	for Range(0, Character.LowercaseZ + 1)
-		let isLower = value >= Character.LowercaseA
-		let isUpper = value >= Character.UppercaseA and value <= Character.UppercaseZ
+		isLower = value >= Character.LowercaseA
+		isUpper = value >= Character.UppercaseA and value <= Character.UppercaseZ
 		isLower or isUpper or IsDigitCode(value)
 IsDigit(character Text) Boolean
 	IsDigit("7")
@@ -149,7 +149,7 @@ Names Texts
 	mutable position = 0
 	mutable isAfterDot = false
 	for as long as position < line.Length
-		let length = line.characters(position).number is Character.Space then 0 else TokenLength(position)
+		length = line.characters(position).number is Character.Space then 0 else TokenLength(position)
 		if isAfterDot is false and IsName(position, length)
 			names.Add(line.Substring(position, length))
 		isAfterDot = length is 0 then isAfterDot else line.characters(position).number is Dot
@@ -161,10 +161,10 @@ IsName(start Number, length Number) Boolean
 	Tokenizer("x").IsName(0, 1) is false
 	Tokenizer(" A").IsName(0, 0) is false
 	Tokenizer("Validators/Check").IsName(0, 10) is false
-	let first = line.characters(start)
+	first = line.characters(start)
 	mutable after = start + length
 	for as long as after < line.Length and line.characters(after).number is Character.Space
 		after = after + 1
-	let isAssigned = after < line.Length and line.characters(after).number is EqualsSign
-	let isPackage = start + length < line.Length and line.characters(start + length).number is Slash
+	isAssigned = after < line.Length and line.characters(after).number is EqualsSign
+	isPackage = start + length < line.Length and line.characters(start + length).number is Slash
 	first is not first.Lower and isAssigned is false and isPackage is false

@@ -20,36 +20,36 @@ Numeric(name Text, default Number) Number
 	Sample.Numeric("seed", 0) is -3
 	Sample.Numeric("width", 720) is 720
 	CommandLine(("--count", "many"), List(Text) + "count").Numeric("count", 1) is Error("InvalidNumber: --count many")
-	let text = Option(name, "")
+	text = Option(name, "")
 	if text is ""
 		return default
-	let number = text to Number
-	let isExact = number is Error then false else number.IsFinite and number to Text is text
+	number = text to Number
+	isExact = number is Error then false else number.IsFinite and number to Text is text
 	isExact then number else Error("InvalidNumber: " + Spelled(name) + " " + text)
 Flag(name Text, default Boolean) Boolean
 	Sample.Flag("jsonOutput", false)
 	Sample.Flag("width", false) is false
 	CommandLine(List(Text) + "--json_output=false", List(Text) + "jsonOutput").Flag("jsonOutput", true) is false
 	CommandLine(("--json_output", "false"), List(Text) + "jsonOutput").Flag("jsonOutput", false) is false
-	let option = Spelled(name)
-	let at = arguments.Index(option)
+	option = Spelled(name)
+	at = arguments.Index(option)
 	if at >= 0
 		return at + 1 >= arguments.Length or arguments(at + 1) is not "false"
-	let written = Values(option)
+	written = Values(option)
 	written.Length is 0 then default else written.Last is "true"
 Repeated(name Text, defaults Texts) Texts
 	Sample.Repeated("lora", List(Text)) is ("a.safetensors:0.8", "b")
 	Sample.Repeated("width", List(Text) + "x") is ("x")
-	let found = Values(Spelled(name))
+	found = Values(Spelled(name))
 	found.Length is 0 then defaults else found
 Chosen(name Text, choices Texts, values Numbers, default Number) Number
 	Sample.Chosen("quality", Choices, (0, 5), 0) is 5
 	Sample.Chosen("width", Choices, (0, 5), 5) is 5
 	Slow.Chosen("quality", Choices, (0, 5), 0) is Error("UnknownChoice:--quality")
-	let text = Option(name, "")
+	text = Option(name, "")
 	if text is ""
 		return default
-	let at = choices.Index(text)
+	at = choices.Index(text)
 	at < 0 then Error("UnknownChoice:" + Spelled(name)) else values(at)
 Spelled(name Text) Text
 	CommandLine.Spelled("jsonOutput") is "--json_output"
@@ -57,7 +57,7 @@ Spelled(name Text) Text
 	CommandLine.Spelled("JsonOutput") is "--json_output"
 	mutable spelled = "--"
 	for name
-		let letter = value to Text
+		letter = value to Text
 		spelled = spelled + (letter.Lower is letter or index is 0 then letter.Lower else "_" + letter.Lower)
 	spelled
 Usage(defaults Texts, descriptions Texts) Text
@@ -77,12 +77,12 @@ Values(option Text) Texts
 Following(option Text, at Number) Text
 	Sample.Following("--count", 6) is "8"
 	CommandLine(List(Text) + "--count", List(Text) + "count").Following("--count", 0) is Error("MissingValue:--count")
-	let next = at + 1 < arguments.Length then arguments(at + 1) else "--"
+	next = at + 1 < arguments.Length then arguments(at + 1) else "--"
 	next.StartsWith("--") then Error("MissingValue:" + option) else next
 Lines(defaults Texts, descriptions Texts) Texts
 	CommandLine(List(Text), List(Text) + "count").Lines(List(Text) + "1", List(Text)) is ("--count 1")
 	Flags.Lines(("1", "false"), ("Outputs", "")) is ("--count 1  Outputs", "--json_output false")
 	Flags.Lines(("1", "false"), List(Text) + "Outputs") is ("--count 1  Outputs", "--json_output false")
 	for names
-		let described = index < descriptions.Length and descriptions(index) is not ""
+		described = index < descriptions.Length and descriptions(index) is not ""
 		Spelled(value) + " " + defaults(index) + (described then "  " + descriptions(index) else "")

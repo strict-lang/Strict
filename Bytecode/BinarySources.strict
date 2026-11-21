@@ -26,7 +26,7 @@ Named(names Texts) BinarySources
 	mutable kept = List(Text)
 	mutable marks = List(Number)
 	for sources
-		let name = Path(value).FileName.RemoveExtension.text
+		name = Path(value).FileName.RemoveExtension.text
 		if value.EndsWith(".strict") is false or name is in names or name + "s" is in names
 			kept = kept + value
 			marks = marks + stamps(index)
@@ -36,15 +36,15 @@ Typed(types List(TypeEntry), folder Text) BinarySources
 	Mixed.Typed(List(TypeEntry) + Listing, ".").sources.Length is 4
 	mutable added = List(Text)
 	for types
-		let file = FileCompiler.Normalized(TypeSource(value).Located(folder))
+		file = FileCompiler.Normalized(TypeSource(value).Located(folder))
 		if File(file).Exists and file is not in sources and file is not in added
 			added = added + file
-	let found = BinarySources(added).Stamped
+	found = BinarySources(added).Stamped
 	BinarySources(sources + found.sources, stamps + found.stamps)
 Names(types List(TypeEntry)) Texts
 	Mixed.Names(List(TypeEntry) + Listing) is ("List")
 	for types
-		let short = TypeEntry.ShortName(value.Name)
+		short = TypeEntry.ShortName(value.Name)
 		short.IndexOf("(") < 0 then short else short.Substring(0, short.IndexOf("("))
 Header Numbers
 	Mixed.Header.Last is 3

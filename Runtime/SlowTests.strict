@@ -4,7 +4,7 @@ Overran(elapsed Number, place Text) Text
 	SlowTests.Overran(1200, "a").StartsWith("Test failed: a took 1200 ms on the VM")
 	SlowTests.Overran(700, "a").StartsWith("Test slow: a took 700 ms on the VM, from 500 ms on")
 	SlowTests.Overran(400, "a") is ""
-	let took = place + " took " + elapsed.Round + " ms on the VM"
+	took = place + " took " + elapsed.Round + " ms on the VM"
 	if elapsed > Slowest
 		return "Test failed: " + took + ", slow tests may take " + Slowest + " ms at most: mark the method native"
 	elapsed > Recommended then "Test slow: " + took + ", from " + Recommended + " ms on mark the method native" else ""
@@ -22,5 +22,5 @@ Passed(path Text) slow
 	File(Marker(path)).Write(List(Text) + Unit(path))
 IsPassed(path Text) Boolean slow
 	SlowTests.IsPassed("Missing.strict") is false
-	let marker = Marker(path)
+	marker = Marker(path)
 	(File(marker).Exists then File(marker).ReadLines else List(Text)) is (Unit(path))

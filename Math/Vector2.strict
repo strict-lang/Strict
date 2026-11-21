@@ -38,8 +38,8 @@ Atan Degrees
 	Vector2(1, -1).Atan is 135 and Vector2(1, 1).Atan is 45 and Vector2(0, -1).Atan is 180
 	Vector2(2, 1).Atan is Degrees(63.43494882292201) and Vector2(-2, -1).Atan is Degrees(-116.56505117707799)
 	Vector2(1, 2).Atan is Degrees(26.56505117707799) and Vector2(2, -1).Atan is Degrees(116.56505117707799)
-	let half = Y < 0 then (X < 0 then -HalfTurn else HalfTurn) else 0
-	let turn = X > 0 then QuarterTurn else -QuarterTurn
+	half = Y < 0 then (X < 0 then -HalfTurn else HalfTurn) else 0
+	turn = X > 0 then QuarterTurn else -QuarterTurn
 	Degrees(X.Absolute > Y.Absolute then turn - Ratio(Y / X).Atan else Ratio(Y is 0 then 0 else X / Y).Atan + half)
 -(other) Vector2
 	Vector2(4, 7) - Vector2(1, 2) is Vector2(3, 5)

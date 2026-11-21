@@ -24,33 +24,33 @@ constant CMainF = ("  float*pl=read_sf(v[4]),*kp=read_sf(v[5]);double pe=rel_err
 constant CMainG = ("  printf(\"%d tokens: relative error of 8 bit tokens %.2e, of kept tokens %.2e\\n\",tok,pe,ke);")
 constant CMainH = ("  if(tok>=64&&(pe<=1e-3||ke>=pe/100))return 3;if(ke>=1e-3)return 4;return 0;}")
 Run Number
-	let folder = "Compiler/output/KeptTokens" + 1000000.Random.Floor
+	folder = "Compiler/output/KeptTokens" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Checked(folder Text) Boolean
-	let src = folder + "/KeptTokens.strict"
+	src = folder + "/KeptTokens.strict"
 	File(src).Write(ProgramA + ProgramB + ProgramC)
-	let built = Process.RunTool(Process.Current.executable, "build " + src, BuildSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + src, BuildSeconds)
 	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else RanCases(folder)
 RanCases(folder Text) Boolean
-	let win = Process.OperatingSystem is "Windows"
-	let cFile = folder + "/check.c"
-	let exe = folder + "/check" + (win then ".exe" else "")
-	let head = CHead + CHelpA + CHelpB + CWriteA + (CWriteB + CWriteC + CWriteC2) + CWriteD + CReadA + CReadB + CReadC
+	win = Process.OperatingSystem is "Windows"
+	cFile = folder + "/check.c"
+	exe = folder + "/check" + (win then ".exe" else "")
+	head = CHead + CHelpA + CHelpB + CWriteA + (CWriteB + CWriteC + CWriteC2) + CWriteD + CReadA + CReadB + CReadC
 	File(cFile).Write(head + CError + CMainA + CMainB + CMainC + CMainD + CMainE + CMainF + CMainG + CMainH)
-	let ccArgs = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (win then "" else " -lm")
-	let comp = Process.RunTool("clang", ccArgs, ToolSeconds)
+	ccArgs = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (win then "" else " -lm")
+	comp = Process.RunTool("clang", ccArgs, ToolSeconds)
 	comp.exitCode is not 0 then Error("CompileFailed: " + comp.Output + comp.error) else RunTokenCounts(folder, exe, win)
 RunTokenCounts(folder Text, exe Text, win Boolean) Boolean
-	let env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
-	let target = "\"" + folder + "/KeptTokens" + (win then ".exe" else "") + "\""
+	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
+	target = "\"" + folder + "/KeptTokens" + (win then ".exe" else "") + "\""
 	for ("96", "20")
-		let args = value + " kept.safetensors " + target + " plain.safetensors kept.out.safetensors"
-		let cmd = "cd " + (win then "/d " else "") + "\"" + folder + "\" && " + env + "\"" + exe + "\" " + args
-		let ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
+		args = value + " kept.safetensors " + target + " plain.safetensors kept.out.safetensors"
+		cmd = "cd " + (win then "/d " else "") + "\"" + folder + "\" && " + env + "\"" + exe + "\" " + args
+		ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 		logger.Log(ran.Output.Trim)
 		if ran.exitCode is not 0
 			return Error("KeptTokensFailed: " + ran.Output + ran.error)

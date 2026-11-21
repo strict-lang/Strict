@@ -19,15 +19,15 @@ constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(Mem
 Text Text
 	Counters.Text.StartsWith("module {")
 	NoRun.Text.StartsWith("unsupported:")
-	let started = Process.Elapsed
-	let reachable = Linked
+	started = Process.Elapsed
+	reachable = Linked
 	BuildProfile.Reported("Emission / reachability (" + reachable.functions.Length + " functions)", started)
-	let edges = reachable.Edges
-	let functions = Safe(reachable.functions, edges)
-	let problem = Problem(functions)
+	edges = reachable.Edges
+	functions = Safe(reachable.functions, edges)
+	problem = Problem(functions)
 	if problem is not ""
 		return problem
-	let counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
+	counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
 	Combined(Declared(counted, functions, edges), functions, counted)
 Problem(functions List(MlirFunction)) Text
 	Counters.Problem(Counters.Functions) is ""
@@ -37,20 +37,20 @@ Problem(functions List(MlirFunction)) Text
 	MlirNarrowing.Problem(functions)
 Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
-	let started = Process.Elapsed
-	let functions = MlirSafety(reachable, edges).Marked
+	started = Process.Elapsed
+	functions = MlirSafety(reachable, edges).Marked
 	BuildProfile.Reported("Emission / safety", started)
 	functions
 Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts
 	Counters.Declared(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
-	let started = Process.Elapsed
-	let recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
+	started = Process.Elapsed
+	recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
 	BuildProfile.Reported("Emission / recursion", started)
-	let lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
-	let emitted = BuildProfile.Emitted(value, texts, functions, recursive)
-	let before = Process.Elapsed
-	let result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
+	lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
+	emitted = BuildProfile.Emitted(value, texts, functions, recursive)
+	before = Process.Elapsed
+	result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 	BuildProfile.Reported("Emission / helpers", before)
 	result
 Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
@@ -58,20 +58,20 @@ Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts)
 	EmissionCache(value, functions, recursive).Emitted(texts)
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
 	Counters.Emission(MlirWhole.Row.function, NoFunctions, List(Text)).IndexOf("alwaysinline") > 0
-	let text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
-	let emitted = MlirEntry.Optimized(function.method, text)
-	let whole = MlirWholeBody(function, functions).Lines
+	text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
+	emitted = MlirEntry.Optimized(function.method, text)
+	whole = MlirWholeBody(function, functions).Lines
 	whole.Length is 0 then emitted else emitted + "\n" + outer.Text.Combine(whole, "\n")
 Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
 	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	Scaled.Text.IndexOf(WgslShader.Marker) < Shaded.Text.IndexOf(WgslShader.Marker)
-	let table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
-	let started = Process.Elapsed
-	let device = MlirGpu.Module(functions)
+	table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
+	started = Process.Elapsed
+	device = MlirGpu.Module(functions)
 	BuildProfile.Reported("Emission / GPU kernels", started)
-	let before = Process.Elapsed
-	let main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
-	let host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
+	before = Process.Elapsed
+	main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
+	host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	BuildProfile.Reported("Emission / globals and assembly", before)
 	outer.Text.Combine((host, device, platform is Platform.Web then WgslShader.Scripts(functions) else "") - "", "\n")
 Functions List(MlirFunction)
@@ -83,20 +83,20 @@ Functions List(MlirFunction)
 	Linked.functions
 Linked MlirRecursion
 	Started.Linked.calls.Length is 2
-	let mains = Entries
-	let roots = mains + Starts(mains)
+	mains = Entries
+	roots = mains + Starts(mains)
 	Reachable(roots, roots, List(Numbers))
 Starts(mains List(MlirFunction)) List(MlirFunction)
 	Counters.Starts(Counters.Functions).Length is 0
 	Started.Starts(Started.Functions).First.Symbol is "Counter_$Start_0"
 	Started.Starts(Started.Functions).Length is 1
 	for mains
-		let start = DefaultInstance.Start(value.type)
+		start = DefaultInstance.Start(value.type)
 		if index < entries and start.instructions.Length > 0
 			MlirFunction(value, method = start)
 Entries List(MlirFunction)
 	Pair.Entries.Last.Symbol is "Other_Run_0"
-	let typeIndex = TypeIndex
+	typeIndex = TypeIndex
 	for Range(0, entries)
 		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = typeIndex)
 TypeIndex Dictionary(Text, Number)
@@ -107,7 +107,7 @@ TypeIndex Dictionary(Text, Number)
 		if value.Name is not in indexed
 			indexed(value.Name) = index
 	for types
-		let short = Path(value.Name).FileName.text
+		short = Path(value.Name).FileName.text
 		if short is not in indexed
 			indexed(short) = index
 	indexed
@@ -131,8 +131,8 @@ Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers
 	mutable found = List(Mutable(MlirFunction))
 	mutable calls = List(Mutable(Numbers))
 	for fresh
-		let called = Callees(value)
-		let unseen = MlirUnseen(symbols).Of(called)
+		called = Callees(value)
+		unseen = MlirUnseen(symbols).Of(called)
 		found = found + unseen
 		symbols = symbols + MlirRecursion.Symbols(unseen)
 		calls.Add(MlirRecursion.Indexes(called, symbols))
@@ -145,13 +145,13 @@ Callees(function MlirFunction) List(MlirFunction)
 	callees
 Called(function MlirFunction, position Number) List(MlirFunction)
 	Counters.Called(Counters.Functions.First, 0).Length is 0
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
 		return List(MlirFunction)
-	let decoder = PayloadDecoder(entry)
+	decoder = PayloadDecoder(entry)
 	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)
-	let type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
-	let callee = decoder.Callee(type)
-	let called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
+	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
+	callee = decoder.Callee(type)
+	called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
 	callee.instructions.Length > 0 or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions

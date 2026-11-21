@@ -39,9 +39,9 @@ IsSum Boolean
 	Summing.IsSum
 	Doubling.IsSum is false
 	Returning.IsSum is false
-	let names = Accumulated
+	names = Accumulated
 	for Range(at + 1, function.method.LoopEndOf(at))
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if entry.kind is in (InstructionType.LoopBegin, InstructionType.InvokeWriteToList, InstructionType.Return)
 			return false
 		if entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is in names and IsAdded(value) is false
@@ -53,7 +53,7 @@ Accumulated Texts
 	Sharing.Accumulated is ("sum")
 	mutable names = List(Mutable(Text))
 	for Range(at + 1, function.method.LoopEndOf(at))
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		if entry.kind is InstructionType.StoreRegisterToVariable and IsLocal(value) is false
 			if IsAccumulation(value) is false
 				return List(Text)
@@ -62,37 +62,37 @@ Accumulated Texts
 IsLocal(store Number) Boolean
 	Sharing.IsLocal(8)
 	Summing.IsLocal(10) is false
-	let name = function.method.instructions(store).texts(0)
+	name = function.method.instructions(store).texts(0)
 	for at
-		let entry = function.method.instructions(index)
-		let isStore = entry.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
+		entry = function.method.instructions(index)
+		isStore = entry.kind is in (InstructionType.StoreConstantToVariable, InstructionType.StoreRegisterToVariable)
 		if isStore and name is in entry.texts
 			return false
 	true
 IsAccumulation(store Number) Boolean
 	Summing.IsAccumulation(10)
 	Summing.IsAccumulation(5) is false
-	let entry = function.method.instructions(store)
-	let previous = function.method.instructions(store - 1)
-	let isSum = previous.kind is InstructionType.Add or previous.kind is InstructionType.Subtract
+	entry = function.method.instructions(store)
+	previous = function.method.instructions(store - 1)
+	isSum = previous.kind is InstructionType.Add or previous.kind is InstructionType.Subtract
 	if isSum is false or previous.payload(3) is not entry.payload(0)
 		return false
-	let loaded = Writer(store - 1, previous.payload(1))
+	loaded = Writer(store - 1, previous.payload(1))
 	if loaded < 0
 		return false
-	let writer = function.method.instructions(loaded)
+	writer = function.method.instructions(loaded)
 	writer.kind is InstructionType.LoadVariableToRegister and writer.texts(0) is entry.texts(0)
 IsAdded(load Number) Boolean
 	Summing.IsAdded(3)
 	Sharing.IsAdded(3) is false
 	Comparing.IsAdded(3) is false
 	MlirDeviceSums(MlirDeviceChoice.Choosing, 4).IsSum is false
-	let register = function.method.instructions(load).payload(0)
+	register = function.method.instructions(load).payload(0)
 	for Range(load + 1, function.method.LoopEndOf(at))
-		let entry = function.method.instructions(value)
-		let isOperator = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.Invoke
+		entry = function.method.instructions(value)
+		isOperator = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.Invoke
 		if isOperator and register is in (entry.payload(1), entry.payload(2))
-			let isSum = entry.kind is InstructionType.Add or entry.kind is InstructionType.Subtract
+			isSum = entry.kind is InstructionType.Add or entry.kind is InstructionType.Subtract
 			return isSum and entry.payload(1) is register and IsAccumulation(value + 1)
 	false
 Writer(before Number, register Number) Number
@@ -107,7 +107,7 @@ IsWarped Boolean
 	Found(false)
 Found(strided Boolean) Boolean
 	MlirDeviceSums(MlirGpu.Layering.function, 2).Found(false)
-	let end = function.method.LoopEndOf(at)
+	end = function.method.LoopEndOf(at)
 	if IsSummed(function, at + 1, end, strided)
 		return true
 	for MlirTokenLaunch(function, at).Devices(end)
@@ -122,8 +122,8 @@ IsSummed(inspected MlirFunction, first Number, limit Number, strided Boolean) Bo
 	Summing.IsSummed(Summing.function, 0, 14, true) is false
 	for Range(first, limit)
 		if inspected.method.instructions(value).kind is InstructionType.LoopBegin
-			let sums = MlirDeviceSums(inspected, value)
-			let isSum = sums.IsSum and (sums.IsStrided or strided is false)
+			sums = MlirDeviceSums(inspected, value)
+			isSum = sums.IsSum and (sums.IsStrided or strided is false)
 			if isSum or strided is false and MlirDeviceChoice(inspected, value).IsChoice
 				return true
 	false
@@ -141,9 +141,9 @@ Lanes(target Text, count Text) Texts
 		return List(Text) + MlirTyped.Integer.Constant(target, "1")
 	if IsSpread is false
 		return List(Text) + MlirTyped.Integer.Constant(target, "32")
-	let warp = (MlirTyped.Integer.Constant(target + "w", "32"), MlirTyped.Integer.Constant(target + "s", "1"))
-	let limit = MlirTyped.Integer.Constant(target + "t", "32768")
-	let many = "    " + target + "m = arith.cmpi sge, " + count + ", " + target + "t : i64"
+	warp = (MlirTyped.Integer.Constant(target + "w", "32"), MlirTyped.Integer.Constant(target + "s", "1"))
+	limit = MlirTyped.Integer.Constant(target + "t", "32768")
+	many = "    " + target + "m = arith.cmpi sge, " + count + ", " + target + "t : i64"
 	warp + (limit, many) + ("    " + target + " = arith.select " + target + "m, " + target + "s, " + target + "w : i64")
 IsStrided Boolean
 	Striding.IsStrided
@@ -151,9 +151,9 @@ IsStrided Boolean
 	Summing.IsStrided is false
 	mutable indexed = -1
 	for Range(at + 1, function.method.LoopEndOf(at))
-		let entry = function.method.instructions(value)
-		let isIndex = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is "index"
-		let isShifted = entry.kind is InstructionType.Add and indexed is in (entry.payload(1), entry.payload(2))
+		entry = function.method.instructions(value)
+		isIndex = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is "index"
+		isShifted = entry.kind is InstructionType.Add and indexed is in (entry.payload(1), entry.payload(2))
 		indexed = isIndex then entry.payload(0) else isShifted then entry.payload(3) else indexed
 		if entry.kind is InstructionType.Multiply and indexed is in (entry.payload(1), entry.payload(2))
 			return true

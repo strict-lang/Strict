@@ -10,7 +10,7 @@ IsTail Boolean
 IsCall Boolean
 	Sample.IsCall
 	MlirTails(Sample.function, 0).IsCall is false
-	let isPlain = function.Group is -1 and function.FastLoop is -1 and function.Packing is ""
+	isPlain = function.Group is -1 and function.FastLoop is -1 and function.Packing is ""
 	isPlain and function.Float is "f64" and function.method.instructions(position).kind is InstructionType.Invoke
 Jumped(entry InstructionEntry, type TypeEntry) Texts
 	Sample.Jumped(TailCalls.Again, TailCalls.Counter).Last is "  ^tail1:"
@@ -19,8 +19,8 @@ Jumped(entry InstructionEntry, type TypeEntry) Texts
 	mutable lines = MlirCalls(function, position).Loads(entry, type)
 	for function.method.parameters
 		lines = lines + function.Store("%t" + position + "a" + index, "%v_" + value.Name)
-	let flag = "%t" + position + "tail"
-	let jump = ("    " + flag + " = arith.constant false", "    cf.cond_br " + flag + ", ^tail" + position + ", ^tailed")
+	flag = "%t" + position + "tail"
+	jump = ("    " + flag + " = arith.constant false", "    cf.cond_br " + flag + ", ^tail" + position + ", ^tailed")
 	lines + jump + ("  ^tail" + position + ":")
 Restart Texts
 	MlirTails(Sample.function, 0).Restart is ("    cf.br ^tailed", "  ^tailed:")

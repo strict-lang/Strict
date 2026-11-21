@@ -1,9 +1,9 @@
 constant Iterations = 500
 constant Allowed = 1600
 Run
-	let before = Process.Executed(5)
-	let total = Sum(Iterations)
-	let made = Process.Executed(5)
+	before = Process.Executed(5)
+	total = Sum(Iterations)
+	made = Process.Executed(5)
 	logger.Log("a VM loop of 500 iterations made " + made + " allocations, sum " + total + " " + before)
 	if made > Allowed
 		return Error("LoopAllocatesTooMuch: " + made)

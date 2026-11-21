@@ -24,16 +24,16 @@ IsForeign Boolean
 	MlirForeign(Booleans).IsForeign is false
 	MlirForeign(MlirFunction(List(TypeEntry), Adder.type, TypeEntry.ToNumber)).IsForeign is false
 	MlirForeign(Counting).IsForeign
-	let name = function.type.Name
-	let isBase = name.IndexOf("/") >= 0 and name.IndexOf("/") is name.LastIndexOf("/")
-	let isBodyless = function.method.instructions.Length is 0 and function.type.members.Length < 2
+	name = function.type.Name
+	isBase = name.IndexOf("/") >= 0 and name.IndexOf("/") is name.LastIndexOf("/")
+	isBodyless = function.method.instructions.Length is 0 and function.type.members.Length < 2
 	isBodyless and isBase is false and IsNative(function.method)
 IsNative(method MethodEntry) Boolean
 	MlirForeign(Adder).IsNative(Add)
 	MlirForeign(Counting).IsNative(Started)
 	MlirForeign(Counting).IsNative(MethodEntry("from", List(MemberEntry), "None", List(InstructionEntry))) is false
-	let first = method.Name(0)
-	let isConstructor = method.Name is "from" and method.parameters.Length > 0 and function.type.members.Length is 1
+	first = method.Name(0)
+	isConstructor = method.Name is "from" and method.parameters.Length > 0 and function.type.members.Length is 1
 	first.Lower is not first or isConstructor
 Symbol Text
 	MlirForeign(Adder).Symbol is "Adder_Add"
@@ -43,17 +43,17 @@ Wrapper Text
 	Symbol + "_foreign"
 Unimplemented Text
 	MlirForeign(Adder).Unimplemented is Unimplementing
-	let name = function.type.JustName
-	let missing = name + "." + function.method.Name + " has no body and no native/" + name + ".c"
+	name = function.type.JustName
+	missing = name + "." + function.method.Name + " has no body and no native/" + name + ".c"
 	"TraitHasNoImplementation: " + missing + ", use a Generic member to hold any type with " + function.method.Name
 Declaration Texts
 	MlirForeign(Adder).Declaration.First is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
 	MlirForeign(Adder).Declaration.Index("  func.func private @Adder_Add_foreign(" + Adding + ") -> f64 {") is 1
 	MlirForeign(Doubler).Declaration.Length is 7
-	let types = Text.Combine(MlirCalls(function, 0).ArgumentTypes(function.Parameters.Length), ", ")
-	let header = "  func.func private @" + Wrapper + "(" + Parameters + ") -> f64 {"
-	let call = "    %result = func.call @" + Symbol + "(" + Arguments + ") : (" + types + ") -> f64"
-	let declaration = "  func.func private @" + Symbol + "(" + types + ") -> f64"
+	types = Text.Combine(MlirCalls(function, 0).ArgumentTypes(function.Parameters.Length), ", ")
+	header = "  func.func private @" + Wrapper + "(" + Parameters + ") -> f64 {"
+	call = "    %result = func.call @" + Symbol + "(" + Arguments + ") : (" + types + ") -> f64"
+	declaration = "  func.func private @" + Symbol + "(" + types + ") -> f64"
 	(List(Text) + declaration + header) + Converted + call + Returned + "  }"
 Parameters Text
 	MlirForeign(Adder).Parameters is Adding
@@ -66,7 +66,7 @@ Converted Texts
 	MlirForeign(Namer).Converted is List(Text) + "    %c1 = func.call @strict_text_flat(%p1) : (f64) -> f64"
 	mutable lines = List(Mutable(Text))
 	for function.method.parameters
-		let call = " = func.call @" + Converter(value.typeName) + "(%p" + (index + 1) + ") : (f64) -> f64"
+		call = " = func.call @" + Converter(value.typeName) + "(%p" + (index + 1) + ") : (f64) -> f64"
 		if Converter(value.typeName) is not ""
 			lines.Add("    %c" + (index + 1) + call)
 	lines
@@ -87,9 +87,9 @@ Returned Texts
 	MlirForeign(Doubler).Returned.First.IndexOf("@strict_foreign_numbers(") > 0
 	MlirForeign(Splitter).Returned.First.IndexOf("@strict_foreign_rows(") > 0
 	MlirForeign(Closing).Returned.First.IndexOf("@strict_foreign_none(") > 0
-	let returned = function.method.returnType
-	let single = returned is "None" then "none" else (returned.EndsWith("Text") then "text" else "number")
-	let kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
+	returned = function.method.returnType
+	single = returned is "None" then "none" else (returned.EndsWith("Text") then "text" else "number")
+	kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
 IsNumbers(typeName Text) Boolean
 	MlirForeign(Adder).IsNumbers("Strict/List(Number)")

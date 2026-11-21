@@ -11,14 +11,14 @@ Loaded(model Gguf) Basis slow
 	Tiny.block is 4
 	Tiny.grouped is true
 	Basis.Loaded(Gguf("NeuralNetworks/tinyqwen35.gguf")) is None
-	let widths = model.Value("prism.hadamard.sign_widths")
+	widths = model.Value("prism.hadamard.sign_widths")
 	if widths is ""
 		return None
-	let values = model.Value("prism.hadamard.sign_values").Lines to Numbers
-	let size = model.Value("prism.hadamard.block_size") to Number
+	values = model.Value("prism.hadamard.sign_values").Lines to Numbers
+	size = model.Value("prism.hadamard.block_size") to Number
 	if size > Sylvester.Radix * Sylvester.Radix
 		return Error("HadamardBlocksAboveRadixSquaredAreNotSupported")
-	let isGrouped = model.Value("prism.hadamard.gdn_v_grouped") is "true"
+	isGrouped = model.Value("prism.hadamard.gdn_v_grouped") is "true"
 	Basis(Parts(values, widths.Lines to Numbers), size, isGrouped, model.Value("prism.hadamard.weight_names").Lines)
 Parts(values Numbers, sizes Numbers) List(Numbers)
 	None.Parts((1, 2, 3), (1, 2)).Last is (2, 3)
@@ -63,9 +63,9 @@ Grouped(input Numbers, size Number, keyHeads Number, heads Number) Numbers
 	None.Grouped((0, 1, 2, 3), 1, 2, 4) is (0, 1, 2, 3)
 	if grouped is false
 		return input
-	let width = size * heads
-	let repeats = heads / keyHeads
+	width = size * heads
+	repeats = heads / keyHeads
 	for input
-		let within = index % width
-		let head = (within / size).Floor
+		within = index % width
+		head = (within / size).Floor
 		input(index - within + within % size + size * ((head / repeats).Floor + keyHeads * (head % repeats)))

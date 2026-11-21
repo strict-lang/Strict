@@ -5,7 +5,7 @@ Named(paths Texts) Texts slow
 	SureMethods.Named(List(Text)).Length is 0
 	"Boolean.xor" is in SureMethods(ResolveCheck.Inference(Booleans)).Named(Booleans)
 	("Dictionary.get" is in SureMethods(ResolveCheck.Inference(Dictionaries)).Named(Dictionaries)) is false
-	let bases = Bases(paths)
+	bases = Bases(paths)
 	mutable records = List(Mutable(Text))
 	for Parsed(bases, InputOutputs.Read(bases))
 		records = records + value
@@ -20,14 +20,14 @@ Parsed(paths Texts, contents List(Texts)) List(Texts)
 	for paths
 		Records(Path(value).FileName.RemoveExtension.text, contents(index))
 Records(type Text, lines Texts) Texts
-	let shape = TypeShape(lines)
-	let statements = MethodBodies(type, shape, inference).Statements
+	shape = TypeShape(lines)
+	statements = MethodBodies(type, shape, inference).Statements
 	for lines
 		if shape.IsMethodHeader(value) and Kept(lines, index)
-			let name = Tokenizer(value).Tokens.First
+			name = Tokenizer(value).Tokens.First
 			type + "." + name + "|" + Text.Combine(Used(type, statements, lines, index) - (type + "." + name), ",")
 Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
-	let last = FileCheck.LastLine(lines, header)
+	last = FileCheck.LastLine(lines, header)
 	mutable keys = List(Mutable(Text))
 	for statements
 		if value.line > header and value.line <= last and Duplicates.IsTest(lines(value.line).Trim) is false
@@ -38,7 +38,7 @@ Kept(lines Texts, header Number) Boolean
 	SureMethods.Kept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
 	SureMethods.Kept(("Parsed Number", "\tname to Number"), 0) is false
 	SureMethods.Kept(("Added(other Numbers) Numbers", "\t(1) + (\"Hi\") is Error", "\tother"), 0) is false
-	let body = Duplicates.Implementation(lines, header)
+	body = Duplicates.Implementation(lines, header)
 	Fails(body) is false and HasBody(body) and IsTestedFailing(lines, header) is false
 IsTestedFailing(lines Texts, header Number) Boolean
 	SureMethods.IsTestedFailing(("A Number", "\tA is Error", "\t1", "B", "\tB is Error"), 0)
@@ -51,7 +51,7 @@ Fails(body Text) Boolean
 	SureMethods.Fails("return Error(\"Bad\")")
 	SureMethods.Fails("value to Number")
 	SureMethods.Fails("low + high") is false
-	let tokens = Tokenizer(body).Tokens
+	tokens = Tokenizer(body).Tokens
 	"Error" is in tokens or "to" is in tokens
 Settled(records Texts) Texts
 	SureMethods.Settled(("Number.Floor|", "PseudoRandom.Next|Number.Floor")) is ("Number.Floor", "PseudoRandom.Next")
@@ -72,7 +72,7 @@ CallList(record Text) Texts
 	SureMethods.CallList("PseudoRandom.Next|Number.Floor") is ("Number.Floor")
 	SureMethods.CallList("Number.Floor|").Length is 0
 	SureMethods.CallList("Demo.Run|Number.Floor,Demo.Next") is ("Number.Floor", "Demo.Next")
-	let rest = record.Split("|").Last
+	rest = record.Split("|").Last
 	record.EndsWith("|") then List(Text) else rest.Split(",")
 Accepts(calls Texts, sure Texts) Boolean
 	SureMethods.Accepts(List(Text), "Number.Floor")
@@ -95,5 +95,5 @@ IsBase(path Text) Boolean
 	SureMethods.IsBase("Strict/PseudoRandom.strict") and SureMethods.IsBase("./PseudoRandom.strict")
 	SureMethods.IsBase("Networking/Socket.strict") is false
 	SureMethods.IsBase("Networking\\Socket.strict") is false
-	let parts = path.Replace("\\", "/").Split("/")
+	parts = path.Replace("\\", "/").Split("/")
 	parts.Length is 1 or parts(parts.Length - 2) is in ("Strict", ".")

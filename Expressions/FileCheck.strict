@@ -41,23 +41,23 @@ Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(FlagLoop, KnownTypes.NoMembers).StartsWith("NotIterable: flag is a Boolean")
 	if scoped.statement.Kind is "Invalid"
 		return scoped.statement.text
-	let names = UnknownNames(scoped.statement, known + scoped.scope.names + ValueNames(scoped.scope))
+	names = UnknownNames(scoped.statement, known + scoped.scope.names + ValueNames(scoped.scope))
 	if names.Length > 0
 		return "NameNotFound: " + names.First
-	let methods = UnknownMethods(scoped.statement, scoped.scope, current)
-	let iterable = methods.Length > 0 then methods.First else NotIterable(scoped, current)
+	methods = UnknownMethods(scoped.statement, scoped.scope, current)
+	iterable = methods.Length > 0 then methods.First else NotIterable(scoped, current)
 	iterable is not "" then iterable else MutatingCheck(inference).Issue(scoped, current)
 NotIterable(scoped ScopedStatement, current Scope) Text
 	Counting.NotIterable(FlagLoop, KnownTypes.NoMembers) is "NotIterable: flag is a Boolean, use for as long as flag"
 	Counting.NotIterable(TwiceCall, KnownTypes.NoMembers) is ""
 	Counting.NotIterable(ScopedStatement(SyntaxNode("For", ""), Counted, 0), Counted) is ""
-	let loop = scoped.statement
+	loop = scoped.statement
 	if loop.Kind is not "For" or loop.HasValue is false or loop.text is "for as long as"
 		return ""
-	let type = inference.TypeOf(loop.children(0), scoped.scope, current)
+	type = inference.TypeOf(loop.children(0), scoped.scope, current)
 	if IsIterable(type) or type is in ("Unknown", "Generic", "Generics")
 		return ""
-	let hint = type is "Boolean" then ", use for as long as " + loop.children(0) else ""
+	hint = type is "Boolean" then ", use for as long as " + loop.children(0) else ""
 	"NotIterable: " + loop.children(0) + " is a " + type + hint
 IsIterable(type Text) Boolean
 	Counting.IsIterable("Text")
@@ -68,16 +68,16 @@ IsIterable(type Text) Boolean
 	Counting.NotIterable(WhileFlag, Flagged) is "" and Counting.NotIterable(OtherLoop, Flagged) is ""
 	Counting.NotIterable(TextLoop, Flagged) is ""
 	Counting.NotIterable(CountLoop, Counted) is "NotIterable: count is a Count"
-	let element = inference.types.ElementType(type)
-	let iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
+	element = inference.types.ElementType(type)
+	iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
 	element is not "Unknown" or iterated is not "Unknown" or inference.Enumerated(type).Length > 0
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
-	let issue = MethodIssue(node, scope, current)
+	issue = MethodIssue(node, scope, current)
 	if issue is not ""
 		unknown = unknown + issue
-	let narrowed = node.text is "then" then ErrorNarrowing(inference).Narrowed(node.children(0), scope, current) else scope
+	narrowed = node.text is "then" then ErrorNarrowing(inference).Narrowed(node.children(0), scope, current) else scope
 	for node.children
 		if value.Kind is not "Body"
 			unknown = unknown + UnknownMethods(value, narrowed, current)
@@ -91,32 +91,32 @@ MethodIssue(node SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(HiddenCall, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Counting.MethodIssue(Counting.Parsed("1 > 0 and (count)"), Counted, Counted).StartsWith("LogicalOperandIsAList")
 	Counting.MethodIssue(Counting.Parsed("Count.Twice"), SelfCounted, Owning).StartsWith("AmbiguousName")
-	let hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
-	let called = IsCall(node) then CallIssue(node, scope, current) else ""
-	let typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called
+	hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
+	called = IsCall(node) then CallIssue(node, scope, current) else ""
+	typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called
 	hidden is "" then typed else hidden
 CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Requiring.CallIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is "ArgumentMissing: Count.Twice got 0 of 1"
 	Counting.CallIssue(HiddenCall, Counted, Scope(List(Text) + "Count", List(Text) + "Text")).EndsWith("use outer.Count")
-	let instance = inference.TypeOf(call.children(0), scope, current)
-	let hidden = call.children(0).text
-	let isHidden = call.children(0).Kind is "Identifier" and inference.types.IsKnown(hidden) and instance is not hidden
-	let hint = isHidden then HiddenType.Hint(inference.Origin(hidden, scope), hidden) else ""
+	instance = inference.TypeOf(call.children(0), scope, current)
+	hidden = call.children(0).text
+	isHidden = call.children(0).Kind is "Identifier" and inference.types.IsKnown(hidden) and instance is not hidden
+	hint = isHidden then HiddenType.Hint(inference.Origin(hidden, scope), hidden) else ""
 	if IsMissing(instance, call.text)
 		return "MethodNotFound: " + instance + "." + call.text + hint
-	let fewest = Fewest(instance, call.text)
-	let issue = "ArgumentMissing: " + instance + "." + call.text + " got " + (call.children.Length - 1) + " of " + fewest
+	fewest = Fewest(instance, call.text)
+	issue = "ArgumentMissing: " + instance + "." + call.text + " got " + (call.children.Length - 1) + " of " + fewest
 	fewest > call.children.Length - 1 then issue else ""
 Fewest(instance Text, name Text) Number
 	Requiring.Fewest("Count", "Twice") is 1
 	Counting.Fewest("Count", "Twice") is 0
 	FileCheck(TypeInference(RequiredThrice, NoScopes), "Count").Fewest("Count", "Twice") is 1
-	let scope = inference.types.ParameterScope(instance)
+	scope = inference.types.ParameterScope(instance)
 	mutable fewest = -1
 	for scope.names
 		if value is name + " required"
-			let required = scope.types(index) to Number
+			required = scope.types(index) to Number
 			fewest = fewest < 0 or required < fewest then required else fewest
 	fewest.Maximum(0)
 UnknownMembers(call SyntaxNode) Texts
@@ -128,7 +128,7 @@ UnknownMembers(call SyntaxNode) Texts
 	Counting.UnknownMembers(SyntaxNode("Member", "in")).Length is 0
 	if call.Kind is "Binary" and call.text is "in"
 		return List(Text) + ("InMustFollowIs: write " + call.children(0) + " is in " + call.children(1))
-	let members = inference.types.MembersOf(call.text).names
+	members = inference.types.MembersOf(call.text).names
 	for call.children
 		if call.Kind is "Call" and value.Kind is "Reassignment" and value.children(0).text is not in members
 			"MemberNotFound: " + call.text + "." + value.children(0).text
@@ -141,8 +141,8 @@ IsCall(node SyntaxNode) Boolean
 	Counting.IsCall(MissingCall.statement)
 	Counting.IsCall(OtherName.statement) is false
 	Counting.IsCall(SyntaxNode("Member", "1", MissingCall.statement.children)) is false
-	let isNamed = node.text.Length > 0 and node.text(0).Upper is not node.text(0).Lower
-	let isMember = node.Kind is in ("Member", "MethodCall") and node.children.Length > 0
+	isNamed = node.text.Length > 0 and node.text(0).Upper is not node.text(0).Lower
+	isMember = node.Kind is in ("Member", "MethodCall") and node.children.Length > 0
 	isMember and isNamed and node.text is not in ("value", "index")
 IsMissing(instance Text, name Text) Boolean
 	Counting.IsMissing("Generics", "number") is false
@@ -154,8 +154,8 @@ IsMissing(instance Text, name Text) Boolean
 	FileCheck(TypeInference(KnownTypes.Options, NoScopes), "Text").IsMissing("Settings", "Parsed") is false
 	Listing.IsMissing("Generic", "number") is false and Listing.IsMissing("List(Text, Number)", "Key") is false
 	Boxing.IsMissing("Box", "first") is false
-	let types = inference.types
-	let isChecked = types.IsKnown(types.BaseName(instance)) and instance is not in ("Generic", "Generics")
+	types = inference.types
+	isChecked = types.IsKnown(types.BaseName(instance)) and instance is not in ("Generic", "Generics")
 	isChecked and types.DeclaredType(instance, name, 3) is "" and types.MemberType(instance, name) is "Unknown"
 ValueNames(scope Scope) Texts
 	FileCheck(NoInference, ("N", "R")).ValueNames(NoScope).Length is 0
@@ -191,7 +191,7 @@ Unimplemented(path Text, lines Texts) Texts
 	Counting.Unimplemented("A.strict", ("from", "\tA(2) is A(2)")).Length is 0
 	Counting.Unimplemented("A.strict", ("Twice(number Number) Number", "\tA(3).Twice(2) is 6")).Length is 1
 	Counting.Unimplemented("A.strict", ("Run", "\t1", "", "\t2")).Length is 0
-	let typeName = Path(path).FileName.RemoveExtension.text
+	typeName = Path(path).FileName.RemoveExtension.text
 	for lines
 		if value.StartsWith("\t") is false and IsUnimplemented(lines, index, typeName)
 			ResolveCheck.Located(path, index + 1, "ImplementationNotFound: " + Tokenizer(value).Tokens.First)
@@ -199,14 +199,14 @@ IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
 	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) > 0 is true"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tA.Add(1) is 1"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tother + 1"), 0, "A") is false
-	let lastLine = LastLine(lines, header)
+	lastLine = LastLine(lines, header)
 	if lastLine is header or lines(header) is in ("from", "") or TypeShape(lines).IsMemberLine(lines(header))
 		return false
-	let last = lines(lastLine).Trim
-	let called = lines(header).StartsWith("from") then typeName else Tokenizer(lines(header)).Tokens.First
-	let isComparison = last.IndexOf(" is ") > 0 or last.IndexOf(" < ") > 0 or last.IndexOf(" > ") > 0
-	let isCalled = last.StartsWith(called + "(") or last.StartsWith(called + " ")
-	let isInstance = last.StartsWith(typeName + "(") and last.IndexOf(")." + called) > 0
+	last = lines(lastLine).Trim
+	called = lines(header).StartsWith("from") then typeName else Tokenizer(lines(header)).Tokens.First
+	isComparison = last.IndexOf(" is ") > 0 or last.IndexOf(" < ") > 0 or last.IndexOf(" > ") > 0
+	isCalled = last.StartsWith(called + "(") or last.StartsWith(called + " ")
+	isInstance = last.StartsWith(typeName + "(") and last.IndexOf(")." + called) > 0
 	isComparison and (isCalled or isInstance or last.StartsWith(typeName + "." + called))
 LastLine(lines Texts, header Number) Number
 	Counting.IsUnimplemented(List(Text) + "Add(1) is 2", 0, "A") is false

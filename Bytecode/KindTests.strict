@@ -11,11 +11,11 @@ IsRuntime(node SyntaxNode, block CodeBlock) Boolean
 		return false
 	if OperatorCodegen(values).IsTypeTest(node.children.Last, block) is false
 		return false
-	let type = values.TypeOf(node.children(0), block)
+	type = values.TypeOf(node.children(0), block)
 	type is "Generic" or node.children.Last.text is in Alternatives(type)
 Alternatives(type Text) Texts
 	Plain.Alternatives("B or Text") is ("B", "Text") and Plain.Alternatives("B").Length is 0
-	let names = type.Split(" or ")
+	names = type.Split(" or ")
 	names.Length > 1 then names else List(Text)
 Tested(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Tested(IsB, Mixed).instructions.Last.kind is InstructionType.OfType
@@ -23,10 +23,10 @@ Tested(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Tested(IsB, Mixed).instructions(1) is InstructionEntry.LoadText(1, "B")
 	Plain.Tested(SyntaxNode("Binary", "is not", IsB.children), Mixed).instructions.Last.texts(1) is "not"
 	if node.text is "is not"
-		let tested = SyntaxNode("Binary", "is", node.children)
+		tested = SyntaxNode("Binary", "is", node.children)
 		return values.Expression(SyntaxNode("Not", "not", List(SyntaxNode) + tested), block)
-	let left = values.Expression(node.children(0), block)
-	let name = values.inference.types.BaseName(node.children.Last.text)
-	let wanted = left.Load(InstructionEntry.LoadText(left.register, name))
-	let named = (List(Text) + name) + Alternatives(values.TypeOf(node.children(0), block))
+	left = values.Expression(node.children(0), block)
+	name = values.inference.types.BaseName(node.children.Last.text)
+	wanted = left.Load(InstructionEntry.LoadText(left.register, name))
+	named = (List(Text) + name) + Alternatives(values.TypeOf(node.children(0), block))
 	wanted.Load(InstructionEntry(InstructionType.OfType, named, (3, left.Result, wanted.Result, wanted.register)))

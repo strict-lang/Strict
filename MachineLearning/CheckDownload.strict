@@ -18,8 +18,8 @@ constant ClientCheckA = ("	if (res.exitCode is 0) or (\"download failed\" is not
 constant ClientCheckB = ("	logger.Log(\"MarkovText reports the download failure without publishing a partial corpus\")", "	0")
 constant ClientHelper = ("Waited(portFile Text)", "	for 200", "		if File(portFile).Exists", "			return 0", "		Process.Wait(0.05)")
 Run(arguments Texts) Number
-	let folder = "Examples/DownloadCheck" + 1000000.Random.Floor
-	let result = Checked(folder, "native" is in arguments)
+	folder = "Examples/DownloadCheck" + 1000000.Random.Floor
+	result = Checked(folder, "native" is in arguments)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Checked(folder Text, isNative Boolean) slow
@@ -27,10 +27,10 @@ Checked(folder Text, isNative Boolean) slow
 		return Error("DirectoryNotCreated")
 	File(folder + "/Server.strict").Write(ServerLines)
 	File(folder + "/Client.strict").Write(ClientLines)
-	let commands = ("run " + folder + "/Server.strict " + folder + "/port.txt", ClientArgs(folder, isNative))
-	let results = Process.RunTools("strict", commands, ToolSeconds)
+	commands = ("run " + folder + "/Server.strict " + folder + "/port.txt", ClientArgs(folder, isNative))
+	results = Process.RunTools("strict", commands, ToolSeconds)
 	if results.First.exitCode is not 0 or results.Last.exitCode is not 0
-		let err = results.First.Output + results.First.error + " | " + results.Last.Output + results.Last.error
+		err = results.First.Output + results.First.error + " | " + results.Last.Output + results.Last.error
 		return Error("DownloadCheckFailed: " + err)
 	logger.Log(results.Last.Output.Trim)
 ClientArgs(folder Text, isNative Boolean) Text
@@ -46,6 +46,6 @@ ReplyByteTexts Texts
 	for ByteEncoder.Empty.UnicodeBytes(ReplyText)
 		value to Number to Text
 ClientLines Texts
-	let runs = ClientBuildA + ClientBuildB + ClientRunA + ClientRunB + ClientCheckA + ClientCheckB + ClientHelper
+	runs = ClientBuildA + ClientBuildB + ClientRunA + ClientRunB + ClientCheckA + ClientCheckB + ClientHelper
 	for ClientHead + ClientPatch + ClientWrite + ClientSave + runs
 		value.Replace("SRC", SourcePath).Replace("URL", OriginalUrl).Replace("DATA", OriginalData)

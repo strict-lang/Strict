@@ -14,10 +14,10 @@ Narrowed(condition SyntaxNode, scope Scope, methods Scope) Scope
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Literal, NumberA, NumberA) is NumberA
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Called, NumberA, NumberA) is NumberA
 	ErrorNarrowing(MethodBodies.NoInference).Narrowed(IsNumber, MixedA, MixedA).TypeOf("a") is "Number"
-	let isChecked = condition.Kind is "Binary" and condition.text is "is" and condition.children(0).Kind is "Identifier"
-	let isError = isChecked and inference.TypeOf(condition.children(1), scope, methods) is "Error"
-	let tested = isChecked then condition.children(1).text else ""
-	let checkedType = isChecked then inference.TypeOf(condition.children(0), scope, methods) else ""
-	let isAlternative = checkedType.IndexOf(" or ") > 0 and tested is in checkedType.Split(" or ")
-	let narrowed = isError then "Error" else isAlternative then tested else ""
+	isChecked = condition.Kind is "Binary" and condition.text is "is" and condition.children(0).Kind is "Identifier"
+	isError = isChecked and inference.TypeOf(condition.children(1), scope, methods) is "Error"
+	tested = isChecked then condition.children(1).text else ""
+	checkedType = isChecked then inference.TypeOf(condition.children(0), scope, methods) else ""
+	isAlternative = checkedType.IndexOf(" or ") > 0 and tested is in checkedType.Split(" or ")
+	narrowed = isError then "Error" else isAlternative then tested else ""
 	narrowed is "" then scope else scope.With(condition.children(0).text, narrowed)

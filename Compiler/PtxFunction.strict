@@ -11,11 +11,11 @@ Library Text
 	Kernel.Library is "H3Block" and Helper.Library is "Strict"
 	PtxFunction("List_Number__Slice_2_gpu4s", KernelLines).Library is "List_Number"
 	PtxFunction("Convrot_Butterfly_3_devicesx_at_step", HelperLines).Library is "Convrot"
-	let parts = name.Split("_")
-	let marks = Marks(parts)
+	parts = name.Split("_")
+	marks = Marks(parts)
 	if marks.Length is 0 or name.StartsWith("strict_")
 		return "Strict"
-	let joined = Text.Combine(parts.Slice(0, marks.First - 2), "_")
+	joined = Text.Combine(parts.Slice(0, marks.First - 2), "_")
 	joined.EndsWith("_") then joined.Substring(0, joined.Length - 1) else joined
 Marks(parts Texts) Numbers
 	Kernel.Marks(("H3Block", "Gated", "5", "gpu7s")) is List(Number) + 3
@@ -34,7 +34,7 @@ Body Text
 	Text.Combine(lines, "\n") + "\n"
 Needs Texts
 	Kernel.Needs is ("Attention", "Strict") and Helper.Needs.Length is 0
-	let own = Library
+	own = Library
 	for Calls
 		if PtxFunction(value, lines).Library is not own
 			PtxFunction(value, lines).Library
@@ -46,6 +46,6 @@ Calls Texts
 Called(line Text) Text
 	Kernel.Called("\tcall.uni (retval0), A_B_1_devices, (param0);") is "A_B_1_devices"
 	Kernel.Called("\tcall.uni strict_x, (param0);") is "strict_x"
-	let rest = line.Substring(line.IndexOf("call.uni ") + 9)
-	let target = rest.Substring(rest.StartsWith("(") then rest.IndexOf("), ") + 3 else 0)
+	rest = line.Substring(line.IndexOf("call.uni ") + 9)
+	target = rest.Substring(rest.StartsWith("(") then rest.IndexOf("), ") + 3 else 0)
 	target.Substring(0, target.IndexOf(","))

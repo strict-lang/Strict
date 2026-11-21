@@ -27,8 +27,8 @@ IsComputed(line Text) Boolean
 	TypeShape("has a").IsComputed("\tNext(add) = add") is false
 	if IsMethodHeader(line) is false
 		return false
-	let tokens = Tokenizer(line).Tokens
-	let assigned = HeaderTokens(tokens).ParametersEnd + 1
+	tokens = Tokenizer(line).Tokens
+	assigned = HeaderTokens(tokens).ParametersEnd + 1
 	assigned < tokens.Length and tokens(assigned) is "="
 IsTrait Boolean
 	TypeShape("Length Number").IsTrait
@@ -55,7 +55,7 @@ MemberScope Scope
 	mutable types = List(Mutable(Text))
 	for lines.Slice(0, MembersEnd)
 		if IsMemberLine(value) and not value.StartsWith("constant ")
-			let header = HeaderTokens(Tokenizer(value).Tokens)
+			header = HeaderTokens(Tokenizer(value).Tokens)
 			names.Add(header.MemberName)
 			types.Add(header.DeclaredType(1))
 	Scope(names, types)
@@ -88,12 +88,12 @@ IsGenericLine(position Number) Boolean
 	TypeShape("mutable value Generic or None").IsGenericLine(0) is false
 	TypeShape("has value Generic or List(Number)").IsGenericLine(0)
 	TypeShape("has items Generics with Length > 0").IsGenericLine(0)
-	let line = lines(position)
-	let mentions = line.IndexOf("Generic") is not -1 or line.IndexOf("generic") is not -1
+	line = lines(position)
+	mentions = line.IndexOf("Generic") is not -1 or line.IndexOf("generic") is not -1
 	if line.StartsWith("has ") or line.StartsWith("mutable ")
-		let words = line.Split(" ")
+		words = line.Split(" ")
 		return mentions and (words.Length < 4 or words(2) is not in ("Generic", "generic") or line.IndexOf("(") is not -1)
-	let hasBody = position + 1 < lines.Length and lines(position + 1).StartsWith("\t")
+	hasBody = position + 1 < lines.Length and lines(position + 1).StartsWith("\t")
 	mentions and line.StartsWith("constant ") is false and hasBody is false
 CallScope(generics Texts) Scope
 	TypeShape("has iterator", "has Start Number").CallScope(List(Text) + "Iterator").TypeOf("from") is "Start"
@@ -101,7 +101,7 @@ CallScope(generics Texts) Scope
 	TypeShape("has Name", "has Value Generic", "has Size = 0").CallScope(List(Text)).TypeOf("from") is "Name,Value,Size"
 	TypeShape("has width Number with value > 0").CallScope(List(Text)).TypeOf(Constrained) is "true"
 	TypeShape("has light Number = 0").CallScope(List(Text)).TypeOf("light default") is "0"
-	let members = MemberScope
+	members = MemberScope
 	Defaults(lines).Of(MethodScope, members, ConstructorNames(members, generics))
 ConstructorNames(members Scope, generics Texts) Texts
 	TypeShape(List(Text)).ConstructorNames(Scope(("a", "b"), ("Generic", "Generics")), List(Text)) is ("a")
@@ -116,9 +116,9 @@ MethodScope Scope
 	mutable names = List(Mutable(Text))
 	mutable types = List(Mutable(Text))
 	for lines
-		let isMethod = IsMethodHeader(value)
+		isMethod = IsMethodHeader(value)
 		if isMethod or value.StartsWith("constant ")
-			let header = HeaderTokens(Tokenizer(value).Tokens)
+			header = HeaderTokens(Tokenizer(value).Tokens)
 			names.Add(isMethod then header.tokens(0) else header.MemberName)
 			types.Add(isMethod then header.ReturnType else header.DeclaredType(1))
 	Scope(names, types)
@@ -137,7 +137,7 @@ EnumValue(position Number) Number
 	TypeShape("constant A = Limit", "constant B").EnumValue(1) is 0
 	mutable next = 0
 	for position
-		let tokens = Tokenizer(lines(index)).Tokens
+		tokens = Tokenizer(lines(index)).Tokens
 		if tokens(0) is "constant" and tokens.Length is 2
 			next = next + 1
 		else if tokens(0) is "constant" and SyntaxParser(tokens).Leaf(tokens(3)).Kind is "Number"
@@ -149,7 +149,7 @@ ConstantText(position Number) Text
 	TypeShape("has a", "has b = 5", "constant C").EnumValue(2) is 0
 	if Tokenizer(lines(position)).Tokens.Length is 2
 		return EnumValue(position) to Text
-	let line = lines(position)
+	line = lines(position)
 	line.Substring(line.IndexOf(" = ") + 3, line.Length - line.IndexOf(" = ") - 3)
 ConstantScope Scope
 	TypeShape("constant A", "constant B = 10", "constant C").ConstantScope.TypeOf("C") is "11"
@@ -161,7 +161,7 @@ UsedTypes Texts
 	mutable own = MemberScope.names + MethodScope.names
 	mutable used = List(Mutable(Text))
 	for lines
-		let trimmed = value.Trim
+		trimmed = value.Trim
 		if trimmed.StartsWith("constant ")
 			own = own + Tokenizer(trimmed).Tokens(1)
 		else if value.StartsWith("\t") or IsComputed(value)

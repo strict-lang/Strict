@@ -7,16 +7,16 @@ FileName Path
 	Path("/dir/file.txt").FileName is Path("file.txt")
 	Path("c:/code/file.txt").FileName is Path("file.txt")
 	Path("noSlash").FileName is Path("noSlash")
-	let separatorIndex = text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator)
+	separatorIndex = text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator)
 	if separatorIndex is -1
 		return Path(text)
-	let fileNameStart = separatorIndex + 1
+	fileNameStart = separatorIndex + 1
 	Path(text.Substring(fileNameStart, text.characters.Length - fileNameStart))
 RemoveExtension Path
 	Path("file.txt").RemoveExtension is Path("file")
 	Path("noExt").RemoveExtension is Path("noExt")
 	Path("./Compiler/NativeCompiler").RemoveExtension is Path("./Compiler/NativeCompiler")
-	let extensionSeparatorIndex = text.LastIndexOf(ExtensionSeparator)
+	extensionSeparatorIndex = text.LastIndexOf(ExtensionSeparator)
 	if extensionSeparatorIndex < text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator) + 1
 		return Path(text)
 	Path(text.Substring(0, extensionSeparatorIndex))
@@ -29,5 +29,5 @@ PathOnly Path
 	Path("/dir/file.txt").PathOnly is Path("/dir")
 	Path("noSlash").PathOnly is Path("")
 	Path("dir\\sub\\file.txt").PathOnly is Path("dir\\sub")
-	let separatorIndex = text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator)
+	separatorIndex = text.Replace("\\", PathSeparator).LastIndexOf(PathSeparator)
 	separatorIndex is -1 then Path("") else Path(text.Substring(0, separatorIndex))

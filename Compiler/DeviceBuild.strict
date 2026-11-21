@@ -14,23 +14,23 @@ constant Doubling = MlirGpu.Module(List(MlirFunction) + MlirGpu.Doubling.functio
 Ptx(base Text, isTiling = false, kept = "") Texts
 	Missing.Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Ptx("Compiler/output/missing").First.StartsWith("mlir-opt failed")
-	let lowered = tools.Lowered(base + ".gpu", kept)
+	lowered = tools.Lowered(base + ".gpu", kept)
 	if tools.platform is Platform.MacOS
 		return List(Text) + (lowered is "" then MetalBuild(tools).Source(base) else lowered)
 	if lowered is not ""
 		return List(Text) + lowered
-	let compiled = Compiled(base, isTiling then ("sm_80", "sm_75") else List(Text) + "sm_75")
+	compiled = Compiled(base, isTiling then ("sm_80", "sm_75") else List(Text) + "sm_75")
 	compiled.Last.StartsWith("//") then compiled else List(Text) + compiled.Last
 Compiled(base Text, targets Texts) Texts
 	Missing.Compiled("Compiler/output/missing", List(Text) + "sm_75").First.StartsWith("clang failed")
 	Missing.Compiled("Compiler/output/missing", ("sm_80", "sm_75")).Length is 2
 	mutable arguments = List(Mutable(Text))
 	for targets
-		let output = tools.Quoted(base + "." + value + ".ptx")
+		output = tools.Quoted(base + "." + value + ".ptx")
 		arguments.Add(Nvptx + value + " " + tools.Quoted(base + ".gpu.ll") + " -o " + output)
-	let phase = "GPU PTX " + Path(base).FileName.text + " (" + Text.Combine(targets, ", ") + ")"
+	phase = "GPU PTX " + Path(base).FileName.text + " (" + Text.Combine(targets, ", ") + ")"
 	for ToolRunner(tools.Located("clang")).ExecuteAll(arguments, phase)
-		let output = base + "." + targets(index) + ".ptx"
+		output = base + "." + targets(index) + ".ptx"
 		value.Failed then "clang failed: " + value.error else Text.Combine(File(output).ReadLines, "\n")
 Combined(device Text, runtimes Texts, target = "Nvidia") Text
 	Local.Combined("module {\n}", Without).IndexOf("@strict_device_element(") > 0
@@ -39,37 +39,37 @@ Combined(device Text, runtimes Texts, target = "Nvidia") Text
 	Local.Combined("module {\n}", Attending).IndexOf("@strict_device_attention(") > 0
 	Local.Combined("module {\n}", Attending).IndexOf("@strict_gpu_run(") is -1
 	Local.Combined("module {\n}", Without).IndexOf("%widthRow = arith.minui %at, %count : i64") > 0
-	let batched = device.IndexOf(MlirTokens.Marker) >= 0 then List(Text) + "Tokens" else List(Text)
+	batched = device.IndexOf(MlirTokens.Marker) >= 0 then List(Text) + "Tokens" else List(Text)
 	device.Substring(0, device.Length - 1) + Runtime(("Device", target) + batched + runtimes) + "\n}"
 Amd(device Text, runtimes Texts) Text
 	Local.Amd("module {\n}", Without).IndexOf("llvm.amdgcn.workitem.id.x") > 0
 	Local.Amd("module {\n}", Without).IndexOf("nvvm.kernel") is -1
 	Local.Amd("module {\n" + MlirTokens.Marker + "\n}", Attending).IndexOf("{rocdl.kernel, nvvm.maxntid") > 0
 	Local.Amd("module {\n}", Attending).IndexOf("llvm.nvvm.") is -1
-	let combined = Combined(device, runtimes, "Amd")
+	combined = Combined(device, runtimes, "Amd")
 	combined.Replace("{nvvm.kernel", "{rocdl.kernel").Replace("nvptx64-nvidia-cuda", "amdgcn-amd-amdhsa")
 Built(base Text, device Text, runtimes Texts) Texts
 	Local.Built(Kernels, "module {\n  x\n}", List(Text)).First.StartsWith("mlir-opt failed")
 	Local.Built(Doubled, Doubling, Without).First.IndexOf(" .entry strict_device_quantize(") is -1
-	let amd = Hsaco(base, device, runtimes)
+	amd = Hsaco(base, device, runtimes)
 	if amd is not ""
 		return List(Text) + amd
-	let isTiling = device.IndexOf(MlirTokens.Marker) >= 0 or "Attention" is in runtimes
-	let kept = tools.platform is Platform.MacOS then "" else Text.Combine(MlirGpu.Exported(device), ",")
-	let program = PtxCache(base).Built(Combined(device, runtimes), isTiling, DeviceBuild(tools), kept)
+	isTiling = device.IndexOf(MlirTokens.Marker) >= 0 or "Attention" is in runtimes
+	kept = tools.platform is Platform.MacOS then "" else Text.Combine(MlirGpu.Exported(device), ",")
+	program = PtxCache(base).Built(Combined(device, runtimes), isTiling, DeviceBuild(tools), kept)
 	if kept is "" or program.First.StartsWith("//") is false
 		return program
-	let shared = Shared(base, device, runtimes, isTiling)
+	shared = Shared(base, device, runtimes, isTiling)
 	shared.First.StartsWith("//") then program else shared
 Shared(base Text, device Text, runtimes Texts, isTiling Boolean) Texts
 	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf(" .entry strict_device_quantize(") > 0
 	Local.Shared(Doubled, Doubling, Without, false).First.IndexOf("Rows_Doubled") is -1
-	let header = device.Substring(0, device.IndexOf("\n  ") + 1) + (isTiling then MlirTokens.Marker + "\n}" else "}")
+	header = device.Substring(0, device.IndexOf("\n  ") + 1) + (isTiling then MlirTokens.Marker + "\n}" else "}")
 	PtxCache(base + ".runtime").Shared(Combined(header, runtimes), isTiling, DeviceBuild(tools, isShipped))
 Hsaco(base Text, device Text, runtimes Texts) Text
 	DeviceBuild(Toolchain(Platform.MacOS, ".")).Hsaco(Kernels, "module {\n}", List(Text)) is ""
 	File(Kernels + ".hsaco").Exists is false
-	let targets = Targets
+	targets = Targets
 	if targets.Length is 0
 		File(base + ".hsaco").Delete
 		return ""
@@ -80,48 +80,48 @@ Targets Texts
 	Local.HasAmdDriver or Local.Targets.Length is 0
 	if tools.platform is Platform.MacOS or HasAmdDriver is false
 		return List(Text)
-	let found = ToolRunner(tools.Located("amdgpu-arch")).Execute("")
+	found = ToolRunner(tools.Located("amdgpu-arch")).Execute("")
 	found.Failed or found.Output.Trim is "" then List(Text) else found.Output.Trim.Lines.Unique
 HasAmdDriver Boolean
 	Missing.HasAmdDriver is Local.HasAmdDriver
-	let folder = Process.Variable("SystemRoot") + "/System32"
+	folder = Process.Variable("SystemRoot") + "/System32"
 	ToolRunner.IsWindows then Directory.Files(folder, "amdhip64*.dll").Length > 0 else Directory.Exists("/sys/class/kfd")
 AmdCompiled(base Text, targets Texts) Text
 	Missing.AmdCompiled("Compiler/output/missing", "gfx803").StartsWith("mlir-opt failed")
-	let lowered = tools.Lowered(base + ".amd")
+	lowered = tools.Lowered(base + ".amd")
 	if lowered is not ""
 		return lowered
-	let arguments = Amdgcn + " " + tools.Quoted(base + ".amd.ll") + " -o " + tools.Quoted(base + ".amd.bc")
-	let optimized = ToolRunner(tools.Located("opt")).Execute(arguments)
+	arguments = Amdgcn + " " + tools.Quoted(base + ".amd.ll") + " -o " + tools.Quoted(base + ".amd.bc")
+	optimized = ToolRunner(tools.Located("opt")).Execute(arguments)
 	if optimized.Failed
 		return "opt failed: " + optimized.error
-	let failures = Failures(base, targets)
+	failures = Failures(base, targets)
 	failures.Length > 0 then failures.First else Bundle(base, targets)
 Failures(base Text, targets Texts) Texts
 	Missing.Failures("Compiler/output/missing", ("gfx803", "gfx1100")).Length is 2
 	for targets
-		let failed = AmdTarget(base, value)
+		failed = AmdTarget(base, value)
 		if failed is not ""
 			failed
 AmdTarget(base Text, target Text) Text
 	Missing.AmdTarget("Compiler/output/missing", "gfx803").StartsWith("llc failed")
-	let object = base + "." + target + ".o"
-	let arguments = Amdgcn + CodeObject + target + " " + tools.Quoted(base + ".amd.bc") + " -o " + tools.Quoted(object)
-	let compiled = ToolRunner(tools.Located("llc")).Execute(arguments)
+	object = base + "." + target + ".o"
+	arguments = Amdgcn + CodeObject + target + " " + tools.Quoted(base + ".amd.bc") + " -o " + tools.Quoted(object)
+	compiled = ToolRunner(tools.Located("llc")).Execute(arguments)
 	if compiled.Failed
 		return "llc failed: " + compiled.error
-	let linking = "-shared " + tools.Quoted(object) + " -o " + tools.Quoted(base + "." + target)
-	let linked = ToolRunner(tools.Located("ld.lld")).Execute(linking)
+	linking = "-shared " + tools.Quoted(object) + " -o " + tools.Quoted(base + "." + target)
+	linked = ToolRunner(tools.Located("ld.lld")).Execute(linking)
 	File(object).Delete
 	linked.Failed then "ld.lld failed: " + linked.error else ""
 Bundle(base Text, targets Texts) Text
 	Missing.Bundle("Compiler/output/missing", "gfx803").StartsWith("clang-offload-bundler failed")
 	File(base + ".host").Write("")
-	let triples = "-type=o -targets=host-x86_64-unknown-linux-gnu," + Text.Combine(Bundled(targets, AmdTriple, ""), ",")
-	let objects = Text.Combine(Bundled(targets, " -input=\"" + base + ".", "\""), "")
-	let inputs = " -input=" + tools.Quoted(base + ".host") + objects
-	let output = " -output=" + tools.Quoted(base + ".hsaco")
-	let bundled = ToolRunner(tools.Located("clang-offload-bundler")).Execute(triples + inputs + output)
+	triples = "-type=o -targets=host-x86_64-unknown-linux-gnu," + Text.Combine(Bundled(targets, AmdTriple, ""), ",")
+	objects = Text.Combine(Bundled(targets, " -input=\"" + base + ".", "\""), "")
+	inputs = " -input=" + tools.Quoted(base + ".host") + objects
+	output = " -output=" + tools.Quoted(base + ".hsaco")
+	bundled = ToolRunner(tools.Located("clang-offload-bundler")).Execute(triples + inputs + output)
 	for targets
 		File(base + "." + value).Delete
 	File(base + ".host").Delete
@@ -134,7 +134,7 @@ Runtime(names Texts) Text
 	Local.Runtime(List(Text) + "Tokens").IndexOf("@strict_device_tokens(") > 0
 	mutable combined = ""
 	for names
-		let path = tools.root + "/Compiler/NativeRuntime" + value + ".mlir"
+		path = tools.root + "/Compiler/NativeRuntime" + value + ".mlir"
 		combined = combined + "\n" + Text.Combine(File(path).ReadLines, "\n")
 	combined
 Embedded(host Text, ptx Texts, base Text) Text
@@ -146,19 +146,19 @@ Embedded(host Text, ptx Texts, base Text) Text
 		return Referenced(host, base, "")
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
-	let ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
-	let written = PtxCache(base).IsWritten(ptx, ending) or PtxCache(base).Written(ptx, ending)
-	let failure = written then CubinBuild(tools, isShipped).Fatbin(base) else "could not write " + base + ending
+	ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
+	written = PtxCache(base).IsWritten(ptx, ending) or PtxCache(base).Written(ptx, ending)
+	failure = written then CubinBuild(tools, isShipped).Fatbin(base) else "could not write " + base + ending
 	failure is "" then Referenced(host, base, ptx.First) else "GPU kernels failed: " + failure
 Referenced(host Text, base Text, newer Text) Text
 	Missing.Referenced("module {\n}", "A", "// a").EndsWith("hash:A\\001446433\\00\") : !llvm.array<15 x i8>\n}")
 	Missing.Referenced("module {\n}", "A", "// abc").EndsWith("hash:A\\0026501\\00\") : !llvm.array<13 x i8>\n}")
 	PtxCache("Compiler/output/Shared.runtime").Remembered("module {\n}", ("// b", "")) is ("// b", "")
 	Missing.Referenced("module {\n}", "Compiler/output/Shared", "// a").IndexOf("hash:Shared\\007868034\\00") > 0
-	let stem = Path(base).FileName.text
-	let shared = File(base + ".runtime.ptx").Exists then PtxCache(base + ".runtime").Read(".ptx") else ""
+	stem = Path(base).FileName.text
+	shared = File(base + ".runtime.ptx").Exists then PtxCache(base + ".runtime").Read(".ptx") else ""
 	constant hashModulus = 9999991
-	let hash = "" + (HashCode(newer + shared).number % hashModulus)
-	let global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"hash:" + stem + "\\00" + hash + "\\00\")"
-	let declared = global + " : !llvm.array<" + (stem.Length + hash.Length + 7) + " x i8>\n}"
+	hash = "" + (HashCode(newer + shared).number % hashModulus)
+	global = "\n  llvm.mlir.global internal constant @strict_gpu_ptx(\"hash:" + stem + "\\00" + hash + "\\00\")"
+	declared = global + " : !llvm.array<" + (stem.Length + hash.Length + 7) + " x i8>\n}"
 	host.Substring(0, host.Length - 1) + declared

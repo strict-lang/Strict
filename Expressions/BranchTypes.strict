@@ -28,11 +28,11 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(Compared, Counted, Counted) is "" and Sizing.Issue(Fallback, Counted, Counted) is ""
 	if node.Kind is not "Binary" or node.text is not "else" or node.children(0).text is not "then"
 		return ""
-	let thenType = Then(node.children(0), scope, current)
-	let elseType = inference.TypeOf(node.children(1), scope, current)
-	let checks = ArgumentTypes(inference)
-	let isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType) or IsSplit(thenType, elseType)
-	let message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
+	thenType = Then(node.children(0), scope, current)
+	elseType = inference.TypeOf(node.children(1), scope, current)
+	checks = ArgumentTypes(inference)
+	isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType) or IsSplit(thenType, elseType)
+	message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
 	thenType is not in Unchecked and elseType is not in Unchecked and isMixed then message else ""
 IsSplit(first Text, second Text) Boolean
 	Coupled.IsSplit("Couple(Text, Number)", "Couple(Number, Number)")
@@ -40,9 +40,9 @@ IsSplit(first Text, second Text) Boolean
 	Coupled.Issue(Paired, Counted, Counted).EndsWith(" gives a Couple(Text, Number) or a Couple(Number, Number)")
 	(Coupled.IsSplit("Pair(Text)", "Pair(Number)") or Coupled.IsSplit("Couple(Text)", "Couple(Text)")) is false
 	Coupled.IsSplit("Couple(Text, Number)", "Pair(Number)") is false
-	let types = inference.types
-	let isOpen = "Generic" is in types.MembersOf(types.BaseName(first)).types
-	let isArgued = first.IndexOf("(") > 0 and second.IndexOf("(") > 0
+	types = inference.types
+	isOpen = "Generic" is in types.MembersOf(types.BaseName(first)).types
+	isArgued = first.IndexOf("(") > 0 and second.IndexOf("(") > 0
 	isOpen and isArgued and first is not second and types.BaseName(first) is types.BaseName(second)
 Then(branch SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Then(Handed.children(0), Counted, Counted) is "Error"
@@ -57,5 +57,5 @@ IsHanded(branch SyntaxNode) Boolean
 	Sizing.IsHanded(Mixed.children(0)) is false
 	Sizing.IsHanded(Kept.children(0)) is false
 	Sizing.Issue(Handed, Counted, Counted) is ""
-	let condition = branch.children(0)
+	condition = branch.children(0)
 	condition.text is "is" and condition.children.Last.text is "Error" and condition.children(0) is branch.children(1)

@@ -23,7 +23,7 @@ Inlined(body SyntaxNode, start Number) SyntaxNode
 Known(start Number) Texts
 	Definitions(("has count Number", "Add(other Number) Number", "\tother")).Known(2) is ("count", "other", "value")
 	Definitions(("has count Number", "Add(other Number) Number")).Known(0) is ("count", "value")
-	let header = start > 0 then HeaderTokens(Tokenizer(lines(start - 1)).Tokens).ParameterNames else List(Text)
+	header = start > 0 then HeaderTokens(Tokenizer(lines(start - 1)).Tokens).ParameterNames else List(Text)
 	TypeShape(lines).MemberScope.names + header + "value"
 Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	Positions.Expanded(Body, ("value", "position"), List(SyntaxNode)).children(1) to Text is "position + 1"
@@ -31,7 +31,7 @@ Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 	mutable computed = definitions
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
-		let statement = Used(Substituted(Defined(value, names, computed), computed), body, index)
+		statement = Used(Substituted(Defined(value, names, computed), computed), body, index)
 		computed = statement.Kind is "Computed" then computed + statement else computed
 		if statement.Kind is not "Computed"
 			statements.Add(Nested(statement, names, computed))
@@ -45,17 +45,26 @@ Nested(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 		children.Add(value.Kind is "Body" then Expanded(value, known, definitions) else value)
 	SyntaxNode(statement.Kind, statement.text, children, statement.line)
 Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
-	Positions.Defined(Assigned, List(Text), List(SyntaxNode)).Kind is "Computed"
+	Positions.Defined(Assigned, List(Text), List(SyntaxNode)).Kind is "Declaration" and Positions.Defined(Assigned, List(Text), List(SyntaxNode)).text is "let next"
 	Positions.Defined(Assigned, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
 	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
 	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).text.StartsWith("ComputedNameMustNotBeAssigned")
 	Positions.Defined(SyntaxNode("Reassignment", "", Next.children), List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
+	if statement.Kind is "Declaration" and statement.text.StartsWith("let ")
+		name = Tokenizer(statement.text).Tokens.Last
+		if name is in Names(definitions)
+			return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + name, List(SyntaxNode), statement.line)
+		if name is in known
+			return SyntaxNode("Reassignment", "", (SyntaxNode("Identifier", name, List(SyntaxNode), statement.line), statement.children(0)), statement.line)
+		return statement
 	if statement.Kind is not "Reassignment"
 		return statement
-	let target = statement.children(0)
+	target = statement.children(0)
 	if target.Kind is in ("Identifier", "Call") and target.text is in Names(definitions)
 		return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + target.text, List(SyntaxNode), statement.line)
-	let isNew = target.Kind is in ("Identifier", "Call") and target.text is not in known and AreNames(target.children)
+	if target.Kind is "Identifier" and target.text is not in known
+		return SyntaxNode("Declaration", "let " + target.text, List(SyntaxNode) + statement.children(1), statement.line)
+	isNew = target.Kind is "Call" and target.text is not in known and AreNames(target.children)
 	isNew then SyntaxNode("Computed", target.text, statement.children, statement.line) else statement
 Used(statement SyntaxNode, body SyntaxNode, position Number) SyntaxNode
 	Positions.Used(Computed, Body, 1) is Computed
@@ -63,7 +72,7 @@ Used(statement SyntaxNode, body SyntaxNode, position Number) SyntaxNode
 	Positions.Used(Computed, Body, 4).Kind is "Invalid"
 	Positions.Used(Computed, Unused, 1).text is "UnusedComputedNameMustBeRemoved: next"
 	Positions.Used(Body.children(0), Body, 4) is Body.children(0)
-	let later = body.children.Slice(position + 1, body.children.Length - position - 1)
+	later = body.children.Slice(position + 1, body.children.Length - position - 1)
 	if statement.Kind is not "Computed" or IsUsed(statement.text, later)
 		return statement
 	SyntaxNode("Invalid", "UnusedComputedNameMustBeRemoved: " + statement.text, List(SyntaxNode), statement.line)
@@ -85,7 +94,7 @@ Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
 		children.Add(value.Kind is "Body" then value else Substituted(value, definitions))
 	for definitions
 		if node.Kind is in ("Identifier", "Call") and node.text is value.text
-			let applied = Applied(value, children)
+			applied = Applied(value, children)
 			return SyntaxNode(applied.Kind, applied.text, applied.children, node.line)
 	SyntaxNode(node.Kind, node.text, children, node.line)
 Applied(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
@@ -95,9 +104,9 @@ Applied(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
 	Positions.Applied(Double, List(SyntaxNode)) to Text is "x * 2"
 	mutable bound = List(Mutable(SyntaxNode))
 	for definition.children(0).children
-		let isDefault = value.Kind is "Reassignment"
-		let name = isDefault then value.children(0) else value
-		let argument = index < arguments.Length then arguments(index) else isDefault then value.children(1) else value
+		isDefault = value.Kind is "Reassignment"
+		name = isDefault then value.children(0) else value
+		argument = index < arguments.Length then arguments(index) else isDefault then value.children(1) else value
 		bound.Add(SyntaxNode("", name.text, (name, argument)))
 	Substituted(definition.children(1), bound)
 Declared(statement SyntaxNode) Texts

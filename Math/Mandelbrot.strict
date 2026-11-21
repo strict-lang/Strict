@@ -9,10 +9,10 @@ Interior(real Number, imaginary Number) Boolean
 	Interior(-1.25, 0) is false
 	Interior(0, 0.5) and Interior(-1.1, 0)
 	(Interior(0.4, 0.1) or Interior(0.25, 0) or Interior(-1, 0.3)) is false
-	let vertical = imaginary * imaginary
-	let shifted = real - CardioidCenter
-	let radius = shifted * shifted + vertical
-	let cardioid = radius * (radius + shifted) < CardioidFactor * vertical - 0.00000000000001
+	vertical = imaginary * imaginary
+	shifted = real - CardioidCenter
+	radius = shifted * shifted + vertical
+	cardioid = radius * (radius + shifted) < CardioidFactor * vertical - 0.00000000000001
 	cardioid or (real + 1) * (real + 1) + vertical < BulbRadiusSquared - 0.00000000000001
 Orbit(start ComplexDoubleDouble, seed ComplexDoubleDouble, limit Number) List(Complex)
 	Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(1, 0)), 8).Length is 4
@@ -48,8 +48,8 @@ DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
 DiskError(orbit List(Complex), position Number, offset Complex, previous Number) Number
 	DiskError(Complex.Zero, 0, Complex(1, 0), 0) > 1.000000000000003
 	DiskError(Complex.Zero, 0, Complex.Zero, 0) > 0 and DiskError(Complex.Zero, 0, Complex.Zero, 1) > 1
-	let bound = offset.Length * RoundingGrowth
-	let factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
+	bound = offset.Length * RoundingGrowth
+	factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
 	(factor * previous + bound * bound) * RoundingGrowth + bound * 0.000000000000001 + 0.00000000000000000000000000001
 Beyond(squared DoubleDouble) Boolean
 	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))

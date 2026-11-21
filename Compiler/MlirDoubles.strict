@@ -22,8 +22,8 @@ Fails(inspected MlirFunction, first Number, limit Number, depth Number) Boolean
 	Squaring.Fails(Squaring.function, 3, 7, 0)
 	Tabling.Fails(Tabling.function, 3, 7, 0) is false
 	for Range(first, limit)
-		let entry = inspected.method.instructions(value)
-		let isLogarithm = entry.kind is InstructionType.Invoke and entry.texts(1) is "Logarithm"
+		entry = inspected.method.instructions(value)
+		isLogarithm = entry.kind is InstructionType.Invoke and entry.texts(1) is "Logarithm"
 		if entry.kind is InstructionType.Power or isLogarithm
 			return true
 		if depth < 3 and entry.kind is InstructionType.Invoke
@@ -36,7 +36,7 @@ Kept Boolean
 	Squaring.Kept is false
 	MlirDoubles(MlirGpu.Doubling.function, 2).Kept is false
 	MlirDoubles(MlirLoops.Counting.function, 0).Kept is false
-	let isPlain = Uses(InstructionType.Invoke) is false and Uses(InstructionType.Power) is false
+	isPlain = Uses(InstructionType.Invoke) is false and Uses(InstructionType.Power) is false
 	MlirLoops(function, position).IsCollecting and IsListed is false and isPlain
 IsListed Boolean
 	MlirDoubles(MlirGpu.Doubling.function, 2).IsListed
@@ -59,12 +59,12 @@ Format Number
 	Squaring.Format is 0
 	MlirDoubles(MlirLayout.Halves, 2).Format is 17
 	MlirDoubles(WgslShader.Scaled.function, 2).Format is 32
-	let packed = MlirLayout(function).Packed(position)
+	packed = MlirLayout(function).Packed(position)
 	packed is 0 and IsSingle then Number.SingleBits else packed is 0 and Kept then Number.DoubleBits else packed
 IsSingle Boolean
 	MlirDoubles(WgslShader.Scaled.function, 2).IsSingle
 	Tabling.IsSingle is false
-	let free = MlirGpuCheck(function, position).Free
+	free = MlirGpuCheck(function, position).Free
 	for function.type.members
 		if value.Bits is Number.SingleBits and value.Name is in free
 			return true

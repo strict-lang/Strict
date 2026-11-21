@@ -5,7 +5,7 @@ constant Fixed = RepeatedCalls(("Fixed Number", "	Fixed is 1", "	mutable text = 
 Issues List(ValidationIssue)
 	Filed.Issues.First to Text is "SameCallTwiceMustBeLet: File(path), keep it in a let"
 	Filed.Issues.First.Line is 3 and Typed.Issues.Length is 0
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if shape.IsMethodHeader(value)
@@ -13,14 +13,14 @@ Issues List(ValidationIssue)
 	issues
 Repeated(header Number) List(ValidationIssue)
 	Filed.Repeated(0).Length is 1 and Typed.Repeated(0).Length is 0 and Fixed.Repeated(0).Length is 0
-	let code = ErrorDrops(lines).Code(header)
-	let start = FileCheck.LastLine(lines, header) - code.Length + 2
-	let changing = Changing(code)
+	code = ErrorDrops(lines).Code(header)
+	start = FileCheck.LastLine(lines, header) - code.Length + 2
+	changing = Changing(code)
 	mutable seen = Dictionary(Text, Boolean)
 	mutable issues = List(Mutable(ValidationIssue))
 	for code
-		let line = start + index
-		let calls = Calls(Tokenizer(value).Tokens)
+		line = start + index
+		calls = Calls(Tokenizer(value).Tokens)
 		for calls - Unsteady(calls, changing)
 			if value is in seen and seen(value)
 				issues.Add(ValidationIssue("SameCallTwiceMustBeLet", value + ", keep it in a let", line))
@@ -50,10 +50,10 @@ Calls(tokens Texts) Texts
 	Filed.Calls(("Path", "(", "value", ")")).Length is 0 and Filed.Calls(("texts", "(", "0", ")")).Length is 0
 	Filed.Calls(("a", ".", "Round", "(", "1", ")", "+", "b", ".", "Round", "(", "1", ")")) is ("a.Round(1)", "b.Round(1)")
 	for tokens
-		let isCall = index + 1 < tokens.Length and tokens(index + 1) is "(" and IsName(value) and value(0).Upper is value(0)
-		let close = isCall then Close(tokens, index + 1) else -1
-		let inner = close > index + 2 then tokens.Slice(index + 2, close - index - 2) else List(Text)
-		let start = Start(tokens, index)
+		isCall = index + 1 < tokens.Length and tokens(index + 1) is "(" and IsName(value) and value(0).Upper is value(0)
+		close = isCall then Close(tokens, index + 1) else -1
+		inner = close > index + 2 then tokens.Slice(index + 2, close - index - 2) else List(Text)
+		start = Start(tokens, index)
 		if inner.Length > 0 and IsTyped(inner) is false and "value" is not in inner and "index" is not in inner
 			Text.Combine(tokens.Slice(start, close - start + 1), "")
 Start(tokens Texts, at Number) Number

@@ -10,8 +10,8 @@ Decoded(bytes Bytes) Bitmap
 	Ppm.Decoded(Sample).Colors is (Color(1, 2, 3), Color(4, 5, 6))
 	Ppm.Decoded(Sample).Height is 1
 	Ppm.Decoded(Spaced).Colors is (Color(1, 2, 3), Color(4, 5, 6), Color(7, 8, 9), Color(10, 11, 12))
-	let width = Field(bytes, 1)
-	let height = Field(bytes, 2)
+	width = Field(bytes, 1)
+	height = Field(bytes, 2)
 	Bitmap(Size(width, height), Colors(bytes, Start(bytes), width * height), true)
 Colors(bytes Bytes, start Number, count Number) Colors
 	Ppm.Colors(Sample, 11, 2) is (Color(1, 2, 3), Color(4, 5, 6))
@@ -21,14 +21,14 @@ Save(bitmap Bitmap, path Text) slow
 	File(path).Write(Encoded(bitmap))
 Encoded(bitmap Bitmap) Bytes
 	Ppm.Encoded(Ppm.Decoded(Sample)) is Sample
-	let header = Signature + Digits(bitmap.Width) + Character.Space + Digits(bitmap.Height) + MaximumLine
-	let rgb = Rgb(bitmap.Colors)
+	header = Signature + Digits(bitmap.Width) + Character.Space + Digits(bitmap.Height) + MaximumLine
+	rgb = Rgb(bitmap.Colors)
 	for header.Length + rgb.Length
 		index < header.Length then header(index) else rgb(index - header.Length)
 Rgb(colors Colors) Bytes
 	Ppm.Rgb((Color(1, 2, 3), Color(4, 5, 6))) is (1, 2, 3, 4, 5, 6)
 	for colors.Length * 3
-		let color = colors((index / 3).Floor)
+		color = colors((index / 3).Floor)
 		index % 3 is 0 then color.Red else (index % 3 is 1 then color.Green else color.Blue)
 Field(bytes Bytes, number Number) Number
 	Ppm.Field(Sample, 1) is 2
@@ -37,9 +37,9 @@ Field(bytes Bytes, number Number) Number
 	mutable result = 0
 	mutable wasSpace = false
 	for Range(2, Start(bytes))
-		let isSpace = bytes(value) is in Whitespace
+		isSpace = bytes(value) is in Whitespace
 		token = wasSpace and isSpace is false then token + 1 else token
-		let digit = bytes(value) - Character.zeroCharacter
+		digit = bytes(value) - Character.zeroCharacter
 		result = token is number and isSpace is false then result * 10 + digit else result
 		wasSpace = isSpace
 	result
@@ -48,7 +48,7 @@ Start(bytes Bytes) Number
 	mutable token = 0
 	mutable wasSpace = false
 	for Range(2, bytes.Length)
-		let isSpace = bytes(value) is in Whitespace
+		isSpace = bytes(value) is in Whitespace
 		if isSpace and token is 3
 			return value + 1
 		token = wasSpace and isSpace is false then token + 1 else token

@@ -24,25 +24,25 @@ Placed(header Number) List(ValidationIssue)
 	Parked.Placed(0).First.Line is 3 and Parked.Placed(4).Length is 0 and Locking.Placed(1).Length is 0
 	Branched.Placed(0).First to Text is "MethodWithBranchMustHaveTestOrBeIO: Sign, write a test line for each branch"
 	Reading.Placed(0).Length is 0 and TestChecks(("Loaded Number slow", "	if a", "		1", "	2")).Placed(0).Length is 0
-	let name = Tokenizer(lines(header)).Tokens.First
-	let tests = Tests(header)
+	name = Tokenizer(lines(header)).Tokens.First
+	tests = Tests(header)
 	mutable issues = List(Mutable(ValidationIssue))
 	for tests
 		if name is not in Tokenizer(value).Tokens and name is not "from"
 			issues.Add(ValidationIssue("TestMustCallItsOwnMethod", value + Moved, header + index + 2))
-	let isUntested = tests.Length is 0 and IsInputOutput(header, name) is false and IsBranching(header)
-	let untested = ValidationIssue("MethodWithBranchMustHaveTestOrBeIO", name + Branches, header + 1)
+	isUntested = tests.Length is 0 and IsInputOutput(header, name) is false and IsBranching(header)
+	untested = ValidationIssue("MethodWithBranchMustHaveTestOrBeIO", name + Branches, header + 1)
 	isUntested then issues + untested else issues
 IsInputOutput(header Number, name Text) Boolean
 	Reading.IsInputOutput(0, "Sign") and Branched.IsInputOutput(0, "Sign") is false and Branched.IsInputOutput(0, "Run")
-	let marker = Tokenizer(lines(header)).Tokens.Last
+	marker = Tokenizer(lines(header)).Tokens.Last
 	name is "Run" or marker is "slow" or marker is "native" or typeName + "." + name is in reaching
 Tests(header Number) Texts
 	Parked.Tests(0) is ("Half(4) is 2", "Twice(4) is 8") and Branched.Tests(0).Length is 0
-	let last = FileCheck.LastLine(lines, header)
+	last = FileCheck.LastLine(lines, header)
 	mutable tests = List(Mutable(Text))
 	for Range(header + 1, last > header then last else header + 1)
-		let code = lines(value).Trim
+		code = lines(value).Trim
 		if code is "" or Duplicates.IsTest(code) is false
 			return tests
 		tests.Add(code)
@@ -50,7 +50,7 @@ Tests(header Number) Texts
 IsBranching(header Number) Boolean
 	Branched.IsBranching(0) and Parked.IsBranching(4) is false
 	for Range(header + 1, FileCheck.LastLine(lines, header) + 1)
-		let code = lines(value).Trim
+		code = lines(value).Trim
 		if code.StartsWith("if ") or code.StartsWith("for ") or code.IndexOf(" then ") > 0
 			return true
 	false
@@ -59,7 +59,7 @@ Leading(header Number) List(ValidationIssue)
 	(TestChecks(("Run", "\t", "\t1")).Leading(0).Length, TestChecks(List(Text) + "Run").Leading(0).Length) is (0, 0)
 	mutable issues = List(Mutable(ValidationIssue))
 	for Tests(header)
-		let left = value.EndsWith(" is true") then value.Substring(0, value.Length - 8) else ""
+		left = value.EndsWith(" is true") then value.Substring(0, value.Length - 8) else ""
 		if IsCalling(left)
 			issues.Add(ValidationIssue("IsTrueIsNotNeeded", left + Hint, header + index + 2))
 	issues
@@ -67,7 +67,7 @@ IsCalling(left Text) Boolean
 	Locking.IsCalling("Started.Locked.over")
 	Locking.IsCalling("Started.over") is false
 	Locking.IsCalling("(false or true)") is false
-	let tokens = Tokenizer(left).Tokens
+	tokens = Tokenizer(left).Tokens
 	for tokens
 		if IsCallToken(tokens, index)
 			return true
@@ -79,11 +79,11 @@ IsCallToken(tokens Texts, position Number) Boolean
 	Locking.IsCallToken(("A", ".", "Locked"), 2) and Locking.IsCallToken(("A", "+"), 1)
 	(Locking.IsCallToken(("(", "A"), 0) or Locking.IsCallToken(("A", "Locked"), 1)) is false
 	(Locking.IsCallToken(("A", ".", "over"), 2) or Locking.IsCallToken(("A", "+", "Locked", "."), 2)) is false
-	let token = tokens(position)
-	let previous = position > 0 then tokens(position - 1) else " "
-	let first = token(0)
-	let isMethod = position > 1 and tokens(position - 1) is "." and first.Lower is not first
-	let isCall = token is "(" and previous(0).Lower is not previous(0).Upper
+	token = tokens(position)
+	previous = position > 0 then tokens(position - 1) else " "
+	first = token(0)
+	isMethod = position > 1 and tokens(position - 1) is "." and first.Lower is not first
+	isCall = token is "(" and previous(0).Lower is not previous(0).Upper
 	isMethod or isCall or token is in Operators or position is 0 and IsOwnMethod(token)
 IsOwnMethod(name Text) Boolean
 	Locking.IsOwnMethod("Locked")

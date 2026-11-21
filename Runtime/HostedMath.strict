@@ -7,8 +7,8 @@ constant Arccosine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Ratio",
 Measured VmValue
 	HostedMath(Sine).Measured.number is 1
 	HostedMath(Logging).Measured.number is 0
-	let type = TypeEntry.ShortName(call.TypeName)
-	let number = call.Instance.number
+	type = TypeEntry.ShortName(call.TypeName)
+	number = call.Instance.number
 	if type is in ("Number", "Time")
 		return VmValue.OfNumber(type is "Time" then Time.Now else Numbered(number))
 	if type is "Degrees"

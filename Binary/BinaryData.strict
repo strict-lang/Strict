@@ -19,14 +19,14 @@ Int32(at Number) Number
 	Sample.Int32(0) is 4
 	Sample.Int32(4) is -2147287041
 	BinaryData((0, 0, 0, 128)).Int32(0) is -2147483648
-	let unsigned = UInt32(at)
+	unsigned = UInt32(at)
 	unsigned >= Int32SignBit then unsigned - HashCode.UnsignedRange else unsigned
 Int16(at Number) Number
 	Sample.Int16(4) is -1
 	Sample.Int16(6) is -32766
 	Sample.Int16(0) is 4
 	BinaryData((0, 128)).Int16(0) is -32768
-	let unsigned = UInt16(at)
+	unsigned = UInt16(at)
 	unsigned >= Int16SignBit then unsigned - UInt16Range else unsigned
 UInt16(at Number) Number
 	Sample.UInt16(4) is 65535
@@ -42,12 +42,12 @@ Float32(at Number) Number
 	Sample.Float32(0) * 2 ^ 149 is 4 and BinaryData((0, 0, 128, 255)).Float32(0) is -1 / 0
 	BinaryData((0, 0, 128, 127)).Float32(0) is 1 / 0 and BinaryData((1, 0, 128, 127)).Float32(0) is not 1 / 0
 	BinaryData((1, 0, 128, 127)).Float32(0).IsFinite is false and BinaryData((0, 0, 128, 128)).Float32(0) < 0
-	let exponent = (bytes(at + 3) % HighBit) * 2 + (bytes(at + 2) / HighBit).Floor
-	let mantissa = (bytes(at + 2) % HighBit) * UInt16Range + bytes(at + 1) * Byte.Values + bytes(at)
+	exponent = (bytes(at + 3) % HighBit) * 2 + (bytes(at + 2) / HighBit).Floor
+	mantissa = (bytes(at + 2) % HighBit) * UInt16Range + bytes(at + 1) * Byte.Values + bytes(at)
 	if exponent is InfinityExponent
 		return mantissa is 0 then (bytes(at + 3) > HighBit then -1 / 0 else 1 / 0) else 0 / 0
-	let fraction = mantissa / MantissaRange
-	let magnitude = exponent is 0 then mantissa * 2 ^ -SubnormalShift else (1 + fraction) * 2 ^ (exponent - ExponentBias)
+	fraction = mantissa / MantissaRange
+	magnitude = exponent is 0 then mantissa * 2 ^ -SubnormalShift else (1 + fraction) * 2 ^ (exponent - ExponentBias)
 	bytes(at + 3) >= HighBit then -magnitude else magnitude
 Text(at Number) Text
 	Sample.Text(12) is "Hello"

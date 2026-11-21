@@ -12,29 +12,29 @@ Converted(number Text) Texts
 	Converting.Converted("%v") is ConvertedFields + ConvertedIntegers + ConvertedMagnitude + ConvertedExact
 	Converting.Converted("%v").First is "    %nb = llvm.bitcast %v : f64 to i64"
 	Converting.Converted("%v").Last is "    %n_q = arith.extui %nw : i1 to i64"
-	let fields = (Line("b", "llvm.bitcast " + number + " : f64 to i64"), Constant("0", "0"), Constant("1", "1"))
+	fields = (Line("b", "llvm.bitcast " + number + " : f64 to i64"), Constant("0", "0"), Constant("1", "1"))
 	fields + Integers + Magnitude + Exact
 Integers Texts
 	Converting.Integers is ConvertedIntegers
 	Converting.Integers(5) is "    %nm = arith.andi %nb, %nmm : i64"
 	Converting.Integers(8) is "    %nii = arith.select %niz, %niu, %n0 : i64"
-	let exponent = (Constant("52", "52"), Constant("k1", "2047"), Operation("x", "shrui", "b", "52"))
-	let masked = (Operation("k", "andi", "x", "k1"), Constant("mm", "4503599627370495"), Operation("m", "andi", "b", "mm"))
-	let present = (Constant("iu", "4503599627370496"), Operation("iz", "cmpi ne,", "k", "0"))
-	let implicit = Line("ii", "arith.select " + Named("iz") + ", " + Named("iu") + ", " + Named("0") + " : i64")
-	let combined = (implicit, Operation("i", "ori", "m", "ii"), Constant("rr", "1075"), Operation("r", "subi", "rr", "k"))
+	exponent = (Constant("52", "52"), Constant("k1", "2047"), Operation("x", "shrui", "b", "52"))
+	masked = (Operation("k", "andi", "x", "k1"), Constant("mm", "4503599627370495"), Operation("m", "andi", "b", "mm"))
+	present = (Constant("iu", "4503599627370496"), Operation("iz", "cmpi ne,", "k", "0"))
+	implicit = Line("ii", "arith.select " + Named("iz") + ", " + Named("iu") + ", " + Named("0") + " : i64")
+	combined = (implicit, Operation("i", "ori", "m", "ii"), Constant("rr", "1075"), Operation("r", "subi", "rr", "k"))
 	exponent + masked + present + combined
 Magnitude Texts
 	Converting.Magnitude is ConvertedMagnitude
 	Converting.Magnitude.Last is "    %n_e = arith.select %nn, %nc, %nf : i64"
-	let shifted = (Constant("63", "63"), Operation("t", "minui", "r", "63"), Operation("f", "shrui", "i", "t"))
-	let negative = (Operation("n", "cmpi slt,", "b", "0"), Operation("c", "subi", "0", "f"))
+	shifted = (Constant("63", "63"), Operation("t", "minui", "r", "63"), Operation("f", "shrui", "i", "t"))
+	negative = (Operation("n", "cmpi slt,", "b", "0"), Operation("c", "subi", "0", "f"))
 	shifted + negative + Line("_e", "arith.select " + Named("n") + ", " + Named("c") + ", " + Named("f") + " : i64")
 Exact Texts
 	Converting.Exact is ConvertedExact
 	Converting.Exact(1) is "    %ny = arith.subi %nh, %n1 : i64"
 	Converting.Exact.Last is "    %n_q = arith.extui %nw : i1 to i64"
-	let lost = (Operation("h", "shli", "1", "t"), Operation("y", "subi", "h", "1"), Operation("j", "andi", "i", "y"))
+	lost = (Operation("h", "shli", "1", "t"), Operation("y", "subi", "h", "1"), Operation("j", "andi", "i", "y"))
 	lost + Operation("w", "cmpi eq,", "j", "0") + Line("_q", "arith.extui " + Named("w") + " : i1 to i64")
 Operation(result Text, operation Text, left Text, right Text) Text
 	Converting.Operation("k", "andi", "x", "k1") is "    %nk = arith.andi %nx, %nk1 : i64"

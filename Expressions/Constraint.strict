@@ -16,10 +16,10 @@ Rewritten(node SyntaxNode) SyntaxNode
 	Counting.Rewritten(SyntaxNode("Identifier", "value")).text is "count"
 	Counting.Rewritten(SyntaxNode("Identifier", "Twice")).Kind is "Member"
 	if node.Kind is "Identifier"
-		let own = SyntaxNode("Identifier", name)
+		own = SyntaxNode("Identifier", name)
 		if node.text is "value"
 			return own
-		let isOwn = types.MemberType(type, node.text) is not "Unknown"
+		isOwn = types.MemberType(type, node.text) is not "Unknown"
 		return isOwn then SyntaxNode("Member", node.text, List(SyntaxNode) + own) else node
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
@@ -28,16 +28,16 @@ Rewritten(node SyntaxNode) SyntaxNode
 Failure(constraint Text) Text
 	Counting.Failure("value > 0") is "return Error(\"ConstraintNotMet: count with value > 0 is false for \" + count)"
 	Counting.Failure("\"") is "return Error(\"ConstraintNotMet: count with \\\" is false for \" + count)"
-	let escaped = constraint.Replace("\"", "\\\"")
+	escaped = constraint.Replace("\"", "\\\"")
 	"return Error(\"ConstraintNotMet: " + name + " with " + escaped + " is false for \" + " + name + ")"
 Checked(constraint Text, line Number) SyntaxNode
 	Counting.Checked("value > 0", 3).line is 3
 	Counting.Checked("value > 0", 3) to Text is "if count > 0 is false"
 	Counting.Checked("value > 0", 3).children.Last.Kind is "Body"
 	Counting.Checked("value > 0", 3).children.Last.children.Length is 1
-	let check = StatementParser(Tokenizer("if (" + Condition(constraint) + ") is false").Tokens).ParseStatement
-	let failed = StatementParser(Tokenizer(Failure(constraint)).Tokens).ParseStatement
-	let body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode(failed.Kind, failed.text, failed.children, line))
+	check = StatementParser(Tokenizer("if (" + Condition(constraint) + ") is false").Tokens).ParseStatement
+	failed = StatementParser(Tokenizer(Failure(constraint)).Tokens).ParseStatement
+	body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode(failed.Kind, failed.text, failed.children, line))
 	SyntaxNode(check.Kind, check.text, check.children + body, line)
 IsConstrained(lines Texts) Boolean
 	Constraint.IsConstrained(List(Text) + "has width Number with value > 0")
@@ -59,7 +59,7 @@ Kind(lines Texts) Text
 			checked = checked + value
 	if checked.Length is 0
 		return ""
-	let length = checked.Length is 1 and TypeShape(lines).MemberScope.names.Length is 1 then Length(checked.First) else 0
+	length = checked.Length is 1 and TypeShape(lines).MemberScope.names.Length is 1 then Length(checked.First) else 0
 	length > 0 then length to Text else "true"
 Length(line Text) Number
 	Constraint.Length("has numbers with Length is 3 and value.Bits is 32") is 3
@@ -68,8 +68,8 @@ Length(line Text) Number
 	Constraint.Length("has x Number with value is 5") is 0
 	Constraint.Length("has numbers with Length is 3 and value is 5") is 0
 	Constraint.Length("has colors with Length is Size.Length") is 0
-	let checking = Of(line.Replace(" . ", "."))
-	let words = checking.Split(" ")
+	checking = Of(line.Replace(" . ", "."))
+	words = checking.Split(" ")
 	words.Length is 3 and checking.StartsWith("Length is ") then Literal(words.Last) else 0
 Literal(word Text) Number
 	Constraint.Literal("3") is 3
@@ -81,10 +81,10 @@ Bits(constraint Text) Number
 	Constraint.Bits("value.Bits is 64") is 64
 	Constraint.Bits("value . Bits is 16") is 16
 	constant prefix = "Bits is "
-	let start = constraint.IndexOf(prefix)
+	start = constraint.IndexOf(prefix)
 	if start < 0
 		return 0
-	let end = start + prefix.Length
+	end = start + prefix.Length
 	Tokenizer(constraint.Substring(end, constraint.Length - end)).Tokens.First to Number
 Checking(constraint Text) Text
 	Constraint.Checking("value > 0 and value.Bits is 32") is "value > 0"
@@ -94,14 +94,14 @@ Checking(constraint Text) Text
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value.Bits is 3)").Tokens), "a") is "value.Bits is 3"
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value is in (1, 2), b N)").Tokens), "a").EndsWith(")")
 	Constraint.Parameter(HeaderTokens(Tokenizer("B(a N with value < b, b N with value > 0)").Tokens), "b") is "value > 0"
-	let clause = "value.Bits is " + Bits(constraint)
+	clause = "value.Bits is " + Bits(constraint)
 	constraint.Replace(" and " + clause, "").Replace(clause + " and ", "").Replace(clause, "")
 Of(line Text) Text
 	Constraint.Of("has width Number with value > 0") is "value > 0"
 	Constraint.Of("has price Number with Step 0.01") is ""
 	Constraint.Of("has width Number") is ""
 	Constraint.Of("has label = \"red with blue\" with value is not \"\"") is "value is not \"\""
-	let start = WithStart(line)
+	start = WithStart(line)
 	if start < 0 or line.StartsWith(" with Step ", start)
 		return ""
 	Checking(line.Substring(start + 6, line.Length - start - 6))
@@ -122,7 +122,7 @@ Parameter(header HeaderTokens, parameter Text) Text
 	mutable words = List(Mutable(Text))
 	mutable isConstraint = false
 	for Range(header.ParameterPosition(parameter) + 1, header.ParametersEnd)
-		let word = header.tokens(value)
+		word = header.tokens(value)
 		if word is "," and header.Depth(value) is 1
 			return Text.Combine(words, " ").Replace(" . ", ".")
 		words = isConstraint then words + word else words

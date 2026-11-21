@@ -10,7 +10,7 @@ IsSummed(name Text) Boolean
 	mutable loads = 0
 	mutable sums = 0
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
+		entry = function.method.instructions(value)
 		loads = entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is name then loads + 1 else loads
 		sums = AddedTo(value) is name then sums + 1 else sums
 	sums > 0 and sums is loads
@@ -25,22 +25,22 @@ Type(name Text) Text
 Loaded(name Text, result Text) Texts
 	Summing.Loaded("sum", "%a") is ("    %a = llvm.load %v_sum : !llvm.ptr -> f64")
 	Multiplying.Loaded("sum", "%a").Last is "    %a = arith.truncf %ad : f64 to f32"
-	let loaded = "llvm.load %v_" + name + " : !llvm.ptr -> f64"
-	let narrowed = MlirSingle(function, position).Narrowed(result, loaded)
+	loaded = "llvm.load %v_" + name + " : !llvm.ptr -> f64"
+	narrowed = MlirSingle(function, position).Narrowed(result, loaded)
 	IsSummed(name) then List(Text) + ("    " + result + " = " + loaded) else narrowed
 Added(entry InstructionEntry, at Number, left Text, right Text) Texts
 	Summing.Added(Adding, 9, "%a", "%b").First is "    %t9w = arith.extf %b : f32 to f64"
 	Summing.Added(Adding, 9, "%a", "%b").Last is "    %t9s = arith.addf %a, %t9w" + MlirSingle.Summed
-	let widened = "%t" + at + "w"
-	let operation = "    %t" + at + "s = arith." + MlirStatements(function, at).Operation(entry.kind) + " "
+	widened = "%t" + at + "w"
+	operation = "    %t" + at + "s = arith." + MlirStatements(function, at).Operation(entry.kind) + " "
 	("    " + widened + " = arith.extf " + right + " : f32 to f64", operation + left + ", " + widened + MlirSingle.Summed)
 Stored(name Text, index Number) Texts
 	Summing.Stored("sum", 0) is ("    llvm.store %t2u0, %v_sum : f64, !llvm.ptr")
 	Multiplying.Stored("sum", 0).First is "    %t2e0 = arith.extf %t2u0 : f32 to f64"
-	let carried = "%t" + position + "u" + index
+	carried = "%t" + position + "u" + index
 	if IsSummed(name)
 		return List(Text) + function.Store(carried, "%v_" + name)
-	let widened = "%t" + position + "e" + index
+	widened = "%t" + position + "e" + index
 	("    " + widened + " = arith.extf " + carried + " : f32 to f64", function.Store(widened, "%v_" + name))
 Typed(letter Text, separator Text) Text
 	Summing.Typed("u", ": ") is ", %t2u0: f64"

@@ -11,42 +11,42 @@ constant WriterC = ("  const char*h=\"{\\\"input\\\":{\\\"dtype\\\":\\\"F32\\\",
 constant WriterD = ("  uint64_t hl=strlen(h),pl=hl+((-hl)&7);fwrite(&pl,8,1,f);fwrite(h,1,hl,f);for(uint64_t i=hl;i<pl;i++)fputc(' ',f);")
 constant WriterE = ("  float pair[2]={0.0f,1.0f};for(uint64_t i=0;i<n/2;i++)fwrite(pair,4,2,f);fclose(f);return 0;}")
 Run Number
-	let folder = "Compiler/output/AttentionBf16" + 1000000.Random.Floor
+	folder = "Compiler/output/AttentionBf16" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Checked(folder Text) Boolean
-	let isWin = Process.OperatingSystem is "Windows"
+	isWin = Process.OperatingSystem is "Windows"
 	if PreparedData(folder, isWin) is Error
 		return Error("PrepareSafetensorsFailed")
 	File(folder + "/AttentionBrains.strict").Write(ProgramHead + ProgramRun + ProgramTail)
-	let built = Process.RunTool(Process.Current.executable, "build " + folder + "/AttentionBrains.strict", BuildSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + folder + "/AttentionBrains.strict", BuildSeconds)
 	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else VerifiedBuild(folder, isWin)
 VerifiedBuild(folder Text, isWin Boolean) Boolean
-	let obj = folder + "/obj/AttentionBrains.runtime.ptx"
-	let ptx = Text.Combine(File(File(obj).Exists then obj else folder + "/AttentionBrains.runtime.ptx").ReadLines, "\n")
+	obj = folder + "/obj/AttentionBrains.runtime.ptx"
+	ptx = Text.Combine(File(File(obj).Exists then obj else folder + "/AttentionBrains.runtime.ptx").ReadLines, "\n")
 	if ptx is ""
 		return Error("MissingRuntimePtx")
 	if not Regex("mma\\.sync\\.aligned\\.m16n8k16\\.row\\.col\\.f32\\.bf16\\.bf16\\.f32").IsMatch(ptx)
 		return Error("Bf16PromptAttentionStillConvertsToFp16")
-	let ran = RunGpu(folder, "AttentionBrains" + (isWin then ".exe" else ""))
+	ran = RunGpu(folder, "AttentionBrains" + (isWin then ".exe" else ""))
 	if ran.exitCode is not 0 or "attention 2113536 0 1" is not in ran.Output
 		return Error("AttentionFailed: " + ran.Output + ran.error)
 	logger.Log(ran.Output.Trim)
 	true
 PreparedData(folder Text, isWin Boolean) Boolean
-	let cFile = folder + "/gen.c"
-	let exe = folder + "/gen" + (isWin then ".exe" else "")
+	cFile = folder + "/gen.c"
+	exe = folder + "/gen" + (isWin then ".exe" else "")
 	File(cFile).Write(WriterA + WriterB + WriterC + WriterD + WriterE)
-	let comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"", CompileSeconds)
+	comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"", CompileSeconds)
 	if comp.exitCode is not 0
 		return Error("CompileGenFailed: " + comp.Output + comp.error)
-	let ran = Process.RunTool(exe, "\"" + folder + "/attention.safetensors\"", WriteSeconds)
+	ran = Process.RunTool(exe, "\"" + folder + "/attention.safetensors\"", WriteSeconds)
 	ran.exitCode is not 0 then Error("WriteDataFailed") else true
 RunGpu(folder Text, exe Text) ProcessResult
-	let win = Process.OperatingSystem is "Windows"
-	let env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
-	let cmd = "cd " + (win then "/d \"" + folder.Replace("/", "\\") else "\"" + folder) + "\" && " + env + exe
+	win = Process.OperatingSystem is "Windows"
+	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
+	cmd = "cd " + (win then "/d \"" + folder.Replace("/", "\\") else "\"" + folder) + "\" && " + env + exe
 	Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", RunSeconds)

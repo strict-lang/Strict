@@ -13,15 +13,15 @@ Indexed(texts Texts) Texts slow
 	for texts
 		value.StartsWith("//") then Index(value, Endings(index)) else value
 Index(text Text, ending Text) Text slow
-	let module = PtxModule(text.Split("\n"))
-	let functions = module.Functions
-	let names = Names(functions)
+	module = PtxModule(text.Split("\n"))
+	functions = module.Functions
+	names = Names(functions)
 	Directory.Create(folder + "/ptx")
 	Directory.Create(folder + "/" + prefix.Substring(0, prefix.Length - 1))
 	for names
 		Written(value, ending, functions)
 	PtxGlobals(folder + "/" + prefix + "Globals" + ending, prefix).Written(module.Globals)
-	let needs = " needs " + prefix + "Globals," + Text.Combine(Stems(names), "")
+	needs = " needs " + prefix + "Globals," + Text.Combine(Stems(names), "")
 	"// strict program " + HashCode(text).number + needs + "\n" + module.Header
 Names(functions List(PtxFunction)) Texts
 	Sample.Names(Both) is ("H3Block", "Strict")
@@ -35,15 +35,15 @@ Stems(names Texts) Texts
 	for names
 		prefix + value + ","
 Written(library Text, ending Text, functions List(PtxFunction)) slow
-	let path = folder + "/" + prefix + library + ending
-	let old = File(path).Exists then PtxModule(File(path).ReadLines).Functions else List(PtxFunction)
-	let composed = Composed(library, PtxMerge(old).Merged(PtxMerge(functions).In(library)))
+	path = folder + "/" + prefix + library + ending
+	old = File(path).Exists then PtxModule(File(path).ReadLines).Functions else List(PtxFunction)
+	composed = Composed(library, PtxMerge(old).Merged(PtxMerge(functions).In(library)))
 	if File(path).Exists is false or Text.Combine(File(path).ReadLines, "\n") is not composed
 		File(path).Write(composed)
 Composed(library Text, functions List(PtxFunction)) Text
 	Sample.Composed("A", Both.Slice(0, 1)).StartsWith("// strict library ptx/A needs ptx/Attention,ptx/Strict,\n" + Marker)
 	Sample.Composed("B", Both.Slice(1, 1)).StartsWith("// strict library ptx/B needs \n.func ")
-	let head = "// strict library " + prefix + library + " needs " + Text.Combine(Stems(Needed(functions).Unique), "")
+	head = "// strict library " + prefix + library + " needs " + Text.Combine(Stems(Needed(functions).Unique), "")
 	head + "\n" + Text.Combine(Prototypes(functions), "") + Marker + "\n" + Text.Combine(Bodies(functions), "")
 Needed(functions List(PtxFunction)) Texts
 	Sample.Needed(Both) is ("Attention", "Strict")
@@ -60,7 +60,7 @@ Bodies(functions List(PtxFunction)) Texts
 	for functions
 		value.Body
 Placed(base Text, ending Text, release Text) slow
-	let sidecar = base + ending
+	sidecar = base + ending
 	if File(sidecar).Exists and File(sidecar).Length > 0
 		File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
 		if ending is in Endings
@@ -70,8 +70,8 @@ Placed(base Text, ending Text, release Text) slow
 Copied(stems Texts, ending Text, release Text) slow
 	Directory.Create(release + "/ptx")
 	for stems
-		let source = File(folder + "/" + value + ending)
-		let target = File(release + "/" + value + ending)
+		source = File(folder + "/" + value + ending)
+		target = File(release + "/" + value + ending)
 		if target.Exists is false or target.ReadBytes is not source.ReadBytes
 			target.Write(source.ReadBytes)
 Reached(program Text, ending Text) Texts slow
@@ -91,8 +91,8 @@ Lost(program Text) Texts slow
 			value
 Needs(path Text) Texts slow
 	Sample.Needs("Compiler/output/missing.ptx").Length is 0
-	let first = File(path).Exists then File(path).ReadLines.First else ""
-	let at = first.IndexOf(" needs ")
+	first = File(path).Exists then File(path).ReadLines.First else ""
+	at = first.IndexOf(" needs ")
 	for (at < 0 then "" else first.Substring(at + 7, first.Length - at - 7)).Split(",")
 		if value is not ""
 			value

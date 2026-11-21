@@ -13,14 +13,14 @@ constant Writing = TypeShape("has W", "has V")
 constant DataNames = ("Content", "Tools")
 Unresolved(path Text, inference TypeInference) Texts
 	ResolveCheck.Unresolved("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
-	let lines = File(path).ReadLines
-	let bodies = MethodBodies(TypeName(path), TypeShape(lines), inference)
-	let known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(TypeName(path)).names
-	let check = FileCheck(inference, known)
-	let issues = check.Unimplemented(path, lines) + DefaultCheck(inference).Unsupported(path, lines)
-	let ambiguous = TypeChoice(lines).Ambiguous(inference.types.names, path)
-	let overloaded = Overloads(inference.types).Ambiguities(path, lines)
-	let placed = issues + Misplaced(path, lines) + Constraint.Where(path, lines)
+	lines = File(path).ReadLines
+	bodies = MethodBodies(TypeName(path), TypeShape(lines), inference)
+	known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(TypeName(path)).names
+	check = FileCheck(inference, known)
+	issues = check.Unimplemented(path, lines) + DefaultCheck(inference).Unsupported(path, lines)
+	ambiguous = TypeChoice(lines).Ambiguous(inference.types.names, path)
+	overloaded = Overloads(inference.types).Ambiguities(path, lines)
+	placed = issues + Misplaced(path, lines) + Constraint.Where(path, lines)
 	placed + ambiguous + overloaded + Found(check, bodies, lines, path)
 Misplaced(path Text, lines Texts) Texts
 	ResolveCheck.Misplaced("A.strict", ("Run", "\t1", "constant B = 1")) is (Stray)
@@ -33,10 +33,10 @@ Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").Length is 1
 	ResolveCheck.Found(FileCheck(Counting, "Drawn"), Drawing, Drawn, "A").First is "A:line 3: " + ReturnTypes.Unvalued
 	for bodies.Statements
-		let found = check.Unknown(value, bodies.Methods)
-		let returns = ReturnTypes(check.inference)
-		let returned = found is "" then returns.Issue(value, bodies.Methods, lines) else found
-		let unknown = returned is "" then returns.Unresulted(value, bodies.Methods, lines) else returned
+		found = check.Unknown(value, bodies.Methods)
+		returns = ReturnTypes(check.inference)
+		returned = found is "" then returns.Issue(value, bodies.Methods, lines) else found
+		unknown = returned is "" then returns.Unresulted(value, bodies.Methods, lines) else returned
 		if unknown is not ""
 			Located(path, value.line + 1, unknown)
 Located(path Text, line Number, issue Text) Text
@@ -50,7 +50,7 @@ Tree(folder Text) Texts
 	if Directory.Files(folder, "*.strict").Length > 0
 		folders.Add(folder)
 	for Directory.Directories(folder)
-		let name = Path(value.Replace("\\", "/")).FileName.text
+		name = Path(value.Replace("\\", "/")).FileName.text
 		if IsCode(name, folder + "/" + name)
 			folders = folders + Tree(folder + "/" + name)
 	folders
@@ -58,8 +58,8 @@ IsCode(name Text, path Text) Boolean
 	ResolveCheck.IsCode("Math", "./Math") and ResolveCheck.IsCode("Content", "./Math")
 	(ResolveCheck.IsCode("Release", "./Math") or ResolveCheck.IsCode("Tools", "./Tools")) is false
 	(ResolveCheck.IsCode("obj", "./obj") or ResolveCheck.IsCode(".git", "./.git")) is false
-	let first = name(0)
-	let isData = name is "Release" or name is in DataNames and Directory.Files(path, "*.strict").Length is 0
+	first = name(0)
+	isData = name is "Release" or name is in DataNames and Directory.Files(path, "*.strict").Length is 0
 	first is first.Upper and first is not first.Lower and isData is false
 AllFiles(root Text) Texts
 	mutable files = Directory.Files(root, "*.strict")
@@ -74,7 +74,7 @@ OverloadedMembers(types KnownTypes, shapes List(TypeShape), memberTypes Texts, s
 	OverloadedMembers(Writers, (OverloadShapes(1), OverloadShapes(0)), "V", KnownTypes.NoMembers).names is ("Go", "Go")
 	mutable traits = KnownTypes.NoMembers
 	for memberTypes
-		let position = types.Index(value)
+		position = types.Index(value)
 		if position >= 0 and shapes(position).IsTrait
 			traits = traits.WithAll(types.parameters(position).names, types.parameters(position).types)
 	mutable result = scope
@@ -94,8 +94,8 @@ TypeNames(files Texts) Texts
 	for files
 		TypeName(value)
 Inference(files Texts) TypeInference
-	let shapes = BuildProfile.Shapes(files)
-	let inferring = Inferring(files, shapes, Generics(files, shapes))
+	shapes = BuildProfile.Shapes(files)
+	inferring = Inferring(files, shapes, Generics(files, shapes))
 	inferring.Refined(inferring.Raw)
 Shapes(files Texts) List(TypeShape)
 	for files

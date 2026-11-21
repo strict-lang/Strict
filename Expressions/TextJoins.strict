@@ -12,10 +12,10 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(SyntaxNode("Call", "+"), Named, Named) is ""
 	if node.Kind is not "Binary" or node.text is not "+"
 		return ""
-	let isText = inference.TypeOf(node.children(0), scope, current) is "Text"
-	let isList = ListFits(inference.types).IsList(isText then inference.TypeOf(node.children.Last, scope, current) else "")
-	let right = node.children.Last
-	let advice = " implicitly, write " + right + " to Text"
+	isText = inference.TypeOf(node.children(0), scope, current) is "Text"
+	isList = ListFits(inference.types).IsList(isText then inference.TypeOf(node.children.Last, scope, current) else "")
+	right = node.children.Last
+	advice = " implicitly, write " + right + " to Text"
 	isList then "ListToTextMustBeExplicit: " + node + " converts the list " + right + advice else ""
 Parsed(at Number) SyntaxNode
 	Parsed(4) to Text is "name + name"

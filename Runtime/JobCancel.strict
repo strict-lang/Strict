@@ -4,7 +4,7 @@ Matches(words Texts, running Text) Boolean
 	JobCancel.Matches(("cancel", "b"), "a") is false
 	JobCancel.Matches(("lost", "b"), "a") is false
 	JobCancel.Matches("done", "a") is false
-	let asked = Asked(words)
+	asked = Asked(words)
 	running is not "" and asked is running
 Asked(words Texts) Text
 	JobCancel.Asked(("cancel", "a")) is "a"

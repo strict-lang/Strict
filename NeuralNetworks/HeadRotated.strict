@@ -6,16 +6,16 @@ has rotation Numbers
 has Epsilon Number
 Rotated BFloat16s
 	HeadRotated((3, 4, 0, 1, 0, 0), 0, 2, (1, 2), (1, 1, -1, 1), 0.000001).Rotated.First.IsNearlyEqual(-1.414214)
-	let size = weights.Length
-	let heads = width / size
-	let scales = Qwen3Block.HeadScales(combined, start, combined.Length / 3, size, rotation.Length)
+	size = weights.Length
+	heads = width / size
+	scales = Qwen3Block.HeadScales(combined, start, combined.Length / 3, size, rotation.Length)
 	for combined.Length / 3
-		let token = ((index / size).Floor / heads).Floor
-		let within = index % size
-		let first = index - within + token * 2 * width + start
-		let partner = (within + size / 2) % size
-		let own = combined(first + within) * weights(within) * rotation(token * 2 * size + within)
-		let other = combined(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
+		token = ((index / size).Floor / heads).Floor
+		within = index % size
+		first = index - within + token * 2 * width + start
+		partner = (within + size / 2) % size
+		own = combined(first + within) * weights(within) * rotation(token * 2 * size + within)
+		other = combined(first + partner) * weights(partner) * rotation((token * 2 + 1) * size + within)
 		(own + other) * scales((index / size).Floor)
 Ones(count Number, number Number) Numbers
 	for count

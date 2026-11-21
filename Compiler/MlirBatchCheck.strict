@@ -5,12 +5,12 @@ IsUsed Boolean
 		return false
 	if Reads.Length is 0
 		return false
-	let linear = MlirBatchLinear(MlirFunction(function, Float = "f32"), position).IsLinear
+	linear = MlirBatchLinear(MlirFunction(function, Float = "f32"), position).IsLinear
 	IsSafe and linear
 IsPlain Boolean
 	if function.method.instructions(position).kind is not InstructionType.LoopBegin
 		return false
-	let loops = MlirLoops(function, position)
+	loops = MlirLoops(function, position)
 	if loops.Collection is not "" or loops.IsCollecting is false or function.Group >= 0
 		return false
 	MlirGroups(function, position).Call < 0 and IsFloat
@@ -34,11 +34,11 @@ IsAllowed(at Number, entry InstructionEntry) Boolean
 		return IsRead(at, entry)
 	if entry.kind is InstructionType.Invoke
 		return at is function.Group or at > Reads.Last or entry.texts(1) is in ("Floor", "Length")
-	let moved = entry.kind is in MlirGpuCheck.Moves
-	let calculated = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.ArithmeticSeparator
+	moved = entry.kind is in MlirGpuCheck.Moves
+	calculated = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.ArithmeticSeparator
 	moved or calculated or entry.kind is in (InstructionType.CheckError, InstructionType.InvokeWriteToList)
 IsRead(at Number, entry InstructionEntry) Boolean
-	let kind = MlirKinds(function).VariableKind(at, entry.texts(0))
-	let flat = MlirDeviceStatements(function, at).IsList(kind)
-	let free = entry.texts(0) is in MlirGpuCheck(function, position).Free
+	kind = MlirKinds(function).VariableKind(at, entry.texts(0))
+	flat = MlirDeviceStatements(function, at).IsList(kind)
+	free = entry.texts(0) is in MlirGpuCheck(function, position).Free
 	flat and free and MlirFeeding(function, at).IsFeeding(at, entry.payload(0)) is false

@@ -4,7 +4,7 @@ constant Points = NearestNeighbors(((0, 0), (0, 1), (1, 1), (5, 5), (5, 6)), (0,
 Classified(sample Numbers, count Number) Number
 	Points.Classified((0.5, 0.5), 3) is 0
 	Points.Classified((4, 5), 1) is 1
-	let distances = Distances(sample)
+	distances = Distances(sample)
 	mutable chosen = List(Mutable(Number))
 	for count
 		chosen.Add(labels(Closest(distances, chosen)))

@@ -10,24 +10,24 @@ constant Tailed = RopeRotated((1, 2, 3, 4, 0, 0, 0, 0, 0, 0, 0, 0), 0, 4, (1, 1,
 constant Padded = RopeRotated((3, 4, 0, 1, 0, 0), 0, 2, (1, 2), (1, 1, -1, 1), 1, 4, 0.000001)
 Rotated BFloat16s
 	Padded.Rotated.Length is 4 and Padded.Rotated(1).IsNearlyEqual(3.11127) and Padded.Rotated(3) is 0
-	let size = weights.Length
-	let scales = Scales
+	size = weights.Length
+	scales = Scales
 	for combined.Length / 3 / size * wide
-		let within = index % wide < size then index % wide else 0
-		let at = (index / wide).Floor * size + within
-		let token = (at / width).Floor
-		let first = at - within + token * 2 * width + start
-		let paired = within < half then within + half else within < 2 * half then within - half else within
-		let own = combined(first + within) * weights(within) * rotation(token * 2 * size + within)
-		let other = combined(first + paired) * weights(paired) * rotation((token * 2 + 1) * size + within)
+		within = index % wide < size then index % wide else 0
+		at = (index / wide).Floor * size + within
+		token = (at / width).Floor
+		first = at - within + token * 2 * width + start
+		paired = within < half then within + half else within < 2 * half then within - half else within
+		own = combined(first + within) * weights(within) * rotation(token * 2 * size + within)
+		other = combined(first + paired) * weights(paired) * rotation((token * 2 + 1) * size + within)
 		index % wide < size then (own + other) * scales((at / size).Floor) else 0
 Scales Float32s
 	Tailed.Scales.First.IsNearlyEqual(0.365148)
 	Tailed.Rotated(1).IsNearlyEqual(3.286335) and Tailed.Rotated(3).IsNearlyEqual(1.460593)
 	RopeRotated((3, 4, 0, 1, 0, 0), 0, 2, (1, 2), (1, 1, -1, 1), 1, 2, 0.000001).Rotated.First.IsNearlyEqual(-1.414214)
-	let size = weights.Length
+	size = weights.Length
 	for combined.Length / 3 / size
-		let first = (index * size / width).Floor * 2 * width + start + index * size
+		first = (index * size / width).Floor * 2 * width + start + index * size
 		Normalization.Scale(Normalization.Squared(combined, first, size), size, epsilon)
 Ones(count Number, number Number) Numbers
 	for count

@@ -26,9 +26,9 @@ IsIndexing(node SyntaxNode, block CodeBlock) Boolean
 	Primed.IsIndexing(PrimeCall, CodeBlock.Empty)
 	if node.Kind is "Call"
 		return IsIndexedCall(node, block)
-	let isMember = node.Kind is "MethodCall" and node.children.Length is in (2, 3)
-	let isConstant = isMember and IsConstantList(node)
-	let isOwned = isMember and IsOwnedList(node, block)
+	isMember = node.Kind is "MethodCall" and node.children.Length is in (2, 3)
+	isConstant = isMember and IsConstantList(node)
+	isOwned = isMember and IsOwnedList(node, block)
 	isMember and node.text is "value" or isConstant or isOwned or node.Kind is "Index"
 IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexedCall(SyntaxNode("Call", "failed", One), Failed)
@@ -39,8 +39,8 @@ IsOwnedList(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsIndexedCall(SyntaxNode("Call", "text", (One, One)), CodeBlock.Empty)
 	MemberA.values.methods is MethodCodegen.NoScope and MemberA.values.inference is ValueCodegen.NoTypes
 	Positioning.IsOwnedList(Indexing.Positioned, CodeBlock.Empty.Declare("t", "Trigger"))
-	let type = values.TypeOf(node.children(0), block)
-	let isMethod = Indexing(values.inference.types).IsIndexed(type, node.text, node.children.Length - 1)
+	type = values.TypeOf(node.children(0), block)
+	isMethod = Indexing(values.inference.types).IsIndexed(type, node.text, node.children.Length - 1)
 	values.target.IsMember(type, node.text) or isMethod
 IsConstantList(node SyntaxNode) Boolean
 	Plain.IsIndexing(SyntaxNode("Number", "1"), CodeBlock.Empty) is false
@@ -53,32 +53,32 @@ IsConstantList(node SyntaxNode) Boolean
 	Positioning.values is ValueCodegen(Indexing.Inferring, MethodCodegen.NoScope, CallTarget.Plain)
 	MemberA.values.target is CallTarget(CallTarget.NoTypes, TypeShape("has A Text"), "Strict/C", List(Text))
 	Primed.IsConstantList(PrimeCall)
-	let member = SyntaxNode("Member", node.text, node.children(0))
+	member = SyntaxNode("Member", node.text, node.children(0))
 	ConstantFolding(values.target.TypeName, values.inference).Folded(member).Kind is "List"
 IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty)
 	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty)
 	MemberA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty) is false
 	Plain.IsIndexedCall(SyntaxNode("Call", "text"), CodeBlock.Empty) is false
-	let isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
-	let isConstant = values.methods.TypeOf(node.text) is not "" and values.target.Header(node.text).tokens.Length is 0
-	let isMethod = values.target.Header(node.text).tokens.Length > 0
-	let isOwnList = isMethod and Indexing(values.inference.types).IsIndexed(values.target.TypeName, node.text, 1)
-	let isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant or isOwnList
-	let isIndexed = node.children.Length is 1 and isNamed or node.children.Length is 2 and isOwnMember
+	isOwnMember = values.target.IsMember(values.target.TypeName, node.text)
+	isConstant = values.methods.TypeOf(node.text) is not "" and values.target.Header(node.text).tokens.Length is 0
+	isMethod = values.target.Header(node.text).tokens.Length > 0
+	isOwnList = isMethod and Indexing(values.inference.types).IsIndexed(values.target.TypeName, node.text, 1)
+	isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant or isOwnList
+	isIndexed = node.children.Length is 1 and isNamed or node.children.Length is 2 and isOwnMember
 	isIndexed and (isConstant or isOwnList or values.inference.types.IsKnown(node.text) is false)
 Indexed(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
 	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
 	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
-	let isCall = node.Kind is "Call"
-	let named = Source(node)
-	let type = values.TypeOf(named, block)
+	isCall = node.Kind is "Call"
+	named = Source(node)
+	type = values.TypeOf(named, block)
 	if type.StartsWith("Dictionary(") or values.inference.types.MethodsOf(type).TypeOf("get") is not ""
 		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
-	let folded = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
-	let isConstant = folded.Kind is "Call" and folded.text is "Error"
-	let isError = isCall and (block.scope.TypeOf(node.text) is "Error" or isConstant)
+	folded = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
+	isConstant = folded.Kind is "Call" and folded.text is "Error"
+	isError = isCall and (block.scope.TypeOf(node.text) is "Error" or isConstant)
 	isError then WithValue(node, block) else Element(node, block)
 Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Keyed(One, Named) is One
@@ -86,11 +86,11 @@ Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Keyed(SyntaxNode("Reassignment", "", (SyntaxNode("Call", "failed", One), One)), Failed).children(1) is One
 	Plain.Keyed(KeyedWrite, Named) to Text is "named = named.set(\"a\", 1)"
 	Plain.Keyed(Computed.children(0), Named) is Computed.children(0)
-	let target = statement.Kind is "Reassignment" then statement.children(0) else One
-	let named = SyntaxNode("Identifier", target.text)
+	target = statement.Kind is "Reassignment" then statement.children(0) else One
+	named = SyntaxNode("Identifier", target.text)
 	if target.Kind is not "Call" or values.TypeOf(named, block).StartsWith("Dictionary(") is false
 		return statement
-	let set = SyntaxNode("MethodCall", "set", (named, target.children.Last, statement.children(1)))
+	set = SyntaxNode("MethodCall", "set", (named, target.children.Last, statement.children(1)))
 	SyntaxNode("Reassignment", statement.text, (named, set), statement.line)
 WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions.Last.payload.Length is 11
@@ -99,22 +99,22 @@ WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Length is 3
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions(0).texts is ("failed")
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions.Last.texts.Last is "Value"
-	let error = values.Expression(SyntaxNode("Identifier", node.text), block)
-	let wrapped = values.Expression(node.children(0), error)
+	error = values.Expression(SyntaxNode("Identifier", node.text), block)
+	wrapped = values.Expression(node.children(0), error)
 	constant signature = ("Strict/ErrorWithValue", "from", "Strict/ErrorWithValue", "Error", "Value")
 	wrapped.Load(InstructionEntry.Invoke(wrapped.register, signature, (error.Result, wrapped.Result), -1))
 Element(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Element(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.payload is (1, 0, -1)
 	Plain.Element(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One)), CodeBlock.Empty).nextId is 1
-	let named = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
-	let isComputed = named.Kind is not "Identifier" and named.IsLiteral is false
-	let isMethod = values.target.Header(node.text).tokens.Length > 0
-	let isNamed = node.Kind is "Call" and isComputed is false and isMethod is false
-	let source = node.Kind is "Call" then (isMethod then SyntaxNode("Call", node.text) else named) else Source(node)
-	let list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
-	let name = isNamed then node.text else "list" + list.nextId
-	let stored = isNamed then list else list.Stored(name).WithNextId
-	let index = values.Expression(GridIndex(node), stored)
+	named = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
+	isComputed = named.Kind is not "Identifier" and named.IsLiteral is false
+	isMethod = values.target.Header(node.text).tokens.Length > 0
+	isNamed = node.Kind is "Call" and isComputed is false and isMethod is false
+	source = node.Kind is "Call" then (isMethod then SyntaxNode("Call", node.text) else named) else Source(node)
+	list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
+	name = isNamed then node.text else "list" + list.nextId
+	stored = isNamed then list else list.Stored(name).WithNextId
+	index = values.Expression(GridIndex(node), stored)
 	index.Load(InstructionEntry(InstructionType.IndexCall, List(Text) + name, (index.register, index.Result, -1)))
 Source(node SyntaxNode) SyntaxNode
 	Plain.Source(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One))) is ValueCodegen.GreeterText
@@ -135,11 +135,11 @@ GridIndex(node SyntaxNode) SyntaxNode
 	Plain.GridIndex(SyntaxNode("MethodCall", "a", (NoNode, One, Hi))) to Text is "1 + x.Size.Width * \"Hi\""
 	Plain.GridIndex(SyntaxNode("Call", "a", (One, NoNode))) to Text is "1 + Size.Width * x"
 	Plain.Element(SyntaxNode("Call", "Greet", One), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
-	let first = node.Kind is "Call" then 0 else 1
+	first = node.Kind is "Call" then 0 else 1
 	if node.children.Length - first < 2
 		return node.children.Last
-	let size = first is 0 then SyntaxNode("Identifier", "Size") else SyntaxNode("Member", "Size", node.children(0))
-	let width = SyntaxNode("Member", "Width", size)
+	size = first is 0 then SyntaxNode("Identifier", "Size") else SyntaxNode("Member", "Size", node.children(0))
+	width = SyntaxNode("Member", "Width", size)
 	SyntaxNode("Binary", "+", (node.children(first), SyntaxNode("Binary", "*", (width, node.children(first + 1)))))
 Unnested(body SyntaxNode) SyntaxNode
 	Plain.Unnested(Computed).Kind is "Body"
@@ -168,13 +168,13 @@ Split(statement SyntaxNode) SyntaxNodes
 	Plain.Split(Computed.children(0)).First to Text is "let elementIndex2 = index + 1"
 	Plain.Split(SyntaxNode("Number", "1")).Length is 1
 	Limited.Split(LimitWrite).First to Text is "let elementIndex2 = Limit"
-	let target = statement.Kind is "Reassignment" then statement.children(0) else One
+	target = statement.Kind is "Reassignment" then statement.children(0) else One
 	if IsKept(target)
 		return List(SyntaxNode) + statement
-	let name = "elementIndex" + statement.line
-	let declaration = SyntaxNode("Declaration", "let " + name, GridIndex(target), statement.line)
-	let instance = target.Kind is "MethodCall" then List(SyntaxNode) + target.children(0) else List(SyntaxNode)
-	let element = SyntaxNode(target.Kind, target.text, instance + SyntaxNode("Identifier", name))
+	name = "elementIndex" + statement.line
+	declaration = SyntaxNode("Declaration", "let " + name, GridIndex(target), statement.line)
+	instance = target.Kind is "MethodCall" then List(SyntaxNode) + target.children(0) else List(SyntaxNode)
+	element = SyntaxNode(target.Kind, target.text, instance + SyntaxNode("Identifier", name))
 	(declaration, SyntaxNode("Reassignment", statement.text, (element, statement.children(1)), statement.line))
 IsKept(target SyntaxNode) Boolean
 	Plain.IsKept(SyntaxNode("Call", "a", One))
@@ -182,6 +182,6 @@ IsKept(target SyntaxNode) Boolean
 	Limited.IsKept(LimitWrite.children(0)) is false
 	if (target.Kind is in ("Call", "MethodCall")) is false or target.children.Length is 0
 		return true
-	let index = GridIndex(target)
-	let isOwnConstant = values.inference.ConstantOf(values.target.TypeName, index.text) is not ""
+	index = GridIndex(target)
+	isOwnConstant = values.inference.ConstantOf(values.target.TypeName, index.text) is not ""
 	index.Kind is "Number" or index.Kind is "Identifier" and isOwnConstant is false

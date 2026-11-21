@@ -37,19 +37,19 @@ Selected(names Texts) TypeEntry slow
 	Limit.Selected("to Number").methods.Length is 0
 	TypeCodegen("Strict/S", ("W Number", "H Number"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 2
 	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
-	let membersOnly = names.Length is 0 and TypeShape(lines).IsTrait is false
+	membersOnly = names.Length is 0 and TypeShape(lines).IsTrait is false
 	TypeEntry(fullName, Members, membersOnly then List(MethodEntry) else Methods(names))
 Generator ValueCodegen
 	Limit.Generator.target.TypeName is "Limit"
 	TypeCodegen("S/List(Number)", "has x Generic", NoTypes, List(Text)).Members.First.typeName is "Strict/Number"
 	Leveled.Member(HeaderTokens("has", "x", "Fast"), 0, Scope("Fast", "Text")).typeName is "Strict/Fast"
-	let target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
+	target = CallTarget(inference.types, TypeShape(lines), fullName, typeNames)
 	ValueCodegen(inference, inference.types.MethodsOf(target.TypeName), target, isOptimizing)
 Members List(MemberEntry) slow
 	Limit.Members.First.initial.First.payload is (1, 10, 0)
 	Leveled.Members.First.typeName is "Strict/Text"
 	mutable members = List(Mutable(MemberEntry))
-	let methods = TypeShape(lines).MethodScope
+	methods = TypeShape(lines).MethodScope
 	for lines
 		if TypeShape(lines).IsMemberLine(value)
 			members.Add(Member(HeaderTokens(Tokenizer(value).Tokens), index, methods))
@@ -60,33 +60,33 @@ Member(header HeaderTokens, position Number, methods Scope) MemberEntry
 	Hello.Member(Alpha, 0, Unscoped).initial.First.payload is (1, 1, 0)
 	Hello.Member(HeaderTokens("has", "x", "Number", "with", "value", ".", "Bits", "is", "32"), 0, Unscoped).Bits is 32
 	Hello.Member(HeaderTokens("has", "numbers", "with", "Length", "is", "3"), 0, Unscoped).Count is 3
-	let isConstant = header.tokens(0) is "constant"
-	let typed = header.DeclaredType(1)
-	let own = "=" is not in header.tokens then "" else methods.TypeOf(typed)
-	let declared = Scope(List(Text) + header.MemberName, List(Text) + (own is "" then typed else own))
-	let member = Instantiation(inference.types).Members(Generator.target.TypeName, declared)
-	let type = Generator.target.FullName(Concrete(member.types.First))
+	isConstant = header.tokens(0) is "constant"
+	typed = header.DeclaredType(1)
+	own = "=" is not in header.tokens then "" else methods.TypeOf(typed)
+	declared = Scope(List(Text) + header.MemberName, List(Text) + (own is "" then typed else own))
+	member = Instantiation(inference.types).Members(Generator.target.TypeName, declared)
+	type = Generator.target.FullName(Concrete(member.types.First))
 	MemberEntry(header.MemberName, type, InitialOf(header, position), isConstant).Limited(Text.Combine(header.tokens, " "))
 InitialOf(header HeaderTokens, position Number) List(InstructionEntry)
 	Hello.InitialOf(HeaderTokens("has", "count", "Number"), 0).Length is 0
 	if header.tokens(0) is "constant" and header.tokens.Length is 2
-		let number = InstructionEntry.NumberValue(TypeShape(lines).EnumValue(position))
+		number = InstructionEntry.NumberValue(TypeShape(lines).EnumValue(position))
 		return List(InstructionEntry) + InstructionEntry.Set(List(Text), number)
-	let equals = header.tokens.Index("=")
+	equals = header.tokens.Index("=")
 	if equals is -1
 		return List(InstructionEntry)
-	let constraints = header.tokens.Index("with")
-	let end = constraints is -1 then header.tokens.Length else constraints
+	constraints = header.tokens.Index("with")
+	end = constraints is -1 then header.tokens.Length else constraints
 	Initial(SyntaxParser(header.tokens).ParseRange(equals + 1, end))
 Initial(node SyntaxNode) List(InstructionEntry)
 	Hello.Initial(SyntaxNode("Text", "\"a\"")).First.payload is (4, -1, 0)
 	Hello.Initial(SyntaxNode("Call", "Range")).Length is 0
 	Vectors.Initial(SyntaxParser(Tokenizer("Vector2(1, 2)").Tokens).Parse).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
 	Hello.Initial(SyntaxParser("(", "1", ",", "2", ")").ParseRange(0, 5)).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
-	let literal = ConstantFolding(Generator.target.TypeName, inference, isOptimizing).Unwrapped(node)
+	literal = ConstantFolding(Generator.target.TypeName, inference, isOptimizing).Unwrapped(node)
 	if literal.IsLiteral is false
 		return List(InstructionEntry)
-	let load = Generator.Expression(literal, CodeBlock.Empty).instructions(0)
+	load = Generator.Expression(literal, CodeBlock.Empty).instructions(0)
 	List(InstructionEntry) + InstructionEntry.Set(load.texts, MethodCodegen.LoadedValue(load))
 Methods(names Texts) List(MethodEntry)
 	Limit.Methods(List(Text)).First.instructions.Length is 2
@@ -95,11 +95,11 @@ Methods(names Texts) List(MethodEntry)
 	mutable methods = List(Mutable(MethodEntry))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
-			let tokens = Tokenizer(value).Tokens
-			let converted = tokens.First is "to" then "to " + HeaderTokens(tokens).ReturnType else tokens.First
+			tokens = Tokenizer(value).Tokens
+			converted = tokens.First is "to" then "to " + HeaderTokens(tokens).ReturnType else tokens.First
 			if names.Length is 0 or tokens.First is in names or converted is in names
 				methods.Add(Method(index))
-	let constants = ConstantMethods(inference, isOptimizing).Methods(value, names)
+	constants = ConstantMethods(inference, isOptimizing).Methods(value, names)
 	methods + constants + Specialization(Generator).Methods(value, names) + Starts(names)
 Starts(names Texts) List(MethodEntry)
 	Limit.Starts(List(Text)).Length is 0
@@ -107,38 +107,38 @@ Starts(names Texts) List(MethodEntry)
 	Defaulted.Starts(List(Text)).First.instructions(2).texts is ("Strict/Bag", "from", "Bag", "items")
 	Defaulted.Starts(List(Text)).First.instructions.Last.kind is InstructionType.Return
 	constant generator = Generator
-	let type = generator.target.TypeName
-	let isAsked = names.Length is 0 or DefaultInstance.Starter is in names
+	type = generator.target.TypeName
+	isAsked = names.Length is 0 or DefaultInstance.Starter is in names
 	if (isAsked and DefaultInstance(generator).HasComputed(type)) is false
 		return List(MethodEntry)
-	let scope = MethodScope(HeaderTokens(DefaultInstance.Starter), generator.target)
-	let code = generator.Expression(SyntaxNode("Call", type), CodeBlock(List(InstructionEntry), 0, 0, scope))
+	scope = MethodScope(HeaderTokens(DefaultInstance.Starter), generator.target)
+	code = generator.Expression(SyntaxNode("Call", type), CodeBlock(List(InstructionEntry), 0, 0, scope))
 	List(MethodEntry) + MethodEntry(DefaultInstance.Starter, List(MemberEntry), fullName, code.Ended(type).instructions)
 Method(start Number) MethodEntry slow
 	(Hello.Method(1).returnType, Created.Method(1).returnType) is ("None", "Strict/C")
 	Iterating.Method(1).instructions(0).texts.First is "Strict/List(Number)"
 	Iterating.Method(1).returnType is "Strict/Iterator(Number)"
 	(Grid.Method(2).instructions(5).texts, Grid.Method(2).instructions(6).texts) is (("index"), ("outer.index"))
-	let header = HeaderTokens(Tokenizer(lines(start)).Tokens)
+	header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
-	let scope = MethodScope(header, generator.target)
-	let returnType = Declared(header)
-	let body = TestLines(generator).Guarded(BodyParser(lines).Method(start + 1), header, start + 1, scope)
-	let code = MethodCodegen(generator).Generate(body, scope, BodyType(header))
-	let optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Kept(code).instructions).Optimized
+	scope = MethodScope(header, generator.target)
+	returnType = Declared(header)
+	body = TestLines(generator).Guarded(BodyParser(lines).Method(start + 1), header, start + 1, scope)
+	code = MethodCodegen(generator).Generate(body, scope, BodyType(header))
+	optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Kept(code).instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), returnType, optimized)
 Declared(header HeaderTokens) Text
 	Hello.Declared(HeaderTokens(Tokenizer("Run Number slow").Tokens)) is "Slow(Strict/Number)"
 	Created.Declared(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Strict/C"
 	Hello.Member(HeaderTokens("constant", "Add"), 0, Unscoped).IsConstant
-	let result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))
-	let full = Generator.target.FullName(result)
+	result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))
+	full = Generator.target.FullName(result)
 	header.ReturnsSlow then "Slow(" + full + ")" else full
 MethodScope(header HeaderTokens, target CallTarget) Scope
 	Hello.MethodScope(HeaderTokens("Run"), Hello.Generator.target).TypeOf(CodeBlock.ErrorMarker) is "Run"
 	TypeCodegen("S/C", Guarded, NoTypes, List(Text)).Method(0).instructions.First.line is 1
-	let declared = Instantiation(inference.types).Members(target.TypeName, target.shape.MemberScope)
-	let members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, declared)
+	declared = Instantiation(inference.types).Members(target.TypeName, target.shape.MemberScope)
+	members = MethodBodies(target.TypeName, target.shape, inference).HeaderScope(header, declared)
 	members.With(CodeBlock.ErrorMarker, header.tokens(0))
 BodyType(header HeaderTokens) Text
 	Iterating.BodyType(HeaderTokens("for", "Iterator", "(", "Number", ")")) is "Numbers"
@@ -146,8 +146,8 @@ BodyType(header HeaderTokens) Text
 	Created.BodyType(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Number"
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generic") is "Number"
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Text") is "Text"
-	let members = Generator.target.shape.MemberScope.types
-	let returnType = header.tokens(0) is "from" and members.Length is 1 then members.First else Returned(header)
+	members = Generator.target.shape.MemberScope.types
+	returnType = header.tokens(0) is "from" and members.Length is 1 then members.First else Returned(header)
 	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
 Returned(header HeaderTokens) Text
 	Hello.Returned(HeaderTokens("Run", "Number")) is "Number"
@@ -155,27 +155,27 @@ Returned(header HeaderTokens) Text
 	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "B")) is "B"
 	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "A")) is "A"
 	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "=")) is "y"
-	let returned = header.ReturnType
-	let name = Generator.target.TypeName
-	let isTemplate = returned is inference.types.BaseName(name) and name.IndexOf("(") > 0
+	returned = header.ReturnType
+	name = Generator.target.TypeName
+	isTemplate = returned is inference.types.BaseName(name) and name.IndexOf("(") > 0
 	returned is "=" or isTemplate then inference.types.MethodsOf(name).TypeOf(header.tokens(0)) else returned
 Parameters(header HeaderTokens) List(MemberEntry)
 	Hello.Parameters(HeaderTokens("Add", "(", "first", "Number", ")")).Length is 1
 	Hello.Parameters(HeaderTokens("Add", "(", "x", "=", "1", ")")).First.initial.Length is 1
 	Hello.Parameters(HeaderTokens(Tokenizer("D(a Numbers with value.Bits is 32, b Numbers)").Tokens)).First.Bits is 32
 	Hello.Parameters(HeaderTokens(Tokenizer("D(a Numbers with value.Bits is 32, b Numbers)").Tokens)).Last.Bits is 0
-	let types = HeaderEntries(header, inference.types.MethodsOf(Generator.target.TypeName)).ParameterTypes
+	types = HeaderEntries(header, inference.types.MethodsOf(Generator.target.TypeName)).ParameterTypes
 	mutable parameters = List(Mutable(MemberEntry))
 	for header.ParameterNames
-		let type = Generator.target.FullName(Concrete(types(index)))
-		let bits = Constraint.Bits(Constraint.Parameter(header, value))
+		type = Generator.target.FullName(Concrete(types(index)))
+		bits = Constraint.Bits(Constraint.Parameter(header, value))
 		parameters.Add(MemberEntry(value, type, Default(header, header.ParameterPosition(value)), false, bits))
 	parameters
 Default(header HeaderTokens, position Number) List(InstructionEntry)
 	Hello.Default(HeaderTokens("Add", "(", "x", ")"), 2).Length is 0
 	Hello.Default(HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0)").Tokens), 2).Length is 1
 	Hello.Default(HeaderTokens(Tokenizer("Run(name Text = \"a\")").Tokens), 2).Length is 1
-	let equals = header.tokens(position + 1) is "=" then position + 1 else position + 2
+	equals = header.tokens(position + 1) is "=" then position + 1 else position + 2
 	if equals >= header.tokens.Length or header.tokens(equals) is not "="
 		return List(InstructionEntry)
 	mutable end = -1
@@ -190,10 +190,10 @@ Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number, Text)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "List(Number, Text)"
 	Hello.Concrete("Generic") is "Generic"
 	Hello.Concrete("Iterator(Generic)") is "Iterator"
-	let open = fullName.IndexOf("(")
-	let element = MethodBodies.Item(fullName.Substring(open + 1, fullName.Length - open - 2))
-	let elements = fullName.StartsWith("Strict/List(") and fullName.IndexOf(",") > 0 then element else element + "s"
-	let other = type is in ("Generics", "List") then elements else Instantiation(inference.types).Own(fullName, type)
+	open = fullName.IndexOf("(")
+	element = MethodBodies.Item(fullName.Substring(open + 1, fullName.Length - open - 2))
+	elements = fullName.StartsWith("Strict/List(") and fullName.IndexOf(",") > 0 then element else element + "s"
+	other = type is in ("Generics", "List") then elements else Instantiation(inference.types).Own(fullName, type)
 	open is -1 then type.Replace("(Generic)", "") else (type is "Generic" then element else other)
 Local(type Text) Text
 	Hello.Local("Strict/Logger") is "Logger"

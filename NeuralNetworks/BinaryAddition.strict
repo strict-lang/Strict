@@ -3,17 +3,17 @@ constant Examples = 10000
 constant OperandLimit = 128
 constant Shown = (37, 85)
 Run
-	let started = Process.Elapsed
-	let trained = Trained(Recurrent.Random(2, 1), Examples)
+	started = Process.Elapsed
+	trained = Trained(Recurrent.Random(2, 1), Examples)
 	logger.Log("Trained on " + Examples + " random sums in " + ((Process.Elapsed - started) * 1000).Round(1) + " ms")
-	let shown = Shown(0) + " + " + Shown(1) + " = " + Added(trained, Shown(0), Shown(1))
+	shown = Shown(0) + " + " + Shown(1) + " = " + Added(trained, Shown(0), Shown(1))
 	logger.Log(Correct(trained, 100) + " of 100 new sums are right, " + shown)
 Trained(network Recurrent, count Number) Recurrent
 	BinaryAddition.Trained(Recurrent.Random(2, 1), 1).input.weights.Length is Recurrent.Hidden
 	mutable trained = network
 	for count
-		let first = Operand
-		let second = Operand
+		first = Operand
+		second = Operand
 		trained = trained.Trained(Pairs(first, second), Bits(first + second), 0.1)
 	trained
 Operand Number
@@ -43,8 +43,8 @@ Correct(network Recurrent, count Number) Number slow
 	BinaryAddition.Correct(Recurrent.Random(2, 1), 3) <= 3
 	mutable correct = 0
 	for count
-		let first = Operand
-		let second = Operand
+		first = Operand
+		second = Operand
 		if Added(network, first, second) is first + second
 			correct = correct + 1
 	correct

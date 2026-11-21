@@ -11,19 +11,19 @@ Of(folders Texts, isParallel Boolean) List(Texts)
 	NativeChunks.Of(List(Text) + "Math", true).First.Length is 4
 	mutable chunks = List(Mutable(Texts))
 	for folders
-		let paths = Directory.Exists(value) then Directory.Files(value, "*.strict") else List(Text) + value
-		let size = isParallel then Size else paths.Length
+		paths = Directory.Exists(value) then Directory.Files(value, "*.strict") else List(Text) + value
+		size = isParallel then Size else paths.Length
 		for Range(0, paths.Length is 0 then 0 else ((paths.Length + size - 1) / size).Floor)
 			chunks.Add(paths.Slice(value * size, (paths.Length - value * size).Clamp(0, size)))
 	chunks
 Compiled(chunks List(Texts), root Text, base Text) List(List(TypeEntry))
 	NativeChunks("*").Compiled(List(Texts), ".", "Compiler/output/Compiled").Length is 0
 	NativeChunks("*").Compiled(Clashing, ".", "Compiler/output/Compiled").First.Length is 0
-	let clash = Clash(chunks)
+	clash = Clash(chunks)
 	if clash is not ""
 		logger.Log(clash)
 		return (List(TypeEntry), List(TypeEntry))
-	let loaded = Loaded(Prepared(chunks, root, base), chunks)
+	loaded = Loaded(Prepared(chunks, root, base), chunks)
 	for chunks
 		loaded(index).Length > 0 then loaded(index) else NativeFolder(selection, false).Counted(value, root)
 Clash(chunks List(Texts)) Text
@@ -31,11 +31,11 @@ Clash(chunks List(Texts)) Text
 	NativeChunks.Clash(Clashing).StartsWith("SameNamedTypes: P in a/P.strict and b/P.strict, a build keys")
 	mutable seen = Dictionary(Text, Text)
 	for chunks
-		let chunk = value
+		chunk = value
 		for chunk
-			let name = Path(value).FileName.text
+			name = Path(value).FileName.text
 			if name is in seen
-				let places = name.Replace(".strict", "") + " in " + seen(name) + " and " + value
+				places = name.Replace(".strict", "") + " in " + seen(name) + " and " + value
 				return "SameNamedTypes: " + places + ", a build keys types by their plain name, rename one"
 			seen.Add(name, value)
 	""
@@ -56,7 +56,7 @@ Saved(output Text, root Text, paths Texts)
 	if IsKept(output, paths, root)
 		return
 	File(output).Delete
-	let counted = NativeFolder(selection, false).Counted(paths, root)
+	counted = NativeFolder(selection, false).Counted(paths, root)
 	if counted.Length < paths.Length
 		return Error("ChunkNotCompiled")
 	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(Text)))
@@ -66,10 +66,10 @@ IsKept(output Text, paths Texts, root Text) Boolean
 	NativeChunks("*").Saved(Stamping, ".", NativeFolder.Hellos) is not Error
 	NativeChunks("*").IsKept(Stamping, NativeFolder.Hellos, ".")
 	NativeChunks.IsKept(Stamping, NativeFolder.Hellos, ".") is false
-	let stamp = File(output + ".stamp")
+	stamp = File(output + ".stamp")
 	if File(output).Exists is false or stamp.Exists is false
 		return false
-	let lines = stamp.ReadLines
+	lines = stamp.ReadLines
 	lines.First is Key(paths, root) and NativeCache.Adding.Matches(lines.Slice(1, lines.Length - 1))
 Key(paths Texts, root Text) Text
 	NativeChunks("*").Key(List(Text) + "A.strict", ".") is ".\t*\tA.strict"
@@ -81,7 +81,7 @@ Stamped(output Text, paths Texts, root Text, types List(TypeEntry))
 		inputs = inputs + (Path(value).PathOnly.text + "/*")
 	for types
 		inputs = inputs + TypeSource(value).Located(Path(paths.First).PathOnly.text)
-	let lines = (List(Text) + Key(paths, root)) + NativeCache.Adding.Snapshot(inputs.Unique)
+	lines = (List(Text) + Key(paths, root)) + NativeCache.Adding.Snapshot(inputs.Unique)
 	File(output + ".stamp").Write(Text.Combine(lines, "\n"))
 Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 	NativeChunks.Loaded(List(Text) + Unsaved, Single).First.Length is 0
@@ -96,5 +96,5 @@ Decoded(output Text, count Number) List(TypeEntry)
 	NativeChunks.Decoded(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
 	if File(output).Exists is false
 		return List(TypeEntry)
-	let types = BinaryFile(output).Types(BinaryFile(output).Unpacked(File(output).ReadBytes))
+	types = BinaryFile(output).Types(BinaryFile(output).Unpacked(File(output).ReadBytes))
 	types.Length < count then List(TypeEntry) else types

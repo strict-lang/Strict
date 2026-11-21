@@ -8,10 +8,10 @@ Weighted(shares Numbers, first Number, count Number, values Numbers, start Numbe
 Shares(scores Numbers, width Number) Numbers
 	Softmax.Shares((0, 1, 5, 5), 2)(1).IsNearlyEqual(0.7310585786300049)
 	Softmax.Shares((0, 1, 5, 5), 2)(2) is 0.5
-	let largests = Largests(scores, width)
-	let totals = Totals(scores, largests, width)
+	largests = Largests(scores, width)
+	totals = Totals(scores, largests, width)
 	for scores.Length
-		let row = (index / width).Floor
+		row = (index / width).Floor
 		(scores(index) - largests(row)).Exponential / totals(row)
 Largests(scores Numbers, width Number) Numbers
 	Softmax.Largests((0, 1, 5, 3), 2) is (1, 5)

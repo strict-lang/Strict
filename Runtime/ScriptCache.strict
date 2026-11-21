@@ -31,10 +31,10 @@ IsBuiltIn(target Text) Boolean
 	Sample.IsBuiltIn("Strict/Number.to")
 	Sample.IsBuiltIn("Strict/B.Go") is false
 	Sample.IsBuiltIn("Strict/Error.from") is false
-	let dot = target.LastIndexOf(".")
-	let type = target.Substring(0, dot)
-	let method = target.Substring(dot + 1, target.Length - dot - 1)
-	let simple = method is in ("from", "in", "Index", "to", "to Text", "to Type") and type is in typeNames
+	dot = target.LastIndexOf(".")
+	type = target.Substring(0, dot)
+	method = target.Substring(dot + 1, target.Length - dot - 1)
+	simple = method is in ("from", "in", "Index", "to", "to Text", "to Type") and type is in typeNames
 	target.StartsWith("Strict/Scratch.") or simple or Linker.Sample.IsNative(type, method)
 IsHit(entry TypeEntry) Boolean
 	Empty.IsHit(TypeEntry.HelloLogger) is false
@@ -57,10 +57,10 @@ GenericsOf(knownTypes KnownTypes) Texts
 		if "Generic" is in knownTypes.members(index).types or "Generic" is in knownTypes.methods(index).types
 			value
 WithBase(baseFiles Texts, currentRoot Text, currentFolder Text) ScriptCache
-	let stamped = KeptInference.Empty.Stamps(baseFiles)
-	let nextInference = ResolveCheck.Inference(baseFiles)
-	let names = FileCompiler.FullNames(baseFiles, currentRoot) + "Strict/Scratch"
-	let found = GenericsOf(nextInference.types)
+	stamped = KeptInference.Empty.Stamps(baseFiles)
+	nextInference = ResolveCheck.Inference(baseFiles)
+	names = FileCompiler.FullNames(baseFiles, currentRoot) + "Strict/Scratch"
+	found = GenericsOf(nextInference.types)
 	ScriptCache(currentRoot, currentFolder, baseFiles, found, nextInference, fullNames = names, stamps = stamped)
 BaseOnly(discovered Texts, skip = "") Texts
 	Empty.BaseOnly((Scripted.Path, "./A.strict", "./B.strict"), "./A.strict") is (List(Text) + "./B.strict")
@@ -69,27 +69,27 @@ BaseOnly(discovered Texts, skip = "") Texts
 			value
 BaseLoaded(lines Texts, currentRoot Text, logger Logger, skip = "") ScriptCache
 	ScriptCache(Sample, folder = Directory.Current, code = 1).BaseLoaded(("Run", "\t1"), ".", Logger).code is 0
-	let currentFolder = Directory.Current
+	currentFolder = Directory.Current
 	if IsFresh(currentRoot, currentFolder) and Mentions(lines).Missing(files).Length is 0
 		return code is 0 then value else ScriptCache(value, code = 0)
 	File(Scripted.Path).InMemory(Text.Combine(lines, "\n"))
-	let discovered = SourceFiles(currentRoot).Of(Scripted.Path)
-	let missing = Mentions(lines).Missing(discovered)
+	discovered = SourceFiles(currentRoot).Of(Scripted.Path)
+	missing = Mentions(lines).Missing(discovered)
 	if missing.Length > 0
 		logger.Log(ResolveCheck.Located(Scripted.Path, FileCompiler.LineOf(lines, missing.First), missing.First))
 	File(Scripted.Path).InMemory("")
-	let clean = BaseOnly(discovered, skip)
+	clean = BaseOnly(discovered, skip)
 	missing.Length > 0 then ScriptCache(value, code = 1) else WithBase(clean, currentRoot, currentFolder)
 MergedInference(lines Texts) TypeInference
 	Sample.MergedInference(("Run", "\t1")).types.IsKnown("Scratch")
-	let shape = TypeShape(lines)
-	let types = inference.types
+	shape = TypeShape(lines)
+	types = inference.types
 	mutable positions = types.positions
 	positions("Scratch") = types.names.Length
-	let members = types.members + shape.MemberScope.Indexed.Owned("Scratch")
-	let typedMethods = ShapeTyping(inference).Typed(shape, shape.MethodScope, "Scratch").Indexed.Owned("Scratch")
-	let params = types.parameters + shape.CallScope(generics)
-	let merged = KnownTypes(types.names + "Scratch", members, types.methods + typedMethods, params, positions)
+	members = types.members + shape.MemberScope.Indexed.Owned("Scratch")
+	typedMethods = ShapeTyping(inference).Typed(shape, shape.MethodScope, "Scratch").Indexed.Owned("Scratch")
+	params = types.parameters + shape.CallScope(generics)
+	merged = KnownTypes(types.names + "Scratch", members, types.methods + typedMethods, params, positions)
 	TypeInference(merged, inference.constants + shape.ConstantScope)
 EntryNames(entries List(TypeEntry)) Texts
 	for entries
@@ -97,63 +97,63 @@ EntryNames(entries List(TypeEntry)) Texts
 MethodTargets(entries List(TypeEntry)) Texts
 	mutable result = List(Mutable(Text))
 	for entries.Slice(1, entries.Length - 1)
-		let entryName = value.Name
+		entryName = value.Name
 		for value.methods
 			result.Add(entryName + "." + value.Name)
 	result
 Linked(entry TypeEntry, main TypeCodegen, logger Logger) ScriptCache
-	let fast = Linker(root, main, known, Linker.Unsourced, isFast = true)
-	let round = fast.Linked((List(TypeEntry) + entry) + BaseRaw, signatures)
+	fast = Linker(root, main, known, Linker.Unsourced, isFast = true)
+	round = fast.Linked((List(TypeEntry) + entry) + BaseRaw, signatures)
 	if round.entries.Length is 0
 		return ScriptCache(value, code = 1)
-	let nextMachine = outer.Execute.Started(round.entries, Scripted.Path, false, true)
+	nextMachine = outer.Execute.Started(round.entries, Scripted.Path, false, true)
 	mutable nextKnown = known
 	for round.signatures
 		nextKnown(value) = round.entries(index + 1)
 	Cached(round, entry, nextMachine, nextKnown)
 Cached(round LinkRound, entry TypeEntry, nextMachine Machine, nextKnown Dictionary(Text, TypeEntry)) ScriptCache
-	let invoked = Linker.Sample.Targets(List(TypeEntry) + entry)
-	let nextTargets = (MethodTargets(round.entries) + invoked + round.Targets).Unique
-	let nextNames = (typeNames + EntryNames(round.entries) + entry.UsedTypes).Unique
-	let updated = ScriptCache(value, known = nextKnown, rawTypes = round.entries, code = 0)
-	let wired = ScriptCache(updated, resolvedTypes = nextMachine.types, signatures = round.signatures)
+	invoked = Linker.Sample.Targets(List(TypeEntry) + entry)
+	nextTargets = (MethodTargets(round.entries) + invoked + round.Targets).Unique
+	nextNames = (typeNames + EntryNames(round.entries) + entry.UsedTypes).Unique
+	updated = ScriptCache(value, known = nextKnown, rawTypes = round.entries, code = 0)
+	wired = ScriptCache(updated, resolvedTypes = nextMachine.types, signatures = round.signatures)
 	ScriptCache(wired, targets = nextTargets, typeNames = nextNames, machine = nextMachine)
 Executed(entry TypeEntry, logger Logger, arguments List(VmValue)) Boolean
 	Sample.Executed(TypeEntry("Strict/Scratch", List(MemberEntry), ReturnOne), Logger, List(VmValue))
-	let rewritten = TailCalls(List(TypeEntry) + entry).Rewritten.First
-	let base = BaseResolved
-	let methods = Resolver((List(TypeEntry) + rewritten) + base).Methods(rewritten)
-	let resolved = TypeEntry(rewritten.Name, rewritten.members, methods)
-	let nextTypes = (List(TypeEntry) + resolved) + base
+	rewritten = TailCalls(List(TypeEntry) + entry).Rewritten.First
+	base = BaseResolved
+	methods = Resolver((List(TypeEntry) + rewritten) + base).Methods(rewritten)
+	resolved = TypeEntry(rewritten.Name, rewritten.members, methods)
+	nextTypes = (List(TypeEntry) + resolved) + base
 	if machine.prototypes.entries.Length is 0
 		return Machine(nextTypes, ConstantCache(List(VmValue)), folder).Prepared.Completed(entry.Name, arguments)
 	machine.prototypes.Stored(0, Natives(nextTypes).Fresh(resolved))
-	let prepared = Machine(nextTypes, machine.prototypes, folder, false, machine.sources)
+	prepared = Machine(nextTypes, machine.prototypes, folder, false, machine.sources)
 	machine.prototypes.Stored(0, Constants(prepared).Filled(0))
 	prepared.Completed(entry.Name, arguments)
 Ran(entry TypeEntry, main TypeCodegen, logger Logger, arguments List(VmValue)) ScriptCache
 	if IsHit(entry)
 		return ScriptCache(value, code = Executed(entry, logger, arguments) then 0 else 1)
-	let built = Linked(entry, main, logger)
+	built = Linked(entry, main, logger)
 	built.code > 0 then built else ScriptCache(built, code = built.machine.Completed(entry.Name, arguments) then 0 else 1)
 Validated(lines Texts, merged TypeInference, logger Logger) Boolean
 	Sample.Validated(("Run", "\tmissing"), Sample.MergedInference(("Run", "\tmissing")), Logger) is false
-	let broken = FileCompiler.Unparsable(lines)
+	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
 		logger.Log(ResolveCheck.Located(Scripted.Path, broken + 1, FileCheck.Problem(lines, broken)))
 		return false
-	let knownNames = merged.types.names + ("value", "index", "outer") + merged.types.ShapeScope("Scratch").names
-	let bodies = MethodBodies("Scratch", TypeShape(lines), merged)
-	let issues = ResolveCheck.Found(FileCheck(merged, knownNames), bodies, lines, Scripted.Path)
+	knownNames = merged.types.names + ("value", "index", "outer") + merged.types.ShapeScope("Scratch").names
+	bodies = MethodBodies("Scratch", TypeShape(lines), merged)
+	issues = ResolveCheck.Found(FileCheck(merged, knownNames), bodies, lines, Scripted.Path)
 	for issues
 		logger.Log(value)
 	issues.Length is 0
 RanLines(lines Texts, texts List(VmValue), currentRoot Text, logger Logger, path = "") ScriptCache
-	let base = BaseLoaded(lines, currentRoot, logger, path is "" then "" else FileCompiler.Normalized(path))
+	base = BaseLoaded(lines, currentRoot, logger, path is "" then "" else FileCompiler.Normalized(path))
 	if base.code > 0
 		return ScriptCache(value, code = 1)
-	let merged = base.MergedInference(lines)
+	merged = base.MergedInference(lines)
 	if Validated(lines, merged, logger) is false
 		return ScriptCache(base, code = 1)
-	let main = TypeCodegen("Strict/Scratch", lines, merged, base.fullNames, false)
+	main = TypeCodegen("Strict/Scratch", lines, merged, base.fullNames, false)
 	base.Ran(main.Entry, main, logger, texts)

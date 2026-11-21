@@ -58,51 +58,51 @@ Grown Boolean
 At(at Number) Texts
 	Text.Combine(Quads.At(3)).IndexOf("wn3") > 0
 	Text.Combine(Quads.At(7)).IndexOf("mulf") > 0
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoopBegin
 		return Counted(at)
 	if entry.kind is in Constants
-		let slot = entry.kind is InstructionType.StoreConstantToVariable then 0 else 1
-		let number = PayloadDecoder(entry).Value(slot).number.Absolute
+		slot = entry.kind is InstructionType.StoreConstantToVariable then 0 else 1
+		number = PayloadDecoder(entry).Value(slot).number.Absolute
 		return List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number) + " : f64")
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Loaded(at)
 	entry.kind is in Bounded then Combined(at) else List(Text)
 Counted(at Number) Texts
-	let entry = function.method.instructions(at)
-	let start = Source(entry.payload(0), at)
+	entry = function.method.instructions(at)
+	start = Source(entry.payload(0), at)
 	if entry.payload(1) is not 1
 		return List(Text) + ("    " + Name("wn", at) + " = llvm.intr.fabs(" + start + ") : (f64) -> f64")
-	let end = Source(entry.payload(2), at)
+	end = Source(entry.payload(2), at)
 	List(Text) + ("    " + Name("wn", at) + " = arith.addf " + start + ", " + end + " : f64")
 Loaded(at Number) Texts
-	let entry = function.method.instructions(at)
-	let parameter = Parameter(entry.texts(0))
+	entry = function.method.instructions(at)
+	parameter = Parameter(entry.texts(0))
 	if parameter < 0 or entry.texts(0) is in ("value", "index")
 		return List(Text)
-	let input = "%t" + position + "wl" + parameter
+	input = "%t" + position + "wl" + parameter
 	List(Text) + ("    " + Name("wb", at) + " = llvm.intr.fabs(" + input + ") : (f64) -> f64")
 Combined(at Number) Texts
 	Rescaled.Combined(12).First is "    %t4wb12 = arith.addf %t4whlimit, %t4wb11 : f64"
 	GatedSum.Combined(13).First is "    %t4wb13 = arith.addf %t4whlimit, %t4wn10 : f64"
-	let entry = function.method.instructions(at)
-	let carried = Carried(at)
+	entry = function.method.instructions(at)
+	carried = Carried(at)
 	if entry.kind is not InstructionType.Multiply and carried >= 0
 		return Accumulated(at, carried)
-	let operation = entry.kind is InstructionType.Multiply then "mulf" else "addf"
-	let factors = Source(entry.payload(1), at) + ", " + Source(entry.payload(2), at)
-	let math = "    " + Name("wb", at) + " = arith." + operation + " " + factors + " : f64"
-	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
+	operation = entry.kind is InstructionType.Multiply then "mulf" else "addf"
+	factors = Source(entry.payload(1), at) + ", " + Source(entry.payload(2), at)
+	math = "    " + Name("wb", at) + " = arith." + operation + " " + factors + " : f64"
+	check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
 	(List(Text) + math) + check
 Accumulated(at Number, carried Number) Texts
 	Pairs.Accumulated(11, 4).First is "    %t4wb11c3 = arith.mulf %t4wn3, %t4wn6 : f64"
-	let entry = function.method.instructions(at)
-	let term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
-	let loaded = function.method.instructions(LoadReuse(function.method.instructions).Writer(carried, at, -1))
-	let reached = StoreBefore(loaded.texts(0), at)
-	let initial = Variable(loaded, reached + 1)
-	let summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + Name("wb", at) + "g : f64"
-	let check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
+	entry = function.method.instructions(at)
+	term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
+	loaded = function.method.instructions(LoadReuse(function.method.instructions).Writer(carried, at, -1))
+	reached = StoreBefore(loaded.texts(0), at)
+	initial = Variable(loaded, reached + 1)
+	summed = "    " + Name("wb", at) + " = arith.addf " + initial + ", " + Name("wb", at) + "g : f64"
+	check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
 	(Product(at, reached, Source(term, at)) + summed) + check
 Product(at Number, reached Number, term Text) Texts
 	Pairs.Product(11, 0, "%x").Last is "    %t4wb11g = arith.mulf %t4wb11c3, %x : f64"
@@ -112,7 +112,7 @@ Product(at Number, reached Number, term Text) Texts
 	mutable lines = List(Mutable(Text))
 	for as long as Loop(loop) > reached
 		loop = Loop(loop)
-		let name = Name("wb", at) + "c" + loop
+		name = Name("wb", at) + "c" + loop
 		lines = lines + ("    " + name + " = arith.mulf " + Name("wn", loop) + ", " + counted + " : f64")
 		counted = name
 	lines + ("    " + Name("wb", at) + "g = arith.mulf " + counted + ", " + term + " : f64")
@@ -122,10 +122,10 @@ Source(register Number, at Number) Text
 	Scaled.Source(2, 6) is "%t4whlimit"
 	GatedSum.Source(11, 17) is "%t4whlimit"
 	LoadReuse(Quads.function.method.instructions).Writer(3, 7, -1) is 5
-	let writer = LoadReuse(function.method.instructions).Writer(register, at, -1)
+	writer = LoadReuse(function.method.instructions).Writer(register, at, -1)
 	if writer < 0
 		return "%t" + position + "whlimit"
-	let entry = function.method.instructions(writer)
+	entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(entry, writer)
 	entry.kind is in Bounded or entry.kind is in Constants then Name("wb", writer) else "%t" + position + "whlimit"
@@ -134,20 +134,20 @@ Variable(entry InstructionEntry, at Number) Text
 		return Name("wn", Loop(at))
 	if Parameter(entry.texts(0)) >= 0
 		return Name("wb", at)
-	let store = StoreBefore(entry.texts(0), at)
+	store = StoreBefore(entry.texts(0), at)
 	if store < 0 or LastStore(entry.texts(0), at) > at or IsSkipped(store, at)
 		return "%t" + position + "whlimit"
-	let stored = function.method.instructions(store)
+	stored = function.method.instructions(store)
 	stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
 Carried(at Number) Number
 	Quads.Carried(12) is 2
 	Quads.Carried(7) is -1
-	let first = function.method.instructions(at).payload(1)
-	let writer = LoadReuse(function.method.instructions).Writer(first, at, -1)
-	let loaded = function.method.instructions(writer < 0 then at else writer)
+	first = function.method.instructions(at).payload(1)
+	writer = LoadReuse(function.method.instructions).Writer(first, at, -1)
+	loaded = function.method.instructions(writer < 0 then at else writer)
 	if loaded.kind is not InstructionType.LoadVariableToRegister
 		return Number.NotFound
-	let name = loaded.texts(0)
+	name = loaded.texts(0)
 	LastStore(name, at) is at + 1 and IsSkipped(StoreBefore(name, at), at) is false then first else Number.NotFound
 LastStore(name Text, at Number) Number
 	Quads.LastStore("sum", 12) is 13
@@ -163,7 +163,7 @@ IsSkipped(store Number, at Number) Boolean
 	GatedSum.IsSkipped(1, 11) is false
 	mutable depth = 0
 	for Range(store + 1, at)
-		let kind = function.method.instructions(value).kind
+		kind = function.method.instructions(value).kind
 		depth = depth + (kind is in Openers then 1 else kind is in Closers then -1 else 0)
 		if depth < 0
 			return true
@@ -171,17 +171,17 @@ IsSkipped(store Number, at Number) Boolean
 Loop(at Number) Number
 	Quads.Loop(7) is 3
 	for at
-		let earlier = at - 1 - index
-		let entry = function.method.instructions(earlier)
+		earlier = at - 1 - index
+		entry = function.method.instructions(earlier)
 		if entry.kind is InstructionType.LoopBegin and function.method.LoopEndOf(earlier) >= at
 			return earlier
 	Number.NotFound
 StoreBefore(name Text, at Number) Number
 	Quads.StoreBefore("sum", 4) is 0
 	for at
-		let earlier = at - 1 - index
-		let entry = function.method.instructions(earlier)
-		let isStore = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
+		earlier = at - 1 - index
+		entry = function.method.instructions(earlier)
+		isStore = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		if isStore and entry.texts.Last is name
 			return earlier
 	Number.NotFound

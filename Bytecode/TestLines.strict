@@ -18,7 +18,7 @@ Without(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Without(BodyParser("Run", "\t2 is in (1, 2)", "\t2").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(BodyParser("Run Boolean", "\t3 > 1", "\ttrue").Block(1, 1), CodeBlock.Empty).children.Length is 1
 	Plain.Without(Declared, CodeBlock.Empty).children.Length is 1
-	let end = LeadingEnd(body, block)
+	end = LeadingEnd(body, block)
 	mutable code = List(Mutable(SyntaxNode))
 	for body.children
 		if index >= end
@@ -31,7 +31,7 @@ UsedConstants(body SyntaxNode, code SyntaxNodes, block CodeBlock) SyntaxNodes
 	mutable names = List(Mutable(Text))
 	for SyntaxNode("Body", "", code).Statements
 		names = names + value.HeadNames
-	let end = LeadingEnd(body, block)
+	end = LeadingEnd(body, block)
 	for body.children
 		if index < end and IsTestConstant(body, index, block) and Tokenizer(value.text).Tokens.Last is in names
 			value
@@ -40,10 +40,11 @@ Tests(body SyntaxNode, block CodeBlock) SyntaxNodes
 	Plain.Tests(BodyParser("Run", "\tlet a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Plain.Tests(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 2
 	Plain.Tests(BodyParser("Run", "\t1 is 1", "\tconstant a = 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 1
+	Plain.Tests(BodyParser("Run", "\t3 is 3", "\tconstant a = 1", "\ta is 1", "\tresult = a", "\tresult").Block(1, 1), CodeBlock.Empty).Length is 3
 	Plain.Tests(Consecutive, CodeBlock.Empty).Length is 4
 	Plain.Tests(BodyParser("Run", "\tmutable a = 1", "\ta is 1", "\ta").Block(1, 1), CodeBlock.Empty).Length is 0
 	Reading.Tests(BodyParser("Run", "\t1 is 1", "\tRead.attack", "\t2").Block(1, 1), CodeBlock.Empty).Length is 2
-	let end = LeadingEnd(body, block)
+	end = LeadingEnd(body, block)
 	for body.children
 		if index < end
 			value
@@ -60,8 +61,8 @@ IsTestConstant(body SyntaxNode, position Number, block CodeBlock) Boolean
 	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta", "\ta").Block(1, 1), 0, CodeBlock.Empty) is false
 	Plain.IsTestConstant(Undeclared, 0, CodeBlock.Empty) is false
 	Plain.IsTestConstant(BodyParser("Run", "\tconstant a = 1", "\ta is 1", "\ta").Block(1, 1), 0, CodeBlock.Empty)
-	let line = body.children(position)
-	let isNext = line.Kind is "Declaration" and line.text.StartsWith("constant ") and position + 2 < body.children.Length
+	line = body.children(position)
+	isNext = line.Kind is "Declaration" and line.text.StartsWith("constant ") and position + 2 < body.children.Length
 	isNext and (IsTest(body.children(position + 1), true, block) or IsTestConstant(body, position + 1, block))
 IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	Plain.IsTest(SyntaxNode("Binary", ">", (One, One)), false, CodeBlock.Empty) is false
@@ -75,7 +76,7 @@ IsTest(line SyntaxNode, isLeading Boolean, block CodeBlock) Boolean
 	if line.Kind is in ("If", "ElseIf", "Else", "Declaration", "Reassignment")
 		return false
 	if isLeading and (IsCalling(line, block) or line.Kind is "Not") or (line to Text).IndexOf(" is ") >= 0
-		let type = values.TypeOf(line, block)
+		type = values.TypeOf(line, block)
 		return "Boolean" is in type.Split(" or ") or values.inference.types.ValueOf(type) is "Boolean"
 	false
 IsCalling(line SyntaxNode, block CodeBlock) Boolean
@@ -91,8 +92,8 @@ Guarded(body SyntaxNode, header HeaderTokens, line Number, scope Scope) SyntaxNo
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).Kind is "Body"
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children(1).Kind is "If"
 	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children.Length is 3
-	let end = LeadingEnd(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
-	let checks = Validations(header) + Checks(header, line)
+	end = LeadingEnd(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
+	checks = Validations(header) + Checks(header, line)
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
 		statements = index is end then statements + checks + value else statements + value
@@ -108,10 +109,10 @@ Checks(header HeaderTokens, line Number) SyntaxNodes
 	Plain.Checks(HeaderTokens(Tokenizer("Run(frames Number) Number").Tokens), 1).Length is 0
 	Plain.Checks(FramedHeader, 1).First.line is 1
 	Plain.Checks(HeaderTokens(Tokenizer("D(a Numbers with value.Bits is 32)").Tokens), 1).Length is 0
-	let parameterTypes = header.ParameterTypes
+	parameterTypes = header.ParameterTypes
 	mutable checks = List(Mutable(SyntaxNode))
 	for header.ParameterNames
-		let constraint = Constraint.Checking(Constraint.Parameter(header, value))
+		constraint = Constraint.Checking(Constraint.Parameter(header, value))
 		if constraint is not ""
 			checks.Add(Constraint(value, parameterTypes(index), values.inference.types).Checked(constraint, line))
 	checks

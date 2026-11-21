@@ -29,46 +29,46 @@ constant CudaMainB2 = ("  ck(CF(\"cuInit\",(unsigned))(0));ck(CF(\"cuDeviceGet\"
 constant CudaMainC = ("  ck(CF(\"cuModuleLoadData\",(void**,const void*))(&mod,ptx));ck(CF(\"cuModuleGetFunction\",(void**,void*,const char*))(&kn,mod,\"strict_device_hadamard_tokens\"));")
 constant CudaMainD = ("  int cs[4][4]={{5376,672,32,0},{14336,896,32,0},{5376,672,32,4},{14336,896,17,0}};", "  for(int i=0;i<4;i++)run_case(kn,cs[i][0],cs[i][1],cs[i][2],cs[i][3]);ck(CF(\"cuCtxDestroy_v2\",(void*))(ctx));return 0;}")
 Run Number
-	let folder = "Compiler/output/HadamardCheck" + 1000000.Random.Floor
+	folder = "Compiler/output/HadamardCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Checked(folder Text) Boolean
-	let body = ModuleLines("Device") + ModuleLines("Nvidia") + ModuleLines("Hadamard")
+	body = ModuleLines("Device") + ModuleLines("Nvidia") + ModuleLines("Hadamard")
 	File(folder + "/hadamard.mlir").Write(MlirHeader + body + List(Text) + "}")
-	let lowered = CompiledPtx(folder)
+	lowered = CompiledPtx(folder)
 	lowered is Error then lowered else RanHarness(folder)
 ModuleLines(name Text) Texts
 	File("Compiler/NativeRuntime" + name + ".mlir").ReadLines
 CompiledPtx(folder Text) Boolean
-	let optArgs = "\"" + folder + "/hadamard.mlir\" " + OptFlags + " -o \"" + folder + "/h.llvm.mlir\""
-	let optRes = Process.RunTool(FindTool("mlir-opt", "C:/msys64/ucrt64/bin/mlir-opt.exe"), optArgs, ToolSeconds)
+	optArgs = "\"" + folder + "/hadamard.mlir\" " + OptFlags + " -o \"" + folder + "/h.llvm.mlir\""
+	optRes = Process.RunTool(FindTool("mlir-opt", "C:/msys64/ucrt64/bin/mlir-opt.exe"), optArgs, ToolSeconds)
 	if optRes.exitCode is not 0
 		return Error("MlirOptFailed: " + optRes.Output + optRes.error)
-	let trArgs = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/h.llvm.mlir\" -o \"" + folder + "/h.ll\""
-	let trRes = Process.RunTool(FindTool("mlir-translate", "C:/msys64/ucrt64/bin/mlir-translate.exe"), trArgs, ToolSeconds)
+	trArgs = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/h.llvm.mlir\" -o \"" + folder + "/h.ll\""
+	trRes = Process.RunTool(FindTool("mlir-translate", "C:/msys64/ucrt64/bin/mlir-translate.exe"), trArgs, ToolSeconds)
 	if trRes.exitCode is not 0
 		return Error("MlirTranslateFailed: " + trRes.Output + trRes.error)
-	let ptxArgs = ClangFlags + " \"" + folder + "/h.ll\" -o \"" + folder + "/h.ptx\""
-	let ptxRes = Process.RunTool(FindTool("clang", "C:/Program Files/LLVM/bin/clang.exe"), ptxArgs, ToolSeconds)
+	ptxArgs = ClangFlags + " \"" + folder + "/h.ll\" -o \"" + folder + "/h.ptx\""
+	ptxRes = Process.RunTool(FindTool("clang", "C:/Program Files/LLVM/bin/clang.exe"), ptxArgs, ToolSeconds)
 	ptxRes.exitCode is not 0 then Error("ClangPtxFailed: " + ptxRes.Output + ptxRes.error) else true
 RanHarness(folder Text) Boolean
-	let win = Process.OperatingSystem is "Windows"
-	let exe = folder + "/check" + (win then ".exe" else "")
+	win = Process.OperatingSystem is "Windows"
+	exe = folder + "/check" + (win then ".exe" else "")
 	File(folder + "/check.c").Write(HarnessCode)
-	let ccArgs = "-O2 \"" + folder + "/check.c\" -o \"" + exe + "\"" + (win then "" else " -ldl -lm")
-	let comp = Process.RunTool("clang", ccArgs, ToolSeconds)
+	ccArgs = "-O2 \"" + folder + "/check.c\" -o \"" + exe + "\"" + (win then "" else " -ldl -lm")
+	comp = Process.RunTool("clang", ccArgs, ToolSeconds)
 	if comp.exitCode is not 0
 		return Error("CompileFailed: " + comp.Output + comp.error)
-	let ran = Process.RunTool(exe, "\"" + folder + "/h.ptx\"", ToolSeconds)
+	ran = Process.RunTool(exe, "\"" + folder + "/h.ptx\"", ToolSeconds)
 	logger.Log(ran.Output.Trim)
 	ran.exitCode is not 0 then Error("HadamardCheckFailed: " + ran.Output + ran.error) else true
 FindTool(name Text, windowsPath Text) Text
 	Process.OperatingSystem is "Windows" and File(windowsPath).Exists then windowsPath else name
 HarnessCode Texts
-	let h = HeadA + HeadB + HeadC + CudaHelpA + CudaHelpB + CudaRotA + CudaRotB + CudaBrn
-	let g = CudaRunG1 + CudaRunG2 + CudaRunH + CudaRunI + CudaMainA + CudaMainA2
-	let m = CudaMainB + CudaMainB2 + CudaMainC + CudaMainD
+	h = HeadA + HeadB + HeadC + CudaHelpA + CudaHelpB + CudaRotA + CudaRotB + CudaBrn
+	g = CudaRunG1 + CudaRunG2 + CudaRunH + CudaRunI + CudaMainA + CudaMainA2
+	m = CudaMainB + CudaMainB2 + CudaMainC + CudaMainD
 	h + CudaRunA + CudaRunB + CudaRunC + CudaRunC2 + CudaRunD + CudaRunE + CudaRunF1 + CudaRunF2 + g + m

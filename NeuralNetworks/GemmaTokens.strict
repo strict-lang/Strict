@@ -13,11 +13,11 @@ Loaded(model Gguf) GemmaTokens
 	Tiny.tokens.Length is 14
 	(Tiny.specials("<|turn>"), Tiny.specials.Length) is (10, 2)
 	Tiny.Encoded(" ab\n\nb<|turn>" + Accent) is (0, 5, 7, 2, 10, 8, 9)
-	let names = Unescaped(GgufFile.Escaped(model.path, "tokenizer.ggml.tokens").Lines)
+	names = Unescaped(GgufFile.Escaped(model.path, "tokenizer.ggml.tokens").Lines)
 	mutable known = Dictionary(Text, Number)
 	for names
 		known(value) = index
-	let merges = Unescaped(GgufFile.Escaped(model.path, "tokenizer.ggml.merges").Lines)
+	merges = Unescaped(GgufFile.Escaped(model.path, "tokenizer.ggml.merges").Lines)
 	GemmaTokens(names, known, Ranked(merges, known, names.Length), Gpt2Tokens.Controls(model, names))
 Unescaped(lines Texts) Texts
 	GemmaTokens.Unescaped(("a", "\\n\\n", "\\\\n")) is ("a", "\n\n", "\\n")
@@ -35,7 +35,7 @@ Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Nu
 	Tiny.ranks(6 * 14 + 6) is 2
 	mutable ranked = Dictionary(Number, Number)
 	for merges
-		let at = value.IndexOf(" ", 1)
+		at = value.IndexOf(" ", 1)
 		ranked(known(value.Substring(0, at)) * width + known(value.Substring(at + 1))) = index
 	ranked
 Encoded(text Text) Numbers
@@ -43,9 +43,9 @@ Encoded(text Text) Numbers
 	(List(Number) + ids("<bos>")) + Pieces(text)
 Pieces(text Text) Numbers
 	Tiny.Pieces("a<|turn>b a") is (1, 10, 2, 3, 1)
-	let special = Shared.Special(text)
+	special = Shared.Special(text)
 	if special is not ""
-		let at = text.IndexOf(special)
+		at = text.IndexOf(special)
 		return (Pieces(text.Substring(0, at)) + specials(special)) + Pieces(text.Substring(at + special.Length))
 	mutable encoded = List(Mutable(Number))
 	for Runs(text.Replace(" ", Space))
@@ -87,8 +87,8 @@ Symbols(bytes Numbers) Numbers
 	mutable symbols = List(Mutable(Number))
 	mutable start = 0
 	for as long as start < bytes.Length
-		let width = (bytes.Length - start).Minimum(Width(bytes(start)))
-		let letter = Text.Utf8(bytes.Slice(start, width))
+		width = (bytes.Length - start).Minimum(Width(bytes(start)))
+		letter = Text.Utf8(bytes.Slice(start, width))
 		symbols = letter is in ids then symbols + ids(letter) else symbols + Unknown(bytes.Slice(start, width))
 		start = start + width
 	symbols
@@ -109,7 +109,7 @@ Best(symbols Numbers) Number
 	mutable best = -1
 	mutable lowest = ranks.Length
 	for Range(1, symbols.Length)
-		let pair = symbols(value - 1) * tokens.Length + symbols(value)
+		pair = symbols(value - 1) * tokens.Length + symbols(value)
 		if symbols(value - 1) >= 0 and symbols(value) >= 0 and pair is in ranks and ranks(pair) < lowest
 			best = value - 1
 			lowest = ranks(pair)

@@ -11,62 +11,62 @@ Computed Machine
 	mutable created = List(Mutable(VmValue))
 	for machine.types
 		created.Add(Filled(index))
-	let loads = ConstantLoads(machine.types, created.Length)
+	loads = ConstantLoads(machine.types, created.Length)
 	Machine(machine, types = loads.Rewritten, prototypes = ConstantCache(created + loads.Decoded))
 Filled(route Number) VmValue
 	Constants(Machine.Hello.Prepared).Filled(0).kind is "HelloLogger"
-	let type = machine.types(route)
-	let prototype = machine.prototypes.At(route)
+	type = machine.types(route)
+	prototype = machine.prototypes.At(route)
 	mutable items = prototype.items
 	for type.methods
-		let slot = type.ConstantSlot(value)
+		slot = type.ConstantSlot(value)
 		if slot >= 0
 			items(slot) = VmValue("$Constant", route, slot to Text, List(VmValue) + VmValue.OfNumber(index))
 	VmValue(prototype.kind, prototype.number, prototype.text, items)
 Value(route Number, slot Number) VmValue
-	let prototype = machine.prototypes.At(route)
-	let found = prototype.items(slot)
+	prototype = machine.prototypes.At(route)
+	found = prototype.items(slot)
 	if found.kind is "$Computing"
 		return VmValue.OfError("RecursiveConstant")
 	if found.kind is not "$Constant"
 		return found
 	Saved(route, slot, VmValue(found, kind = "$Computing"))
-	let method = machine.types(route).methods(found.items.First.number)
-	let computed = Computed(route, method, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
+	method = machine.types(route).methods(found.items.First.number)
+	computed = Computed(route, method, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
 	Saved(route, slot, computed)
 	computed
 Computed(route Number, method MethodEntry, call Invocation) VmValue
-	let entered = TestBudget.Entered
-	let computed = machine.Executed(route, method, call)
+	entered = TestBudget.Entered
+	computed = machine.Executed(route, method, call)
 	TestBudget.Left(entered)
 	computed
 Saved(route Number, slot Number, result VmValue)
-	let prototype = machine.prototypes.At(route)
-	let items = Storage(machine.types).Replaced(prototype.items, slot, result)
+	prototype = machine.prototypes.At(route)
+	items = Storage(machine.types).Replaced(prototype.items, slot, result)
 	machine.prototypes.Stored(route, VmValue(prototype, items = items))
 Member(type TypeEntry, slot Number) VmValue
-	let route = type.Name is in machine.places then machine.places(type.Name) else Resolver(machine.types).Position(type)
-	let isPrepared = route >= 0 and route < machine.prototypes.entries.Length
+	route = type.Name is in machine.places then machine.places(type.Name) else Resolver(machine.types).Position(type)
+	isPrepared = route >= 0 and route < machine.prototypes.entries.Length
 	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))
 Seeded(cache Dictionary(Text, VmValue)) Machine
 	if cache.Length is 0
 		return machine
 	for machine.types
 		if value.Name is in cache
-			let cached = cache(value.Name)
-			let proto = machine.prototypes.At(index)
+			cached = cache(value.Name)
+			proto = machine.prototypes.At(index)
 			if cached.items.Length is proto.items.Length
 				machine.prototypes.Stored(index, VmValue(proto, items = Merged(proto.items, cached.items)))
 	machine
 Merged(current List(VmValue), cached List(VmValue)) List(VmValue)
 	Constants(Machine.Hello.Prepared).Merged(List(VmValue) + Unset, List(VmValue) + VmValue.OfNumber(7)).First.number is 7
 	for current
-		let keep = value.kind is "$Constant" and cached(index).kind is not in ("$Constant", "$Computing")
+		keep = value.kind is "$Constant" and cached(index).kind is not in ("$Constant", "$Computing")
 		keep and cached(index).kind is not in VmValue.ErrorKinds then cached(index) else value
 Recorded(cache Dictionary(Text, VmValue)) Dictionary(Text, VmValue)
 	mutable result = cache
 	for machine.types
-		let proto = machine.prototypes.At(index)
+		proto = machine.prototypes.At(index)
 		if proto.items.Length > 0 and IsEvaluated(value, proto.items)
 			result(value.Name) = proto
 	result

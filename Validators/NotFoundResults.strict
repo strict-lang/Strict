@@ -5,7 +5,7 @@ constant Signing = NotFoundResults(("Sign Number", "	Sign is 1", "	value > 0 the
 Issues List(ValidationIssue)
 	Searching.Issues.First to Text is "NotFoundMustBeNamed: Find returns -1, use Number.NotFound"
 	Searching.Issues.First.Line is 3 and Returning.Issues.First.Line is 4 and Signing.Issues.Length is 0
-	let codes = StatusCodes(lines)
+	codes = StatusCodes(lines)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if codes.IsNumbered(index)
@@ -14,8 +14,8 @@ Issues List(ValidationIssue)
 Found(codes StatusCodes, header Number) List(ValidationIssue)
 	Searching.Found(StatusCodes(Searching.lines), 0).Length is 1
 	Signing.Found(StatusCodes(Signing.lines), 0).Length is 0
-	let name = Tokenizer(lines(header)).Tokens.First
+	name = Tokenizer(lines(header)).Tokens.First
 	for codes.Results(header)
-		let literals = codes.Literals(value)
+		literals = codes.Literals(value)
 		if "-1" is in literals and "1" is not in literals
 			ValidationIssue("NotFoundMustBeNamed", name + " returns -1, use Number.NotFound", header + index + 2)

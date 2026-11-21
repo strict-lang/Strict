@@ -30,5 +30,5 @@ Intersects(other) Boolean
 CreateFromCorners(first Vector2, second Vector2) Rectangle
 	Rectangle.CreateFromCorners(Vector2(4, 6), Vector2(0, 0)) is Rectangle(Vector2(2, 3), Size(4, 6))
 	Rectangle.CreateFromCorners(Vector2(1, 2), Vector2(5, 8)) is Rectangle(Vector2(3, 5), Size(4, 6))
-	let center = Vector2((first.X + second.X) / 2, (first.Y + second.Y) / 2)
+	center = Vector2((first.X + second.X) / 2, (first.Y + second.Y) / 2)
 	Rectangle(center, Size((second.X - first.X).Absolute, (second.Y - first.Y).Absolute))

@@ -2,9 +2,9 @@ constant Population = 50
 constant Generations = 300
 constant Strength = 0.5
 Run
-	let started = Process.Elapsed
-	let best = Evolved(Networks, Generations)
-	let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+	started = Process.Elapsed
+	best = Evolved(Networks, Generations)
+	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	logger.Log(Generations + " generations of " + Population + " networks in " + milliseconds + " ms")
 	logger.Log("XOR error " + Xor.Error(best))
 	for Xor.Inputs
@@ -33,8 +33,8 @@ Mutated(network Network) Network
 	Network(layers)
 Tournament(population List(Network)) Network
 	Neuroevolution.Tournament(List(Network) + Network.Pair) is Network.Pair
-	let first = population(population.Length.Random.Floor)
-	let second = population(population.Length.Random.Floor)
+	first = population(population.Length.Random.Floor)
+	second = population(population.Length.Random.Floor)
 	Xor.Error(first) < Xor.Error(second) then first else second
 Best(population List(Network)) Network
 	Xor.Error(Neuroevolution.Best((Network.Pair, Network.Single))) <= Xor.Error(Network.Pair)

@@ -43,7 +43,7 @@ Statements(body SyntaxNode) SyntaxNodes
 	NamedIterators.Expanded(Sizing).children.Last.Lines("\t")(1) is "\tlet width = value(1)"
 	NamedIterators.Statements(Pairing).First.children(0) to Text is "height"
 	for body.children
-		let nested = SyntaxNode(value.Kind, value.text, Children(value), value.line)
+		nested = SyntaxNode(value.Kind, value.text, Children(value), value.line)
 		IsNamed(nested) then Expanded(nested) else nested
 Children(statement SyntaxNode) SyntaxNodes
 	NamedIterators.Children(Branching).Last.Lines("\t") is ("\tfor height", "\t\tfor width", "\t\t\tvalue")
@@ -53,21 +53,21 @@ Expanded(loop SyntaxNode) SyntaxNode
 	NamedIterators.Expanded(Pairing.children(0)).children(0) to Text is "height"
 	NamedIterators.Expanded(Sizing).children(0) to Text is "((1, 2), (3, 4))"
 	NamedIterators.Expanded(Eighths).children(0) to Text is "64"
-	let iterating = NamedIterators(StatementParser(Tokenizer(loop.text).Tokens).IteratorNames, loop.line)
-	let iterables = loop.children.Slice(0, loop.children.Length - 1)
+	iterating = NamedIterators(StatementParser(Tokenizer(loop.text).Tokens).IteratorNames, loop.line)
+	iterables = loop.children.Slice(0, loop.children.Length - 1)
 	if iterables.Length is 1
 		return iterating.Destructured(iterables(0), loop.children.Last)
 	if CountedIterators.IsFlat(iterables, loop.children.Last)
 		return CountedIterators(iterating.names, loop.line).Flattened(iterables, loop.children.Last)
-	let renamed = iterating.Iterables(iterables)
-	let body = iterating.Renamed(loop.children.Last, iterables.Length)
+	renamed = iterating.Iterables(iterables)
+	body = iterating.Renamed(loop.children.Last, iterables.Length)
 	iterating.Looped(renamed, body, iterating.Mentions(SyntaxNode(loop.Kind, "", renamed + body)), 0)
 Destructured(iterable SyntaxNode, body SyntaxNode) SyntaxNode
 	Sizes.Destructured(Sizing.children(0), Sizing.children.Last).children(0) to Text is "((1, 2), (3, 4))"
 	Sizes.Destructured(Sizing.children(0), Sizing.children.Last).children.Last.Lines("\t")(1) is "\tlet width = value(1)"
 	Pairs.Destructured(Sizing.children(0), HidingBody).children.Last.children(0).Kind is "Invalid"
-	let checked = Renamed(body, 0)
-	let declarations = Declarations(Mentions(checked))
+	checked = Renamed(body, 0)
+	declarations = Declarations(Mentions(checked))
 	SyntaxNode("For", "", (iterable, SyntaxNode("Body", "", declarations + checked.children, body.line)), line)
 Declarations(mentioned Texts) SyntaxNodes
 	Sizes.Declarations(List(Text) + "width").First to Text is "let width = value(1)"
@@ -87,10 +87,10 @@ Looped(iterables SyntaxNodes, body SyntaxNode, bound Texts, position Number) Syn
 	Pairs.Looped(Counts, Pairing, List(Text) + "y", 0).children.Last.Lines("\t")(0) is "\tlet y = value"
 	Pairs.Looped(Counts, Pairing, List(Text) + "y", 0).children.Last.Lines("\t")(2) is "\t\tfor y, x in height, width"
 	Pairs.Looped(Counts, Pairing, List(Text), 1).children.Last.Lines("\t")(0) is "\tfor y, x in height, width"
-	let isLast = position + 1 is iterables.Length
-	let inner = isLast then body.children else List(SyntaxNode) + Looped(iterables, body, bound, position + 1)
-	let element = Declared(names(position), SyntaxNode("Identifier", "value"))
-	let declared = names(position) is in bound then List(SyntaxNode) + element else List(SyntaxNode)
+	isLast = position + 1 is iterables.Length
+	inner = isLast then body.children else List(SyntaxNode) + Looped(iterables, body, bound, position + 1)
+	element = Declared(names(position), SyntaxNode("Identifier", "value"))
+	declared = names(position) is in bound then List(SyntaxNode) + element else List(SyntaxNode)
 	SyntaxNode("For", "", (iterables(position), SyntaxNode("Body", "", declared + inner)), line)
 Iterables(iterables SyntaxNodes) SyntaxNodes
 	Pairs.Renamed(BodyParser("Run", "\tif x", "\t\tx").Block(1, 1), 2).Lines("\t") is ("\tif value", "\t\tvalue")
@@ -107,26 +107,26 @@ Renamed(node SyntaxNode, level Number) SyntaxNode
 	Pairs.Renamed(SyntaxParser(Tokenizer("y.Length + x.Length").Tokens).Parse, 2) to Text is "y.Length + value.Length"
 	Cubes.Renamed(SyntaxNode("Identifier", "z"), 3) to Text is "z"
 	Pairs.Renamed(HidingBody.children(0), 2) to Text is "VariableHidesIteratorUseDifferentName: x"
-	let declared = node.Kind is "Declaration" then Tokenizer(node.text).Tokens.Last else ""
+	declared = node.Kind is "Declaration" then Tokenizer(node.text).Tokens.Last else ""
 	if declared is in names
 		return SyntaxNode("Invalid", "VariableHidesIteratorUseDifferentName: " + declared, List(SyntaxNode), node.line)
-	let distance = Distance(node, level)
-	let text = distance is 0 then "value" else (distance is 1 then "outer" else node.text)
+	distance = Distance(node, level)
+	text = distance is 0 then "value" else (distance is 1 then "outer" else node.text)
 	SyntaxNode(node.Kind, text, RenamedChildren(node, level), node.line)
 RenamedChildren(node SyntaxNode, level Number) SyntaxNodes
 	Pairs.RenamedChildren(Inner, 2).Last.Lines("\t") is ("\touter + y")
 	Pairs.RenamedChildren(Inner, 2).First to Text is "4"
 	Pairs.RenamedChildren(Inner, 0).Last.Lines("\t") is ("\tx + y")
 	for node.children
-		let isMember = node.Kind is in ("Member", "MethodCall") and index is 0 and Distance(value, level) is 1
-		let isCondition = node.text is "for as long as" and index is 0
-		let deeper = level > 0 and node.Kind is "For" and value.Kind is "Body" then level + 1 else level
+		isMember = node.Kind is in ("Member", "MethodCall") and index is 0 and Distance(value, level) is 1
+		isCondition = node.text is "for as long as" and index is 0
+		deeper = level > 0 and node.Kind is "For" and value.Kind is "Body" then level + 1 else level
 		IsTarget(node, index) or isMember or isCondition then value else Renamed(value, deeper)
 Distance(node SyntaxNode, level Number) Number
 	Pairs.Distance(SyntaxNode("Identifier", "y"), 2) is 1
 	Pairs.Distance(SyntaxNode("Call", "x", List(SyntaxNode) + SyntaxNode("Number", "0")), 2) is 0
 	Pairs.Distance(SyntaxNode("Number", "2"), 2) is -1
-	let position = node.Kind is in ("Identifier", "Call") then names.Index(node.text) else -1
+	position = node.Kind is in ("Identifier", "Call") then names.Index(node.text) else -1
 	position < 0 then Number.NotFound else level - 1 - position
 IsTarget(node SyntaxNode, position Number) Boolean
 	Pairs.IsTarget(SyntaxNode("Reassignment", "", (SyntaxNode("Number", "5"), SyntaxNode("Number", "1"))), 0) is false

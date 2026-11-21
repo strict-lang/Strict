@@ -6,13 +6,13 @@ has epsilon Number
 Modulated BFloat16s
 	TokenModulated((3, 4), (1, 2), (0.5, 0, 1, 1, 0, 0), 0, 0.000001).Modulated(1).IsNearlyEqual(4.525483)
 	TokenModulated(Zeros(3072, 1), Zeros(3072, 2), Zeros(18432, 0.5), 0, 0.000001).Modulated.First.IsNearlyEqual(3.5)
-	let width = weights.Length
-	let scales = Qwen3Block.Scales(input, width, epsilon)
-	let shifts = part * width
-	let scaling = shifts + width
+	width = weights.Length
+	scales = Qwen3Block.Scales(input, width, epsilon)
+	shifts = part * width
+	scaling = shifts + width
 	for input.Length
-		let channel = index % width
-		let factor = scales((index / width).Floor) * weights(channel) * (1 + modulation(scaling + channel))
+		channel = index % width
+		factor = scales((index / width).Floor) * weights(channel) * (1 + modulation(scaling + channel))
 		input(index) * factor + modulation(shifts + channel)
 Zeros(count Number, number Number) Numbers
 	for count

@@ -15,44 +15,44 @@ constant CNixRun = ("  pthread_t t[16];", "  for (int i = 0; i < 16; i++) pthrea
 constant CCheck = ("  for (int i = 0; i < 16; i++) { if (assigned[i] <= 0 || assigned[i] >= 65536) return 2;", "    for (int j = i + 1; j < 16; j++) if (assigned[i] == assigned[j]) return 3; }", "  return 0;", "}")
 constant CLookup = ("  fn_listen = (Fn)DLL_SYM(lib, \"Socket_Listen\");", "  fn_port = (Fn)DLL_SYM(lib, \"Socket_Port\");", "  fn_close = (Fn)DLL_SYM(lib, \"Socket_Close\");")
 Run Number
-	let folder = "Examples/SocketCheck" + 1000000.Random.Floor
+	folder = "Examples/SocketCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder)
+	result = Checked(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
 Checked(folder Text) slow
-	let parallel = CheckedThreads(folder)
+	parallel = CheckedThreads(folder)
 	if parallel is Error
 		return parallel
-	let occupied = Socket.Listen(FixedPort)
+	occupied = Socket.Listen(FixedPort)
 	if occupied is Error
 		return Error("PortOpenFailed: " + (occupied to Text))
-	let results = RanConcurrent
+	results = RanConcurrent
 	Socket.Close(occupied)
 	for results
 		if value.exitCode is not 0
 			return Error("ConcurrentSocketChecksFailed: " + value.Output + value.error)
 	logger.Log("Concurrent loopbacks pass with the old fixed port occupied")
 RanConcurrent List(ProcessResult) slow
-	let extension = Process.OperatingSystem is "Windows" then ".exe" else ""
+	extension = Process.OperatingSystem is "Windows" then ".exe" else ""
 	Process.RunTools("Networking/obj/SocketChecks.test" + extension, EmptyArguments, ToolSeconds)
 EmptyArguments Texts
 	for Threads
 		""
 CheckedThreads(folder Text) slow
-	let isWindows = Process.OperatingSystem is "Windows"
-	let cFile = folder + "/threads.c"
-	let exe = folder + "/threads" + (isWindows then ".exe" else "")
+	isWindows = Process.OperatingSystem is "Windows"
+	cFile = folder + "/threads.c"
+	exe = folder + "/threads" + (isWindows then ".exe" else "")
 	File(cFile).Write(ThreadCode("Networking/native/Networking." + (isWindows then "dll" else "so")))
-	let args = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (isWindows then "" else " -ldl -lpthread")
-	let compile = Process.RunTool("clang", args, ToolSeconds)
+	args = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (isWindows then "" else " -ldl -lpthread")
+	compile = Process.RunTool("clang", args, ToolSeconds)
 	if compile.exitCode is not 0
 		return Error("CompileFailed: " + compile.Output + compile.error)
-	let ran = Process.RunTool(exe, "", ToolSeconds)
+	ran = Process.RunTool(exe, "", ToolSeconds)
 	if ran.exitCode is not 0
 		return Error("ThreadCheckFailed: " + ran.Output + ran.error)
 ThreadCode(dll Text) Texts
-	let body = ("int main(void) {", "  void* lib = DLL_OPEN(\"" + dll + "\");") + CLookup
-	let middle = body + CWinRun + CWinWait + CNixRun
+	body = ("int main(void) {", "  void* lib = DLL_OPEN(\"" + dll + "\");") + CLookup
+	middle = body + CWinRun + CWinWait + CNixRun
 	CIncludes + CWinHead + CPosix + CState + CWin + CWinTail + CNix + CNixTail + middle + CCheck

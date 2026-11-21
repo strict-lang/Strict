@@ -22,16 +22,16 @@ constant FirstTraceLines = 3
 constant LastTraceLines = 3
 constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
 Run(arguments Texts) Number
-	let resident = Resident(Path(Process.Current.executable).PathOnly.text)
-	let command = arguments.Length > 0 then arguments(0) else ""
+	resident = Resident(Path(Process.Current.executable).PathOnly.text)
+	command = arguments.Length > 0 then arguments(0) else ""
 	if command is in ("coordinator", "serve", "linked", "status")
 		Hosted(command, arguments, resident)
 		return 0
-	let rebuilt = SelfBuild(resident.root, Process.Current.executable).Rebuilt(arguments)
+	rebuilt = SelfBuild(resident.root, Process.Current.executable).Rebuilt(arguments)
 	if rebuilt is not SelfBuild.Current
 		return rebuilt
-	let passed = Scripted.Packed(arguments)
-	let forwarded = Forwarding(resident.root).Forwarded(passed)
+	passed = Scripted.Packed(arguments)
+	forwarded = Forwarding(resident.root).Forwarded(passed)
 	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(passed).code else forwarded
 Hosted(command Text, arguments Texts, resident Resident) slow
 	if command is "coordinator"
@@ -41,47 +41,47 @@ Hosted(command Text, arguments Texts, resident Resident) slow
 		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
 	if command is "status"
 		return Coordinator.Reported
-	let rest = arguments.Slice(1, arguments.Length - 1)
+	rest = arguments.Slice(1, arguments.Length - 1)
 	NativeChunks(rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
 Served(resident Resident) slow
-	let server = resident.Opened
+	server = resident.Opened
 	if server is Error
 		return server
-	let built = File(Process.Current.executable).Modified
+	built = File(Process.Current.executable).Modified
 	mutable socket = resident.Accepted(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket is not Error
-		let request = resident.Requested(socket)
-		let arguments = resident.Arguments(request)
+		request = resident.Requested(socket)
+		arguments = resident.Arguments(request)
 		answer = Replied(resident, request, socket, arguments, Resident.Variables, answer)
 		socket = arguments is (Resident.Stopping) then Resident.Unaccepted else resident.Accepted(server, built)
 	resident.Closed(server)
 Replied(resident Resident, request Text, socket Number, arguments Texts, variables Text, last Answer) Answer slow
-	let isStopping = arguments is (Resident.Stopping)
-	let isAnswered = isStopping is false and resident.IsCurrent(request, variables)
-	let started = isAnswered and Scripted.IsRun(arguments) is false then Time.Now else 0
-	let answer = isAnswered then Answered(resident, request, socket, arguments, last) else last
-	let stamped = isAnswered and started > 0 then answer.Stamped(started) else answer
+	isStopping = arguments is (Resident.Stopping)
+	isAnswered = isStopping is false and resident.IsCurrent(request, variables)
+	started = isAnswered and Scripted.IsRun(arguments) is false then Time.Now else 0
+	answer = isAnswered then Answered(resident, request, socket, arguments, last) else last
+	stamped = isAnswered and started > 0 then answer.Stamped(started) else answer
 	resident.Released(request)
-	let code = isAnswered then stamped.code else (isStopping then 0 else Resident.Refused)
+	code = isAnswered then stamped.code else (isStopping then 0 else Resident.Refused)
 	logger.Log(Time(Time.Now).Iso8601 + " " + Text.Combine(arguments, " ") + " exit " + code)
 	resident.Ended(socket, code)
 	stamped
 Answered(resident Resident, request Text, socket Number, arguments Texts, last Answer) Answer slow
-	let home = Directory.Current
-	let folder = resident.Folder(request)
-	let isMoved = folder is not home
+	home = Directory.Current
+	folder = resident.Folder(request)
+	isMoved = folder is not home
 	if isMoved
 		Directory.Change(folder)
 	Socket.Output(socket)
-	let isCode = Scripted.IsRun(arguments)
-	let answer = Logged(arguments, isCode then last else Answer(last, known = last.Fresh(folder)))
+	isCode = Scripted.IsRun(arguments)
+	answer = Logged(arguments, isCode then last else Answer(last, known = last.Fresh(folder)))
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
 	isCode then answer else Answer(answer, folder = folder).Carried(last)
 Logged(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
-	let answer = Scripted.IsRun(arguments) then Coded(arguments, last) else Ran(arguments, last.known, last.inferred)
+	answer = Scripted.IsRun(arguments) then Coded(arguments, last) else Ran(arguments, last.known, last.inferred)
 	if answer is Error
 		logger.Log(Shortened(answer to Text))
 		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
@@ -89,8 +89,8 @@ Logged(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer sl
 Coded(arguments Texts, last Answer) Answer slow
 	if Scripted.IsCode(arguments)
 		return Scripted(arguments(2)).RanWith(arguments, TypeSource.Root, last)
-	let given = arguments(1)
-	let path = File(given).Exists then given else TypeSource.Cased(given)
+	given = arguments(1)
+	path = File(given).Exists then given else TypeSource.Cased(given)
 	if File(path).Exists is false
 		logger.Log(given + " not found")
 		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
@@ -98,19 +98,19 @@ Coded(arguments Texts, last Answer) Answer slow
 Shortened(trace Text) Text
 	Strict.Shortened("Error: A\n\t1") is "Error: A\n\t1"
 	Strict.Shortened(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
-	let logged = trace.LastIndexOf("\n\tat Strict.Logged ")
-	let lines = (logged < 0 then trace else trace.Substring(0, logged)).Split("\n")
+	logged = trace.LastIndexOf("\n\tat Strict.Logged ")
+	lines = (logged < 0 then trace else trace.Substring(0, logged)).Split("\n")
 	if lines.Length <= FirstTraceLines + LastTraceLines
 		return Text.Combine(lines, "\n")
-	let gap = "\t... (skipped " + (lines.Length - FirstTraceLines - LastTraceLines) + " lines)"
+	gap = "\t... (skipped " + (lines.Length - FirstTraceLines - LastTraceLines) + " lines)"
 	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
 Ran(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
-	let folder = Directory.Current
-	let head = arguments.Length > 0 then arguments(0) else ""
-	let given = head is in Informing then List(Text) + head else Projected(Mained(arguments))
-	let command = given.Length > 0 then given(0) else "help"
-	let rest = Cleaned(command, Rooted(command is in Commands then Rest(given) else given))
-	let message = Message(command, rest)
+	folder = Directory.Current
+	head = arguments.Length > 0 then arguments(0) else ""
+	given = head is in Informing then List(Text) + head else Projected(Mained(arguments))
+	command = given.Length > 0 then given(0) else "help"
+	rest = Cleaned(command, Rooted(command is in Commands then Rest(given) else given))
+	message = Message(command, rest)
 	if message is not ""
 		logger.Log(message)
 		return Answer(command is in Informing then 0 else 2, known)
@@ -122,8 +122,8 @@ Cleaned(command Text, rest Texts) Texts slow
 	Strict.Cleaned("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
 	if "full" is not in rest
 		return rest
-	let folder = Directory.Exists(rest(0)) then rest(0) else Path(rest(0)).PathOnly.text
-	let target = folder is "" then "." else folder
+	folder = Directory.Exists(rest(0)) then rest(0) else Path(rest(0)).PathOnly.text
+	target = folder is "" then "." else folder
 	logger.Log("Removed " + Folders.Cleaned(target) + " files in the obj folders of " + target)
 	command is "build" then rest - "full" else rest
 Message(command Text, rest Texts) Text slow
@@ -137,18 +137,18 @@ Message(command Text, rest Texts) Text slow
 		return Version + " " + Process.Current.Built.Substring(0, DateAndMinuteLength)
 	if command is in Informing or rest.Length < (command is "suggest" then 3 else 2)
 		return Text.Combine(Help, "\n")
-	let isFolder = command is "test" and Directory.Exists(rest(0))
+	isFolder = command is "test" and Directory.Exists(rest(0))
 	command is in ("check", "update") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
 Examined(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
 	"nightly" is in rest then Answer(Nightly(rest), known) else Tested(rest, known, inferred)
 Nightly(rest Texts) Number slow
 	if File(rest(0)).Exists is false
 		return Folders.Nightly(rest(0), rest(1)) + Native("test", (rest(0), rest(1), "native"))
-	let unit = Execute.Served(rest(0), rest(1), true).code
+	unit = Execute.Served(rest(0), rest(1), true).code
 	unit > 0 then unit else Execute("*").Served(rest(0), rest(1), true).code
 Tested(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
 	Strict.Tested(("Missing.strict", ".")).code is 1
-	let request = TestRequest(rest)
+	request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
 		return Answer(2, known)
@@ -156,11 +156,11 @@ Tested(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCach
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
 	if request.Option is in ("values", "trace", "profile", "sampled")
 		return Answer(Traced(request, rest), known)
-	let execute = request.Executing(logger, known, inferred)
+	execute = request.Executing(logger, known, inferred)
 	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
 Traced(request TestRequest, rest Texts) Number slow
-	let trace = ValueTrace(request.Selection)
-	let profile = Profile(request.Selection)
+	trace = ValueTrace(request.Selection)
+	profile = Profile(request.Selection)
 	if request.Option is in ("profile", "sampled")
 		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sampled(rest(0), rest(1))
 	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
@@ -175,14 +175,14 @@ Rooted(arguments Texts) Texts slow
 Main(folder Text) Text slow
 	Strict.Main(".") is "Strict.strict"
 	Strict.Main("Missing") is ""
-	let isCurrent = folder is "" or folder is "."
-	let target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
-	let clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
-	let prefix = isCurrent then "" else clean + "/"
-	let named = TypeSource.Cased(prefix + Path(clean).FileName.text)
+	isCurrent = folder is "" or folder is "."
+	target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
+	clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
+	prefix = isCurrent then "" else clean + "/"
+	named = TypeSource.Cased(prefix + Path(clean).FileName.text)
 	if File(named).Exists
 		return named
-	let files = Directory.Files(isCurrent then "." else clean, "*.strict")
+	files = Directory.Files(isCurrent then "." else clean, "*.strict")
 	isCurrent and File("Strict.strict").Exists then "Strict.strict" else (files.Length is 1 then files.First else "")
 Mained(arguments Texts) Texts slow
 	Strict.Mained(("build", "web")) is ("build", "Strict.strict", "web")
@@ -192,7 +192,7 @@ Mained(arguments Texts) Texts slow
 	Strict.Mained(("test", "Math")) is ("test", "Math")
 	Strict.Mained(("test", "native")) is ("test", "Strict.strict", "native")
 	Strict.Projected(Strict.Mained(("build", "strict"))) is ("build", "Strict.strict")
-	let main = Main(".")
+	main = Main(".")
 	if arguments.Length is 0
 		return main is "" or main is "Strict.strict" then arguments else List(Text) + main
 	arguments(0) is in ("build", "test") then Resolved(arguments, main) else arguments
@@ -200,21 +200,21 @@ Resolved(arguments Texts, main Text) Texts slow
 	Strict.Resolved(("build", "."), "Strict.strict") is ("build", "Strict.strict")
 	Strict.Resolved(("test", "."), "Strict.strict") is ("test", ".")
 	Strict.Resolved(List(Text) + "test", "Strict.strict") is ("test", "Strict.strict")
-	let given = arguments.Length > 1 then arguments(1) else ""
+	given = arguments.Length > 1 then arguments(1) else ""
 	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
-		let folder = Main(given)
+		folder = Main(given)
 		return folder is "" then arguments else (List(Text) + "build" + folder) + arguments.Slice(2, arguments.Length - 2)
-	let isSource = given is not "" and (File(TypeSource.Cased(given)).Exists or Directory.Exists(given))
-	let target = arguments(0) is "test" and main is "" then "." else main
+	isSource = given is not "" and (File(TypeSource.Cased(given)).Exists or Directory.Exists(given))
+	target = arguments(0) is "test" and main is "" then "." else main
 	isSource or target is "" then arguments else (List(Text) + arguments(0) + target) + Rest(arguments)
 Projected(arguments Texts) Texts slow
 	Strict.Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
 	Strict.Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
 	Strict.Projected(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
-	let at = arguments.Length > 0 and arguments(0) is in Commands then 1 else 0
-	let source = TypeSource.Cased(arguments.Length > at then arguments(at) else "")
-	let project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
-	let full = TypeSource.Absolute(source)
+	at = arguments.Length > 0 and arguments(0) is in Commands then 1 else 0
+	source = TypeSource.Cased(arguments.Length > at then arguments(at) else "")
+	project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
+	full = TypeSource.Absolute(source)
 	if project is not ""
 		Directory.Change(project)
 	for arguments
@@ -228,18 +228,18 @@ Joined(arguments Texts) Text
 Launched(rest Texts, folder Text) Number slow
 	if NativeBuild.IsProgram(rest(0)) is false
 		return Native("test", (rest(0), rest(1), "native"))
-	let base = NativeBuild.Output(rest(0), true)
-	let extension = Toolchain(Platform.Current, rest(1)).Extension
-	let cache = NativeCache("build", (rest(0), rest(1)))
-	let fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
+	base = NativeBuild.Output(rest(0), true)
+	extension = Toolchain(Platform.Current, rest(1)).Extension
+	cache = NativeCache("build", (rest(0), rest(1)))
+	fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
 	if fresh is ""
-		let tested = Retested(rest)
+		tested = Retested(rest)
 		if tested is not 0
 			return tested
 	Started(rest, folder, fresh)
 Retested(rest Texts) Number slow
-	let quietUntil = Process.Elapsed + QuietSeconds
-	let tested = Execute("", quietUntil = quietUntil).Served(rest(0), rest(1)).code
+	quietUntil = Process.Elapsed + QuietSeconds
+	tested = Execute("", quietUntil = quietUntil).Served(rest(0), rest(1)).code
 	if tested is 0 and Process.Elapsed >= quietUntil
 		logger.Log(Execute.Summary(0, rest(0)))
 	tested
@@ -248,14 +248,14 @@ Compiled(rest Texts, fresh Text) Number slow
 		return 0
 	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
 Started(rest Texts, folder Text, fresh Text) Number slow
-	let base = NativeBuild.Output(rest(0), true)
-	let tools = Toolchain(Platform.Current, rest(1))
-	let built = Compiled(rest, fresh)
+	base = NativeBuild.Output(rest(0), true)
+	tools = Toolchain(Platform.Current, rest(1))
+	built = Compiled(rest, fresh)
 	if built is not 0
 		return built
 	if fresh is not ""
 		logger.Log("Up to date: " + fresh)
-	let target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
+	target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
 	Directory.Change(folder)
 	Process(target).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
@@ -267,7 +267,7 @@ Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 		logger.Log(Formatted(rest(0)))
 	if command is "update"
 		Updated(Repositories("."), rest(0))
-	let checked = command is "check" then Checked(ValidateCheck, rest(0), rest(1)) else 0
+	checked = command is "check" then Checked(ValidateCheck, rest(0), rest(1)) else 0
 	Answer(command is "suggest" then Suggested(rest) else checked, known)
 Checked(checker Validators/ValidateCheck, folder Text, root Text) Number slow
 	checker.Run(folder, root)
@@ -278,14 +278,14 @@ Native(command Text, rest Texts) Number slow
 	NativeCompiler.Ran((List(Text) + command) + rest)
 Formatted(path Text) Text slow
 	Strict.Formatted("Examples/HelloLogger.strict").StartsWith("has logger")
-	let lines = RoundTrip.Tabbed(File(path).ReadLines)
-	let broken = FileCompiler.Unparsable(lines)
+	lines = RoundTrip.Tabbed(File(path).ReadLines)
+	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
 		return Error(ResolveCheck.Located(FileCompiler.Normalized(path), broken + 1, FileCheck.Problem(lines, broken)))
 	Text.Combine(RoundTrip.Formatted(lines), "\n")
 Suggested(rest Texts) Number slow
-	let source = FileCompiler.Normalized(rest(0))
+	source = FileCompiler.Normalized(rest(0))
 	if rest.Length > 3 and rest(3) is "-"
 		File(source).InMemory(Process.Input)
-	let files = SourceFiles(rest(1)).Of(source)
+	files = SourceFiles(rest(1)).Of(source)
 	Suggestions(source, rest(1), File(source).ReadLines, ResolveCheck.Inference(files)).Run(rest(2), files)

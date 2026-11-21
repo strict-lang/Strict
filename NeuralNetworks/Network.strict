@@ -30,18 +30,18 @@ Output(layer Layer, input Numbers) Numbers
 	layer.biases.Length > 1 then Softmax(layer.Sums(input)) else layer.Forward(input)
 Softmax(sums Numbers) Numbers
 	Single.Softmax((1, 1)) is (0.5, 0.5)
-	let exponentials = Exponentials(sums)
-	let total = exponentials.Sum
+	exponentials = Exponentials(sums)
+	total = exponentials.Sum
 	for exponentials
 		value / total
 Exponentials(sums Numbers) Numbers
 	Single.Exponentials((0, 0)) is (1, 1)
-	let largest = sums.Maximum
+	largest = sums.Maximum
 	for sums
 		(value - largest).Exponential
 Trained(input Numbers, target Numbers, rate Number) Network
 	Pair.Trained((1, 1), List(Number) + 0, 1).Predict((1, 1)).First < Pair.Predict((1, 1)).First
-	let activations = Activations(input)
+	activations = Activations(input)
 	Network(Updated(activations, Deltas(activations, target), rate))
 Updated(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer)
 	Single.Updated(Halved, List(Numbers) + (List(Number) + 1), 0.5).First.biases is List(Number) + -0.5
@@ -53,9 +53,9 @@ Deltas(activations List(Numbers), target Numbers) List(Numbers)
 	mutable deltas = List(Mutable(Numbers))
 	deltas.Add(delta)
 	for Range(1, layers.Length)
-		let next = layers.Length - index
-		let layer = layers(next - 1)
-		let sums = layer.activation is Activation.Swish then layer.Sums(activations(next - 1)) else activations(next)
+		next = layers.Length - index
+		layer = layers(next - 1)
+		sums = layer.activation is Activation.Swish then layer.Sums(activations(next - 1)) else activations(next)
 		delta = Derived(layer.activation, sums, activations(next), layers(next).Spread(delta))
 		deltas.Add(delta)
 	deltas.Reverse
@@ -73,7 +73,7 @@ Learned(data Dataset, epochs Number) Network slow
 	Network.Random((4, 3, 2)).Learned(Dataset.Pairs, 300).Accuracy(Dataset.Pairs) is 1
 	mutable trained = value
 	for epochs
-		let shuffled = data.Shuffled
+		shuffled = data.Shuffled
 		for shuffled.inputs
 			trained = trained.Trained(value, shuffled.targets(index), LearningRate)
 	trained

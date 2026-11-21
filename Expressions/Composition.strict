@@ -6,9 +6,9 @@ Scoped(typeName Text) Scope
 	Composition(Counted).Scoped("Box").TypeOf("Twice") is "Count"
 	Composition(Shadowing).Scoped("Box").TypeOf("Twice") is "Number"
 	Composition(KnownTypes.Measured).Scoped("F").Count("Length") is 1
-	let members = types.MembersOf(typeName)
-	let held = Held(members)
-	let own = held.names.Length is 0 then members else held.WithAll(members.names, members.types).Owned(members.owner)
+	members = types.MembersOf(typeName)
+	held = Held(members)
+	own = held.names.Length is 0 then members else held.WithAll(members.names, members.types).Owned(members.owner)
 	own.WithAll(types.MethodsOf(typeName).names, types.MethodsOf(typeName).types)
 Held(members Scope) Scope
 	Composition(Counted).Held(Counted.members(0)).TypeOf("number") is "Number"
@@ -17,8 +17,8 @@ Held(members Scope) Scope
 	mutable held = Scope(List(Text), List(Text))
 	for members.types
 		if IsComposite(value)
-			let fields = types.MembersOf(value)
-			let methods = types.MethodsOf(value)
+			fields = types.MembersOf(value)
+			methods = types.MethodsOf(value)
 			held = held.WithAll(fields.names, fields.types).WithAll(methods.names, methods.types)
 	held
 IsComposite(type Text) Boolean

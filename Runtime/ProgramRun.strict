@@ -1,8 +1,8 @@
 has machine Machine
 Result(typeName Text, arguments List(VmValue)) VmValue
 	ProgramRun(Machine.Hello).Result("HelloLogger", List(VmValue)).kind is not in VmValue.ErrorKinds
-	let main = Natives(machine.types).TypeOf(typeName)
-	let exact = main.Callee("Run", arguments.Length, "None", List(Text))
-	let run = exact.instructions.Length > 0 then exact else main.Callee("Run", 1, "None", List(Text))
-	let instance = machine.Started(main)
+	main = Natives(machine.types).TypeOf(typeName)
+	exact = main.Callee("Run", arguments.Length, "None", List(Text))
+	run = exact.instructions.Length > 0 then exact else main.Callee("Run", 1, "None", List(Text))
+	instance = machine.Started(main)
 	machine.Execute(run, machine.Bound(main, instance, run, machine.Typed(run.parameters, arguments), instance), main.Name)

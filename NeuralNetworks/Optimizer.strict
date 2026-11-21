@@ -13,13 +13,13 @@ Started(untrained Network, decay Number) Optimizer
 	Optimizer(untrained, zeros, decay)
 Trained(input Numbers, target Numbers, rate Number) Optimizer
 	Paired.Trained((1, 1), List(Number) + 0, 0.1).network.Predict((1, 1)).First < 0.7
-	let activations = network.Activations(input)
-	let deltas = network.Deltas(activations, target)
-	let scaled = rate * (1 - Moments.SquareBeta ^ (step + 1)).SquareRoot / (1 - beta ^ (step + 1))
+	activations = network.Activations(input)
+	deltas = network.Deltas(activations, target)
+	scaled = rate * (1 - Moments.SquareBeta ^ (step + 1)).SquareRoot / (1 - beta ^ (step + 1))
 	mutable layers = List(Mutable(Layer))
 	mutable updated = List(Mutable(Moments))
 	for network.layers
-		let moment = moments(index).Updated(deltas(index), activations(index), beta)
+		moment = moments(index).Updated(deltas(index), activations(index), beta)
 		updated.Add(moment)
 		layers.Add(moment.Applied(value, scaled))
 	Optimizer(Network(layers), updated, beta, step + 1)

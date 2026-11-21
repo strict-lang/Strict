@@ -5,13 +5,13 @@ Helper(helper Text) Text
 		return "strict_file_joined"
 	helper is "strict_text_combine" and IsJoin then "strict_file_joined_result" else helper
 IsRead Boolean
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	if position < 0 or position + 3 >= steps.Length
 		return false
-	let read = steps(position)
+	read = steps(position)
 	if IsCall(read, "File", "ReadLines") is false
 		return false
-	let check = steps(position + 1)
+	check = steps(position + 1)
 	Matches(read, check, steps(position + 2), steps(position + 3)) and Unused(read.payload(0), position + 3)
 Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry, join InstructionEntry) Boolean
 	if check.kind is not InstructionType.CheckError or check.payload(0) is not read.payload(0)
@@ -22,16 +22,16 @@ Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry,
 		return false
 	LoadReuse(function.method.instructions).Reads(join) is (read.payload(0), literal.payload(0))
 Unused(register Number, joined Number) Boolean
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	if LoadReuse(steps).Written(steps(joined)) is register
 		return true
 	for Range(joined + 1, steps.Length)
-		let result = Outcome(steps(value), register)
+		result = Outcome(steps(value), register)
 		if result is not 0
 			return result > 0
 	true
 Outcome(entry InstructionEntry, register Number) Number
-	let reuse = LoadReuse(function.method.instructions)
+	reuse = LoadReuse(function.method.instructions)
 	if register is in reuse.Reads(entry)
 		return Number.NotFound
 	if reuse.Written(entry) is register or entry.kind is InstructionType.Return

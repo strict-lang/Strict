@@ -31,7 +31,7 @@ to Number
 	Character("3") to Number is 3
 	constant notANumber = Error
 	Character("A") to Number is notANumber
-	let result = number - zeroCharacter
+	result = number - zeroCharacter
 	result is in Range(0, 10) then result else notANumber(value)
 Upper Character
 	Character("a").Upper is "A"

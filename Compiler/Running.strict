@@ -15,7 +15,7 @@ Listed Texts
 	Process.RunTool("powershell", Listing + TypeSource.Absolute(executable) + Matching + Older + Printed).Output.Lines - ""
 Described Text
 	Missing.Described is "another program"
-	let found = Listed
+	found = Listed
 	mutable ids = List(Mutable(Text))
 	for found
 		ids.Add(Id(value))
@@ -39,9 +39,9 @@ IsIdle(line Text) Boolean
 	Idling.IsIdle("12\t\"Compiler/output/strict.exe\" serve 8")
 	Served.IsIdle("12\t\"C:/s/strict.exe\" serve 2") is false
 	Idling.IsIdle("12\t\"Compiler/output/strict.exe\" build A.strict") is false
-	let command = Command(line)
-	let at = command.IndexOf(" serve")
-	let slot = at < 0 then "" else command.Substring(at + 6, command.Length - at - 6).Trim.Split(" ").First
+	command = Command(line)
+	at = command.IndexOf(" serve")
+	slot = at < 0 then "" else command.Substring(at + 6, command.Length - at - 6).Trim.Split(" ").First
 	at >= 0 and File(Resident(Path(executable).PathOnly.text, slot).Freed).Exists
 IsStrict Boolean
 	Served.IsStrict
@@ -57,7 +57,7 @@ Stopping Texts
 Ended(id Text) Boolean
 	Missing.Ended("0") is false
 	Process.OperatingSystem is not "Windows" or Missing.Ended("999999")
-	let isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in Stopped
+	isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in Stopped
 	isClosed or Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped or IsGone(id)
 IsGone(id Text) Boolean slow
 	Missing.IsGone("999999") and Missing.IsGone(Process.Id to Text) is false
@@ -70,7 +70,7 @@ Restarted(old Text) Text slow
 	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0
 		return ""
-	let stopping = Stopping
+	stopping = Stopping
 	for stopping
 		logger.Log("Stopping " + executable + " (process " + Id(value) + ")")
 		if Ended(Id(value)) is false
@@ -81,8 +81,8 @@ Restarted(old Text) Text slow
 Started(lines Texts) Text
 	Missing.Started(List(Text)) is ""
 	for lines
-		let command = Forwarding.Quote + Command(value).Replace("'", "''").Replace("\"", Forwarding.Quote) + Forwarding.Quote
-		let folder = "' -WindowStyle Hidden -WorkingDirectory '" + Directory.Current + "'"
-		let started = Process.RunTool("powershell", Forwarding.Starting + command + folder)
+		command = Forwarding.Quote + Command(value).Replace("'", "''").Replace("\"", Forwarding.Quote) + Forwarding.Quote
+		folder = "' -WindowStyle Hidden -WorkingDirectory '" + Directory.Current + "'"
+		started = Process.RunTool("powershell", Forwarding.Starting + command + folder)
 		logger.Log(started.exitCode is 0 then "Started " + executable + " again" else "Could not start " + Command(value))
 	""

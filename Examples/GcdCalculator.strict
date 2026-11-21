@@ -7,7 +7,7 @@ GCD Number
 	mutable current = first
 	mutable modulo = second
 	for as long as modulo is not 0
-		let temp = modulo
+		temp = modulo
 		modulo = current % modulo
 		current = temp
 	current

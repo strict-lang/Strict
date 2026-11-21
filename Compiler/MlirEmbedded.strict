@@ -24,12 +24,12 @@ IsNumbers(typeName Text) Boolean
 IsNested(typeName Text, depth Number) Boolean
 	Sample.IsNested("Strict/Outer", 0)
 	Sample.IsNested("Strict/Outer", 9) is false
-	let layout = MlirLayout(function)
+	layout = MlirLayout(function)
 	if depth > 8 or layout.IsStruct(typeName) is false
 		return false
-	let stored = MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
+	stored = MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
 	for stored
-		let isNumber = layout.Represented(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
+		isNumber = layout.Represented(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
 		if isNumber is false and IsNested(value.typeName, depth + 1) is false
 			return false
 	stored.Length > 0
@@ -39,7 +39,7 @@ Slots(typeName Text) Number
 	Sample.Slots("Strict/Boxed") is 3
 	Text.Combine(Building.Constructed(Making, "Strict/Boxed")).IndexOf("constant 24 : i64") > 0
 	Text.Combine(Initializing.Returned(2)).IndexOf("constant 24 : i64") > 0
-	let owner = function.TypeOf(typeName, true)
+	owner = function.TypeOf(typeName, true)
 	mutable count = 0
 	for MlirInstances(function, 0).Stored(owner)
 		count = count + Width(owner, value)
@@ -67,29 +67,29 @@ IsInline(owner TypeEntry, member MemberEntry) Boolean
 Listed(element Text, result Text, capacity Text) Texts
 	Sample.Listed("Strict/Boxed", "%r", "%a").Last.StartsWith("    %r = func.call @strict_record_list_new(%a, %rc)")
 	Text.Combine(MlirListDestined(MlirStructs.Collector.function, 2).Created("%r", "%a")).IndexOf("_record_list_new(") > 0
-	let counted = "    " + result + "c = arith.constant " + Slots(element) + ".0 : f64"
-	let call = " = func.call @strict_record_list_new(" + capacity + ", " + result + "c) : (f64, f64) -> f64"
+	counted = "    " + result + "c = arith.constant " + Slots(element) + ".0 : f64"
+	call = " = func.call @strict_record_list_new(" + capacity + ", " + result + "c) : (f64, f64) -> f64"
 	(counted, "    " + result + call)
 StackSlots(at Number) Number
 	Wrapper.StackSlots(1) is 1
 	Wrapper.StackSlots(2) is 0
 	MlirEmbedded(MlirStructs.Forwarder.function).StackSlots(1) is 0
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is not InstructionType.Invoke or IsCopied(at, entry.payload(0)) is false
 		return 0
-	let callees = MlirModule(function.types, "").Called(function, at)
-	let returned = callees.Length > 0 then callees.First.method.returnType else ""
-	let isConsumed = callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(1) else false
+	callees = MlirModule(function.types, "").Called(function, at)
+	returned = callees.Length > 0 then callees.First.method.returnType else ""
+	isConsumed = callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(1) else false
 	isConsumed and IsNumbers(returned) then Slots(returned) else 0
 IsCopied(at Number, register Number) Boolean
 	Wrapper.IsCopied(1, 1)
 	Wrapper.IsCopied(0, 0) is false
-	let membered = MlirMembered(function, at)
-	let built = membered.Rebuilding(register)
+	membered = MlirMembered(function, at)
+	built = membered.Rebuilding(register)
 	if built < 0 or membered.Reader(at, register) is not built
 		return false
-	let owner = function.TypeOf(function.method.instructions(built).texts(0), true)
-	let slot = membered.Slot(built, register)
+	owner = function.TypeOf(function.method.instructions(built).texts(0), true)
+	slot = membered.Slot(built, register)
 	if slot < 0
 		return false
 	IsInline(owner, MlirInstances(function, 0).Stored(owner)(slot)) and membered.Reader(built, register) < 0
@@ -99,10 +99,10 @@ Stacks Texts
 	Text.Combine(Wrapper.function.Slots).IndexOf("%stack1 = llvm.alloca") > 0
 	mutable lines = List(Text)
 	for function.method.instructions
-		let slots = StackSlots(index)
+		slots = StackSlots(index)
 		if slots > 0
-			let name = "%stack" + index
-			let counted = "    " + name + "n = arith.constant " + slots + " : i64"
+			name = "%stack" + index
+			counted = "    " + name + "n = arith.constant " + slots + " : i64"
 			lines = lines + (counted, "    " + name + " = llvm.alloca " + name + "n x f64 : (i64) -> !llvm.ptr")
 	lines
 Stacked(at Number, compiled Texts) Texts
@@ -111,36 +111,36 @@ Stacked(at Number, compiled Texts) Texts
 	Text.Combine(Stacking.Collected(MlirStructs.Calling, List(Text) + "call", "Shape")).IndexOf("(%t1sd)") > 0
 	if StackSlots(at) is 0
 		return compiled
-	let bits = "    %t" + at + "sd = func.call @strict_bits(%stack" + at + ") : (!llvm.ptr) -> f64"
+	bits = "    %t" + at + "sd = func.call @strict_bits(%stack" + at + ") : (!llvm.ptr) -> f64"
 	(bits, MlirStructs(function, at).Destine("sd")) + compiled
 Read(memory MlirMemory, owner TypeEntry, member MemberEntry, base Text, suffix Text) Texts
 	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.Last, "%b", "m").First.IndexOf("%b[2]") > 0
 	Sample.Read(MlirMemory.Sample, Boxed, Boxed.members.First, "%b", "m").Last.IndexOf("@strict_bits(") > 0
 	Text.Combine(MlirInstances(Boxer, 0).Unpacked).IndexOf("%t-1selfp[2]") > 0
 	Text.Combine(MlirAutomatic(Boxer).Function(Boxed)).IndexOf("%p[2]") > 0
-	let offset = Offset(owner, member.Name)
+	offset = Offset(owner, member.Name)
 	IsInline(owner, member) then memory.Addressed(base, offset, suffix) else memory.Loaded(base, offset, suffix)
 Copied(source Text, destination Text, typeName Text) Texts
 	Sample.Copied("%a", "%s", "Strict/Outer")(1) is "    %an = arith.constant 16 : i64"
 	Sample.Copied("%a", "%s", "Strict/Outer").Last.StartsWith("    %am = llvm.call @memcpy(%s, %ap, %an) : (!llvm.ptr")
-	let pointer = "    " + source + "p = func.call @strict_ptr(" + source + ") : (f64) -> !llvm.ptr"
-	let bytes = "    " + source + "n = arith.constant " + Slots(typeName) * 8 + " : i64"
-	let copy = " = llvm.call @memcpy(" + destination + ", " + source + "p, " + source + "n)"
+	pointer = "    " + source + "p = func.call @strict_ptr(" + source + ") : (f64) -> !llvm.ptr"
+	bytes = "    " + source + "n = arith.constant " + Slots(typeName) * 8 + " : i64"
+	copy = " = llvm.call @memcpy(" + destination + ", " + source + "p, " + source + "n)"
 	(pointer, bytes, "    " + source + "m" + copy + " : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr")
 Placed(owner TypeEntry, member MemberEntry, source Text, slot Text) Texts
 	Sample.Placed(Boxed, Boxed.members.First, "%a", "%s").Last.IndexOf("@memcpy(%s, %ap, %an)") > 0
 	Sample.Placed(Boxed, Boxed.members.Last, "%a", "%s").Last is MlirInstances.Counting.Replace("%s", "%s")
 	Text.Combine(MlirOwned(Boxer, 7).Put(Boxed, Boxed.members.First, 2)).IndexOf("@memcpy(%t7r0") > 0
-	let counted = (function.Store(source, slot), MlirInstances.Counting.Replace("%s", slot))
+	counted = (function.Store(source, slot), MlirInstances.Counting.Replace("%s", slot))
 	IsInline(owner, member) then Copied(source, slot, member.typeName) else counted
 Inlined(instances MlirInstances, type TypeEntry, base Text, prefix Text, creating Texts) Texts
 	Text.Combine(Sample.Inlined(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("%b[2]") > 0
 	Text.Combine(Sample.Inlined(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("@strict_alloc(") is -1
-	let memory = MlirMemory(function, instances.position)
+	memory = MlirMemory(function, instances.position)
 	mutable lines = List(Text)
 	for instances.Stored(type)
-		let slot = prefix + "s" + index
-		let address = memory.Slot(base, Offset(type, value.Name), slot)
-		let initialized = instances.Initialized(type, value, memory.Temp(slot), prefix + index, creating + type.Name)
+		slot = prefix + "s" + index
+		address = memory.Slot(base, Offset(type, value.Name), slot)
+		initialized = instances.Initialized(type, value, memory.Temp(slot), prefix + index, creating + type.Name)
 		lines = lines + address + initialized
 	lines

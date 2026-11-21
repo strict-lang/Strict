@@ -37,46 +37,46 @@ constant MainStressB = ("  if(is_gguf){ for(int i=0;i<8;i++) h[i]=(HANDLE)_begin
 constant MainNixA = ("  pthread_t t[8]; pthread_create(&t[0],0,w1,0); pthread_create(&t[1],0,w2,0);", "  pthread_join(t[0],0); pthread_join(t[1],0); for(int i=0;i<8;i++) pthread_create(&t[i],0,wrep,(void*)(size_t)i);")
 constant MainNixB = ("  for(int i=0;i<8;i++) pthread_join(t[i],0);", "  if(is_gguf){ for(int i=0;i<8;i++) pthread_create(&t[i],0,wev,(void*)(size_t)i); for(int i=0;i<8;i++) pthread_join(t[i],0); }", "#endif", "  return 0; }")
 Run(arguments Texts) Number
-	let provider = arguments.Length > 0 then arguments.First else "TensorFile"
-	let folder = "Examples/NativeThreads" + 1000000.Random.Floor
+	provider = arguments.Length > 0 then arguments.First else "TensorFile"
+	folder = "Examples/NativeThreads" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = Checked(folder, provider)
+	result = Checked(folder, provider)
 	Directory.Delete(folder)
 	if result is Error
 		return result
 	logger.Log("Returned matrices remain thread-owned; overlapping matrix loads pass")
 	0
 Checked(folder Text, provider Text) slow
-	let isWindows = Process.OperatingSystem is "Windows"
-	let dll = "Compiler/output/" + provider + "Threads." + (isWindows then "dll" else "so")
-	let cSrc = "NeuralNetworks/native/" + provider + ".c"
-	let buildCmd = "-shared -O2 -DSTRICT_LIBRARY -ICompiler " + cSrc + " -o " + dll + BuildExtra(provider, isWindows)
-	let build = Process.RunTool("clang", buildCmd, ToolSeconds)
+	isWindows = Process.OperatingSystem is "Windows"
+	dll = "Compiler/output/" + provider + "Threads." + (isWindows then "dll" else "so")
+	cSrc = "NeuralNetworks/native/" + provider + ".c"
+	buildCmd = "-shared -O2 -DSTRICT_LIBRARY -ICompiler " + cSrc + " -o " + dll + BuildExtra(provider, isWindows)
+	build = Process.RunTool("clang", buildCmd, ToolSeconds)
 	if build.exitCode is not 0
 		return Error("BuildProviderFailed: " + build.Output + build.error)
 	CheckedHarness(folder, dll, provider, isWindows)
 CheckedHarness(folder Text, dll Text, provider Text, isWindows Boolean) slow
-	let cFile = folder + "/harness.c"
-	let exe = folder + "/harness" + (isWindows then ".exe" else "")
+	cFile = folder + "/harness.c"
+	exe = folder + "/harness" + (isWindows then ".exe" else "")
 	File(cFile).Write(HarnessHead + HarnessBody + HarnessTail)
-	let libs = isWindows then "" else " -ldl -lpthread -lm"
-	let comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + libs, ToolSeconds)
+	libs = isWindows then "" else " -ldl -lpthread -lm"
+	comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + libs, ToolSeconds)
 	if comp.exitCode is not 0
 		return Error("CompileHarnessFailed: " + comp.Output + comp.error)
-	let args = "\"" + dll + "\" \"" + folder + "\"" + (provider is "GgufFile" then " gguf" else "")
-	let ran = Process.RunTool(exe, args, ToolSeconds)
+	args = "\"" + dll + "\" \"" + folder + "\"" + (provider is "GgufFile" then " gguf" else "")
+	ran = Process.RunTool(exe, args, ToolSeconds)
 	if ran.exitCode is not 0
 		return Error("NativeThreadsFailed (" + ran.exitCode + "): " + ran.Output + ran.error)
 BuildExtra(provider Text, isWindows Boolean) Text slow
-	let raw = Text.Combine(File("NeuralNetworks/native/Windows.flags").ReadLines, " ")
+	raw = Text.Combine(File("NeuralNetworks/native/Windows.flags").ReadLines, " ")
 	isWindows then (provider is "GgufFile" then " " + raw else "") else " -fPIC -lpthread -lm"
 HarnessHead Texts
-	let top = HeadA + HeadB + HeadC + TypesA + TypesB + TypesC
+	top = HeadA + HeadB + HeadC + TypesA + TypesB + TypesC
 	top + HelpersA + HelpersB + CheckRowsA + CheckRowsB + WriteSafeA + WriteSafeB
 HarnessBody Texts
-	let sync = Process.OperatingSystem is "Windows" then SyncWin else SyncNixA + SyncNixB + SyncNixC
-	let body = WriteGgufA + WriteGgufB + WriteGgufC + sync + WorkersA + WorkersB + WorkersC
+	sync = Process.OperatingSystem is "Windows" then SyncWin else SyncNixA + SyncNixB + SyncNixC
+	body = WriteGgufA + WriteGgufB + WriteGgufC + sync + WorkersA + WorkersB + WorkersC
 	body + ExpertsA + ExpertsB + ExpertsC + ExpertsD
 HarnessTail Texts
 	GlueWinA + GlueWinB + GlueNix + MainA + MainB + MainDataA + MainDataB + MainStressA + MainStressB + MainNixA + MainNixB

@@ -3,15 +3,15 @@ constant Target = Source.Replace(".ppm", ".strict.ppm")
 constant Radius = 4
 constant Square = Bitmap(Size(2, 2), (Color(1, 1, 1), Color(2, 2, 2), Color(3, 3, 3), Color(4, 4, 4)), true)
 Run
-	let bitmap = Ppm.Loaded(Source)
+	bitmap = Ppm.Loaded(Source)
 	if bitmap is Error
 		logger.Log("Missing " + Source + ", see ImageProcessing/Compare/README.md")
 	else
-		let warmup = Blurred(bitmap)
-		let started = Process.Elapsed
-		let blurred = Blurred(bitmap)
-		let milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
-		let difference = warmup is blurred then "" else ", the first call differs"
+		warmup = Blurred(bitmap)
+		started = Process.Elapsed
+		blurred = Blurred(bitmap)
+		milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
+		difference = warmup is blurred then "" else ", the first call differs"
 		Ppm.Save(Bitmap(bitmap.Size, blurred, bitmap.IsOpaque), Target)
 		logger.Log("Blurred " + bitmap.Width + "x" + bitmap.Height + " in " + milliseconds + " ms" + difference)
 Blurred(bitmap Bitmap) Colors

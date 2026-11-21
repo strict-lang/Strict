@@ -50,10 +50,10 @@ Chosen(owner Text, method Text, argumentTypes Texts) Number
 	Defaulted.Chosen("D", "from", ("Number", "Number")) is 1
 	Picking.Chosen("Picker", "Put", List(Text) + "Number") is 1
 	ListFits.Sorts.Chosen("Sorter", "Sorted", List(Text) + "Number") is -1
-	let exact = Ordinal(owner, method, argumentTypes, true)
+	exact = Ordinal(owner, method, argumentTypes, true)
 	if exact >= 0
 		return exact
-	let widened = Ordinal(owner, method, argumentTypes, false)
+	widened = Ordinal(owner, method, argumentTypes, false)
 	IsIndexing(owner, method, argumentTypes, widened) then Number.NotFound else widened
 IsIndexing(owner Text, method Text, arguments Texts, ordinal Number) Boolean
 	ListFits.Sorts.IsIndexing("Sorter", "Sorted", List(Text) + "Number", 1)
@@ -61,7 +61,7 @@ IsIndexing(owner Text, method Text, arguments Texts, ordinal Number) Boolean
 	Picking.IsIndexing("Picker", "Put", List(Text) + "Number", 0) is false
 	if ordinal < 0 or arguments.Length is not 1
 		return false
-	let scope = types.ParameterScope(owner)
+	scope = types.ParameterScope(owner)
 	if arguments.First is not "Number" or scope.TypeAt(method + " types", ordinal) is "Number"
 		return false
 	for Range(0, scope.Count(method))
@@ -71,7 +71,7 @@ IsIndexing(owner Text, method Text, arguments Texts, ordinal Number) Boolean
 Ordinal(owner Text, method Text, arguments Texts, isExact Boolean) Number
 	Scaling.Ordinal("Scaler", "Scaled", List(Text) + "Number", true) is -1
 	Picking.Ordinal("Picker", "Mixed", List(Text) + "Generics", true) is -1
-	let scope = types.ParameterScope(owner)
+	scope = types.ParameterScope(owner)
 	if scope.Count(method) < 2
 		return Number.NotFound
 	mutable ordinal = -1
@@ -86,10 +86,10 @@ Required(owner Text, method Text, ordinal Number) Texts
 	Labeling.Required("Labeler", "Labels", 0).Length is 0
 	Defaulted.Required("D", "Get", 1).Length is 0 and Defaulted.Required("D", "Get", 0) is ("x", "b")
 	Defaulted.Chosen("D", "Get", List(Text) + "Number") is 1 and Defaulted.Chosen("D", "Get", List(Text)) is 1
-	let scope = types.ParameterScope(owner)
+	scope = types.ParameterScope(owner)
 	for scope.TypeAt(method, ordinal).Split(",")
-		let isOwn = scope.TypeOf(method + " " + value + " default") is not ""
-		let isMember = method is "from" and scope.TypeOf(value + " default") is not ""
+		isOwn = scope.TypeOf(method + " " + value + " default") is not ""
+		isMember = method is "from" and scope.TypeOf(value + " default") is not ""
 		if value is not "" and (isOwn or isMember) is false
 			value
 Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean, required Number) Boolean
@@ -110,8 +110,8 @@ Assignable(argument Text, declared Text, isExact Boolean) Boolean
 	Scaling.Assignable("Number", "Generic", true) is false
 	Scaling.Assignable("Number", "Generic", false)
 	Scaling.Assignable("Bytes", "Numbers", false) and Scaling.Assignable("Bytes", "Numbers", true) is false
-	let isList = argument.StartsWith("List(") and argument.IndexOf(",") < 0
-	let plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
+	isList = argument.StartsWith("List(") and argument.IndexOf(",") < 0
+	plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
 	plural is declared then true else isExact is false and ListFits(types).Widened(argument, declared)
 Converts(argument Text, declared Text) Boolean
 	Scaling.Converts("Byte", "Number")
@@ -122,7 +122,7 @@ Converts(argument Text, declared Text) Boolean
 	Presetting.Indexed(SyntaxNode("Member", "Preset", PresetRead), Presets.methods(0)) is ""
 	if declared is "Generic" or types.ValueOf(declared) is argument or types.ValueOf(argument) is declared
 		return true
-	let converter = TypeInference(types, List(Scope)).Converter(argument, declared)
+	converter = TypeInference(types, List(Scope)).Converter(argument, declared)
 	converter is "from" or converter is "to" and ListFits(types).Elements(argument).Length is 0
 Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
@@ -132,7 +132,7 @@ Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) T
 	Scaling.Returned(SyntaxNode("Call", "Scaled"), LabelInference, KnownTypes.NoMembers, Scaler.methods(0)) is ""
 	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Relabeled) is ""
 	Presetting.Returned(PresetRead, LabelInference, KnownTypes.NoMembers, Presets.methods(0)) is "Number"
-	let position = types.Index(current.owner)
+	position = types.Index(current.owner)
 	if position < 0 or current.Count(node.text) < 2
 		return Indexed(node, current)
 	current.TypeAt(node.text, Chosen(types.names(position), node.text, Arguments(node, inference, scope, current)))
@@ -143,11 +143,11 @@ Indexed(node SyntaxNode, current Scope) Text
 	Presetting.Indexed(PresetRead, KnownTypes.NoMembers) is ""
 	Labeling.Indexed(LabelsCall, Labeler.methods(0)) is "" and Labeling.Indexed(LabelsMember, Labeler.methods(0)) is ""
 	Scaling.Indexed(ScaledRead, Scaler.methods(0)) is ""
-	let position = types.Index(current.owner)
+	position = types.Index(current.owner)
 	if position < 0 or node.Kind is not "Call" or node.children.Length is not 1
 		return ""
-	let returned = current.TypeOf(node.text)
-	let isPlain = types.ParameterScope(types.names(position)).TypeOf(node.text) is ""
+	returned = current.TypeOf(node.text)
+	isPlain = types.ParameterScope(types.names(position)).TypeOf(node.text) is ""
 	returned is not "" and isPlain then types.ElementType(returned) else ""
 Unfit(call SyntaxNode, instance Text, method Text, inference TypeInference, scope Scope, current Scope) Text
 	Scaling.Unfit(Rescaled, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is Unfitted
@@ -156,14 +156,14 @@ Unfit(call SyntaxNode, instance Text, method Text, inference TypeInference, scop
 	Scaling.Unfit(Rescaled, "Scaler", "Missing", ScalerInference, Scalers, Scalers) is ""
 	Scaling.Unfit(Renamed, "Scaler", "Scaled", ScalerInference, Scalers, Scalers) is ""
 	ListFits.Sorts.Unfit(ScaledRead, "Sorter", "Sorted", ScalerInference, Scalers, Scalers).StartsWith("IndexOrList")
-	let arguments = Arguments(call, inference, scope, current)
-	let isOverloaded = types.ParameterScope(instance).Count(method) > 1
-	let isNamed = call.children.Length > 0 and call.children.Last.Kind is "Reassignment"
+	arguments = Arguments(call, inference, scope, current)
+	isOverloaded = types.ParameterScope(instance).Count(method) > 1
+	isNamed = call.children.Length > 0 and call.children.Last.Kind is "Reassignment"
 	if isOverloaded is false or isNamed or Chosen(instance, method, arguments) >= 0
 		return ""
-	let target = instance + "." + method
+	target = instance + "." + method
 	if IsIndexing(instance, method, arguments, Ordinal(instance, method, arguments, false))
-		let reason = "(Number) indexes " + method + " or passes a one-element list, index a let of it"
+		reason = "(Number) indexes " + method + " or passes a one-element list, index a let of it"
 		return "IndexOrListIsAmbiguous: " + target + reason
 	"NoOverloadFits: " + target + " got " + Text.Combine(arguments, ", ")
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
@@ -180,12 +180,12 @@ Typed(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, 
 	Labeling.Typed(LabelerLabels, "Labeler", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "List(Numbers)"
 	if node.text is "value"
 		return instanceType
-	let position = types.Index(instanceType)
-	let declared = position < 0 then "" else types.methods(position).TypeOf(node.text)
+	position = types.Index(instanceType)
+	declared = position < 0 then "" else types.methods(position).TypeOf(node.text)
 	if declared is not in ("Generic", "Generics")
 		return types.MemberType(instanceType, node.text)
-	let parameters = types.ParameterNames(types.parameters(position).TypeOf(node.text + " types"))
-	let specialized = Specialized(declared, parameters, Arguments(node, inference, scope, current))
+	parameters = types.ParameterNames(types.parameters(position).TypeOf(node.text + " types"))
+	specialized = Specialized(declared, parameters, Arguments(node, inference, scope, current))
 	specialized is declared then types.MemberType(instanceType, node.text) else specialized
 Specialized(type Text, declared Texts, arguments Texts) Text
 	Picking.Specialized("Generics", "Generics", "Numbers") is "Numbers"
@@ -194,28 +194,28 @@ Specialized(type Text, declared Texts, arguments Texts) Text
 	Picking.Specialized("Generic", ("Number", "Generic"), ("Number", "Texts")) is "Texts"
 	Picking.Specialized("Generic", List(Text) + "Generic", List(Text)) is "Generic"
 	Picking.Specialized("Generic", ("Number", "Generic"), List(Text)) is "Generic"
-	let at = declared.Index("Generics") >= 0 then declared.Index("Generics") else declared.Index("Generic")
+	at = declared.Index("Generics") >= 0 then declared.Index("Generics") else declared.Index("Generic")
 	if at < 0 or at >= arguments.Length
 		return type
-	let element = declared(at) is "Generics" then types.ElementType(arguments(at)) else arguments(at)
+	element = declared(at) is "Generics" then types.ElementType(arguments(at)) else arguments(at)
 	type is "Generics" then Instantiation(types).Plural(element) else element
 Ambiguities(path Text, lines Texts) Texts
 	Scaling.Ambiguities("A", Valued) is (Clashing)
 	Scaling.Ambiguities("A", ("to Text", "\t\"a\"", "to Number", "\t1")).Length is 0
 	Scaling.Ambiguities("A", Limits) is ("A:line 3: NameAlreadyDeclared: Limit like line 1")
 	Twins.Indexed(SyntaxParser(Tokenizer("Values(2)").Tokens).Parse, TwinMethods(1)) is ""
-	let signatures = Signatures(lines)
+	signatures = Signatures(lines)
 	for signatures
 		if value is not "" and signatures.Index(value) < index
-			let first = signatures.Index(value) + 1
-			let rule = value.EndsWith(")") then "OverloadsNeedDifferentParameterNames: " else "NameAlreadyDeclared: "
+			first = signatures.Index(value) + 1
+			rule = value.EndsWith(")") then "OverloadsNeedDifferentParameterNames: " else "NameAlreadyDeclared: "
 			ResolveCheck.Located(path, index + 1, rule + value + " like line " + first)
 Signatures(lines Texts) Texts
 	Scaling.Signatures(Valued) is ("Value(name, default)", "", "Value(name, default)", "")
 	Picking.Typed(SyntaxNode("Call", "Chosen"), "Picker", LabelInference, Relabeled, Relabeled) is "Unknown"
-	let shape = TypeShape(lines)
+	shape = TypeShape(lines)
 	for lines
-		let tokens = Tokenizer(value).Tokens
-		let name = shape.IsMethodHeader(value) then tokens.First else "to"
-		let signature = name is "to" then "" else name + "(" + Text.Combine(HeaderTokens(tokens).ParameterNames, ", ") + ")"
+		tokens = Tokenizer(value).Tokens
+		name = shape.IsMethodHeader(value) then tokens.First else "to"
+		signature = name is "to" then "" else name + "(" + Text.Combine(HeaderTokens(tokens).ParameterNames, ", ") + ")"
 		shape.IsMemberLine(value) then tokens(1) else signature

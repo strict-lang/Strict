@@ -6,7 +6,7 @@ constant Population = 40
 constant MutationRate = 0.2
 Distance(angles Numbers) Number
 	Planar.Distance((0, 0)) is 0.6403124237432849
-	let difference = Network.Difference(arm.Reached(angles), target)
+	difference = Network.Difference(arm.Reached(angles), target)
 	Batch.Dot(difference, 0, difference, 0).SquareRoot
 Arms List(Numbers)
 	Planar.Arms.Length is Population
@@ -36,8 +36,8 @@ Mutated(angles Numbers) Numbers
 		(1.Random < MutationRate then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
 Tournament(population List(Numbers)) Numbers
 	Planar.Tournament(List(Numbers) + (0, 0)) is (0, 0)
-	let first = population(population.Length.Random.Floor)
-	let second = population(population.Length.Random.Floor)
+	first = population(population.Length.Random.Floor)
+	second = population(population.Length.Random.Floor)
 	Distance(first) < Distance(second) then first else second
 Best(population List(Numbers)) Numbers
 	Planar.Best(((0, 0), (40, 40))) is (40, 40)

@@ -11,5 +11,5 @@ IsHosted Boolean
 Result VmValue
 	HostedTokenizer(Tokening).Result.items.Length is 3
 	HostedTokenizer(Naming).Result.items.First.text is "Size"
-	let tokenizer = Tokenizer(call.Instance.Member(0).text)
+	tokenizer = Tokenizer(call.Instance.Member(0).text)
 	Hosted(call).Values(call.MethodName is "Tokens" then tokenizer.Tokens else tokenizer.Names)

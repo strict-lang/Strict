@@ -18,7 +18,7 @@ Mask(free Texts) Number
 		return 0
 	mutable dots = 0
 	for free
-		let end = function.method.LoopEndOf(position)
+		end = function.method.LoopEndOf(position)
 		dots = IsDotted(function, position + 1, end, value, true) then dots + 2 ^ index else dots
 	dots
 IsDotted(inspected MlirFunction, first Number, last Number, name Text, canPass Boolean) Boolean
@@ -27,7 +27,7 @@ IsDotted(inspected MlirFunction, first Number, last Number, name Text, canPass B
 	Layering.IsDotted(Layering.function, 3, 12, "input", false) is false
 	mutable uses = 0
 	for Range(first, last)
-		let use = Use(inspected, value, name, canPass)
+		use = Use(inspected, value, name, canPass)
 		if use < 0
 			return false
 		uses = uses + use
@@ -36,8 +36,8 @@ Use(inspected MlirFunction, at Number, name Text, canPass Boolean) Number
 	Layering.Use(Layering.function, 4, "input", true) is 1
 	Layering.Use(Layering.function, 8, "biases", true) is -1
 	Layering.Use(Layering.function, 10, "biases", true) is 0
-	let entry = inspected.method.instructions(at)
-	let isRead = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
+	entry = inspected.method.instructions(at)
+	isRead = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.IndexCall)
 	if isRead then entry.texts(0) is not name else true
 		return 0
 	if entry.kind is InstructionType.IndexCall
@@ -47,11 +47,11 @@ IsPassed(at Number) Boolean
 	Layering.IsPassed(4)
 	Layering.IsPassed(3) is false
 	Mixing.IsPassed(4) is false
-	let register = function.method.instructions(at).payload(0)
+	register = function.method.instructions(at).payload(0)
 	mutable isPassed = false
 	for Range(at + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
-		let isRead = entry.kind is InstructionType.Invoke and MlirKinds(function).Writer(value, register) is at
+		entry = function.method.instructions(value)
+		isRead = entry.kind is InstructionType.Invoke and MlirKinds(function).Writer(value, register) is at
 		if isRead and IsDottedCall(value, register) is false
 			return false
 		isPassed = isPassed or isRead and register is in PayloadDecoder(entry).Arguments
@@ -59,10 +59,10 @@ IsPassed(at Number) Boolean
 IsDottedCall(call Number, register Number) Boolean
 	Layering.IsDottedCall(5, 2)
 	Mixing.IsDottedCall(5, 2) is false
-	let decoder = PayloadDecoder(function.method.instructions(call))
+	decoder = PayloadDecoder(function.method.instructions(call))
 	if register is not in decoder.Arguments
 		return decoder.Instance is not register
-	let callees = MlirModule(function.types, "").Called(function, call)
+	callees = MlirModule(function.types, "").Called(function, call)
 	if callees.Length is not 1 or decoder.Instance is register
 		return false
 	for decoder.Arguments

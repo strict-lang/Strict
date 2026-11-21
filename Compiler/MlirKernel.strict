@@ -44,11 +44,11 @@ IsSimple Boolean
 	Doubling.IsSimple
 	Calling.IsSimple is false
 	MlirKernel(MlirLoops.Counting.function, 0).IsSimple is false
-	let entry = function.method.instructions(position)
-	let isCounted = entry.kind is InstructionType.LoopBegin and entry.payload(1) is not 1
+	entry = function.method.instructions(position)
+	isCounted = entry.kind is InstructionType.LoopBegin and entry.payload(1) is not 1
 	if isCounted is false or function.FastLoop >= 0 or MlirLoops(function, position).Collection is "Text"
 		return false
-	let end = function.method.LoopEndOf(position)
+	end = function.method.LoopEndOf(position)
 	for Range(position + 1, end)
 		if IsAllowed(value) is false
 			return false
@@ -57,37 +57,37 @@ IsUseful Boolean
 	Doubling.IsUseful
 	Uncollected.IsUseful is false
 	Offsetting.IsSimple and MlirKernel(MlirParallel.Doubling.function, 2).IsSimple
-	let loops = MlirLoops(function, position)
+	loops = MlirLoops(function, position)
 	mutable collected = 0
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if function.method.instructions(value).kind is InstructionType.InvokeWriteToList
 			collected = collected + 1
-	let isRead = Sources.Length > 0 or loops.Collection is not ""
+	isRead = Sources.Length > 0 or loops.Collection is not ""
 	loops.IsCollecting then collected is 1 else collected is 0 and isRead
 IsAllowed(at Number) Boolean
 	Doubling.IsAllowed(4)
 	Calling.IsAllowed(2) is false
-	let entry = function.method.instructions(at)
-	let kind = entry.kind
+	entry = function.method.instructions(at)
+	kind = entry.kind
 	if kind is InstructionType.LoadConstantToRegister
 		return PayloadDecoder(entry).Value(1).kind is in ("Number", "Boolean")
 	if kind is InstructionType.StoreRegisterToVariable
 		return entry.texts(0).IndexOf("(") < 0 and entry.texts(0) is not in Sources
 	if kind is in Accesses
 		return IsAccessAllowed(at)
-	let isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
+	isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 	kind is InstructionType.LoadVariableToRegister or isBinary and IsCalculated(at)
 IsAccessAllowed(at Number) Boolean
 	Doubling.IsAccessAllowed(4)
 	Doubling.IsAccessAllowed(7)
 	Guarding.IsAccessAllowed(3) and Guarding.IsAccessAllowed(7) is false
-	let entry = function.method.instructions(at)
-	let previous = function.method.instructions(at - 1)
-	let isSource = previous.kind is InstructionType.LoadVariableToRegister and previous.texts(0) is in Sources
+	entry = function.method.instructions(at)
+	previous = function.method.instructions(at - 1)
+	isSource = previous.kind is InstructionType.LoadVariableToRegister and previous.texts(0) is in Sources
 	if entry.kind is InstructionType.Invoke
 		return IsCalled(at)
 	if entry.kind is InstructionType.CheckError
-		let isRead = (previous.kind is InstructionType.IndexCall or isSource) and previous.payload(0) is entry.payload(0)
+		isRead = (previous.kind is InstructionType.IndexCall or isSource) and previous.payload(0) is entry.payload(0)
 		return isRead or MlirChecks(function, at).IsInfallible
 	entry.kind is InstructionType.IndexCall then IsIndexedByLoop(at) else entry.texts(0) is "forResult"
 IsCalled(at Number) Boolean
@@ -96,16 +96,16 @@ IsCalled(at Number) Boolean
 	MlirKernel(MlirParallel.Timing.function, 2).IsCalled(4) is false
 	Reading.IsCalled(3)
 	Reading.Versioned.Last is "  ^loop2generic:"
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.texts.Length < 3 or entry.texts(2) is not "Strict/Number"
 		return false
-	let isSure = MlirChecks(function, at).IsFailing(function, at, 0) is false
+	isSure = MlirChecks(function, at).IsFailing(function, at, 0) is false
 	isSure and MlirPurity(function, position).IsSafe(function, at, 0)
 IsCalculated(at Number) Boolean
 	Doubling.IsCalculated(6)
-	let isText = MlirTexts(function, at).IsSum
-	let isList = MlirListOperators(function, at).IsOperation
-	let isCompared = MlirEquality(function, at).Handles(function.method.instructions(at))
+	isText = MlirTexts(function, at).IsSum
+	isList = MlirListOperators(function, at).IsOperation
+	isCompared = MlirEquality(function, at).Handles(function.method.instructions(at))
 	isText is false and isList is false and isCompared is false
 IsIndexedByLoop(at Number) Boolean
 	Doubling.IsIndexedByLoop(4)
@@ -114,10 +114,10 @@ IsIndexedByLoop(at Number) Boolean
 	Offsetting.IsIndexedByLoop(4) and Offsetting.IsIndexedByLoop(8) and Offsetting.IsIndexedByLoop(13)
 	(Rejecting.IsIndexedByLoop(5) or Rejecting.IsIndexedByLoop(8) or Rejecting.IsIndexedByLoop(11)) is false
 	FlatReading.IsIndexedByLoop(4)
-	let entry = function.method.instructions(at)
-	let kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, entry.texts(0)))
-	let terms = Terms(entry.payload(1), at)
-	let isList = kind.StartsWith("List(") and "" is not in terms and terms.Count("index") is 1
+	entry = function.method.instructions(at)
+	kind = MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, entry.texts(0)))
+	terms = Terms(entry.payload(1), at)
+	isList = kind.StartsWith("List(") and "" is not in terms and terms.Count("index") is 1
 	isList or MlirCouples(function, at).IsFlatRead(entry)
 Terms(register Number, before Number) Texts
 	Offsetting.Terms(5, 8) is ("index", "0x4078D00000000000")
@@ -125,7 +125,7 @@ Terms(register Number, before Number) Texts
 	Rejecting.Terms(6, 8) is ("", "index")
 	Rejecting.Terms(9, 11) is ("")
 	for before - position - 1
-		let at = before - 1 - index
+		at = before - 1 - index
 		if LoadReuse(function.method.instructions).Written(function.method.instructions(at)) is register
 			return Termed(at)
 	List(Text) + ""
@@ -133,7 +133,7 @@ Termed(at Number) Texts
 	Offsetting.Termed(6) is ("0x4078D00000000000")
 	Offsetting.Termed(3) is ("index")
 	Doubling.Termed(5) is ("")
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.Add
 		return Terms(entry.payload(1), at) + Terms(entry.payload(2), at)
 	if entry.kind is InstructionType.LoadConstantToRegister
@@ -146,7 +146,7 @@ Offsets(at Number) Texts
 	Doubling.Offsets(4).Length is 0
 	Squaring.Offsets(16).Length is 0
 	Offsetting.Offsets(13) is ("0x3FF0000000000000", "0x4078D00000000000")
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	entry.kind is InstructionType.IndexCall then Terms(entry.payload(1), at) - "index" else List(Text)
 Shifted(source Text) Numbers
 	Squaring.Shifted("input") is (7, 12)
@@ -165,19 +165,19 @@ Sources Texts
 	Text.Combine(FlatReading.Versioned).IndexOf("= func.call @strict_flat_at(%f4l, %f4i)") > 0
 	mutable names = List(Mutable(Text))
 	for Range(position + 1, function.method.LoopEndOf(position))
-		let entry = function.method.instructions(value)
-		let isList = entry.kind is InstructionType.IndexCall and MlirCouples(function, value).IsFlatRead(entry) is false
+		entry = function.method.instructions(value)
+		isList = entry.kind is InstructionType.IndexCall and MlirCouples(function, value).IsFlatRead(entry) is false
 		if isList and entry.texts(0) is not in names
 			names.Add(entry.texts(0))
 	names
 Checked Texts
 	Guarding.Checked is ("numbers")
 	Doubling.Checked.Length is 0
-	let sources = Sources
+	sources = Sources
 	mutable names = List(Mutable(Text))
 	for Range(position + 2, function.method.LoopEndOf(position))
-		let loaded = function.method.instructions(value - 1)
-		let isChecked = function.method.instructions(value).kind is InstructionType.CheckError
+		loaded = function.method.instructions(value - 1)
+		isChecked = function.method.instructions(value).kind is InstructionType.CheckError
 		if isChecked and loaded.kind is InstructionType.LoadVariableToRegister and loaded.texts(0) is in sources
 			names.Add(loaded.texts(0))
 	names
@@ -188,11 +188,11 @@ Versioned Texts
 	Text.Combine(Summing.Versioned).IndexOf("cf.cond_br %f1ok1, ^floop1packed, ^loop1generic") > 0
 	if IsSimple is false
 		return List(Text)
-	let fast = MlirFunction(function.types, function.type, function.method, function.lineSlots, position)
-	let loop = MlirFastLoop(fast, position)
-	let packed = MlirPacked(function, position)
-	let copy = Renamed(loop.Started + loop.Counted + loop.Current + loop.Looped + loop.Exited, "")
-	let joined = MlirCounter(function, position).Finished("") + ("  ^loop" + position + "generic:")
+	fast = MlirFunction(function.types, function.type, function.method, function.lineSlots, position)
+	loop = MlirFastLoop(fast, position)
+	packed = MlirPacked(function, position)
+	copy = Renamed(loop.Started + loop.Counted + loop.Current + loop.Looped + loop.Exited, "")
+	joined = MlirCounter(function, position).Finished("") + ("  ^loop" + position + "generic:")
 	Renamed(loop.Checked, "") + packed.Branch + packed.Dispatched + copy + joined
 Joined Texts
 	Doubling.Joined is ("    cf.br ^loop2joined", "  ^loop2joined:")

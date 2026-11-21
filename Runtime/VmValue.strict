@@ -57,7 +57,7 @@ Member(index Number) VmValue
 	Numbered.Member(1).items.Length is 2
 	if kind is in ("Text", "Number", "Boolean", "List") or kind.StartsWith("Strict/List(")
 		return value
-	let isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
+	isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
 As(typeName Text) VmValue
 	OfText("a").As("Strict/Number").number is 97 and OfList(OfText("c")).As("Strict/Number").items.Length is 1
@@ -112,7 +112,7 @@ Automatic Text
 	mutable result = ""
 	for items
 		if value.kind is not "None"
-			let shown = value to Text
+			shown = value to Text
 			result = result is "" then shown else result + ", " + shown
 	"(" + result + ")"
 Traces Text
@@ -121,8 +121,8 @@ Traces Text
 	OfList(None, OfList(None.items + OfList(OfText(""), OfText(""), OfNumber(3)))).Traces is "\n\t... (skipped 3 lines)"
 	mutable result = ""
 	for items(1).items
-		let file = value.items(1).text
-		let line = value.items(2).number
-		let at = "at " + value.items(0).text + " in " + file + ":line " + line
+		file = value.items(1).text
+		line = value.items(2).number
+		at = "at " + value.items(0).text + " in " + file + ":line " + line
 		result = result + "\n\t" + (file is "" then "... (skipped " + line + " lines)" else at)
 	result

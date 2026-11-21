@@ -8,8 +8,8 @@ Widened(argument Text, declared Text) Boolean
 	Scaling.Widened("List(Bytes, Text)", "List(Numbers)") is false
 	Scaling.Widened("Bytes", "Generic") and Scaling.Widened("Bytes", "Number") is false
 	Scaling.Widened("Byte", "Bytes") and Scaling.Widened("Text", "Bytes") is false
-	let elements = Elements(argument)
-	let wanted = Elements(declared)
+	elements = Elements(argument)
+	wanted = Elements(declared)
 	if wanted.Length is not 1
 		return Overloads(types).Converts(argument, declared)
 	if elements.Length is 0

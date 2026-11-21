@@ -21,7 +21,7 @@ Translated(functions List(MetalFunction)) Texts
 		Text.Combine(value.Source, "\n")
 Kept(names Texts, functions List(MetalFunction)) Texts
 	Sample.Kept(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
-	let kept = Supporting(names, functions)
+	kept = Supporting(names, functions)
 	kept.Length is names.Length then names else Kept(kept, functions)
 Supporting(names Texts, functions List(MetalFunction)) Texts
 	Sample.Supporting(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
@@ -31,9 +31,9 @@ Supporting(names Texts, functions List(MetalFunction)) Texts
 Source(prelude Texts) Texts
 	Sample.Source(List(Text)).First is "// parameters K 1"
 	Sample.Source(List(Text)).Last.StartsWith("kernel void K(")
-	let functions = Functions
-	let translated = Translated(functions)
-	let kept = Kept(Translatable(translated, functions), functions)
+	functions = Functions
+	translated = Translated(functions)
+	kept = Kept(Translatable(translated, functions), functions)
 	prelude + Markers(functions, kept) + Prototypes(functions, kept) + Bodies(translated, functions, kept)
 Translatable(translated Texts, functions List(MetalFunction)) Texts
 	Sample.Translatable(Sample.Translated(Sample.Functions), Sample.Functions) is ("twice", "K", "L")

@@ -5,28 +5,28 @@ Exported(library MlirLibrary, base Text, root Text)
 	if library.Exported.Length is 0
 		logger.Log("No exported methods in " + base + ".strict" + NoExports)
 		return Error("NoExportedMethods")
-	let program = NativeBuild.Device(library.Text, base, root)
+	program = NativeBuild.Device(library.Text, base, root)
 	File(base + ".mlir").Write(NativeBuild.Mlir(program, root, Platform.Current))
-	let error = program is "" then "Failed " + base else Linked(base, Toolchain(Platform.Current, root), library)
+	error = program is "" then "Failed " + base else Linked(base, Toolchain(Platform.Current, root), library)
 	logger.Log(error is "" then "Built " + Target(base, Platform.Current) + " and " + base + ".cs" else error)
 	if error is not ""
 		return Error("LibraryNotBuilt")
 	File(base + ".cs").Write(CSharpBinding(library, File(base + ".strict").ReadLines).Lines)
 	Intermediates.Removed(base)
 Linked(base Text, tools Toolchain, library MlirLibrary) Text
-	let lowered = tools.Lowered(base)
+	lowered = tools.Lowered(base)
 	if lowered is not ""
 		return lowered
-	let target = Toolchain.Quoted(Target(base, Platform.Current))
-	let linking = tools.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + Shared(library)
-	let linked = ToolRunner(tools.Located("clang")).Execute(linking)
+	target = Toolchain.Quoted(Target(base, Platform.Current))
+	linking = tools.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + Shared(library)
+	linked = ToolRunner(tools.Located("clang")).Execute(linking)
 	linked.Failed then "clang failed: " + linked.error else ""
 Target(base Text, platform Number) Text
 	LibraryBuild.Target("./Games/Policy", Platform.Windows) is "./Games/Policy.dll"
 	LibraryBuild.Target("./Games/Policy", Platform.Linux) is "./Games/libPolicy.so"
 	LibraryBuild.Target("./Games/Policy", Platform.MacOS) is "./Games/libPolicy.dylib"
-	let name = Path(base).FileName.text
-	let folder = base.Substring(0, base.Length - name.Length)
+	name = Path(base).FileName.text
+	folder = base.Substring(0, base.Length - name.Length)
 	platform is Platform.Windows then base + ".dll" else folder + "lib" + name + Platform.LibraryExtension(platform)
 Shared(library MlirLibrary) Text
 	LibraryBuild.Shared(MlirLibrary.Policy).EndsWith("Policy_Start") is (Platform.Current is Platform.Windows)

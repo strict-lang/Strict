@@ -20,8 +20,8 @@ Entry(signature Text, positions Dictionary(Text, Number), compiled Dictionary(Te
 	Fresh(signature, compiled(signature))
 Precompiled(signed Texts, positions Dictionary(Text, Number)) Dictionary(Text, TypeEntry) slow
 	Single.Precompiled(Logging, Unplaced)("Strict/Logger:").Name is "Strict/Logger"
-	let fresh = Probed(signed, positions).Unique
-	let generated = Generating(fresh, Read(fresh))
+	fresh = Probed(signed, positions).Unique
+	generated = Generating(fresh, Read(fresh))
 	mutable compiled = Dictionary(Text, TypeEntry)
 	for fresh
 		compiled.Add(value, generated(index))
@@ -35,21 +35,21 @@ Probed(signed Texts, positions Dictionary(Text, Number)) Texts
 Read(fresh Texts) List(Texts) slow
 	Single.Read(Logging).First.Length > 0
 	Twice.Read(List(Text) + "Strict/Logger:Log").Length is 1
-	let compile = LinkCompile(round.linker)
+	compile = LinkCompile(round.linker)
 	mutable read = List(Mutable(Texts))
 	for fresh
-		let type = Signature(value).Type
-		let wanted = Wanted(value)
+		type = Signature(value).Type
+		wanted = Wanted(value)
 		read.Add(compile.IsCompiled(type, wanted) then compile.Prepared(type, compile.Absent(type, wanted)) else List(Text))
 	read
 Generating(fresh Texts, read List(Texts)) List(TypeEntry)
 	Single.Generating(Logging, List(Texts) + List(Text)).First.Name is "Strict/Logger"
 	Homing.Generating(List(Text) + "Strict/Logger:Run", List(Texts) + List(Text)).First is BinaryLinks.Unknown
-	let compile = LinkCompile(round.linker)
+	compile = LinkCompile(round.linker)
 	for fresh
-		let type = Signature(value).Type
-		let wanted = Wanted(value)
-		let absent = compile.Absent(type, wanted)
+		type = Signature(value).Type
+		wanted = Wanted(value)
+		absent = compile.Absent(type, wanted)
 		compile.IsCompiled(type, wanted) then compile.Generated(type, read(index), absent) else BinaryLinks.Unknown
 Compiled(signature Text) TypeEntry slow
 	Twice.Compiled("Strict/Logger:Log").methods.Length is 1
@@ -64,12 +64,12 @@ Older(signature Text) Texts
 	Twice.Older("Strict/Logger:Log").Length is 0
 	Single.Older("Strict/Logger:").Length is 0
 	Logged.Older("Strict/Logger:Log;Reset") is ("Log")
-	let earlier = Earlier(signature)
+	earlier = Earlier(signature)
 	earlier < 0 then List(Text) else Signature(round.signatures(earlier)).Names
 Earlier(signature Text) Number
 	Twice.Earlier("Strict/Logger:Log") is 0
 	Single.Earlier("Strict/Logger:Log") is -1
-	let type = Signature(signature).Type
+	type = Signature(signature).Type
 	type is in earliest then earliest(type) else Number.NotFound
 Wanted(signature Text) Texts
 	Twice.Wanted("Strict/Logger:Log") is ("Log")
@@ -79,8 +79,8 @@ Wanted(signature Text) Texts
 Fresh(signature Text, compiled TypeEntry) TypeEntry slow
 	Single.Fresh("Strict/Logger:", Single.Compiled("Strict/Logger:")).Name is "Strict/Logger"
 	Twice.Fresh("Strict/Logger:Log", Twice.Compiled("Strict/Logger:Log")).methods.Length is 2
-	let linked = LinkCompile(round.linker).LinkedType(Signature(signature).Type, Wanted(signature), compiled)
+	linked = LinkCompile(round.linker).LinkedType(Signature(signature).Type, Wanted(signature), compiled)
 	if IsWhole(signature)
 		return linked
-	let entry = round.entries(Earlier(signature) + 1)
+	entry = round.entries(Earlier(signature) + 1)
 	TypeEntry(entry.Name, entry.members, entry.methods + linked.methods)

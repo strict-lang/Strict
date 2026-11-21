@@ -26,11 +26,11 @@ Variables(instructions List(InstructionEntry), candidates Texts, rounds Number) 
 	Sample.Variables(Chained, List(Text), 4) is ("pair Pair", "copy Pair", "again Pair")
 	Sample.Variables(ElementStore, List(Text), 4).Length is 0
 	Sample.Variables(Cycle, List(Text), 4) is ("x Pair", "y Pair")
-	let found = Scan(instructions, candidates)
+	found = Scan(instructions, candidates)
 	if found is not candidates
 		return rounds is 0 then found else Variables(instructions, found, rounds - 1)
-	let hoped = LaneHopes(value, Stores(instructions, found)).Hoped
-	let kept = Scan(instructions, hoped)
+	hoped = LaneHopes(value, Stores(instructions, found)).Hoped
+	kept = Scan(instructions, hoped)
 	kept.Length is hoped.Length and (kept - hoped).Length is 0 then kept else found
 Scan(instructions List(InstructionEntry), candidates Texts) Texts
 	Sample.Scan(Copying, "pair Pair") is ("pair Pair", "copy Pair")
@@ -52,15 +52,15 @@ Stored(entry InstructionEntry, laned Texts, loaded Texts) Text
 	Sample.Stored(Kept, List(Text), "2 other") is "pair ?other"
 	Sample.Stored(ElementStore.Last, "2 Pair", "2 other") is "pairs(0) -"
 	Sample.Stored(Picking, "2 Pair", "2 other") is "pairs -"
-	let isNamed = entry.kind is not InstructionType.StoreRegisterToVariable
-	let isFixed = isNamed or entry.texts(0).IndexOf("(") > 0 or entry.texts(0).StartsWith("changed_")
-	let type = isFixed then "" else Typed(laned, entry.payload(0) to Text)
-	let source = isFixed then "" else Typed(loaded, entry.payload(0) to Text)
+	isNamed = entry.kind is not InstructionType.StoreRegisterToVariable
+	isFixed = isNamed or entry.texts(0).IndexOf("(") > 0 or entry.texts(0).StartsWith("changed_")
+	type = isFixed then "" else Typed(laned, entry.payload(0) to Text)
+	source = isFixed then "" else Typed(loaded, entry.payload(0) to Text)
 	entry.texts(0) + " " + (type is not "" then type else source is "" then "-" else "?" + source)
 Loaded(entry InstructionEntry, loaded Texts) Texts
 	Sample.Loaded(Reloaded, List(Text)) is ("5 pair") and Sample.Loaded(StructLanes.Constructed, ("2 a", "5 b")) is ("5 b")
-	let written = LoadReuse(List(InstructionEntry)).Written(entry)
-	let kept = Without(loaded, written)
+	written = LoadReuse(List(InstructionEntry)).Written(entry)
+	kept = Without(loaded, written)
 	entry.kind is InstructionType.LoadVariableToRegister then kept + (written + " " + entry.texts(0)) else kept
 Agreed(stores Texts) Texts
 	Sample.Agreed(("a Pair", "b -", "a Pair", "c Pair", "c -")) is ("a Pair")
@@ -75,7 +75,7 @@ IsUniform(stores Texts, entry Text) Boolean
 	Sample.IsUniform(("ab Pair", "a Pair"), "a Pair")
 	if entry.EndsWith(" -") or entry.IndexOf(" ?") > 0
 		return false
-	let prefix = entry.Substring(0, entry.IndexOf(" ") + 1)
+	prefix = entry.Substring(0, entry.IndexOf(" ") + 1)
 	for stores
 		if value.StartsWith(prefix) and value is not entry
 			return false
@@ -85,19 +85,19 @@ Tracked(entry InstructionEntry, laned Texts, variables Texts) Texts
 	Sample.Tracked(Reloaded, List(Text), "pair Pair") is ("5 Pair")
 	Sample.Tracked(InstructionEntry.LoadNumber(3, 1), "3 Pair", List(Text)).Length is 0
 	Sample.Tracked(Changing, ("7 Pair", "2 Pair", "9 Pair"), List(Text)) is ("2 Pair", "9 Pair")
-	let written = LoadReuse(List(InstructionEntry)).Written(entry)
+	written = LoadReuse(List(InstructionEntry)).Written(entry)
 	if written < 0
 		return laned
-	let isCall = entry.kind is InstructionType.Invoke then entry.texts(1) is not "from" else false
-	let kept = isCall then Unchanged(laned, entry) else Without(laned, written)
-	let type = Produced(entry, variables)
+	isCall = entry.kind is InstructionType.Invoke then entry.texts(1) is not "from" else false
+	kept = isCall then Unchanged(laned, entry) else Without(laned, written)
+	type = Produced(entry, variables)
 	type is "" then kept else kept + (written + " " + type)
 Unchanged(laned Texts, call InstructionEntry) Texts
 	Sample.Unchanged(("6 Pair", "7 Pair", "8 Pair", "9 Pair", "5 Pair"), Changing) is ("9 Pair", "5 Pair")
-	let written = call.payload(0)
-	let last = written + LoadReuse(List(InstructionEntry)).InvokeReads(call).Length + 1
+	written = call.payload(0)
+	last = written + LoadReuse(List(InstructionEntry)).InvokeReads(call).Length + 1
 	for laned
-		let register = value.Split(" ").First to Number
+		register = value.Split(" ").First to Number
 		if register < written or register > last
 			value
 Produced(entry InstructionEntry, variables Texts) Text
@@ -130,8 +130,8 @@ IsBuilt(entry InstructionEntry) Boolean
 		return false
 	if skips.IsTabled(entry.texts(0)) and TypeEntry.ShortName(entry.texts(0)) is not in skips.structs
 		return false
-	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
-	let type = Inliner(types).TypeOf(entry.texts(0))
+	reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
+	type = Inliner(types).TypeOf(entry.texts(0))
 	if reads.Length is not entry.texts.Length - 3 or StructLanes(types).Members(type).Length is 0
 		return false
 	IsFull(type, entry.texts.Slice(3, entry.texts.Length - 3))
@@ -163,7 +163,7 @@ Lists(type TypeEntry, method MethodEntry) Texts
 	Sample.Lists(StructLanes.Caller, StructLanes.Squared).Length is 0
 	Sample.Lists(StructLanes.Pair, StructLanes.Squared).Length is 0
 	for type.members + method.parameters
-		let element = Element(value.typeName)
+		element = Element(value.typeName)
 		if element is not ""
 			value.Name + " " + element
 Element(typeName Text) Text
@@ -171,7 +171,7 @@ Element(typeName Text) Text
 	Sample.Element("Strict/Pairs") is "Strict/Pair"
 	Sample.Element("Strict/List(Number)") is ""
 	Sample.Element("Strict/Pairx") is "" and Sample.Element("Strict/Callers") is ""
-	let short = TypeEntry.ShortName(typeName)
-	let plural = short.EndsWith("s") then short.Substring(0, short.Length - 1) else ""
-	let element = Inliner(types).TypeOf(short.StartsWith("List(") then short.Substring(5, short.Length - 6) else plural)
+	short = TypeEntry.ShortName(typeName)
+	plural = short.EndsWith("s") then short.Substring(0, short.Length - 1) else ""
+	element = Inliner(types).TypeOf(short.StartsWith("List(") then short.Substring(5, short.Length - 6) else plural)
 	StructLanes(types).Members(element).Length > 0 then element.Name else ""

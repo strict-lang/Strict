@@ -30,10 +30,10 @@ Compared Texts
 	found
 Operations(left Text, type Text) Texts
 	mutable found = List(Mutable(Text))
-	let methods = known.MethodsOf(type)
+	methods = known.MethodsOf(type)
 	for methods.names
-		let operator = value
-		let parameters = known.ParameterNames(known.ParameterScope(type).TypeOf(operator + " types"))
+		operator = value
+		parameters = known.ParameterNames(known.ParameterScope(type).TypeOf(operator + " types"))
 		if operator is in Operators and methods.TypeOf(operator) is header.ReturnType and parameters.Length is 1
 			for values.names
 				if values.types(index) is (parameters.First is "Other" then type else parameters.First)
@@ -47,31 +47,31 @@ Receivers Texts
 Calls(sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
 	for Receivers
-		let declared = values.TypeOf(value)
-		let listed = declared is "Text" then Receiver(value, "List", sameName) else List(Text)
+		declared = values.TypeOf(value)
+		listed = declared is "Text" then Receiver(value, "List", sameName) else List(Text)
 		calls = calls + Receiver(value, declared is "" then value else declared, sameName) + listed
 	calls
 Receiver(receiver Text, type Text, sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
 	for known.MethodsOf(type).names
-		let recursive = type is own and value is header.tokens.First
+		recursive = type is own and value is header.tokens.First
 		if Named(value) and recursive is false and Stem(value) is Stem(header.tokens.First) is sameName
 			if known.MemberType(type, value) is header.ReturnType and value is in known.ParameterScope(type).names
-				let call = Call(type is own then value else receiver + "." + value, type, value, receiver)
+				call = Call(type is own then value else receiver + "." + value, type, value, receiver)
 				if call is not ""
 					calls.Add(call)
 	calls
 Named(name Text) Boolean
-	let first = name(0)
-	let named = Tokenizer.IsWordCharacter(first) and Tokenizer.IsDigit(first) is false
+	first = name(0)
+	named = Tokenizer.IsWordCharacter(first) and Tokenizer.IsDigit(first) is false
 	named and name is not in DefaultCheck.Keywords and name is not "Run"
 Call(prefix Text, type Text, name Text, receiver Text) Text
-	let scope = known.ParameterScope(type)
-	let parameters = known.ParameterNames(scope.TypeOf(name + " types"))
-	let required = scope.TypeOf(name + " required") to Number
+	scope = known.ParameterScope(type)
+	parameters = known.ParameterNames(scope.TypeOf(name + " types"))
+	required = scope.TypeOf(name + " required") to Number
 	mutable arguments = List(Mutable(Text))
 	for parameters
-		let matched = Argument(value, arguments + receiver)
+		matched = Argument(value, arguments + receiver)
 		if matched is ""
 			return index >= required then Called(prefix, arguments) else ""
 		arguments.Add(matched)
@@ -84,7 +84,7 @@ Argument(type Text, used Texts) Text
 Called(prefix Text, arguments Texts) Text
 	arguments.Length is 0 then prefix else prefix + "(" + Text.Combine(arguments, ", ") + ")"
 Stem(name Text) Text
-	let lower = name.Lower
+	lower = name.Lower
 	lower.EndsWith("ed") then lower.Substring(0, lower.Length - 2) else lower
 Unique(candidates Texts) Texts
 	constant MaxSuggestions = 64

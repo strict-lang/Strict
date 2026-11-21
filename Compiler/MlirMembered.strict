@@ -13,23 +13,23 @@ constant Defaulted = MlirMembered(MlirFunction(Moved.function.types, Mover, Meth
 Destined(entry InstructionEntry, compiled Texts) Texts
 	Moved.Destined(Moving(4), List(Text) + "call")(2).IndexOf("@strict_flat_destine_member(%t4mo, %t4ms)") > 0
 	MlirMembered(Moved.function, 7).Destined(Moving(7), List(Text) + "call") is ("call")
-	let handed = MlirDestined(function, position).Handed(entry)
-	let at = handed is "strict_flat_destine" then Rebuilding(entry.payload(0)) else -1
-	let slot = at < 0 then -1 else Slot(at, entry.payload(0))
-	let name = slot < 0 then "" else Target(at, slot)
+	handed = MlirDestined(function, position).Handed(entry)
+	at = handed is "strict_flat_destine" then Rebuilding(entry.payload(0)) else -1
+	slot = at < 0 then -1 else Slot(at, entry.payload(0))
+	name = slot < 0 then "" else Target(at, slot)
 	if name is ""
 		return MlirStructs(function, position).Destined(entry, MlirDestined(function, position).Next(entry), compiled)
-	let temp = "%t" + position + "m"
-	let counted = "    " + temp + "s = arith.constant " + slot + ".0 : f64"
-	let destined = "    func.call @strict_flat_destine_member(" + temp + "o, " + temp + "s) : (f64, f64) -> ()"
+	temp = "%t" + position + "m"
+	counted = "    " + temp + "s = arith.constant " + slot + ".0 : f64"
+	destined = "    func.call @strict_flat_destine_member(" + temp + "o, " + temp + "s) : (f64, f64) -> ()"
 	(function.Load(temp + "o", "%v_" + name), counted, destined) + compiled
 Rebuilding(register Number) Number
 	Moved.Rebuilding(3) is 7
 	Moved.Rebuilding(9) is -1
-	let steps = function.method.instructions
-	let reuse = LoadReuse(steps)
+	steps = function.method.instructions
+	reuse = LoadReuse(steps)
 	for Range(position + 1, steps.Length)
-		let step = steps(value)
+		step = steps(value)
 		if (step.kind is InstructionType.Invoke then step.texts(1) is "from" else false) and register is in reuse.Reads(step)
 			return value
 		if reuse.Written(step) is register
@@ -39,38 +39,38 @@ Slot(at Number, register Number) Number
 	Moved.Slot(7, 3) is 0
 	Moved.Slot(7, 5) is 1
 	Defaulted.Slot(0, 0) is -1
-	let entry = function.method.instructions(at)
-	let arguments = PayloadDecoder(entry).Arguments
-	let names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
+	entry = function.method.instructions(at)
+	arguments = PayloadDecoder(entry).Arguments
+	names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
 	for MlirInstances(function, 0).Stored(function.TypeOf(entry.texts(0), true))
-		let chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
+		chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
 		if chosen < arguments.Length then arguments(chosen) is register else false
 			return index
 	Number.NotFound
 Target(at Number, slot Number) Text
 	Moved.Target(7, 0) is "entity"
 	Moved.Target(7, 1) is ""
-	let entry = function.method.instructions(at)
-	let owner = function.TypeOf(entry.texts(0), true)
-	let name = MlirOwned(function, at).Target(entry, owner)
+	entry = function.method.instructions(at)
+	owner = function.TypeOf(entry.texts(0), true)
+	name = MlirOwned(function, at).Target(entry, owner)
 	if name is "" or MlirAlone(function).IsAlone(name) is false
 		return ""
 	IsKept(MlirInstances(function, 0).Stored(owner)(slot).Name) then name else ""
 IsKept(member Text) Boolean
 	Moved.IsKept("position")
 	MlirMembered(Moved.function, 7).IsKept("position") is false
-	let steps = function.method.instructions
+	steps = function.method.instructions
 	for steps
-		let isField = value.kind is InstructionType.FieldLoad then value.texts(0) is member else false
-		let isConsumed = isField then MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) else true
+		isField = value.kind is InstructionType.FieldLoad then value.texts(0) is member else false
+		isConsumed = isField then MlirFlats(function, index).IsConsumed(steps, index, value.payload(0)) else true
 		if (isConsumed or Reader(index, value.payload(0)) is position) is false
 			return false
 	true
 Reader(at Number, register Number) Number
 	Moved.Reader(3, 2) is 4
 	Moved.Reader(4, 3) is 7
-	let steps = function.method.instructions
-	let reuse = LoadReuse(steps)
+	steps = function.method.instructions
+	reuse = LoadReuse(steps)
 	for Range(at + 1, steps.Length)
 		if register is in reuse.Reads(steps(value)) and steps(value).kind is not InstructionType.CheckError
 			return value

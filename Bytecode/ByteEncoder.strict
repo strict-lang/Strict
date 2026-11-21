@@ -48,7 +48,7 @@ SevenBitLength(number Number) Number
 	number < SevenBitBase then 1 else 1 + SevenBitLength((number / SevenBitBase).Floor)
 Text(text Text) ByteEncoder
 	ByteEncoder(1, 2).Text(ByteEncoder(195, 164).Spelled(0, 2)).bytes is (1, 2, 2, 195, 164)
-	let unicode = UnicodeBytes(text)
+	unicode = UnicodeBytes(text)
 	ByteEncoder(SevenBit(unicode.Length).bytes + unicode)
 UnicodeBytes(text Text) Numbers
 	ByteEncoder(1, 2).UnicodeBytes(ByteEncoder(97, 195, 164, 226, 130, 172).Spelled(0, 6)) is (97, 195, 164, 226, 130, 172)
@@ -60,18 +60,18 @@ Double(number Number) ByteEncoder
 	ByteEncoder.Empty.Double(-3 * 2 ^ -1074).bytes is (3, 0, 0, 0, 0, 0, 0, 128)
 	if number.IsFinite is false
 		return Packed(number.Absolute > 0 then 0 else 2 ^ (MantissaBits - 1), ExponentBias + 1, number < 0)
-	let isSubnormal = number.Absolute < 2 ^ (1 - ExponentBias)
-	let exponent = isSubnormal then -ExponentBias else Exponent(number.Absolute)
-	let normal = (number.Absolute / 2 ^ exponent - 1) * 2 ^ MantissaBits
+	isSubnormal = number.Absolute < 2 ^ (1 - ExponentBias)
+	exponent = isSubnormal then -ExponentBias else Exponent(number.Absolute)
+	normal = (number.Absolute / 2 ^ exponent - 1) * 2 ^ MantissaBits
 	Packed(isSubnormal then number.Absolute / 2 ^ (1 - ExponentBias - MantissaBits) else normal, exponent, number < 0)
 Packed(mantissa Number, exponent Number, isNegative Boolean) ByteEncoder
 	ByteEncoder.Empty.Packed(0, 0, false).bytes is (0, 0, 0, 0, 0, 0, 240, 63)
 	ByteEncoder.Empty.Double(-1 / 0).bytes is (0, 0, 0, 0, 0, 0, 240, 255)
 	ByteEncoder.Empty.Double(0 / 0).bytes is (0, 0, 0, 0, 0, 0, 248, 127)
 	ByteEncoder.Empty.Double(-1 / (1 / 0)).bytes.Last is 0
-	let low = UInt(mantissa % 2 ^ LowMantissaBits, 6)
-	let high = (mantissa / 2 ^ LowMantissaBits).Floor + ((exponent + ExponentBias) % ExponentLowBits) * ExponentLowBits
-	let top = ((exponent + ExponentBias) / ExponentLowBits).Floor + (isNegative then SignBit else 0)
+	low = UInt(mantissa % 2 ^ LowMantissaBits, 6)
+	high = (mantissa / 2 ^ LowMantissaBits).Floor + ((exponent + ExponentBias) % ExponentLowBits) * ExponentLowBits
+	top = ((exponent + ExponentBias) / ExponentLowBits).Floor + (isNegative then SignBit else 0)
 	low.UInt(high, 1).UInt(top, 1)
 Exponent(positive Number) Number
 	ByteEncoder(1, 2).Exponent(10) is 3

@@ -26,20 +26,20 @@ LetIssues(at Number) ValidationIssues
 	Inlines(("Run", "\tlet x = 1 + 345678901", "\tLog(x)" + Padding)).LetIssues(1).Length is 0
 	if IsInlinable(at) is false
 		return List(ValidationIssue)
-	let detail = Tokenizer(lines(at).Trim).Tokens(1) + ", use " + Value(lines(at)) + " in the next line"
+	detail = Tokenizer(lines(at).Trim).Tokens(1) + ", use " + Value(lines(at)) + " in the next line"
 	List(ValidationIssue) + ValidationIssue("SingleUseLetMustBeInlined", detail, at + 1)
 IsInlinable(at Number) Boolean
 	Evicted.IsInlinable(1) and Ordered.IsInlinable(1) is false
 	Inlines(("Run", "\tlet total = 1", "\t\tLog(total)")).IsInlinable(1) is false
 	Inlines(("Run", "\tlet total = 1")).IsInlinable(1) is false
-	let inlined = Value(lines(at))
+	inlined = Value(lines(at))
 	if inlined is "" or BodyParser.Indent(Line(at + 1)) is not BodyParser.Indent(lines(at))
 		return false
-	let name = Tokenizer(lines(at).Trim).Tokens(1)
-	let next = Tokenizer(Line(at + 1).Trim).Tokens
-	let length = Line(at + 1).Length + inlined.Length - name.Length
-	let fits = length + (inlined.Count(" ") > 0 then 2 else 0) <= Limits.MaxCharacters
-	let isOnce = Uses(next, name) is 1 and IsUsedLater(name, at + 2) is false
+	name = Tokenizer(lines(at).Trim).Tokens(1)
+	next = Tokenizer(Line(at + 1).Trim).Tokens
+	length = Line(at + 1).Length + inlined.Length - name.Length
+	fits = length + (inlined.Count(" ") > 0 then 2 else 0) <= Limits.MaxCharacters
+	isOnce = Uses(next, name) is 1 and IsUsedLater(name, at + 2) is false
 	fits and isOnce and IsReordered(inlined, next, name) is false and IsRebound(inlined, next, name) is false
 IsRebound(inlined Text, next Texts, name Text) Boolean
 	Inlines(("Run", "\tfor 2", "\t\tlet chunk = value", "\t\tfor chunk", "\t\t\t1")).IsInlinable(2) is false
@@ -48,18 +48,21 @@ IsRebound(inlined Text, next Texts, name Text) Boolean
 	Evicted.IsRebound("Account", ("for", "account", "(", "list", ")"), "account")
 	Evicted.IsRebound("a", ("Log", "(", "found", ")"), "found") is false
 	Evicted.IsRebound("a", ("for", "as", "x"), "x") and Evicted.IsRebound("a", ("if", "as", "x"), "x") is false
-	let tokens = Tokenizer(inlined).Tokens
-	let after = next.Index(name) + 1
-	let isIndexed = after < next.Length then next(after) is "(" else false
-	let isRepeated = next.First is "for" and next.Index("as") is 1
+	tokens = Tokenizer(inlined).Tokens
+	after = next.Index(name) + 1
+	isIndexed = after < next.Length then next(after) is "(" else false
+	isRepeated = next.First is "for" and next.Index("as") is 1
 	isIndexed or isRepeated or next.First is "for" and Uses(tokens, "value") + Uses(tokens, "index") > 0
 Value(line Text) Text
 	Inlines(("Run", "\tx", "\tx")).IsInlinable(1) is false
 	Evicted.Value("\tlet evicted = GpuMemory.Evicted") is "GpuMemory.Evicted"
+	Evicted.Value("\tevicted = GpuMemory.Evicted") is "GpuMemory.Evicted"
 	Evicted.Value("\tmutable count = 1") is ""
-	let trimmed = line.Trim
-	let at = trimmed.IndexOf(" = ") + 3
-	trimmed.StartsWith("let ") then trimmed.Substring(at) else ""
+	trimmed = line.Trim
+	tokens = Tokenizer(trimmed).Tokens
+	at = trimmed.IndexOf(" = ") + 3
+	isAssigned = tokens.Length > 1 and tokens(1) is "=" and trimmed.StartsWith("mutable ") is false
+	trimmed.StartsWith("let ") or isAssigned then trimmed.Substring(at) else ""
 IsUsedLater(name Text, start Number) Boolean
 	Inlines(("Run", "\tLog(1)", "\t\ttotal")).IsUsedLater("total", 1)
 	Inlines(("Run", "\tLog(1)", "Other", "\ttotal")).IsUsedLater("total", 1) is false
@@ -96,7 +99,7 @@ ReturnIssues(at Number) ValidationIssues
 	Inlines(("R Number", "\tif done", "\t\treturn 1", "Other")).ReturnIssues(1).Length is 0
 	Inlines(("R Number", "\tif done", "\t\treturn 1", "\tlet x = 2")).ReturnIssues(1).Length is 0
 	Inlines(("R Number", "\tif done", "\t\treturn 1")).ReturnIssues(1).Length is 0
-	let merged = Merged(at)
+	merged = Merged(at)
 	if merged is "" or merged.Length + (Line(at + 1).IndexOf(" then ") is -1 then 1 else 3) > Limits.MaxCharacters
 		return List(ValidationIssue)
 	if HasOneResult(at) is false
@@ -105,7 +108,7 @@ ReturnIssues(at Number) ValidationIssues
 HasOneResult(at Number) Boolean
 	Inlines(("R Number", "\tif result is Error", "\t\treturn Wrapped(result.Name)", "\t1")).ReturnIssues(1).Length is 1
 	Returned.HasOneResult(1) and Inlines(("Log(text Text)", "\tx")).HasOneResult(1) is false
-	let header = Header(at)
+	header = Header(at)
 	header.IndexOf(" or ") is -1 and HeaderTokens(Tokenizer(header).Tokens).ReturnType is not "None"
 Header(at Number) Text
 	Returned.Header(2) is "A Text" and Returned.Header(4) is "Run"
@@ -122,10 +125,10 @@ Merged(at Number) Text
 	Inlines(("R Number", "\tif done", "\t\treturn 1", "\t1", "\t2")).Merged(1) is ""
 	Inlines(("Run", "\tfor done", "\t\treturn 1", "\t1")).Merged(1) is ""
 	Inlines(("R Number", "\tif done", "\t\tLog(1)", "\t1")).Merged(1) is ""
-	let returned = Line(at + 1).Trim
-	let last = Line(at + 2)
-	let isValue = BodyParser.Indent(last) is 1 and Tokenizer(last.Trim).Tokens.First is not in Keywords
-	let isBranch = lines(at).StartsWith("\tif ") and returned.StartsWith("return ")
+	returned = Line(at + 1).Trim
+	last = Line(at + 2)
+	isValue = BodyParser.Indent(last) is 1 and Tokenizer(last.Trim).Tokens.First is not in Keywords
+	isBranch = lines(at).StartsWith("\tif ") and returned.StartsWith("return ")
 	if (isBranch and isValue and Line(at + 3).StartsWith("\t") is false) is false
 		return ""
 	lines(at).Substring(4) + " then " + returned.Substring(7) + " else " + last.Trim

@@ -12,8 +12,8 @@ get(key Text) Json
 	Bones("loop") to Text is "true"
 	Bones("missing") to Text is ""
 	Json("[\"a\", 1]").get("a") to Text is ""
-	let open = Skip(0)
-	let parts = Parts(open)
+	open = Skip(0)
+	parts = Parts(open)
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
 		if Unquoted(parts(value * 2)) is key
 			return Slice(MemberValue(parts(value * 2)), parts(value * 2 + 1))
@@ -21,17 +21,17 @@ get(key Text) Json
 Keys Texts
 	Bones.Keys is ("bones", "loop")
 	Bones("bones").Keys.Length is 0
-	let open = Skip(0)
-	let parts = Parts(open)
+	open = Skip(0)
+	parts = Parts(open)
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
 		Unquoted(parts(value * 2))
 Elements Jsons
 	Bones("bones").Elements.Length is 2
 	Bones.Elements(1) to Text is "true"
-	let open = Skip(0)
-	let parts = Parts(open)
+	open = Skip(0)
+	parts = Parts(open)
 	for Range(0, (parts.Length - 1) / 2)
-		let start = parts(value * 2)
+		start = parts(value * 2)
 		Slice(text.StartsWith("{", open) then MemberValue(start) else start, parts(value * 2 + 1))
 Values Numbers
 	Json("[1, -2.5, 1.0E-5]").Values is (1, -2.5, 0.00001)
@@ -41,22 +41,22 @@ to Text
 	Escaped to Text is "a\"b\ncA"
 	Json(" 82 ") to Text is "82"
 	(Json("\"\\u00e9\\ud83d\\ude00\"") to Text).Bytes is (195, 169, 240, 159, 152, 128)
-	let start = Skip(0)
+	start = Skip(0)
 	text.StartsWith("\"", start) then Unquoted(start) else text.Trim
 to Number
 	Json(" 82 ") to Number is 82
 	text.Trim to Number
 Parts(open Number) Numbers
 	Json("[1, \"b\"]").Parts(0) is (1, 2, 4, 7, 7)
-	let isObject = text.StartsWith("{", open)
+	isObject = text.StartsWith("{", open)
 	mutable parts = List(Mutable(Number))
 	if isObject is false and text.StartsWith("[", open) is false
 		return parts + open
 	mutable at = Skip(open + 1)
 	for as long as at < text.Length and text(at) is not in ("}", "]")
-		let finish = ValueEnd(isObject then MemberValue(at) else at)
+		finish = ValueEnd(isObject then MemberValue(at) else at)
 		parts = parts + at + finish
-		let after = Skip(finish)
+		after = Skip(finish)
 		at = text.StartsWith(",", after) then Skip(after + 1) else after
 	parts + at
 ValueEnd(start Number) Number
@@ -88,7 +88,7 @@ Slashes(position Number) Number
 MemberValue(key Number) Number
 	Bones.MemberValue(2) is 11
 	Json("{\"a\"}").MemberValue(1) is 5
-	let colon = text.IndexOf(":", StringEnd(key))
+	colon = text.IndexOf(":", StringEnd(key))
 	colon < 0 then text.Length else Skip(colon + 1)
 Skip(position Number) Number
 	Json(" \t\n1").Skip(0) is 3

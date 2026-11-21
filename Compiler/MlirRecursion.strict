@@ -12,7 +12,7 @@ constant Looping = MlirRecursion(Looped.Functions, 1)
 Recursive(edges List(Numbers)) Texts
 	Looping.Recursive(Looping.Edges) is ("Looped_Again_0")
 	MlirRecursion(MlirModule.Counters.Functions, 1).Recursive(List(Numbers) + List(Number)).Length is 0
-	let order = Order(edges)
+	order = Order(edges)
 	for functions
 		if IsBack(edges(index), order.Index(index), order)
 			value.Symbol
@@ -22,7 +22,7 @@ Edges List(Numbers)
 	MlirRecursion(Looped.Functions, 1, ((0), (0))).Edges(1) is (0)
 	if calls.Length is functions.Length
 		return calls
-	let symbols = Symbols(functions)
+	symbols = Symbols(functions)
 	mutable edges = List(Mutable(Numbers))
 	for functions
 		edges.Add(Indexes(MlirModule(value.types, "").Callees(value), symbols))
@@ -40,7 +40,7 @@ Order(edges List(Numbers)) Numbers
 	order
 Finished(node Number, path Numbers, order Numbers, edges List(Numbers)) Numbers
 	Looping.Finished(0, List(Number), List(Number), Looping.Edges) is (1, 0)
-	let onPath = path + node
+	onPath = path + node
 	mutable done = order
 	for edges(node)
 		if value is not in done and value is not in onPath

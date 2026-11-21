@@ -31,8 +31,8 @@ Fits(need Need, ram Number, vram Number) Boolean
 IsTiny(need Need, seen MachineView) Boolean
 	Sample.IsTiny(Need.Tiny, MachineView.Wide)
 	Sample.IsTiny(Need.Small, MachineView.Wide) is false
-	let ram = seen.totalRam > 0 and seen.totalRam < need.minimumRam
-	let vram = seen.totalVram > 0 and seen.totalVram < need.minimumVram
+	ram = seen.totalRam > 0 and seen.totalRam < need.minimumRam
+	vram = seen.totalVram > 0 and seen.totalVram < need.minimumVram
 	ram or vram
 Usable(total Number, share Number) Number
 	Sample.Usable(16, HostShare) is 8
@@ -44,14 +44,14 @@ Reason(need Need, seen MachineView) Text
 	Sample.Reason(BigNeed, HeldMachine).EndsWith(", idle backends could free 40 GB RAM and 18 GB VRAM")
 	if IsTiny(need, seen)
 		return Undersized(need, seen)
-	let needs = "it needs " + Sized(need.Ram) + " RAM and " + Sized(need.Vram) + " VRAM, "
-	let free = Sized(seen.freeRam) + " of " + Sized(seen.totalRam) + " RAM and " + Sized(seen.freeVram) + " of "
-	let idle = ", idle backends could free " + Sized(seen.idleRam) + " RAM and " + Sized(seen.idleVram) + " VRAM"
-	let text = needs + free + Sized(seen.totalVram) + " VRAM are free"
+	needs = "it needs " + Sized(need.Ram) + " RAM and " + Sized(need.Vram) + " VRAM, "
+	free = Sized(seen.freeRam) + " of " + Sized(seen.totalRam) + " RAM and " + Sized(seen.freeVram) + " of "
+	idle = ", idle backends could free " + Sized(seen.idleRam) + " RAM and " + Sized(seen.idleVram) + " VRAM"
+	text = needs + free + Sized(seen.totalVram) + " VRAM are free"
 	seen.idleRam > 0 or seen.idleVram > 0 then text + idle else text
 Undersized(need Need, seen MachineView) Text
 	Sample.Undersized(BigNeed, SmallMachine).EndsWith(" VRAM, it needs at least 64 GB RAM and 10 GB VRAM")
-	let total = "this machine has " + Sized(seen.totalRam) + " RAM and " + Sized(seen.totalVram) + " VRAM"
+	total = "this machine has " + Sized(seen.totalRam) + " RAM and " + Sized(seen.totalVram) + " VRAM"
 	total + ", it needs at least " + Sized(need.minimumRam) + " RAM and " + Sized(need.minimumVram) + " VRAM"
 Sized(bytes Number) Text
 	Sample.Sized(Gigabyte * 2.5) is "2.5 GB"

@@ -17,14 +17,14 @@ Peeled(loop SyntaxNode, aggregation Text) SyntaxNode
 	Shifted.Kind is "Body" and Shifted.text is "peeled"
 	Steps.Peeled(Summing, "any").Kind is "For"
 	Unpeeled.Kind is "For"
-	let edges = LoopEdge(loop)
-	let edge = edges.Found(loop.children.Last)
-	let kind = Kind(loop)
+	edges = LoopEdge(loop)
+	edge = edges.Found(loop.children.Last)
+	kind = Kind(loop)
 	if edge.Kind is "Missing" or kind is "" or aggregation is "any"
 		return loop
-	let isFirst = edges.IsFirst(edge)
-	let element = Element(loop, edge, kind, isFirst)
-	let rest = Rest(loop, edge, kind, isFirst)
+	isFirst = edges.IsFirst(edge)
+	element = Element(loop, edge, kind, isFirst)
+	rest = Rest(loop, edge, kind, isFirst)
 	SyntaxNode("Body", "peeled", isFirst then (element, rest) else (rest, element))
 Kind(loop SyntaxNode) Text
 	Steps.Kind(Sigmas) is "count"
@@ -32,35 +32,35 @@ Kind(loop SyntaxNode) Text
 	Steps.Kind(BodyParser("Run", "\tfor steps + Count(steps)", "\t\tindex").Block(1, 1).children(0)) is ""
 	Steps.Kind(BodyParser("Run", "\tfor width.Clamp(0, steps)", "\t\tindex").Block(1, 1).children(0)) is ""
 	Listed.Kind(BodyParser("Run", "\tfor ones", "\t\tvalue").Block(1, 1).children(0)) is "list"
-	let isSafe = LoopHoisting(methods.values).IsSafe(loop.children(0))
-	let isSingle = isSafe and loop.children.Length is 2 and loop.text.EndsWith(" in") is false
-	let type = isSingle and loop.text is not "for as long as" then methods.values.TypeOf(loop.children(0), block) else ""
+	isSafe = LoopHoisting(methods.values).IsSafe(loop.children(0))
+	isSingle = isSafe and loop.children.Length is 2 and loop.text.EndsWith(" in") is false
+	type = isSingle and loop.text is not "for as long as" then methods.values.TypeOf(loop.children(0), block) else ""
 	type is "Number" then "count" else (ListFits(methods.values.inference.types).IsList(type) then "list" else "")
 Element(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Shifted.children(1) to Text is "for Range((steps + 1 - 1).Clamp(0, steps + 1), (steps + 1).Clamp(0, steps + 1))"
 	Joined.children(0) to Text is "for texts.Slice(0, 1.Clamp(0, texts.Length))"
 	Summed.children(0) to Text is "for Range(0, 1.Clamp(0, 3))"
 	Trailing.children(1).children(0).children(1) to Text is "(texts.Length - 1).Clamp(0, texts.Length)"
-	let count = kind is "count" then loop.children(0) else Length(loop)
-	let one = Clamped(MethodCodegen.One, count)
-	let last = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
-	let range = SyntaxNode("Call", "Range", isFirst then (Zero, one) else (last, Clamped(count, count)))
-	let sliced = SyntaxNode("MethodCall", "Slice", (loop.children(0), isFirst then Zero else last, one))
-	let at = isFirst then SyntaxNode("Identifier", "index") else edge.children(1)
-	let body = Simplified(Substituted(loop.children.Last, at, edge, true))
+	count = kind is "count" then loop.children(0) else Length(loop)
+	one = Clamped(MethodCodegen.One, count)
+	last = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
+	range = SyntaxNode("Call", "Range", isFirst then (Zero, one) else (last, Clamped(count, count)))
+	sliced = SyntaxNode("MethodCall", "Slice", (loop.children(0), isFirst then Zero else last, one))
+	at = isFirst then SyntaxNode("Identifier", "index") else edge.children(1)
+	body = Simplified(Substituted(loop.children.Last, at, edge, true))
 	SyntaxNode("For", loop.text, (kind is "count" then range else sliced, body), loop.line)
 Rest(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Shifted.children(0) to Text is "for (steps + 1 - 1).Clamp(0, steps + 1)"
 	Joined.children(1) to Text is "for texts.Slice(1, (texts.Length - 1).Clamp(0, texts.Length))"
 	Summed.children(1) to Text is "for Range(1.Clamp(0, 3), 3.Clamp(0, 3))"
-	let count = kind is "count" then loop.children(0) else Length(loop)
-	let fewer = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
-	let range = SyntaxNode("Call", "Range", (Clamped(MethodCodegen.One, count), Clamped(count, count)))
-	let counted = isFirst then range else fewer
-	let sliced = SyntaxNode("MethodCall", "Slice", (loop.children(0), isFirst then MethodCodegen.One else Zero, fewer))
-	let index = SyntaxNode("Identifier", "index")
-	let at = isFirst and kind is "list" then SyntaxNode("Binary", "+", (index, MethodCodegen.One)) else index
-	let body = Simplified(Substituted(loop.children.Last, at, edge, false))
+	count = kind is "count" then loop.children(0) else Length(loop)
+	fewer = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
+	range = SyntaxNode("Call", "Range", (Clamped(MethodCodegen.One, count), Clamped(count, count)))
+	counted = isFirst then range else fewer
+	sliced = SyntaxNode("MethodCall", "Slice", (loop.children(0), isFirst then MethodCodegen.One else Zero, fewer))
+	index = SyntaxNode("Identifier", "index")
+	at = isFirst and kind is "list" then SyntaxNode("Binary", "+", (index, MethodCodegen.One)) else index
+	body = Simplified(Substituted(loop.children.Last, at, edge, false))
 	SyntaxNode("For", loop.text, (kind is "count" then counted else sliced, body), loop.line)
 Length(loop SyntaxNode) SyntaxNode
 	Texted.Length(Joining) to Text is "texts.Length"
@@ -97,7 +97,7 @@ Substituted(node SyntaxNode, at SyntaxNode, edge SyntaxNode, isEdge Boolean) Syn
 		return SyntaxNode("Boolean", isEdge to Text)
 	if node.Kind is "Identifier" and node.text is "index"
 		return at
-	let kept = node.Kind is "For" then node.children.Length - 1 else node.children.Length
+	kept = node.Kind is "For" then node.children.Length - 1 else node.children.Length
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
 		children.Add(index < kept then Substituted(value, at, edge, isEdge) else value)
@@ -111,13 +111,13 @@ Simplified(node SyntaxNode) SyntaxNode
 	Folded(SyntaxNode(node.Kind, node.text, children, node.line))
 Folded(node SyntaxNode) SyntaxNode
 	Steps.Folded(SyntaxNode("Not", "not", List(SyntaxNode) + SyntaxNode("Boolean", "true"))) to Text is "false"
-	let first = node.children.Length > 0 then node.children(0) else node
+	first = node.children.Length > 0 then node.children(0) else node
 	if node.text is "else" and first.text is "then" and first.children(0).Kind is "Boolean"
 		return first.children(0).text is "true" then first.children(1) else node.children(1)
 	if node.Kind is "Not" and first.Kind is "Boolean"
 		return SyntaxNode("Boolean", first.text is "true" then "false" else "true")
-	let literal = node.children.Length is 2 then (first.Kind is "Boolean" then first else node.children(1)) else node
-	let other = literal is first then node.children(1) else first
+	literal = node.children.Length is 2 then (first.Kind is "Boolean" then first else node.children(1)) else node
+	other = literal is first then node.children(1) else first
 	if node.text is not in ("and", "or") or literal.Kind is not "Boolean"
 		return node
 	(literal.text is "true") is (node.text is "and") then other else literal

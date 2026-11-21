@@ -4,17 +4,17 @@ constant Projected = "Compiler/output/Projected"
 constant InternalPackages = ("Compiler", "Runtime", "Bytecode", "Expressions")
 Root Text
 	TypeSource.Root is "."
-	let folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
+	folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
 	File("Any.strict").Exists then "." else File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
 Located(folder Text) Text
 	Sizing.Located("./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Located("") is "List.strict"
 	TypeSource(TypeEntry.HelloLogger).Located("./Examples") is "Examples/HelloLogger.strict"
 	TypeSource(TypeEntry("Strict/Examples/Sum", List(MemberEntry), List(MethodEntry))).Located("") is "Examples/Sum.strict"
-	let open = entry.Source.IndexOf("(")
-	let file = open < 0 then entry.Source else entry.Source.Substring(0, open) + ".strict"
-	let relative = folder.StartsWith("./") then folder.Substring(2) else folder
-	let local = folder is "" then file else relative + "/" + file
+	open = entry.Source.IndexOf("(")
+	file = open < 0 then entry.Source else entry.Source.Substring(0, open) + ".strict"
+	relative = folder.StartsWith("./") then folder.Substring(2) else folder
+	local = folder is "" then file else relative + "/" + file
 	if File(local).Exists
 		return local
 	Root is "." or File(Root + "/" + file).Exists is false then file else Root + "/" + file
@@ -27,29 +27,29 @@ Location(methodName Text, file Text) Text
 Relative(path Text) Text
 	Sizing.Relative(Directory.Current + "\\Math/Size.strict") is "./Math/Size.strict"
 	Sizing.Relative("Q:/elsewhere/A.strict") is "Q:/elsewhere/A.strict"
-	let current = Directory.Current.Replace("\\", "/") + "/"
-	let slashed = path.Replace("\\", "/")
-	let isInside = slashed.Lower.StartsWith(current.Lower)
+	current = Directory.Current.Replace("\\", "/") + "/"
+	slashed = path.Replace("\\", "/")
+	isInside = slashed.Lower.StartsWith(current.Lower)
 	isInside then "./" + slashed.Substring(current.Length, slashed.Length - current.Length) else path
 Absolute(path Text) Text
 	Sizing.Absolute("C:/a/b.strict") is "C:/a/b.strict"
 	Sizing.Absolute("./a.strict") is Directory.Current.Replace("\\", "/") + "/a.strict"
 	Sizing.Absolute(".") is Directory.Current.Replace("\\", "/")
-	let slashed = path.Replace("\\", "/")
+	slashed = path.Replace("\\", "/")
 	if slashed.IndexOf(":") is 1 or slashed.StartsWith("/")
 		return slashed
-	let inside = slashed.StartsWith("./") then slashed.Substring(2) else slashed
-	let current = Directory.Current.Replace("\\", "/")
+	inside = slashed.StartsWith("./") then slashed.Substring(2) else slashed
+	current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
 Cased(path Text) Text
 	Sizing.Cased("strict") is "Strict.strict" and Sizing.Cased("Examples/sum.STRICT") is "Examples/Sum.strict"
 	Sizing.Cased("Missing") is "Missing" and Sizing.Cased("Examples") is "Examples"
-	let slashed = path.Replace("\\", "/")
-	let named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed
-	let folder = named.IndexOf("/") < 0 then "." else Path(named).PathOnly.text
-	let wanted = Path(named).FileName.text.Lower
+	slashed = path.Replace("\\", "/")
+	named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed
+	folder = named.IndexOf("/") < 0 then "." else Path(named).PathOnly.text
+	wanted = Path(named).FileName.text.Lower
 	for Directory.Files(folder, "*.strict")
-		let file = Path(value.Replace("\\", "/")).FileName.text
+		file = Path(value.Replace("\\", "/")).FileName.text
 		if file.Lower is wanted + ".strict"
 			return folder is "." then file else folder + "/" + file
 	path
@@ -60,7 +60,7 @@ Project(path Text) Text
 	Sizing.Project("Compiler/output/Projected/A/B.strict") is Sizing.Absolute("Compiler/output/Projected")
 	Sizing.Project("Compiler/output/Projected") is Sizing.Absolute("Compiler/output/Projected")
 	Sizing.Project("Examples") is ""
-	let full = Absolute(path)
+	full = Absolute(path)
 	mutable folder = Directory.Exists(full) then full else Path(full).PathOnly.text
 	for as long as folder.Length > 3 and IsProject(folder) is false
 		folder = Path(folder).PathOnly.text
@@ -72,8 +72,8 @@ IsProject(folder Text) Boolean
 NativeFolder(path Text, root Text) Text
 	TypeSource(TypeEntry("Gpu", List(MemberEntry), List(MethodEntry))).NativeFolder("Gpu.strict", ".") is "./native"
 	TypeSource(TypeEntry("Strict/P/T", List(MemberEntry), List(MethodEntry))).NativeFolder("A", "C:") is "C:/P/native"
-	let source = File(entry.Source).Exists then entry.Source else root + "/" + entry.Source
-	let parent = Path(entry.Name.IndexOf("/") < 0 then path else source).PathOnly.text
+	source = File(entry.Source).Exists then entry.Source else root + "/" + entry.Source
+	parent = Path(entry.Name.IndexOf("/") < 0 then path else source).PathOnly.text
 	(parent is "" then "." else parent) + "/native"
 IsSlow(fullName Text, header HeaderTokens) Boolean
 	TypeSource.IsSlow("Strict/Compiler/Even", HeaderTokens("Run", "Number"))
@@ -86,5 +86,5 @@ IsSlow(fullName Text, header HeaderTokens) Boolean
 IsInternal(fullName Text) Boolean
 	TypeSource.IsInternal("Strict/Runtime/Frame") and TypeSource.IsInternal("Game/Runtime/Frame") is false
 	TypeSource.IsInternal("Strict/Runtime") is false
-	let parts = fullName.Split("/")
+	parts = fullName.Split("/")
 	parts.Length > 2 and parts(0) is "Strict" and parts(1) is in InternalPackages

@@ -11,16 +11,16 @@ from(types List(TypeEntry))
 	Paired.lanes is ("Pair")
 	LaneSkips(List(TypeEntry) + StructLanes.Caller).lanes.Length is 0
 	Sizes.structs is ("Size") and Drawn.fields is ("Drawer.offset Pair")
-	let found = Lanes(types)
+	found = Lanes(types)
 	lanes = found
 	relevant = Built(found) + Called(types, found)
-	let firsts = Firsts(types)
+	firsts = Firsts(types)
 	structs = Structs(types, firsts)
 	fields = Fields(types, firsts)
 Lanes(types List(TypeEntry)) Texts
 	Paired.Lanes((StructLanes.Pair, StructLanes.Caller)) is ("Pair")
 	Drawn.lanes is ("Pair", "Drawer")
-	let calls = LaneCalls(types)
+	calls = LaneCalls(types)
 	for types
 		if StructLanes(types).Members(value).Length > 0 or calls.Laned(value.members).Length > 0
 			TypeEntry.ShortName(value.Name)
@@ -53,14 +53,14 @@ Firsts(types List(TypeEntry)) List(TypeEntry)
 	mutable seen = List(Text)
 	mutable firsts = List(TypeEntry)
 	for types
-		let short = TypeEntry.ShortName(value.Name)
+		short = TypeEntry.ShortName(value.Name)
 		if "(" is not in value.Name and short is not in seen
 			seen = seen + short
 			firsts = firsts + value
 	firsts
 Structs(types List(TypeEntry), firsts List(TypeEntry)) Texts
 	Sizes.Structs(List(TypeEntry) + StructLanes.Sized, List(TypeEntry) + StructLanes.Sized) is ("Size")
-	let analysis = StructLanes(types)
+	analysis = StructLanes(types)
 	for firsts
 		if analysis.Members(value).Length > 0
 			TypeEntry.ShortName(value.Name)

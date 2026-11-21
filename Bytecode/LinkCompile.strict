@@ -7,10 +7,10 @@ LinkedType(type Text, methods Texts, compiled TypeEntry) TypeEntry slow
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text), Sample.Compiling("Strict/Bytecode/Crc", List(Text))).Name is "Crc"
 	Housed.Homed("Strict/Logger", List(Text) + "Missing").methods.Length is 0
 	Housed.Homed("Strict/Bytecode/Logged", "Run").Name is "Logged"
-	let homed = Assembled(type, methods, compiled)
+	homed = Assembled(type, methods, compiled)
 	if Linker.IsChecking is false
 		return homed
-	let checked = Compiled(type, methods)
+	checked = Compiled(type, methods)
 	if BinaryLinks.User.Picked(checked, methods) is not BinaryLinks.User.Picked(homed, methods)
 		Logger.Log("LinkCheckFailed: " + type + " " + Text.Combine(methods, ", "))
 	checked
@@ -40,9 +40,9 @@ Assembled(type Text, methods Texts, compiled TypeEntry) TypeEntry
 	Sample.Assembled("Strict/Logger", List(Text) + "Run", Linker.Reading).members is Linker.Reading.members
 	if methods.Length is 0
 		return compiled
-	let own = Own(type)
-	let whole = TypeEntry(own, methods = own.methods + compiled.methods)
-	let members = own.Name is "" then compiled.members else own.members
+	own = Own(type)
+	whole = TypeEntry(own, methods = own.methods + compiled.methods)
+	members = own.Name is "" then compiled.members else own.members
 	TypeEntry(linker.main.Local(type), members, BinaryLinks.User.Picked(whole, methods))
 Homed(type Text, methods Texts) TypeEntry slow
 	Housed.Homed("Strict/Logger", "Run").Name is "Strict/Logger"
@@ -55,12 +55,12 @@ Compiled(type Text, methods Texts) TypeEntry slow
 	Generated(type, Prepared(type, methods), methods)
 Prepared(type Text, methods Texts) Texts slow
 	Sample.Prepared("Strict/Bytecode/Crc", List(Text)).Length > 0
-	let folder = Path(linker.SourcePath(type)).PathOnly.text
-	let source = Fusion(File(linker.SourcePath(type)).ReadLines, folder).Fused
-	let generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(linker.main.inference.types))
-	let automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
+	folder = Path(linker.SourcePath(type)).PathOnly.text
+	source = Fusion(File(linker.SourcePath(type)).ReadLines, folder).Fused
+	generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(linker.main.inference.types))
+	automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
 	MemberAverage(type, linker.main.inference.types).Replaced(automatic)
 Generated(type Text, lines Texts, methods Texts) TypeEntry
 	Sample.Generated("Strict/Logger", ("Run", "\t1"), List(Text)).Name is "Strict/Logger"
-	let generator = TypeCodegen(type, lines, linker.main.inference, linker.main.typeNames)
+	generator = TypeCodegen(type, lines, linker.main.inference, linker.main.typeNames)
 	TypeEntry(generator.Selected(methods), Name = linker.main.Local(type))

@@ -65,7 +65,7 @@ Jump(type Number, number Number) InstructionEntry
 LoopBegin(start Number, end Number) InstructionEntry
 	InstructionEntry.LoopBegin(1, -1).payload is (1, 0, 0)
 	InstructionEntry.LoopBegin(0, 1).payload is (0, 1, 1, 0)
-	let range = end < 0 then (0) else (1, end)
+	range = end < 0 then (0) else (1, end)
 	InstructionEntry(InstructionType.LoopBegin, List(Text), List(Number) + start + range + 0)
 Invoke(register Number, names Texts, arguments Numbers, instance Number) InstructionEntry
 	InstructionEntry.Invoke(1, ("T", "Run", "N"), List(Number), -1).payload is (1, -1, -2, 0, -3, 0, 0)

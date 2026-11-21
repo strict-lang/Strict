@@ -30,23 +30,23 @@ Source(load Number) Number
 	Chain.Source(2) is 0 and Blocked.Source(1) is -1 and Spread.Source(3) is -1
 	if instructions(load).kind is not InstructionType.LoadVariableToRegister
 		return Number.NotFound
-	let latest = EarlierLoad(load)
-	let earlier = latest < 0 then -1 else Source(latest)
-	let first = earlier < 0 then latest else earlier
+	latest = EarlierLoad(load)
+	earlier = latest < 0 then -1 else Source(latest)
+	first = earlier < 0 then latest else earlier
 	if first < 0
 		return Number.NotFound
-	let register = instructions(first).payload(0)
+	register = instructions(first).payload(0)
 	IsUnchanged(register, first, load) and CanRedirect(load, register) then first else Number.NotFound
 EarlierLoad(load Number) Number
 	Twice.EarlierLoad(1) is 0
 	Stored.EarlierLoad(2) is -1
 	Printed.EarlierLoad(2) is -1
 	Spread.EarlierLoad(3) is 0
-	let name = instructions(load).texts(0)
+	name = instructions(load).texts(0)
 	for load
-		let position = load - 1 - index
-		let earlier = instructions(position)
-		let isSameName = name is in earlier.texts
+		position = load - 1 - index
+		earlier = instructions(position)
+		isSameName = name is in earlier.texts
 		if IsBoundary(earlier) or isSameName and earlier.kind <= InstructionType.StoreRegisterToVariable
 			return earlier.kind is InstructionType.LoadVariableToRegister then position else Number.NotFound
 	Number.NotFound
@@ -63,10 +63,10 @@ IsUnchanged(register Number, first Number, load Number) Boolean
 CanRedirect(load Number, register Number) Boolean
 	Twice.CanRedirect(1, 0)
 	Rewritten.CanRedirect(1, 0) and Blocked.CanRedirect(1, 0) is false
-	let reloaded = instructions(load).payload(0)
+	reloaded = instructions(load).payload(0)
 	mutable isBlocked = false
 	for Range(load + 1, instructions.Length)
-		let entry = instructions(value)
+		entry = instructions(value)
 		if reloaded is in Reads(entry) and isBlocked
 			return false
 		if Written(entry) is reloaded
@@ -85,30 +85,30 @@ ReadPositions(entry InstructionEntry) Numbers
 	Twice.ReadPositions(AddBoth) is (1, 2)
 	Twice.ReadPositions(Indexed) is List(Number) + 1
 	Twice.ReadPositions(InstructionEntry.PrintValue("a", 0, false)) is (2)
-	let kind = entry.kind
+	kind = entry.kind
 	if kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
 		return (1, 2)
 	if kind is InstructionType.Invoke
 		return InvokeReads(entry)
-	let leading = kind is in FirstRegisterKinds then List(Number) + 0 else List(Number)
-	let flagged = kind is in (InstructionType.Print, InstructionType.LoopBegin) then entry.payload(1) is 1 else false
-	let trailing = flagged then leading + 2 else leading
+	leading = kind is in FirstRegisterKinds then List(Number) + 0 else List(Number)
+	flagged = kind is in (InstructionType.Print, InstructionType.LoopBegin) then entry.payload(1) is 1 else false
+	trailing = flagged then leading + 2 else leading
 	kind is in (InstructionType.FieldLoad, InstructionType.IndexCall) then List(Number) + 1 else trailing
 InvokeReads(entry InstructionEntry) Numbers
 	Twice.InvokeReads(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1)) is (7, 9)
 	Twice.InvokeReads(InstructionEntry.Invoke(1, ("T", "Run", "N"), (3, 4), -1)) is (6, 7)
-	let argumentCountPosition = 5 + entry.payload(3)
-	let argumentCount = entry.payload(argumentCountPosition)
+	argumentCountPosition = 5 + entry.payload(3)
+	argumentCount = entry.payload(argumentCountPosition)
 	mutable positions = List(Mutable(Number))
 	for argumentCount
 		positions.Add(argumentCountPosition + 1 + index)
-	let instancePosition = argumentCountPosition + 1 + argumentCount
+	instancePosition = argumentCountPosition + 1 + argumentCount
 	entry.payload(instancePosition) is 1 then positions + (instancePosition + 1) else positions
 Written(entry InstructionEntry) Number
 	Twice.Written(AddBoth) is 2
 	Twice.Written(Indexed) is 1
 	Twice.Written(InstructionEntry.Return(2)) is -1
-	let position = WritePosition(entry)
+	position = WritePosition(entry)
 	position < 0 then Number.NotFound else entry.payload(position)
 Writer(register Number, before Number, after Number) Number
 	Twice.Writer(2, 4, -1) is 2
@@ -117,7 +117,7 @@ Writer(register Number, before Number, after Number) Number
 	if register < 0
 		return Number.NotFound
 	for before - after - 1
-		let earlier = before - 1 - index
+		earlier = before - 1 - index
 		if Written(instructions(earlier)) is register
 			return earlier
 	Number.NotFound
@@ -128,7 +128,7 @@ WritePosition(entry InstructionEntry) Number
 	Twice.WritePosition(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "a")) is -1
 	if entry.kind is in WritingKinds
 		return 0
-	let isBinary = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
+	isBinary = entry.kind > InstructionType.StoreSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
 	isBinary and entry.payload(0) is 3 then 3 else Number.NotFound
 RegisterCount Number
 	Twice.RegisterCount is 3
@@ -136,8 +136,8 @@ RegisterCount Number
 	LoadReuse((InstructionEntry.Return(4), InstructionEntry.Return(5), InstructionEntry.Return(1))).RegisterCount is 6
 	mutable most = 0
 	for instructions
-		let written = Written(value)
-		let isCall = value.kind is InstructionType.Invoke
+		written = Written(value)
+		isCall = value.kind is InstructionType.Invoke
 		most = (isCall then written + 2 + value.payload(5 + value.payload(3)) else written + 1).Maximum(most)
 		for Reads(value)
 			most = value + 1 > most then value + 1 else most
@@ -146,7 +146,7 @@ Rebased(entry InstructionEntry, base Number) InstructionEntry
 	Twice.Rebased(AddBoth, 6).payload is (3, 6, 7, 8)
 	Twice.Rebased(InstructionEntry.Return(2), 6).payload is List(Number) + 8
 	Twice.Rebased(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), 6).payload is (2, 6, 7)
-	let positions = ReadPositions(entry) + WritePosition(entry)
+	positions = ReadPositions(entry) + WritePosition(entry)
 	mutable content = List(Mutable(Number))
 	for entry.payload
 		content.Add(index is in positions then value + base else value)
@@ -162,7 +162,7 @@ Remapped(entry InstructionEntry, position Number) InstructionEntry
 	Twice.Remapped(AddBoth, 2).payload is (3, 0, 0, 2)
 	Twice.Remapped(InstructionEntry(InstructionType.Add, List(Text), (3, 0, 1, 2), 4), 2).line is 4
 	Twice.Remapped(InstructionEntry.Binary(InstructionType.Add, (0, 1, 1)), 2).payload is (3, 0, 0, 1)
-	let reads = ReadPositions(entry)
+	reads = ReadPositions(entry)
 	if reads.Length is 0
 		return entry
 	mutable content = List(Mutable(Number))
@@ -173,6 +173,6 @@ Origin(register Number, position Number) Number
 	Twice.Origin(1, 2) is 0
 	Twice.Origin(0, 2) is 0
 	Twice.Origin(5, 2) is 5
-	let writer = Writer(register, position, -1)
-	let source = writer < 0 then -1 else Source(writer)
+	writer = Writer(register, position, -1)
+	source = writer < 0 then -1 else Source(writer)
 	source < 0 then register else instructions(source).payload(0)

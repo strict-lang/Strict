@@ -4,24 +4,24 @@ Run(path Text, count Number, repeats = 1, batch = 1)
 	if MachineUse.Weights(logger, "Gemma4Benchmark", path).Admitted
 		Ran(path, count, repeats, batch)
 Ran(path Text, count Number, repeats Number, batch Number) slow
-	let tokenizer = GemmaTokens.Loaded(Gguf(path))
-	let started = Process.Elapsed
-	let model = Gemma4.Loaded(path)
-	let loaded = Process.Elapsed
-	let prompt = Qwen3Benchmark.Repeated(tokenizer.Encoded(Prompt), repeats)
+	tokenizer = GemmaTokens.Loaded(Gguf(path))
+	started = Process.Elapsed
+	model = Gemma4.Loaded(path)
+	loaded = Process.Elapsed
+	prompt = Qwen3Benchmark.Repeated(tokenizer.Encoded(Prompt), repeats)
 	logger.Log(Prompt + tokenizer.Decoded(Generation(model.Prefilled(prompt, 0)).Continued(prompt.Length, count)))
-	let prefill = Fastest(model, prompt)
-	let prefilled = model.Prefilled(prompt, 0)
-	let durations = Durations(prefilled.Copies(batch), prefilled.Next, prompt.Length, count, batch)
-	let report = Qwen3Benchmark.Report(prompt.Length, prefill, durations, batch)
+	prefill = Fastest(model, prompt)
+	prefilled = model.Prefilled(prompt, 0)
+	durations = Durations(prefilled.Copies(batch), prefilled.Next, prompt.Length, count, batch)
+	report = Qwen3Benchmark.Report(prompt.Length, prefill, durations, batch)
 	logger.Log(report + ", loaded in " + (loaded - started).Round(1) + " s")
 Fastest(model Gemma4, prompt Numbers) Number native
 	Gemma4Benchmark.Fastest(Gemma4.Tiny, Gemma4.Prompt) > 0
 	mutable fastest = 1000000
 	for Tries
-		let before = Process.Elapsed
-		let first = model.Prefilled(prompt, 0).Next
-		let milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
+		before = Process.Elapsed
+		first = model.Prefilled(prompt, 0).Next
+		milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
 		fastest = first >= 0 and milliseconds < fastest then milliseconds else fastest
 	fastest
 Durations(model Gemma4, token Number, start Number, count Number, batch Number) Numbers native
@@ -33,6 +33,6 @@ Durations(model Gemma4, token Number, start Number, count Number, batch Number) 
 		current = current.Steps(chosen, Qwen3Benchmark.Repeated(List(Number) + (start + index), batch), batch)
 		chosen = current.Nexts
 		GpuMemory.Finished
-		let duration = (Process.Elapsed - last) * 1000
+		duration = (Process.Elapsed - last) * 1000
 		last = last + duration / 1000
 		duration

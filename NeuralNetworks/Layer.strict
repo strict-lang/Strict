@@ -69,7 +69,7 @@ Row(row Numbers, previous Numbers, scaled Number, input Numbers) Numbers
 		value - scaled * input(index) + Momentum * (value - previous(index))
 Shifted(deltas Numbers, rate Number) Numbers
 	Halves.Shifted(List(Number) + 1, 0.5) is List(Number) + -0.5
-	let previous = previousBiases.Length is 0 then biases else previousBiases
+	previous = previousBiases.Length is 0 then biases else previousBiases
 	for biases
 		value - rate * deltas(index) + Momentum * (value - previous(index))
 Mutated(strength Number) Layer

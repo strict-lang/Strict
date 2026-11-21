@@ -6,9 +6,9 @@ Run(path Text, root Text) Number
 	Profile.Run("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let mode = selection is "" then "unit" else (selection is "*" then "" else selection)
-	let result = ToolRunner(Process.Current.executable).Execute("test \"" + path + "\" \"" + root + "\" sampled " + mode)
-	let lines = result.Output.Lines
+	mode = selection is "" then "unit" else (selection is "*" then "" else selection)
+	result = ToolRunner(Process.Current.executable).Execute("test \"" + path + "\" \"" + root + "\" sampled " + mode)
+	lines = result.Output.Lines
 	for ValueTrace.Plain(lines) + Report(lines)
 		logger.Log(value)
 	result.exitCode
@@ -16,14 +16,14 @@ Sampled(path Text, root Text) Number
 	Profile.Sampled("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	let types = FileCompiler(true, selection).Compiled(path, root, true)
+	types = FileCompiler(true, selection).Compiled(path, root, true)
 	types.Length is 0 then 1 else Execute.Started(types, path, false, true, true).Tested(types.First.Name)
 Report(lines Texts) Texts
 	Profile.Report(Lines).First is "3 ms sampled, slowest lines:"
 	Profile.Report(Lines).Slice(1, 2) is ("  66.7 % 2 ms A.Run line 2", "  33.3 % 1 ms A.Go line 5")
 	Profile.Report(Lines).Slice(3, 3) is ("slowest methods:", "  66.7 % 2 ms A.Run", "  33.3 % 1 ms A.Go")
-	let places = Places(lines)
-	let header = places.Length + " ms sampled, slowest lines:"
+	places = Places(lines)
+	header = places.Length + " ms sampled, slowest lines:"
 	(List(Text) + header) + Ranked(places, places.Length) + "slowest methods:" + Ranked(Methods(places), places.Length)
 Places(lines Texts) Texts
 	Profile.Places(Lines) is ("A.Run line 2", "A.Run line 2", "A.Go line 5")
@@ -48,7 +48,7 @@ Ranked(places Texts, total Number) Texts
 			Line(value, total)
 Line(ordered Text, total Number) Text
 	Profile.Line("1000002|a", 3) is "  66.7 % 2 ms a"
-	let separator = ordered.IndexOf("|")
-	let count = (ordered.Substring(0, separator) to Number) - Padding
-	let place = ordered.Substring(separator + 1, ordered.Length - separator - 1)
+	separator = ordered.IndexOf("|")
+	count = (ordered.Substring(0, separator) to Number) - Padding
+	place = ordered.Substring(separator + 1, ordered.Length - separator - 1)
 	"  " + (count * 100 / total).Round(1) + " % " + count + " ms " + place

@@ -9,7 +9,7 @@ constant ShapeNamed = ("    %w2 = llvm.mlir.addressof @wShape_Run_0 : !llvm.ptr"
 constant Table = "  llvm.mlir.global internal @strict_places(dense<0> : tensor<"
 Lines Texts
 	Counted.Lines.Length is 14
-	let files = Files
+	files = Files
 	mutable lines = List(Mutable(Text))
 	for functions
 		lines = lines + Function(value, files(value.type.Name))
@@ -24,19 +24,19 @@ Places Texts
 		if MlirForeign(value).IsForeign is false
 			fills = fills + Place(value, count)
 			count = count + 1
-	let size = (count, 1).Maximum * 2
-	let table = Table + size + "xi64>) : !llvm.array<" + size + " x i64>"
+	size = (count, 1).Maximum * 2
+	table = Table + size + "xi64>) : !llvm.array<" + size + " x i64>"
 	(List(Text) + table) + Filling + fills + ("    %count = arith.constant " + count + " : i64") + Returning
 Place(function MlirFunction, at Number) Texts
 	Counted.Place(MlirCalls.Shapes, 2) is ShapeFunction + ShapeStored + ShapeNamed
 	Foreign.Place(MlirForeign.Adder, 0)(0).EndsWith("f64, f64) -> f64")
-	let signature = "(" + outer.Text.Combine(Types(function), ", ") + ") -> f64"
-	let pointer = "    %c" + at + " = builtin.unrealized_conversion_cast %f" + at + " : " + signature + " to !llvm.ptr"
-	let slot = "    %s" + at + " = llvm.getelementptr %table[" + at * 2 + "] : (!llvm.ptr) -> !llvm.ptr, i64"
-	let named = "    %n" + at + " = llvm.getelementptr %s" + at + "[1] : (!llvm.ptr) -> !llvm.ptr, i64"
-	let where = "    %w" + at + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
-	let called = "    %f" + at + " = func.constant @" + function.Symbol + " : " + signature
-	let stores = ("    llvm.store %c" + at + ", %s" + at + " : !llvm.ptr, !llvm.ptr", where, named)
+	signature = "(" + outer.Text.Combine(Types(function), ", ") + ") -> f64"
+	pointer = "    %c" + at + " = builtin.unrealized_conversion_cast %f" + at + " : " + signature + " to !llvm.ptr"
+	slot = "    %s" + at + " = llvm.getelementptr %table[" + at * 2 + "] : (!llvm.ptr) -> !llvm.ptr, i64"
+	named = "    %n" + at + " = llvm.getelementptr %s" + at + "[1] : (!llvm.ptr) -> !llvm.ptr, i64"
+	where = "    %w" + at + " = llvm.mlir.addressof @w" + function.Symbol + " : !llvm.ptr"
+	called = "    %f" + at + " = func.constant @" + function.Symbol + " : " + signature
+	stores = ("    llvm.store %c" + at + ", %s" + at + " : !llvm.ptr, !llvm.ptr", where, named)
 	(called, pointer, slot) + stores + ("    llvm.store %w" + at + ", %n" + at + " : !llvm.ptr, !llvm.ptr")
 Types(function MlirFunction) Texts
 	Counted.Types(MlirCalls.Shapes).First is "f64"
@@ -52,10 +52,10 @@ Files Dictionary(Text, Text)
 Function(function MlirFunction, file Text) Texts
 	Counted.Function(MlirCalls.Shapes, "Shape.strict").Length is 3
 	Counted.Function(MlirCalls.Shapes, "Shape.strict").First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0
-	let location = TypeSource(function.type).Location(function.method.Name, file)
-	let valued = MlirValued(function)
-	let content = location.Replace(" in ", "\\00") + "\\00" + valued.Named + "\")"
-	let where = "  llvm.mlir.global internal constant @w" + function.Symbol + "(\"" + content
+	location = TypeSource(function.type).Location(function.method.Name, file)
+	valued = MlirValued(function)
+	content = location.Replace(" in ", "\\00") + "\\00" + valued.Named + "\")"
+	where = "  llvm.mlir.global internal constant @w" + function.Symbol + "(\"" + content
 	mutable lines = List(Text) + (where + " : !llvm.array<" + (location.Length - 2 + valued.Size) + " x i8>")
 	for Positions(function)
 		if IsGlobal(function, value)
@@ -71,17 +71,17 @@ Positions(function MlirFunction) Numbers
 	positions
 IsGlobal(function MlirFunction, position Number) Boolean
 	Counted.IsGlobal(MlirCalls.Shapes, 3)
-	let kind = position < function.method.instructions.Length then function.method.instructions(position).kind else -1
+	kind = position < function.method.instructions.Length then function.method.instructions(position).kind else -1
 	if kind is in (InstructionType.Print, InstructionType.IndexCall)
 		return true
 	MlirConstants(function, position).IsConstant
 Global(function MlirFunction, position Number, file Text) Text
 	Counted.Global(MlirCalls.Shapes, 3, "Shape.strict").IndexOf("Hi %s\\0A\\00") > 0
 	Counted.Global(MlirCalls.Shapes, 1, "Shape.strict") is "  llvm.mlir.global internal @lShape_Run_0_1(0.0 : f64) : f64"
-	let constants = MlirConstants(function, position)
+	constants = MlirConstants(function, position)
 	if position >= function.method.instructions.Length
 		return constants.Global
-	let entry = function.method.instructions(position)
+	entry = function.method.instructions(position)
 	if entry.kind is InstructionType.IndexCall
 		return NameGlobal(function, position, file)
 	if entry.kind is InstructionType.Invoke
@@ -90,17 +90,17 @@ Global(function MlirFunction, position Number, file Text) Text
 NameGlobal(function MlirFunction, position Number, file Text) Text
 	Counted.NameGlobal(Counted.functions.First, 0, "Counter.strict").IndexOf("Run\\00") > 0
 	Counted.NameGlobal(Counted.functions.First, 0, "C.strict").IndexOf("\\00Counter.Run\\00C.strict\\000\\00") > 0
-	let name = function.method.Name
-	let location = TypeSource(function.type).Location(name, file)
-	let line = function.method.instructions(position).line to Text
-	let content = name + "\\00" + location.Replace(" in ", "\\00") + "\\00" + line + "\\00"
-	let global = "  llvm.mlir.global internal constant @s" + function.Symbol + "_" + position
+	name = function.method.Name
+	location = TypeSource(function.type).Location(name, file)
+	line = function.method.instructions(position).line to Text
+	content = name + "\\00" + location.Replace(" in ", "\\00") + "\\00" + line + "\\00"
+	global = "  llvm.mlir.global internal constant @s" + function.Symbol + "_" + position
 	global + "(\"" + content + "\") : !llvm.array<" + (name.Length + location.Length + line.Length) + " x i8>"
 PrintGlobal(function MlirFunction, position Number, entry InstructionEntry) Text
 	Counted.PrintGlobal(MlirCalls.Shapes, 3, MlirCalls.Shapes.method.instructions(3)).StartsWith("  llvm")
-	let constants = MlirConstants(function, position)
-	let hasValue = entry.payload(1) is 1
-	let content = constants.Escaped(entry.texts(0), true) + (hasValue then "%s" else "") + "\\0A\\00"
-	let length = constants.EscapedLength(entry.texts(0), true) + (hasValue then 4 else 2)
-	let name = "@s" + function.Symbol + "_" + position
+	constants = MlirConstants(function, position)
+	hasValue = entry.payload(1) is 1
+	content = constants.Escaped(entry.texts(0), true) + (hasValue then "%s" else "") + "\\0A\\00"
+	length = constants.EscapedLength(entry.texts(0), true) + (hasValue then 4 else 2)
+	name = "@s" + function.Symbol + "_" + position
 	"  llvm.mlir.global internal constant " + name + "(\"" + content + "\") : !llvm.array<" + length + " x i8>"

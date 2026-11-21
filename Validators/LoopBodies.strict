@@ -7,11 +7,11 @@ Issues List(ValidationIssue)
 	LoopBodies(Grid + "\t\t\trow * columns + value").Issues.First.target.StartsWith("row * columns")
 	LoopBodies(("Run", "\tfor row, column in rows, columns", "\t\trow * columns + column")).Issues.Length is 0
 	Spans.Issues.Length is 1 and Spans.Issues.First.Line is 14
-	let constants = Constants
+	constants = Constants
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
-			let isShort = FileCheck.LastLine(lines, index) - index + 1 < 10
+			isShort = FileCheck.LastLine(lines, index) - index + 1 < 10
 			for Loops(BodyParser(lines).Block(index + 1, 1), false, constants, isShort)
 				issues = issues + value.Issues
 	issues
@@ -22,7 +22,7 @@ Loops(node SyntaxNode, isNested Boolean, constants Texts, isShort Boolean) List(
 	Loops(BodyParser(("Run", "\tfor 3", "\t\t1")).Block(1, 1), false, List(Text), true).First.isNested is false
 	mutable loops = List(Mutable(LoopBody))
 	for node.children
-		let isLoop = value.Kind is "For"
+		isLoop = value.Kind is "For"
 		if isLoop
 			loops.Add(LoopBody(value, constants, isNested or value.children.Length > 2, isShort))
 		loops = loops + Loops(value, isNested or isLoop, constants, isShort)

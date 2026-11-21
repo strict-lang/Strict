@@ -18,16 +18,16 @@ constant ValueTailA = ("	let appended = Stored + index", "	let mapped = Mapped(S
 constant ValueTailB = ("	let correct = (Stored is (0, 1, 2, 3)) and (mapped is (1, 2, 3, 4))", "	correct and (literal.Sum is 6) and (pair.Left + pair.Right is 3) and (appended.Length is 5) then 1 else 0")
 constant ValueExtra = ("Made(count Number) Numbers", "	for count", "		index", "Mapped(numbers Numbers) Numbers", "	for numbers", "		value + 1")
 Run(arguments Texts) Number
-	let folder = "Examples/AuditCheck" + 1000000.Random.Floor
+	folder = "Examples/AuditCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	let result = RanSelected(folder, arguments)
+	result = RanSelected(folder, arguments)
 	Directory.Delete(folder)
 	result is Error then result else 0
 RanSelected(folder Text, arguments Texts) Boolean
 	for ("locks", "replace", "discovery", "linking", "values")
 		if arguments.Length is 0 or value is in arguments
-			let err = RanNamed(folder, value)
+			err = RanNamed(folder, value)
 			if err is Error
 				return err
 	true
@@ -40,33 +40,33 @@ RanNamed(folder Text, name Text) Boolean
 		return CheckDiscovery(folder)
 	name is "linking" then CheckLinking(folder) else CheckValues(folder)
 CheckLocks(folder Text) Boolean
-	let posix = LockedMlir("Posix")
-	let darwin = LockedMlir("Darwin")
-	let kept = List(Text) + "  func.func private @strict_file_lock_kept(%p: f64, %k: i64) { return }"
+	posix = LockedMlir("Posix")
+	darwin = LockedMlir("Darwin")
+	kept = List(Text) + "  func.func private @strict_file_lock_kept(%p: f64, %k: i64) { return }"
 	File(folder + "/locks.mlir").Write(MlirLockHeadA + MlirLockHeadB + kept + posix + darwin + (List(Text) + "}"))
 	File(folder + "/locks.c").Write(LocksCA + LocksCB + LocksCC + LocksCD + LocksCE + LocksCF)
 	BuiltLocks(folder)
 LockedMlir(name Text) Texts
-	let src = Text.Combine(File("Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")
-	let chunk = src.Split("  func.func private @strict_file_locked(")(1).Split("\n  }")(0)
-	let renamed = "  func.func @lock_" + name + "(" + chunk.Replace("@open(", "@test_open(")
+	src = Text.Combine(File("Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")
+	chunk = src.Split("  func.func private @strict_file_locked(")(1).Split("\n  }")(0)
+	renamed = "  func.func @lock_" + name + "(" + chunk.Replace("@open(", "@test_open(")
 	(renamed.Replace("@flock(", "@test_flock(").Replace("@close(", "@test_close(") + "\n  }").Split("\n")
 BuiltLocks(folder Text) Boolean
-	let trCmd = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/l.mlir\" -o \"" + folder + "/l.ll\""
-	let optArgs = "\"" + folder + "/locks.mlir\" " + OptLockFlags + " -o \"" + folder + "/l.mlir\""
-	let r1 = Process.RunTool("mlir-opt", optArgs, ToolSeconds)
-	let r2 = r1.exitCode is 0 then Process.RunTool("mlir-translate", trCmd, ToolSeconds) else r1
-	let ext = Process.OperatingSystem is "Windows" then ".exe" else ""
-	let lArgs = "\"" + folder + "/l.ll\" \"" + folder + "/locks.c\" -O2 -Wno-override-module -o \""
-	let r3 = r2.exitCode is 0 then Process.RunTool("clang", lArgs + folder + "/locks" + ext + "\"", ToolSeconds) else r2
-	let r4 = r3.exitCode is 0 then Process.RunTool(folder + "/locks" + ext, "", ToolSeconds) else r3
+	trCmd = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/l.mlir\" -o \"" + folder + "/l.ll\""
+	optArgs = "\"" + folder + "/locks.mlir\" " + OptLockFlags + " -o \"" + folder + "/l.mlir\""
+	r1 = Process.RunTool("mlir-opt", optArgs, ToolSeconds)
+	r2 = r1.exitCode is 0 then Process.RunTool("mlir-translate", trCmd, ToolSeconds) else r1
+	ext = Process.OperatingSystem is "Windows" then ".exe" else ""
+	lArgs = "\"" + folder + "/l.ll\" \"" + folder + "/locks.c\" -O2 -Wno-override-module -o \""
+	r3 = r2.exitCode is 0 then Process.RunTool("clang", lArgs + folder + "/locks" + ext + "\"", ToolSeconds) else r2
+	r4 = r3.exitCode is 0 then Process.RunTool(folder + "/locks" + ext, "", ToolSeconds) else r3
 	logger.Log(r4.Output.Trim)
 	r4.exitCode is not 0 then Error("LocksFailed: " + r4.Output + r4.error) else true
 CheckReplace(folder Text) Boolean
 	if Process.OperatingSystem is not "Windows"
 		return Error("Replacement check requires Windows file sharing")
 	File(folder + "/hold.c").Write(HoldC)
-	let hold = Process.RunTool("clang", "-O2 \"" + folder + "/hold.c\" -o \"" + folder + "/hold.exe\"", ToolSeconds)
+	hold = Process.RunTool("clang", "-O2 \"" + folder + "/hold.c\" -o \"" + folder + "/hold.exe\"", ToolSeconds)
 	if hold.exitCode is not 0
 		return Error("HoldCompileFailed: " + hold.Output + hold.error)
 	File(folder + "/ReplaceCheck.strict").Write(ReplaceBody(folder + "/app.exe"))
@@ -74,66 +74,66 @@ CheckReplace(folder Text) Boolean
 	File(folder + "/app.new.exe").Write("new".Bytes)
 	VerifyReplace(folder)
 VerifyReplace(folder Text) Boolean
-	let cmd = "\"" + Process.Current.executable + "\" \"" + folder + "/ReplaceCheck.strict\""
-	let held = Process.RunTool(folder + "/hold.exe", "\"" + folder + "/app.new.exe\" \"" + cmd + "\"", ToolSeconds)
-	let keptOld = File(folder + "/app.exe").Exists and File(folder + "/app.exe").ReadBytes is "old".Bytes
+	cmd = "\"" + Process.Current.executable + "\" \"" + folder + "/ReplaceCheck.strict\""
+	held = Process.RunTool(folder + "/hold.exe", "\"" + folder + "/app.new.exe\" \"" + cmd + "\"", ToolSeconds)
+	keptOld = File(folder + "/app.exe").Exists and File(folder + "/app.exe").ReadBytes is "old".Bytes
 	if held.exitCode is not 0 or not keptOld or File(folder + "/app.new.exe").ReadBytes is not "new".Bytes
 		return Error("FailedInstallCorruptedFiles: " + held.Output + held.error)
-	let open = Process.RunTool(Process.Current.executable, folder + "/ReplaceCheck.strict", ToolSeconds)
-	let ok = open.exitCode is 0 and File(folder + "/app.exe").ReadBytes is "new".Bytes
+	open = Process.RunTool(Process.Current.executable, folder + "/ReplaceCheck.strict", ToolSeconds)
+	ok = open.exitCode is 0 and File(folder + "/app.exe").ReadBytes is "new".Bytes
 	if not ok or File(folder + "/app.new.exe").Exists or File(folder + "/app.old.exe").Exists
 		return Error("CleanReplaceFailed: " + open.Output + open.error)
 	logger.Log("Failed replacement restores original; successful replacement removes backup")
 	true
 ReplaceBody(original Text) Texts
-	let raw = Text.Combine(File("Compiler/NativeBuild.strict").ReadLines, "\n")
-	let linked = raw.Split("Linked(base Text, tools Toolchain) Text slow\n")(1).Split("\nCrossBuild(")(0)
-	let trimmed = "\tlet executable =" + linked.Split("\tlet executable =")(1)
-	let fixed = trimmed.Replace("tools.Executable(base)", "\"" + original + "\"").Replace("tools.isWeb", "false")
-	let patched = Regex("\tlet built = [^\n]*").Replace(fixed, "\tlet built = \"Built \" + target")
+	raw = Text.Combine(File("Compiler/NativeBuild.strict").ReadLines, "\n")
+	linked = raw.Split("Linked(base Text, tools Toolchain) Text slow\n")(1).Split("\nCrossBuild(")(0)
+	trimmed = "\tlet executable =" + linked.Split("\tlet executable =")(1)
+	fixed = trimmed.Replace("tools.Executable(base)", "\"" + original + "\"").Replace("tools.isWeb", "false")
+	patched = Regex("\tlet built = [^\n]*").Replace(fixed, "\tlet built = \"Built \" + target")
 	("has build Compiler/NativeBuild", "has logger", "Run", "	logger.Log(Attempt)", "Attempt Text") + patched.Split("\n")
 CheckDiscovery(folder Text) Boolean
 	for ChainLength
-		let line = index < ChainLast then "has next Hop" + (index + 1) else "has number"
+		line = index < ChainLast then "has next Hop" + (index + 1) else "has number"
 		File(folder + "/Hop" + index + ".strict").Write(List(Text) + line)
-	let sfArg = "SourceFiles(\".\").Of(\"./" + folder + "/Hop0.strict\")"
-	let sfLine = "\tlogger.Log((\"./" + folder + "/Hop69.strict\" is in " + sfArg + ") to Text)"
+	sfArg = "SourceFiles(\".\").Of(\"./" + folder + "/Hop0.strict\")"
+	sfLine = "\tlogger.Log((\"./" + folder + "/Hop69.strict\" is in " + sfArg + ") to Text)"
 	File(folder + "/DiscoveryCheck.strict").Write(("has logger", "Run", sfLine))
-	let res = Process.RunTool(Process.Current.executable, folder + "/DiscoveryCheck.strict", ToolSeconds)
+	res = Process.RunTool(Process.Current.executable, folder + "/DiscoveryCheck.strict", ToolSeconds)
 	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("DiscoveryFailed: " + res.Output + res.error)
 	logger.Log("Source discovery reaches all 70 dependency edges")
 	true
 CheckLinking(folder Text) Boolean
 	for ChainLength
-		let body = index < ChainLast then "\tChain" + (index + 1) + ".Result" else "\t7"
+		body = index < ChainLast then "\tChain" + (index + 1) + ".Result" else "\t7"
 		File(folder + "/Chain" + index + ".strict").Write(("Result Number", body))
-	let cmpCall = "FileCompiler(Logger).Compiled(\"./" + folder + "/Chain0.strict\", \".\", false).Length >= 70"
-	let line = "\tlogger.Log((" + cmpCall + ") to Text)"
+	cmpCall = "FileCompiler(Logger).Compiled(\"./" + folder + "/Chain0.strict\", \".\", false).Length >= 70"
+	line = "\tlogger.Log((" + cmpCall + ") to Text)"
 	File(folder + "/LinkCheck.strict").Write(("has logger", "Run", line))
-	let res = Process.RunTool(Process.Current.executable, folder + "/LinkCheck.strict", ToolSeconds)
+	res = Process.RunTool(Process.Current.executable, folder + "/LinkCheck.strict", ToolSeconds)
 	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("LinkingFailed: " + res.Output + res.error)
 	logger.Log("Linking closes a chain longer than 50 rounds")
 	true
 CheckValues(folder Text) Boolean
 	File(folder + "/CachePair.strict").Write(("has Left Number", "has Right Number"))
-	let src = folder + "/ValueCheck.strict"
+	src = folder + "/ValueCheck.strict"
 	File(src).Write(ValueHead + ValueMid + ValueTailA + ValueTailB + ValueExtra)
-	let built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildValuesFailed: " + built.Output + built.error)
-	let mlir = Text.Combine(File(folder + "/obj/ValueCheck.mlir").ReadLines, "\n")
-	let hasClaim = "strict_cache_claim(" is in mlir and "strict_cache_publish(" is in mlir
+	mlir = Text.Combine(File(folder + "/obj/ValueCheck.mlir").ReadLines, "\n")
+	hasClaim = "strict_cache_claim(" is in mlir and "strict_cache_publish(" is in mlir
 	if not hasClaim or "ValueCheck_Results_1_loop" is not in mlir
 		return Error("MissingCacheOrParallelMlir")
 	RunValues(folder + "/ValueCheck" + (Process.OperatingSystem is "Windows" then ".exe" else ""))
 RunValues(exe Text) Boolean
-	let win = Process.OperatingSystem is "Windows"
+	win = Process.OperatingSystem is "Windows"
 	for ("1", "4")
-		let env = "STRICT_THREADS=" + value + (win then "&& set STRICT_GPU=0&& " else " STRICT_GPU=0 ")
-		let shArgs = (win then "/c set " else "-c \"") + env + "\"" + exe + "\"" + (win then "" else "\"")
-		let res = Process.RunTool(win then "cmd" else "sh", shArgs, RunSeconds)
+		env = "STRICT_THREADS=" + value + (win then "&& set STRICT_GPU=0&& " else " STRICT_GPU=0 ")
+		shArgs = (win then "/c set " else "-c \"") + env + "\"" + exe + "\"" + (win then "" else "\"")
+		res = Process.RunTool(win then "cmd" else "sh", shArgs, RunSeconds)
 		if res.exitCode is not 0 or res.Output.Trim is not "1024"
 			return Error("ValuesRunFailed: " + res.Output + res.error)
 	logger.Log("Native literal/constructor caches and constant list reuse preserve values on 1 and 4 threads")

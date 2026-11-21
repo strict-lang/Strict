@@ -35,7 +35,7 @@ Source Text
 	Doubling.Source.StartsWith(Bindings.First)
 	if IsShaded is false
 		return ""
-	let lines = Bindings + Numbers + Globals + Functions + Main
+	lines = Bindings + Numbers + Globals + Functions + Main
 	for lines
 		if value.StartsWith("unsupported")
 			return ""
@@ -45,9 +45,9 @@ IsShaded Boolean
 	Doubling.IsShaded
 	WgslShader(MlirGpu.Timing.function, 2).IsShaded is false
 	Halved.IsShaded
-	let collection = MlirLoops(function, position).Collection
-	let isFloats = MlirDoubles(function, position).Format is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
-	let isKernel = MlirWholeKernel(function, position).IsKernel
+	collection = MlirLoops(function, position).Collection
+	isFloats = MlirDoubles(function, position).Format is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
+	isKernel = MlirWholeKernel(function, position).IsKernel
 	collection is in ("", "List(Number)") and isFloats and isKernel is false and MlirGpuCheck(function, position).IsGpu
 Functions Texts
 	Doubling.Functions.First is "fn s_Rows_Twice_1(instance: num, p0: num) -> num {"
@@ -62,18 +62,18 @@ Main Texts
 	Scaled.Main.First is "@compute @workgroup_size(64)"
 	"if (at >= places[4]) { return; }" is in Scaled.Main
 	"output[at] = r3.f;" is in Scaled.Main
-	let count = "if (at >= places[" + (MlirGpuCheck(function, position).Free.Length + 1) * 2 + "]) { return; }"
-	let tail = Loaded + Started + WgslFunction(function).Statements(position + 1, function.method.LoopEndOf(position))
+	count = "if (at >= places[" + (MlirGpuCheck(function, position).Free.Length + 1) * 2 + "]) { return; }"
+	tail = Loaded + Started + WgslFunction(function).Statements(position + 1, function.method.LoopEndOf(position))
 	(Entry + count + WgslFunction(function).Declarations(tail) + tail) + "}"
 Loaded Texts
 	Scaled.Loaded is ("m_scale = numbers[places[0]];", "v_scale = n_of(m_scale);")
 	mutable lines = List(Text)
 	for MlirGpuCheck(function, position).Free
-		let place = "places[" + index * 2 + "]"
-		let pair = "l = vec2<u32>(" + place + ", places[" + (index * 2 + 1) + "]);"
-		let suffix = MlirDevice(function, position).IsList(value) then "l" else ""
-		let loaded = "m_" + value + (suffix is "l" then pair else " = numbers[" + place + "];")
-		let converted = suffix is "l" then "m_" + value + "l" else "n_of(m_" + value + ")"
+		place = "places[" + index * 2 + "]"
+		pair = "l = vec2<u32>(" + place + ", places[" + (index * 2 + 1) + "]);"
+		suffix = MlirDevice(function, position).IsList(value) then "l" else ""
+		loaded = "m_" + value + (suffix is "l" then pair else " = numbers[" + place + "];")
+		converted = suffix is "l" then "m_" + value + "l" else "n_of(m_" + value + ")"
 		lines = lines + loaded + ("v_" + value + suffix + " = " + converted + ";")
 	lines
 Globals Texts
@@ -86,10 +86,10 @@ Started Texts
 	Scaled.Started is ("v_index = n_int(i32(at));", "v_value = n_int(i32(at));")
 	Doubling.Started.Last is "v_value = n_of(n_item(places[0], at));"
 	WgslShader(MlirLoops.Ranging.function, 3).Started.Last is "v_value = n_add(n_of(numbers[places[0]]), n_int(i32(at)));"
-	let source = "places[" + MlirGpuCheck(function, position).Free.Length * 2 + "]"
-	let isCounted = MlirLoops(function, position).Collection is ""
-	let isRanged = function.method.instructions(position).payload(1) is 1
-	let counter = isRanged then "n_add(n_of(numbers[" + source + "]), n_int(i32(at)))" else "n_int(i32(at))"
+	source = "places[" + MlirGpuCheck(function, position).Free.Length * 2 + "]"
+	isCounted = MlirLoops(function, position).Collection is ""
+	isRanged = function.method.instructions(position).payload(1) is 1
+	counter = isRanged then "n_add(n_of(numbers[" + source + "]), n_int(i32(at)))" else "n_int(i32(at))"
 	("v_index = " + counter + ";", "v_value = " + (isCounted then counter else "n_of(n_item(" + source + ", at))") + ";")
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
@@ -106,15 +106,15 @@ Shaded(inspected MlirFunction) Texts
 	WgslShader.Shaded(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2s\"] = [0];")
 	for inspected.method.instructions
 		if value.kind is InstructionType.LoopBegin
-			let shader = WgslShader(inspected, index)
-			let source = shader.Source.Replace("\n", "\\n")
-			let name = "[\"" + MlirDevice(inspected, index).Name + "s\"] = "
-			let singles = " (Module[\"strictSingles\"] ||= {})" + name + shader.Singles + ";"
+			shader = WgslShader(inspected, index)
+			source = shader.Source.Replace("\n", "\\n")
+			name = "[\"" + MlirDevice(inspected, index).Name + "s\"] = "
+			singles = " (Module[\"strictSingles\"] ||= {})" + name + shader.Singles + ";"
 			source is "" then "" else ";(Module[\"strictShaders\"] ||= {})" + name + "\"" + source + "\";" + singles
 Singles Text
 	Scaled.Singles is "[0]"
 	Doubling.Singles is "[]"
-	let free = MlirGpuCheck(function, position).Free
+	free = MlirGpuCheck(function, position).Free
 	mutable singles = List(Text)
 	for function.type.members
 		if value.Bits is Number.SingleBits and value.Name is in free

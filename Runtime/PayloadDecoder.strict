@@ -13,7 +13,7 @@ Value(position Number) VmValue
 	PayloadDecoder(InstructionEntry.LoadBoolean(0, true)).Value(1).IsTrue
 	PayloadDecoder(InstructionEntry.LoadAnyError(0)).Value(1) is VmValue.AnyError
 	CachedSeven.Value(1).number is 7 and Ones.Value(1) to Text is "(1, 1.5)"
-	let kind = entry.payload(position)
+	kind = entry.payload(position)
 	if kind is ConstantLoads.Cached
 		return Value(position + 2)
 	if kind is 4
@@ -30,7 +30,7 @@ Scalar(kind Number, position Number) VmValue
 	kind is 3 then VmValue.OfNumber(Double(position + 1)) else VmValue.AnyError
 End(position Number) Number
 	Ones.End(1) is 15
-	let kind = entry.payload(position)
+	kind = entry.payload(position)
 	if kind is 3
 		return position + 9
 	if kind is not 6
@@ -44,20 +44,20 @@ Cached(position Number, cache ConstantCache) VmValue
 	Ones.Cached(1, ConstantCache(List(VmValue))) to Text is "(1, 1.5)"
 	CachedSeven.Cached(1, ConstantCache(List(VmValue))).number is 7
 	PayloadDecoder(InstructionEntry.LoadNumber(0, 5)).Cached(1, ConstantCache(List(VmValue))).number is 5
-	let kind = entry.payload(position)
+	kind = entry.payload(position)
 	if kind is 1
 		return VmValue.OfNumber(entry.payload(position + 1))
-	let index = kind is ConstantLoads.Cached then entry.payload(position + 1) else cache.entries.Length
+	index = kind is ConstantLoads.Cached then entry.payload(position + 1) else cache.entries.Length
 	index < cache.entries.Length then cache.At(index) else Value(position)
 Elements(position Number) VmValue
 	Ones.Elements(1) to Text is "(1, 1.5)"
-	let count = entry.payload(position + 2)
+	count = entry.payload(position + 2)
 	if count is 0
 		return VmValue.EmptyList
 	mutable elements = List(Mutable(VmValue))
 	mutable next = position + 3
 	for count
-		let elementKind = entry.payload(next)
+		elementKind = entry.payload(next)
 		elements.Add(Value(next))
 		next = elementKind is 6 then End(next) else (elementKind is 3 then next + 9 else next + 2)
 	VmValue.OfList(elements)
@@ -65,20 +65,20 @@ Double(position Number) Number
 	PayloadDecoder(InstructionEntry.LoadNumber(0, 1.5)).Double(2) is 1.5
 	PayloadDecoder(InstructionEntry.LoadNumber(0, -1000)).Double(2) is -1000
 	Undefined.IsFinite is false and Undefined is not 1 / 0
-	let top = entry.payload(position + 7)
-	let sixth = entry.payload(position + 6)
-	let exponent = (top % ByteEncoder.SignBit) * ByteEncoder.ExponentLowBits + (sixth / ByteEncoder.ExponentLowBits).Floor
+	top = entry.payload(position + 7)
+	sixth = entry.payload(position + 6)
+	exponent = (top % ByteEncoder.SignBit) * ByteEncoder.ExponentLowBits + (sixth / ByteEncoder.ExponentLowBits).Floor
 	mutable mantissa = sixth % ByteEncoder.ExponentLowBits
 	for 6
 		mantissa = mantissa * Byte.Values + entry.payload(position + 5 - index)
-	let fraction = (exponent is 0 then 0 else 1) + mantissa / 2 ^ ByteEncoder.MantissaBits
-	let magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - ByteEncoder.ExponentBias)
+	fraction = (exponent is 0 then 0 else 1) + mantissa / 2 ^ ByteEncoder.MantissaBits
+	magnitude = fraction * 2 ^ ((exponent is 0 then 1 else exponent) - ByteEncoder.ExponentBias)
 	exponent < Infinite or mantissa is 0 then (top < ByteEncoder.SignBit then magnitude else -magnitude) else 0 / 0
 ElementParts Texts
 	PayloadDecoder(ElementStore).ElementParts is ("list", "index")
 	PayloadDecoder(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list")).ElementParts.Length is 0
-	let open = entry.texts(0).IndexOf("(")
-	let name = entry.texts(0)
+	open = entry.texts(0).IndexOf("(")
+	name = entry.texts(0)
 	open < 0 then List(Text) else (name.Substring(0, open), name.Substring(open + 1, name.Length - open - 2))
 Names Texts
 	PayloadDecoder(Invocation.AddCall.entry).Names is ("x")
@@ -105,7 +105,7 @@ Arguments Numbers
 Instance Number
 	Scaled.Instance is -1
 	PayloadDecoder(Invocation.AddCall.entry).Instance is 1
-	let reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
+	reads = LoadReuse(List(InstructionEntry)).InvokeReads(entry)
 	reads.Length > ArgumentCount then entry.payload(reads.Last) else Number.NotFound
 SevenBit(position Number) Number
 	PayloadDecoder(InstructionEntry.Jump(InstructionType.LoopEnd, 300)).SevenBit(0) is 300

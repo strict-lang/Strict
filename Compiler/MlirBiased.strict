@@ -21,12 +21,12 @@ constant Varied = MlirBiased(MlirFunction(Biasing.function, method = MethodEntry
 Biases Text
 	Summing.Biases is ""
 	Biasing.Biases is "biases"
-	let call = MlirTokens(function, position).Call
+	call = MlirTokens(function, position).Call
 	if call < 0 or Written < 0
 		return ""
-	let groups = MlirGroups(function, position)
-	let sum = groups.Writer(function.method.instructions(Written).payload(0), Written)
-	let bias = Added(sum, function.method.instructions(call).payload(0))
+	groups = MlirGroups(function, position)
+	sum = groups.Writer(function.method.instructions(Written).payload(0), Written)
+	bias = Added(sum, function.method.instructions(call).payload(0))
 	bias < 0 then "" else Read(groups.Writer(bias, sum))
 Written Number
 	Summing.Written is 16
@@ -35,7 +35,7 @@ Written Number
 	Varied.Measured(28) is "" and Varied.Measured(29) is ""
 	Varied.Read(30) is ""
 	MlirBiased(MlirLoops.Nested.function, 0).Written is -1
-	let last = function.method.LoopEndOf(position) - 1
+	last = function.method.LoopEndOf(position) - 1
 	function.method.instructions(last).kind is InstructionType.InvokeWriteToList then last else Number.NotFound
 Added(at Number, dot Number) Number
 	Biasing.Added(21, 13) is 18
@@ -45,37 +45,37 @@ Added(at Number, dot Number) Number
 	Biasing.Added(21, 3) is -1
 	if at < 0
 		return Number.NotFound
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if entry.kind is not InstructionType.Add
 		return Number.NotFound
 	entry.payload(1) is dot then entry.payload(2) else entry.payload(2) is dot then entry.payload(1) else Number.NotFound
 Read(at Number) Text
 	Biasing.Read(20) is "biases"
 	Biasing.Read(6) is ""
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if at < 0 or entry.kind is not InstructionType.IndexCall
 		return ""
 	Measured(MlirGroups(function, position).Writer(entry.payload(1), at)) is entry.texts(0) then entry.texts(0) else ""
 Measured(at Number) Text
 	Biasing.Measured(19) is "biases"
 	Biasing.Measured(5) is ""
-	let entry = function.method.instructions(at)
+	entry = function.method.instructions(at)
 	if at < 0 or entry.kind is not InstructionType.Modulo
 		return ""
-	let tokens = MlirTokens(function, position)
-	let length = MlirGroups(function, position).Writer(entry.payload(2), at)
-	let call = function.method.instructions(length)
-	let isLength = length >= 0 and call.kind is InstructionType.Invoke and call.texts(1) is "Length"
-	let list = isLength then tokens.Variable(MlirDeviceCalls(function, length, function).Register(call), length) else ""
+	tokens = MlirTokens(function, position)
+	length = MlirGroups(function, position).Writer(entry.payload(2), at)
+	call = function.method.instructions(length)
+	isLength = length >= 0 and call.kind is InstructionType.Invoke and call.texts(1) is "Length"
+	list = isLength then tokens.Variable(MlirDeviceCalls(function, length, function).Register(call), length) else ""
 	tokens.Variable(entry.payload(1), at) is "index" then list else ""
 IsFused Boolean
 	Summing.IsFused
 	Biasing.IsFused
 	MlirBiased(MlirGated.Gating.function, 2).IsFused
-	let call = MlirTokens(function, position).Call
+	call = MlirTokens(function, position).Call
 	if Written < 0 or call < 0
 		return false
-	let dot = function.method.instructions(call).payload(0)
+	dot = function.method.instructions(call).payload(0)
 	function.method.instructions(Written).payload(0) is dot or Biases is not "" or MlirGated(function, position).IsGated
 Operand Text
 	Summing.Operand is "%zero"
@@ -93,7 +93,7 @@ Fused Texts
 	Biasing.Fused(2) is "  ^loop2kernel:"
 	if IsFused is false
 		return List(Text)
-	let gpu = MlirGpu(function, position)
-	let label = "^loop" + position
-	let exit = "    cf.cond_br " + gpu.Temp("gn") + ", " + label + "exit, " + label + "kernel"
+	gpu = MlirGpu(function, position)
+	label = "^loop" + position
+	exit = "    cf.cond_br " + gpu.Temp("gn") + ", " + label + "exit, " + label + "kernel"
 	(function.Store(gpu.Temp("gb"), "%v_forResult"), exit, "  " + label + "kernel:")

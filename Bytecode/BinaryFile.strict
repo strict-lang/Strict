@@ -5,11 +5,11 @@ constant Packing = Probe.Unpacked(Greeting)
 constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + BinarySources.CompilerStamp + 5,List(TypeEntry) + TypeEntry.HelloLogger, List(Text)))
 Path Text
 	Probe.Path is "./Bytecode/obj/Probe.strictbinary"
-	let intermediate = BuildOutput.Intermediate(source)
+	intermediate = BuildOutput.Intermediate(source)
 	intermediate.Substring(0, intermediate.Length - 7) + ".strictbinary"
 Saved(bytes Bytes)
 	Probe.Saved(Greeting) is not Error and File(Probe.Path).ReadBytes is Greeting
-	let temporary = Path + "." + 1000000000.Random.Floor + ".tmp"
+	temporary = Path + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(bytes)
 	File(temporary).Rename(Path)
 Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
@@ -29,8 +29,8 @@ Unpacked(bytes Bytes) List(ZipEntry)
 Head(bytes Bytes) List(ZipEntry)
 	Probe.Head(Greeting) is Packing
 	Probe.Head(Probe.Packed(1, (TypeEntry.HelloLogger, TypeEntry.HelloLogger), List(Text))).Length is 2
-	let first = Ended(bytes, 0)
-	let second = first < 0 then -1 else Ended(bytes, first)
+	first = Ended(bytes, 0)
+	second = first < 0 then -1 else Ended(bytes, first)
 	second < 0 or second > bytes.Length then Unpacked(bytes) else (Entry(bytes, 0), Entry(bytes, first))
 Rewritten(header Numbers, own TypeEntry, rest List(ZipEntry)) Bytes
 	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, Packing + ZipEntry("x", 97))).Last.Name is "x"
@@ -46,30 +46,30 @@ Ended(bytes Bytes, position Number) Number
 	Probe.Ended(List(Byte), 0) is -1
 	Probe.Head(Greeting.Slice(0, 50)).Length is 0
 	Probe.Head(List(Byte)).Length is 0
-	let reader = Header(bytes, position)
-	let isLocal = reader.bytes.Length >= ZipReader.LocalHeaderSize and reader.Read(0, 4) is ZipReader.LocalHeader
+	reader = Header(bytes, position)
+	isLocal = reader.bytes.Length >= ZipReader.LocalHeaderSize and reader.Read(0, 4) is ZipReader.LocalHeader
 	isLocal then position + reader.End(0) else Number.NotFound
 Entry(bytes Bytes, position Number) ZipEntry
 	Probe.Entry(Greeting, 0) is Packing.First
-	let reader = Header(bytes, position)
-	let size = reader.Read(ZipReader.SizeOffset, 4)
-	let start = position + reader.End(0) - size
-	let named = reader.bytes.Length - ZipReader.LocalHeaderSize
+	reader = Header(bytes, position)
+	size = reader.Read(ZipReader.SizeOffset, 4)
+	start = position + reader.End(0) - size
+	named = reader.bytes.Length - ZipReader.LocalHeaderSize
 	ZipEntry(ByteEncoder(reader.bytes).Spelled(ZipReader.LocalHeaderSize, named), ZipReader.Copied(bytes, start, size))
 Header(bytes Bytes, position Number) ZipReader
 	Probe.Header(List(Byte), 0).bytes.Length is 0
 	if position + ZipReader.LocalHeaderSize > bytes.Length
 		return ZipReader(List(Number))
-	let header = ZipReader(ZipReader.Copied(bytes, position, ZipReader.LocalHeaderSize))
-	let start = position + ZipReader.LocalHeaderSize
-	let named = (header.Read(ZipReader.NameLengthOffset, 2), bytes.Length - start).Minimum
+	header = ZipReader(ZipReader.Copied(bytes, position, ZipReader.LocalHeaderSize))
+	start = position + ZipReader.LocalHeaderSize
+	named = (header.Read(ZipReader.NameLengthOffset, 2), bytes.Length - start).Minimum
 	ZipReader(header.bytes + ZipReader.Copied(bytes, start, named))
 IsFresh(entries List(ZipEntry)) Boolean
 	Probe.IsFresh(Packing)
 	Probe.IsFresh(Packing + ZipEntry("links", ByteEncoder.Empty.UnicodeBytes("Missing\tStrict/Missing\t"))) is false
 	if IsCurrent(entries) is false or entries.Length < 2 or entries(1).Name.EndsWith(".bytecode") is false
 		return false
-	let own = List(TypeEntry) + EntryDecoder.Of(entries(1).content).Type
+	own = List(TypeEntry) + EntryDecoder.Of(entries(1).content).Type
 	for entries.Last.Name is "links" then BinaryLinks(BinaryFile(source)).Resolved(own, entries.Last) else own
 		if value.Name is ""
 			return false
@@ -77,14 +77,14 @@ IsFresh(entries List(ZipEntry)) Boolean
 Unchecked(paths Texts) Texts
 	Probe.Unchecked(List(Text) + "./Missing.strict") is ("./Missing.strict")
 	for paths
-		let cache = BinaryFile(value)
-		let header = File(cache.Path).Exists then cache.Head(File(cache.Path).ReadBytes) else List(ZipEntry)
+		cache = BinaryFile(value)
+		header = File(cache.Path).Exists then cache.Head(File(cache.Path).ReadBytes) else List(ZipEntry)
 		if header.Length is 0 or cache.IsCurrent(header) is false
 			value
 Current(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Current(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	Probe.Current(Outdated).Length is 0
-	let types = IsCurrent(entries) then Types(entries) else List(TypeEntry)
+	types = IsCurrent(entries) then Types(entries) else List(TypeEntry)
 	for types
 		if value.Name is ""
 			return List(TypeEntry)
@@ -92,8 +92,8 @@ Current(entries List(ZipEntry)) List(TypeEntry)
 Relative(target Text) Text
 	Probe.Relative("./Examples/obj/A.strictbinary") is "../../Examples/obj/A.strictbinary"
 	Probe.Relative("./Bytecode/obj/A.strictbinary") is "A.strictbinary"
-	let here = value.Path.Substring(0, value.Path.LastIndexOf("/")).Split("/")
-	let there = target.Split("/")
+	here = value.Path.Substring(0, value.Path.LastIndexOf("/")).Split("/")
+	there = target.Split("/")
 	mutable shared = 0
 	for as long as shared < here.Length and shared < there.Length - 1 and here(shared) is there(shared)
 		shared = shared + 1
@@ -108,11 +108,11 @@ IsCurrent(entries List(ZipEntry), known = Dictionary(Text, Number)) Boolean
 	Probe.IsCurrent(Probe.Unpacked(Probe.Packed((1, 2), List(TypeEntry), List(Text)))) is false
 	if entries.Length is 0 or entries.First.Name is not "sources"
 		return false
-	let header = EntryDecoder.Of(entries.First.content)
-	let start = 1 + header.stream(0)
-	let complete = header.stream.Length is start + 2 + header.names.Length
-	let stamped = BinarySources(header.names).Stamped(known)
-	let isSameCompiler = complete and header.stream(start + 1) is BinarySources.CompilerStamp
+	header = EntryDecoder.Of(entries.First.content)
+	start = 1 + header.stream(0)
+	complete = header.stream.Length is start + 2 + header.names.Length
+	stamped = BinarySources(header.names).Stamped(known)
+	isSameCompiler = complete and header.stream(start + 1) is BinarySources.CompilerStamp
 	isSameCompiler and header.stream(start) is TypeEntry.FormatVersion and stamped.Matches(header.stream, start + 2)
 Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
@@ -128,7 +128,7 @@ IsInput(name Text) Boolean
 	Probe.IsInput("Compiler/NativeRuntime.mlir")
 	Probe.IsInput("./Character.test") is false
 	Probe.IsInput("strict") is false
-	let isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
+	isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
 	name.LastIndexOf(".") > name.LastIndexOf("/") + 1 and isOutput is false
 Contained(folder Text, ignored Texts = List(Text)) Texts
 	Probe.Contained("NeuralNetworks/images").Length is 2
