@@ -29,7 +29,8 @@ Candidates(method HeaderTokens) Texts
 		members.names.First + " = " + value
 Search(header HeaderTokens) SuggestionCalls
 	let members = TypeShape(lines).MemberScope
-	let values = Scope(header.ParameterNames, header.ParameterTypes).WithAll(members.names, members.types)
+	let parameters = Scope(header.ParameterNames, header.ParameterTypes)
+	let values = header.tokens.First is "from" then parameters else parameters.WithAll(members.names, members.types)
 	SuggestionCalls(Path(path).FileName.RemoveExtension.text, header, values, inference.types)
 Tests(header Number) Texts
 	let code = TypeCodegen(FileCompiler.FullName(path, root), lines, inference, List(Text))

@@ -7,6 +7,10 @@ constant Wrapper = ("has dispatcher Dispatcher", "Clamped Number", "	Wrapper(Dis
 constant Dispatcher = ("has number", "Clamped Number", "	Wrapper(Dispatcher(number)).Clamped")
 constant Dual = ("has number", "Pick(other Number) Number", "	Dual(2).Pick(3) is 5", "	number + other", "Pick Number", "	Dual(3).Pick is 6", "	Dual(0).Pick is 0")
 constant Built = ("has number", "from(first Number, second Number)", "	Built(2, 3) is 5", "	Built(1, 6) is 7")
+constant AppendingLines = ("has text", "from(first Text, second Text)", "	Appending(\"a\", \"b\") is \"ab\"", "	Appending(\"x\", \"yz\") is \"xyz\"")
+constant EvenLines = ("has boolean", "from(input Number)", "	Even(2)", "	Even(3) is false", "	Even(10)")
+constant MeasuredLines = ("has number", "from(input Text)", "	Measured(\"abc\") is 3", "	Measured(\"\") is 0")
+constant LargerLines = ("has number", "from(first Number, second Number)", "	Larger(2, 5) is 5", "	Larger(7, 3) is 7")
 constant Prefix = "Suggestion: "
 constant ToolSeconds = 30
 Run(arguments Texts) Number
@@ -60,6 +64,21 @@ CheckedMissing(folder Text, root Text) slow
 	if built is Error
 		return built
 	logger.Log("from of one member: passed")
+	CheckedCalls(folder, root)
+CheckedCalls(folder Text, root Text) slow
+	let appended = CheckedCase(folder, root, "Appending", "from", AppendingLines, "text = first + second")
+	if appended is Error
+		return appended
+	let even = CheckedCase(folder, root, "Even", "from", EvenLines, "boolean = input % 2 is 0")
+	if even is Error
+		return even
+	let measured = CheckedCase(folder, root, "Measured", "from", MeasuredLines, "number = input.Length")
+	if measured is Error
+		return measured
+	let larger = CheckedCase(folder, root, "Larger", "from", LargerLines, "number = first.Maximum(second)")
+	if larger is Error
+		return larger
+	logger.Log("One-call from bodies: passed")
 CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expected Text) slow
 	let path = folder + "/" + name + ".strict"
 	File(path).Write(lines)

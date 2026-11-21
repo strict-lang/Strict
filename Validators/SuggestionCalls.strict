@@ -8,11 +8,25 @@ Candidates Texts
 	for values.names
 		if values.types(index) is header.ReturnType
 			found = found + value
-	Unique(found + Binary + Calls(false))
+	Unique(found + Binary + Calls(false) + Compared)
 Binary Texts
 	mutable found = List(Mutable(Text))
 	for values.names
-		found = found + Operations(value, values.types(index))
+		found = found + Operations(value, values.types(index)) + Joined(value, values.types(index))
+	found
+Joined(left Text, type Text) Texts
+	if type is not "Text" or header.ReturnType is not "Text"
+		return List(Text)
+	for values.names
+		if values.types(index) is "Text"
+			left + " + " + value
+Compared Texts
+	if header.ReturnType is not "Boolean"
+		return List(Text)
+	mutable found = List(Mutable(Text))
+	for values.names
+		if values.types(index) is "Number"
+			found = found + (value + " % 2 is 0", value + " is 0", value + " > 0")
 	found
 Operations(left Text, type Text) Texts
 	mutable found = List(Mutable(Text))
@@ -34,7 +48,8 @@ Calls(sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
 	for Receivers
 		let declared = values.TypeOf(value)
-		calls = calls + Receiver(value, (declared is "" then value else declared), sameName)
+		let listed = declared is "Text" then Receiver(value, "List", sameName) else List(Text)
+		calls = calls + Receiver(value, (declared is "" then value else declared), sameName) + listed
 	calls
 Receiver(receiver Text, type Text, sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
@@ -72,7 +87,7 @@ Stem(name Text) Text
 	let lower = name.Lower
 	lower.EndsWith("ed") then lower.Substring(0, lower.Length - 2) else lower
 Unique(candidates Texts) Texts
-	constant MaxSuggestions = 32
+	constant MaxSuggestions = 64
 	mutable found = List(Mutable(Text))
 	for candidates
 		if value is not in found and found.Length < MaxSuggestions
