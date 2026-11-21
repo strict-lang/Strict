@@ -169,14 +169,15 @@ Sorted List
 	(2, 1, 2, 0).Sorted is (0, 1, 2, 2)
 	(1).Sorted is (1)
 	("b", "c", "a").Sorted is ("a", "b", "c")
+	(3, 1, 2).Sorted(0) is 1
 	Picked(Order)
-Sorted(numbers Numbers) List
-	("b", "c", "a").Sorted((2, 3, 1)) is ("a", "b", "c")
-	(5, 6, 7).Sorted((1, 0, 1)) is (6, 5, 7)
+SortedBy(numbers Numbers) List
+	("b", "c", "a").SortedBy((2, 3, 1)) is ("a", "b", "c")
+	(5, 6, 7).SortedBy((1, 0, 1)) is (6, 5, 7)
 	Picked(numbers.Order)
-Sorted(texts Texts) List
-	(1, 2).Sorted(("b", "a")) is (2, 1)
-	("x", "y", "z").Sorted(("b", "a", "b")) is ("y", "x", "z")
+SortedBy(texts Texts) List
+	(1, 2).SortedBy(("b", "a")) is (2, 1)
+	("x", "y", "z").SortedBy(("b", "a", "b")) is ("y", "x", "z")
 	Picked(texts.Order)
 Picked(order Numbers) List
 	("a", "b", "c").Picked((2, 0)) is ("c", "a")
