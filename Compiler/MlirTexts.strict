@@ -90,12 +90,15 @@ Textual(instance Number, target Text, result Text) Texts
 	MlirTexts(Joined, 7).Textual(0, "Text", "%r3")(1) is "    %t7vxc = func.constant @strict_text_itself : (f64) -> f64"
 	MlirTexts(Joined, 7).Textual(0, "Text", "%r3")(0) is "    %t7v = llvm.load %r0 : !llvm.ptr -> f64"
 	MlirTexts(Joined, 7).Textual(1, "Character", "%r3")(3).IndexOf("%t7vc = func.call @strict_text_at(%t7vx, %zero)") > 0
+	MlirTexts(Joined, 7).Textual(0, "Character", "%r3")(3).IndexOf("%t7vc = func.call @strict_text_character(%t7vx)") > 0
 	MlirTexts(Joined, 7).Textual(1, "Character", "%r3").Last is "    llvm.store %t7vc, %r3 : f64, !llvm.ptr"
 	let isText = Printable(MlirKinds(function).KindOf(position, instance)) is "Text"
 	let loaded = function.Load(Temp("v"), "%r" + instance)
 	let checked = MlirMemory(function, position).Converting(Temp("vx"), "strict_text_itself", Temp("v"))
 	let text = isText then List(Text) + loaded + checked else TextBits(instance, "v")
-	let first = MlirMemory(function, position).Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
+	let memory = MlirMemory(function, position)
+	let character = memory.Called(Temp("vc"), "strict_text_character", List(Text) + Temp("vx"))
+	let first = isText then character else memory.Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
 Elements(instance Number, target Text, result Text) Texts
 	Text.Combine(MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1")).IndexOf("@strict_list_numbers(") > 0

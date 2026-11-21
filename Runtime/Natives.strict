@@ -59,6 +59,7 @@ Converted(instance VmValue, target Text) VmValue
 	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
 	Shapes.Converted(VmValue.OfNumber(75), "Strict/Character").text is "7"
 	Shapes.Converted(VmValue.OfText(""), "Strict/Character").text is ""
+	Shapes.Converted(VmValue.OfText("ab"), "Strict/Character").kind is in VmValue.ErrorKinds
 	if target.StartsWith("Strict/List(")
 		mutable converted = List(Mutable(VmValue))
 		for instance.items
@@ -67,6 +68,8 @@ Converted(instance VmValue, target Text) VmValue
 	if target is "Strict/Number"
 		return instance.kind is "Number" then instance else Parsed(instance.text)
 	let text = instance to Text
+	if target is "Strict/Character" and instance.kind is "Text" and text.Length > 1
+		return VmValue.OfError("InvalidCharacter")
 	VmValue.OfText(target is "Strict/Character" then text.Substring(0, text.Length is 0 then 0 else 1) else text)
 Parsed(text Text) VmValue
 	Shapes.Parsed("5").number is 5

@@ -14074,6 +14074,23 @@
     %decoded = arith.uitofp %code : i64 to f64
     return %decoded : f64
   }
+  llvm.mlir.global internal constant @strict_invalid_character("\10\00\00\00\00\00\00\00\10\00\00\00\00\00\00\00InvalidCharacter\00") : !llvm.array<33 x i8>
+  // a text converted to a Character: its only character, an empty text has none, two or more are InvalidCharacter
+  func.func private @strict_text_character(%text: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %length = func.call @strict_text_length(%text) : (f64) -> f64
+    %long = arith.cmpf ogt, %length, %one : f64
+    cf.cond_br %long, ^invalid, ^first
+  ^invalid:
+    %nameLengths = llvm.mlir.addressof @strict_invalid_character : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %error = func.call @strict_error_named(%name) : (!llvm.ptr) -> f64
+    return %error : f64
+  ^first:
+    %code = func.call @strict_text_at(%text, %zero) : (f64, f64) -> f64
+    return %code : f64
+  }
   // strict_text_at with IndexOutOfRange like strict_list_read: a byte behind the terminator belongs to something else,
   // so a read that is no terminator is compared with the length (texts of 256 bytes or more keep it cached)
   // a character of a text by index: inside the text it is one compare and one load in the caller (the length and the
