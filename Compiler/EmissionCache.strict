@@ -57,11 +57,12 @@ Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 		File(module.Cached).Write(Text.Combine(joined, ""))
 Keys(texts List(MlirFunction)) Texts
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
+	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")
 	let shared = Shared(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
 	let graph = CallGraph(module.types)
 	for texts
 		let own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
-		(HashCode(Flags(value) + "|" + shared + "|" + graph.Closure(own) + "|" + graph.Calling(own)).number % Range) to Text
+		Flags(value) + "|" + (HashCode(shared + "|" + graph.Closure(own) + "|" + graph.Calling(own)).number % Range)
 Flags(function MlirFunction) Text
 	Counting.Flags(MlirModule.Counters.Functions.First).StartsWith("Counter_Run_0|")
 	let loops = function.FastLoop + "|" + function.Group + "|" + function.Guarded

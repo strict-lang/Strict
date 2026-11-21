@@ -181,6 +181,7 @@ NeuralNetworks/gpt2/
 NeuralNetworks/distilgpt2/
 NeuralNetworks/corpus/
 NeuralNetworks/qwen3/
+NeuralNetworks/lfm3/
 *.safetensors
 !NeuralNetworks/tiny.safetensors
 !NeuralNetworks/tinygpt2.safetensors
@@ -199,3 +200,5 @@ NeuralNetworks/qwen3/
 *.py
 *.lock
 *.s
+*.map
+plan-lfm.md
