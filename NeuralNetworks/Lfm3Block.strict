@@ -10,8 +10,8 @@ has window Number = 0
 has output Numbers = List(Number)
 constant Epsilon = 0.00001
 constant Unmixed = ShortConvolution(Layer.None, List(Number), Layer.None, 1)
-constant Unattended = Qwen3Block(List(Number), Layer.None, Layer.None, List(Number), List(Number), List(Number), Experts.Single, 0, 0)
 constant Feeding = Experts.Dense(Layer(((1, 0), (0, 1)), Layer.Unbiased), Layer(((1), (1)), Layer.Unbiased))
+constant Unattended = Qwen3Block(List(Number), Layer.None, Layer.None, List(Number), List(Number), List(Number), Feeding, 0, 0)
 constant Passing = Lfm3Block(List(Number), List(Number), List(Number), List(Number), Feeding)
 Loaded(model Gguf, prefix Text, heads Number, size Number) Lfm3Block slow
 	let forward = Qwen3Block.FeedForward(model, prefix)
