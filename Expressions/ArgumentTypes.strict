@@ -154,11 +154,15 @@ Owner(instance Text, method Text) Text
 	Inheriting.Owner("Settings", "to") is "Settings"
 	Inheriting.Compared(Parsing, "Settings", "Parsed", Counted, Counted).EndsWith(".Parsed got a Number for a Texts")
 	Sizing.Owner("Count", "Grow") is "Count"
+	ArgumentTypes(TypeInference(KnownTypes.Nested, TypeInference.NoShapes)).Owner("G", "Length") is "Length"
 	Sizing.ConstantAccess(SyntaxNode("Member", "Limit", SyntaxNode("Type", "Count")), CountNamed, Counted) is ""
 	Sizing.ConstantAccess(TypeLimited, CountNamed, Counted).StartsWith("ConstantNeedsTypeName")
 	types = inference.types
 	isOwn = types.ParameterScope(instance).Count(method) > 0 or types.MethodsOf(instance).TypeOf(method) is not ""
-	isOwn or types.Inherited(instance, method) is "" then instance else "Any"
+	if isOwn or types.Inherited(instance, method) is not ""
+		return isOwn then instance else "Any"
+	holder = types.Holder(instance, method, 3)
+	holder is "" then instance else Owner(types.MembersOf(instance).TypeOf(holder), method)
 Declared(instance Text, method Text) Texts
 	Sizing.Declared("Count", "Grow") is ("Area")
 	Sizing.Declared("Size", "from") is ("Number")
