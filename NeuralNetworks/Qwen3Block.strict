@@ -77,7 +77,8 @@ Store(numbers Numbers, bits Number) Numbers
 	bits is 8 then Float8.Pack(numbers) else numbers
 Copies(count Number, bits Number) Qwen3Block
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Copies(2, 32).keys.Length is 8
-	Qwen3Block(value, keys = Store(Interleave(keys, count), bits), values = Store(Interleave(values, count), bits))
+	keyed = Qwen3Block(value, keys = Store(Interleave(keys, count), bits), hybrid = hybrid.Copies(count))
+	Qwen3Block(keyed, values = Store(Interleave(values, count), bits))
 Interleave(cache Numbers, count Number) Numbers
 	Tiny.Interleave((1, 2, 3, 4, 5, 6, 7, 8), 2) is (1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 5, 6, 7, 8)
 	stride = groups * queryNorm.Length

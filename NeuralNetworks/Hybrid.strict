@@ -5,6 +5,7 @@ has inputs List(Numbers) = List(Numbers)
 constant RewindableTokens = 16
 constant None = Hybrid(List(DeltaBlock))
 constant Tiny = Hybrid(List(DeltaBlock) + DeltaBlock.Tiny)
+constant Block = DeltaBlock.Tiny
 constant Single = Tiny.Prepared(Drafter.Rows(1))
 Loaded(model Gguf, first Number, count Number, zeros Numbers, basis Basis) Hybrid slow
 	Hybrid.Loaded(Drafter.Model, 0, 3, DeltaBlock.Tiny.memory, Basis.None).layers.Length is 3
@@ -33,11 +34,45 @@ Prepared(input Numbers, sequences = 1) Hybrid
 	mutable combinations = List(Mutable(Numbers))
 	for layers
 		combined = value.Combine(hidden)
-		cached = value.Cached(combined, sequences)
+		cached = sequences is 1 then value.Cached(combined) else CacheEach(value, combined, sequences)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
 		combinations.Add(combined.Length > RewindableTokens * value.Width then List(Number) else combined)
 	Hybrid(stepped, hidden, inputs = combinations)
+CacheEach(block DeltaBlock, combined Numbers, sequences Number) DeltaBlock slow
+	Tiny.CacheEach(Block, Block.Combine(Drafter.Pair), 2).memory.Length is 2 * Block.memory.Length
+	rows = combined.Length / sequences
+	memories = block.decays.Length * block.norm.Length * block.norm.Length
+	windows = 3 * block.convolution.Length / 4
+	mutable parts = List(Mutable(DeltaBlock))
+	for sequences
+		remembered = DeltaBlock(block, memory = Slot(block.memory, index, memories))
+		windowed = DeltaBlock(remembered, window = Slot(block.window, index, windows))
+		parts.Add(windowed.Cached(combined.Slice(index * rows, rows)))
+	Join(block, parts)
+Slot(state Numbers, sequence Number, size Number) Numbers
+	Tiny.Slot((1, 2, 3, 4), 1, 2) is (3, 4) and Tiny.Slot((1, 2), 1, 2) is (1, 2)
+	state.Length > size then state.Slice(sequence * size, size) else state
+Join(block DeltaBlock, parts List(DeltaBlock)) DeltaBlock
+	Tiny.Join(Block, (Block, Block)).memory.Length is 2 * Block.memory.Length
+	mutable memories = List(Number)
+	mutable windows = List(Number)
+	mutable merged = List(Number)
+	for parts
+		memories = memories + value.memory
+		windows = windows + value.window
+		merged = merged + value.merged
+	DeltaBlock(block, memory = memories, window = windows, merged = merged)
+Copies(count Number) Hybrid
+	Tiny.Copies(2).layers.First.memory.Length is 2 * Block.memory.Length
+	mutable copied = List(Mutable(DeltaBlock))
+	for layers
+		copied.Add(DeltaBlock(value, memory = Repeat(value.memory, count), window = Repeat(value.window, count)))
+	Hybrid(value, layers = copied)
+Repeat(state Numbers, count Number) Numbers
+	Tiny.Repeat((1, 2), 2) is (1, 2, 1, 2)
+	for state.Length * count
+		state(index % state.Length)
 Opened(combined Numbers, tokens Number, start Number) Hybrid
 	None.Opened((1, 2, 3, 4), 2, 1).gates is (2, 4)
 	None.Opened((1, 2, 3, 4), 1, 4).gates.Length is 0
