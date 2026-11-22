@@ -1102,8 +1102,14 @@
     %missing = llvm.icmp "eq" %slot, %null : !llvm.ptr
     cf.cond_br %missing, ^untimed, ^timed
   ^timed:
+    // Finished measures on the test clock when it was armed and on the wall clock otherwise, shift on the same one
+    %testClockSlot = llvm.getelementptr %slot[9] : (!llvm.ptr) -> !llvm.ptr, i64
+    %testClock = llvm.load %testClockSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %noClock = arith.constant 0 : i64
+    %wasArmed = arith.cmpi ne, %testClock, %noClock : i64
+    %shiftBy = arith.select %wasArmed, %seconds, %wallSeconds : f64
     %shiftSlot = llvm.getelementptr %slot[4] : (!llvm.ptr) -> !llvm.ptr, i64
-    %old = llvm.atomicrmw fadd %shiftSlot, %seconds acq_rel : !llvm.ptr, f64
+    %old = llvm.atomicrmw fadd %shiftSlot, %shiftBy acq_rel : !llvm.ptr, f64
     cf.br ^untimed
   ^untimed:
     return %seconds : f64
