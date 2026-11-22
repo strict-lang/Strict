@@ -35,7 +35,7 @@ Expression(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Expression(SyntaxNode("Binary", ">=", (One, NoNode)), CodeBlock.Empty).instructions.Length is 5
 	Plain.Expression(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 9
 	Plain.Expression(SyntaxNode("Identifier", "Error"), CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
-	ErrorCodegen(value).Checked(node, block)
+	ErrorCodegen(value).Guard(node, block)
 Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Variable(SyntaxNode("Identifier", "a"), CodeBlock.Empty).instructions(0).texts is ("a")
 	Plain.Variable(SyntaxNode("Identifier", "Greet"), CodeBlock.Empty).instructions(0).kind is InstructionType.Invoke
@@ -50,7 +50,7 @@ Variable(node SyntaxNode, block CodeBlock) CodeBlock
 	if isFree and owner is not ""
 		return InstanceCall(SyntaxNode("Member", node.text, SyntaxNode("Identifier", owner)), block)
 	if IsMethodCall(node, block) or isFree and node.text is "Error"
-		return ChangedInstance(value, node.text).Called(node, node, block)
+		return ChangedInstance(value, node.text).Call(node, node, block)
 	if isFree and (inference.types.IsPlural(node.text) or IsTypeName(node, block))
 		return TypeValue(node, block)
 	block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, node.text))
@@ -85,17 +85,17 @@ Call(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Call(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
 	Plain.Call(SyntaxNode("Call", "Dictionary", One), CodeBlock.Empty).instructions.Last.kind is not InstructionType.Invoke
 	if node.Kind is "Call" and node.text is in ("List", "Dictionary", "Mutable")
-		return Constructed(node, block)
+		return Construct(node, block)
 	if IndexCodegen(value).IsIndexing(node, block)
-		return IndexCodegen(value).Indexed(node, block)
+		return IndexCodegen(value).EmitIndex(node, block)
 	if node.Kind is "Call" or IsTypeName(node.children(0), block)
-		return DefaultInstance(value).Called(node, block)
+		return DefaultInstance(value).Call(node, block)
 	first = node.children(0)
 	isListVariable = first.Kind is "Identifier" and inference.types.IsPlural(TypeOf(first, block))
-	node.text is in ("Add", "Remove") and isListVariable then Elements.Added(node, block) else Held(node, block)
-Held(node SyntaxNode, block CodeBlock) CodeBlock
-	Boxing.Held(BoxWidth, Boxes).instructions.Last.texts is ("Width", "Size")
-	Plain.Held(GreeterText, CodeBlock.Empty) is Plain.InstanceCall(GreeterText, CodeBlock.Empty)
+	node.text is in ("Add", "Remove") and isListVariable then Elements.Add(node, block) else Hold(node, block)
+Hold(node SyntaxNode, block CodeBlock) CodeBlock
+	Boxing.Hold(BoxWidth, Boxes).instructions.Last.texts is ("Width", "Size")
+	Plain.Hold(GreeterText, CodeBlock.Empty) is Plain.InstanceCall(GreeterText, CodeBlock.Empty)
 	isComposed = node.Kind is in ("Member", "MethodCall")
 	holder = isComposed then target.Holding(TypeOf(node.children(0), block), node.text) else ""
 	held = SyntaxNode("Member", holder, List(SyntaxNode) + node.children(0), node.line)
@@ -103,14 +103,14 @@ Held(node SyntaxNode, block CodeBlock) CodeBlock
 	call = holder is "" then node else SyntaxNode(node.Kind, node.text, children, node.line)
 	texted = SyntaxNode("Call", "Text", List(SyntaxNode) + call, node.line)
 	IsListed(node, block) then Expression(texted, block) else InstanceCall(call, block)
-Constructed(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Constructed(SyntaxNode("Call", "Dictionary", (One, One)), CodeBlock.Empty) is Plain.Leaf(Ones, CodeBlock.Empty)
-	Plain.Constructed(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
-	Plain.Constructed(SyntaxNode("Call", "Dictionary"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
-	Plain.Constructed(SyntaxNode("Call", "Mutable", One), CodeBlock.Empty).instructions(0).payload is (0, 1, 1)
-	Plain.Constructed(SyntaxNode("Call", "Dictionary", One), CodeBlock.Empty).instructions(0).payload is not (0, 6, -1, 0)
+Construct(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Construct(SyntaxNode("Call", "Dictionary", (One, One)), CodeBlock.Empty) is Plain.Leaf(Ones, CodeBlock.Empty)
+	Plain.Construct(SyntaxNode("Call", "List", One), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
+	Plain.Construct(SyntaxNode("Call", "Dictionary"), CodeBlock.Empty).instructions(0).payload is (0, 6, -1, 0)
+	Plain.Construct(SyntaxNode("Call", "Mutable", One), CodeBlock.Empty).instructions(0).payload is (0, 1, 1)
+	Plain.Construct(SyntaxNode("Call", "Dictionary", One), CodeBlock.Empty).instructions(0).payload is not (0, 6, -1, 0)
 	if node.text is "Mutable"
-		return ErrorCodegen(value).Handled(node.children(0), block)
+		return ErrorCodegen(value).Handle(node.children(0), block)
 	isEmpty = node.text is "List" or node.children.Length is 0 or IsTypeName(node.children(0), block)
 	isEmpty then Elements.Empty(TypeOf(node, block), block) else Elements.Of(SyntaxNode("List", "", node.children), block)
 IsListed(node SyntaxNode, block CodeBlock) Boolean
@@ -160,16 +160,16 @@ IsMethodCall(node SyntaxNode, block CodeBlock) Boolean
 	node.Kind is in ("Call", "MethodCall") and IndexCodegen(value).IsIndexing(node, block) is false
 Replacing(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Replacing(TypeCodegen.Rebuilt, CodeBlock.Empty).instructions(3).texts is ("replaced0")
-	replaced = ConversionCodegen(value).Replaced(node)
+	replaced = ConversionCodegen(value).Replace(node)
 	instance = node.children.Length > 0 then node.children(0) else node
 	if replaced is node or instance.Kind is "Identifier"
-		return ErrorCodegen(value).Validated(node, block, ChangedInstance(value, node.text).Called(node, replaced, block))
+		return ErrorCodegen(value).Validate(node, block, ChangedInstance(value, node.text).Call(node, replaced, block))
 	name = "replaced" + block.nextId
 	stored = Expression(instance, block).Stored(name).At(block.register).Declare(name, TypeOf(instance, block))
 	mutable children = node.children
 	children(0) = SyntaxNode("Identifier", name)
-	renamed = ConversionCodegen(value).Replaced(SyntaxNode(node.Kind, node.text, children, node.line))
-	ErrorCodegen(value).Validated(node, block, Invoke(renamed, stored.WithNextId, -1, TypeOf(node, block)))
+	renamed = ConversionCodegen(value).Replace(SyntaxNode(node.Kind, node.text, children, node.line))
+	ErrorCodegen(value).Validate(node, block, Invoke(renamed, stored.WithNextId, -1, TypeOf(node, block)))
 IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsTypeName(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
 	Plain.IsTypeName(NoNode, CodeBlock.Empty) is false
@@ -182,9 +182,9 @@ IsTypeName(node SyntaxNode, block CodeBlock) Boolean
 Invoke(node SyntaxNode, block CodeBlock, instance Number, returnType Text) CodeBlock
 	Plain.Invoke(SyntaxNode("Call", "Greet"), CodeBlock.Empty, -1, "Text").instructions(0).texts.Last is "Strict/Text"
 	owner = Owner(node, block)
-	filled = NamedArguments(value).Defaulted(node, owner, ArgumentStart(node), block.scope)
-	signature = Specialization(value).Signed(filled, owner, returnType, block)
-	call = Elements.Grouped(target.WithErrorArguments(filled, block.scope), ArgumentStart(node), signature.Length - 3)
+	filled = NamedArguments(value).Default(node, owner, ArgumentStart(node), block.scope)
+	signature = Specialization(value).Sign(filled, owner, returnType, block)
+	call = Elements.Group(target.WithErrorArguments(filled, block.scope), ArgumentStart(node), signature.Length - 3)
 	parameters = target.ParameterTypes(node.text, owner, ConversionCodegen(value).ArgumentTypes(filled, owner, block))
 	mutable result = block
 	mutable arguments = List(Mutable(Number))
@@ -215,7 +215,7 @@ Owner(node SyntaxNode, block CodeBlock) Text
 Elements ListCodegen
 	Plain.Variable(SyntaxNode("Identifier", "Error"), CodeBlock.Empty.Declare("Error", "Text")).instructions.Length is 1
 	Plain.Call(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty).instructions.Length is 2
-	Plain.Constructed(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty).instructions.Length is 1
+	Plain.Construct(SyntaxNode("Call", "Greeter", Hi), CodeBlock.Empty).instructions.Length is 1
 	Plain.Call(Edits(0), CodeBlock.Empty.Declare("values", "Numbers")).instructions.Last.texts is ("values")
 	Plain.Call(Edits(0), CodeBlock.Empty.Declare("values", "Number")).instructions.Last.texts(1) is "Add"
 	Plain.InstanceCall(SyntaxParser("outer", ".", "x").Parse, CodeBlock.Empty).instructions(0).texts(0) is "outer"

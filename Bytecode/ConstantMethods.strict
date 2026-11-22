@@ -17,7 +17,7 @@ Definition(owner Text, name Text) SyntaxNode
 	Growing.Methods(Lettered, List(Text)).Length is 0 and Lettered.fullName is "Strict/Count"
 	tokens = Tokenizer(inference.ConstantOf(owner, name)).Tokens
 	folding = ConstantFolding(owner, inference)
-	folding.Unhidden(folding.Qualified(folding.Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length))))
+	folding.Unhidden(folding.Qualify(folding.Outer(SyntaxParser(tokens).ParseRange(0, tokens.Length))))
 IsCached(owner Text, name Text) Boolean
 	Growing.HasCall(SyntaxNode("MethodCall", "Plain", SyntaxNode("Type", "Count")))
 	Growing.HasCall(SyntaxNode("Binary", "+", (Value, SyntaxNode("Member", "Started", SyntaxNode("Type", "Count")))))

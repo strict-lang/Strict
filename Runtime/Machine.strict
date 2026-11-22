@@ -68,7 +68,7 @@ Prepared Machine
 	mutable placed = Dictionary(Text, Number)
 	for types
 		created.Add(Natives(types).Fresh(value))
-		located(value.Name) = TypeSource(value).Located(folder)
+		located(value.Name) = TypeSource(value).Locate(folder)
 		placed(value.Name) = index
 	prepared = Machine(types, ConstantCache(created), folder, isTracing, located, isSampling = isSampling)
 	Constants(Machine(prepared, places = placed)).Computed
@@ -141,8 +141,8 @@ Ownership(type TypeEntry, kind Text) Number
 	long = kind.Length > type.Name.Length then kind else type.Name
 	short = kind.Length > type.Name.Length then type.Name else kind
 	if long is short or long.Length is short.Length + 7 and long.StartsWith("Strict/") and long.EndsWith(short)
-		return short.IndexOf("List") < 0 then 2 else (TypeEntry.Based(type.Name) is "List" then 1 else 2)
-	kind is "List" then 1 else TypeEntry.Based(type.Name) is TypeEntry.Based(kind) then 1 else 0
+		return short.IndexOf("List") < 0 then 2 else (TypeEntry.Base(type.Name) is "List" then 1 else 2)
+	kind is "List" then 1 else TypeEntry.Base(type.Name) is TypeEntry.Base(kind) then 1 else 0
 Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Frame.Doubling.Execute(Frame.Twice.method, Frame.Listed, "Strict/Doubler").number is 42
 	Machine(Frame.Doubling, isTracing = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42

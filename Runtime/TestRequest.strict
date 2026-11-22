@@ -73,7 +73,7 @@ Message Text
 IsInternal Boolean
 	Seeded.IsInternal and Seeded.Selection is TestCodegen.Unmarked
 	(TestRequest(("Number.strict", ".", "unit")).IsInternal or TestRequest(("Compiler", ".", "unit")).IsInternal) is false
-	name = FileCompiler.FullName(FileCompiler.Normalized(rest(0)), rest(1))
+	name = FileCompiler.FullName(FileCompiler.Normalize(rest(0)), rest(1))
 	Directory.Exists(rest(0)) is false and TypeSource.IsInternal(name)
 Executing(known Dictionary(Text, TypeEntry), kept InferenceCache) Execute
 	Shown.Executing(Dictionary(Text, TypeEntry), InferenceCache.None).selection is "*"

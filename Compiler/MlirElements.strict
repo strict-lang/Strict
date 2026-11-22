@@ -55,6 +55,6 @@ IsStored(at Number, register Number) Boolean
 		isKeeping = steps(value).kind is in (Inliner.Store, InstructionType.InvokeWriteToList)
 		if isKeeping and register is in reuse.Reads(steps(value))
 			return true
-		if reuse.Written(steps(value)) is register
+		if reuse.Write(steps(value)) is register
 			return false
 	false

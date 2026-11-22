@@ -92,7 +92,7 @@ GenerateCodeAnswer(arguments Texts, last Answer) Answer slow
 	if Scripted.IsCode(arguments)
 		return Scripted(arguments(2)).RanWith(arguments, TypeSource.Root, last)
 	given = arguments(1)
-	path = File(given).Exists then given else TypeSource.Cased(given)
+	path = File(given).Exists then given else TypeSource.Case(given)
 	if File(path).Exists is false
 		logger.Log(given + " not found")
 		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
@@ -155,7 +155,7 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 		logger.Log(request.Message)
 		return Answer(2, known)
 	if request.Option is "-"
-		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
+		File(FileCompiler.Normalize(rest(0))).InMemory(Process.Input)
 	if request.Option is in ("values", "trace", "profile", "sampled")
 		return Answer(Trace(request, rest), known)
 	execute = request.Executing(known, inferred)
@@ -182,7 +182,7 @@ FindMainFile(folder Text) Text slow
 	isCurrent = folder is "" or folder is "."
 	target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
 	clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
-	named = TypeSource.Cased((isCurrent then "" else clean + "/") + Path(clean).FileName.text)
+	named = TypeSource.Case((isCurrent then "" else clean + "/") + Path(clean).FileName.text)
 	if File(named).Exists
 		return named
 	files = Directory.Files(isCurrent then "." else clean, "*.strict")
@@ -207,7 +207,7 @@ Resolve(arguments Texts, main Text) Texts slow
 	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
 		folder = FindMainFile(given)
 		return folder is "" then arguments else List(Text) + "build" + folder + arguments.Slice(2, arguments.Length - 2)
-	isSource = given is not "" and (File(TypeSource.Cased(given)).Exists or Directory.Exists(given))
+	isSource = given is not "" and (File(TypeSource.Case(given)).Exists or Directory.Exists(given))
 	target = arguments(0) is "test" and main is "" then "." else main
 	isSource or target is "" then arguments else List(Text) + arguments(0) + target + Rest(arguments)
 Project(arguments Texts) Texts slow
@@ -215,7 +215,7 @@ Project(arguments Texts) Texts slow
 	Strict.Project(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
 	Strict.Project(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
 	at = arguments.Length > 0 and arguments(0) is in Commands then 1 else 0
-	source = TypeSource.Cased(arguments.Length > at then arguments(at) else "")
+	source = TypeSource.Case(arguments.Length > at then arguments(at) else "")
 	project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
 	full = TypeSource.Absolute(source)
 	if project is not ""
@@ -275,7 +275,7 @@ Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 Check(checker Validators/ValidateCheck, folder Text, root Text) Number slow
 	checker.Run(folder, root)
 Update(updater Bytecode/Repositories, folder Text) slow
-	logger.Log("Updated " + updater.Updated(folder) + " packages in " + folder)
+	logger.Log("Updated " + updater.Update(folder) + " packages in " + folder)
 Native(command Text, rest Texts) Number slow
 	Strict.Native("test", ("Missing.strict", ".", "values", "other")) is 2
 	NativeCompiler.Ran((List(Text) + command) + rest)
@@ -284,10 +284,10 @@ Format(path Text) Text slow
 	lines = RoundTrip.Tab(File(path).ReadLines)
 	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
-		return Error(ResolveCheck.Locate(FileCompiler.Normalized(path), broken + 1, FileCheck.Problem(lines, broken)))
+		return Error(ResolveCheck.Locate(FileCompiler.Normalize(path), broken + 1, FileCheck.Problem(lines, broken)))
 	Text.Combine(RoundTrip.Format(lines), "\n")
 Suggest(rest Texts) Number slow
-	source = FileCompiler.Normalized(rest(0))
+	source = FileCompiler.Normalize(rest(0))
 	if rest.Length > 3 and rest(3) is "-"
 		File(source).InMemory(Process.Input)
 	files = SourceFiles(rest(1)).Of(source)

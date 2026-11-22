@@ -193,7 +193,7 @@ IsPure(at Number, register Number) Boolean
 		entry = steps(value)
 		if register is in reuse.Reads(entry) and IsKept(entry, value) is false
 			return false
-		if reuse.Written(entry) is register
+		if reuse.Write(entry) is register
 			return true
 	true
 IsKept(entry InstructionEntry, at Number) Boolean

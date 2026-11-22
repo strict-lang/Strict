@@ -26,7 +26,7 @@ Fits(owner TypeEntry, type TypeEntry, call InstructionEntry) Boolean
 	Boxing.Fits(Inliner.Caller, Inliner.Boxed, Inliner.BoxedCall) is false
 	isOwn = IsOwn(call)
 	own = isOwn and type.Name is owner.Name and IsContained(MemberNames(owner))
-	member = isOwn or StructLanes(types).Members(type).Length > 0 then "" else Wrapped(type)
+	member = isOwn or StructLanes(types).Members(type).Length > 0 then "" else Wrap(type)
 	wrapped = member is not "" and HasOwnCall is false and IsContained((member, "value"))
 	isCached = type.ConstantSlot(callee) >= 0
 	(own or wrapped) and isCached is false and IsSmall and IsComputed and IsReplaceable(type) and IsReturningComputed
@@ -41,12 +41,12 @@ IsOwn(call InstructionEntry) Boolean
 	Listing.Fits(Inliner.Caller, Inliner.Listed, StructLanes.Constructed) is false
 	InlineRules(Recursing).Fits(Cached, Linker.Reading, Inliner.Scaled) is false
 	call.payload(6 + call.payload(3) + call.payload(5 + call.payload(3))) is not 1
-Wrapped(type TypeEntry) Text
-	Listing.Wrapped(Cached) is "elements"
-	Listing.Wrapped(TypeEntry("Strict/A", Inliner.Elements, List(MethodEntry))) is "elements"
-	Listing.Wrapped(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "elements"
-	Listing.Wrapped(Inliner.Listed) is "elements"
-	Listing.Wrapped(Inliner.Caller) is ""
+Wrap(type TypeEntry) Text
+	Listing.Wrap(Cached) is "elements"
+	Listing.Wrap(TypeEntry("Strict/A", Inliner.Elements, List(MethodEntry))) is "elements"
+	Listing.Wrap(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "elements"
+	Listing.Wrap(Inliner.Listed) is "elements"
+	Listing.Wrap(Inliner.Caller) is ""
 	InlineRules(Reloaded).Fits(Cached, Linker.Reading, Inliner.Scaled) is false
 	InlineRules(Twice).Fits(Cached, Linker.Reading, Inliner.Scaled) is false
 	InlineRules(Reloaded).IsComputed and InlineRules(Reloaded).IsSmall and InlineRules(Twice).IsComputed
@@ -134,7 +134,7 @@ IsReturningComputed Boolean
 	reuse = LoadReuse(instructions)
 	mutable isLoaded = false
 	for instructions
-		if reuse.Written(value) is instructions.Last.payload(0)
+		if reuse.Write(value) is instructions.Last.payload(0)
 			isLoaded = value.kind is InstructionType.LoadVariableToRegister
 	isLoaded is false
 IsLaned(type TypeEntry, call InstructionEntry, isReturning Boolean) Boolean

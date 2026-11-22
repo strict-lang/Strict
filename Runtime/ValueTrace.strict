@@ -24,7 +24,7 @@ Trace(path Text, root Text) Number
 	ValueTrace.Trace("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	types = FileCompiler(true, selection).Compiled(path, root, true)
+	types = FileCompiler(true, selection).Compile(path, root, true)
 	types.Length is 0 then 1 else Execute.Start(types, path, true).RunTests(types.First.Name)
 Value(lines Texts, folder Text) Texts
 	ValueTrace.Value(Events, "Examples").First.EndsWith("line 1 hit 2 times")
@@ -60,7 +60,7 @@ Rest(event Text) Text
 Line(place Text, summaries Texts, folder Text) Text
 	ValueTrace.Line("Sum|3", List(Text) + "Hit", "Examples").EndsWith("line 3 hit 1 times")
 	parts = place.Split("|")
-	file = TypeSource(TypeEntry(parts(0), List(MemberEntry), List(MethodEntry))).Located(folder)
+	file = TypeSource(TypeEntry(parts(0), List(MemberEntry), List(MethodEntry))).Locate(folder)
 	start = "Value " + file + ":line " + parts(1) + " hit " + summaries.Length + " times"
 	source = File(file).ReadLines
 	number = parts(1) to Number

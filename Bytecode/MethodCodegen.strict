@@ -28,15 +28,15 @@ constant Doubled = LoopCodegen.DoubledBody
 constant Packed = BodyParser("Packed Pack", "\t(1, 2)").Block(1, 1)
 constant SumsBody = BodyParser("Summed Sums", "\tfor 3", "\t\tSums((index))").Block(1, 1)
 constant Blank = CodeBlock.Empty
-constant Unlooped = PackLoops.Aggregated(Packed, CodeBlock.Empty, "Pack")
-constant Boxed = PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Box")
-constant Added = PackLoops.Aggregated(SumsBody, CodeBlock.Empty, "Sums")
-constant PackedLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Pack")
-constant BoxLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Box")
-constant TextLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Text")
-constant TextSummed = PackLoops.Aggregated(Doubled, CodeBlock.Empty, "Text")
+constant Unlooped = PackLoops.Aggregate(Packed, CodeBlock.Empty, "Pack")
+constant Boxed = PackLoops.Aggregate(Doubled, CodeBlock.Empty, "Box")
+constant Added = PackLoops.Aggregate(SumsBody, CodeBlock.Empty, "Sums")
+constant PackedLoop = Packing.Loop(Doubled, CodeBlock.Empty, "Pack")
+constant BoxLoop = Packing.Loop(Doubled, CodeBlock.Empty, "Box")
+constant TextLoop = Packing.Loop(Doubled, CodeBlock.Empty, "Text")
+constant TextSummed = PackLoops.Aggregate(Doubled, CodeBlock.Empty, "Text")
 constant ForResults = List(SyntaxNode) + SyntaxNode("Identifier", "forResult")
-constant SumsLoop = Packing.Looped(Doubled, CodeBlock.Empty, "Sums")
+constant SumsLoop = Packing.Loop(Doubled, CodeBlock.Empty, "Sums")
 constant ElseIfRuns = BodyParser("Run", "\tif x", "\t\tRun", "\telse if x", "\t\tRun").Block(1, 1)
 Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "Number").instructions.Length is 4
@@ -45,25 +45,25 @@ Generate(body SyntaxNode, scope Scope, returnType Text) CodeBlock
 	Plain.Generate(FilterBody, NoScope, "Number").instructions(12).kind is InstructionType.JumpEnd
 	Plain.Generate(CopiedBody, NoScope, "None").instructions(5).kind is InstructionType.Add
 	typed = scope.With(CodeBlock.ReturnMarker, returnType)
-	start = ErrorScope(values).Prepared(body, CodeBlock(List(InstructionEntry), 0, 0, typed))
+	start = ErrorScope(values).Prepare(body, CodeBlock(List(InstructionEntry), 0, 0, typed))
 	code = BranchValues(returnType).Rewritten(Production(body, start))
-	block = Looped(code, start, returnType)
+	block = Loop(code, start, returnType)
 	if code.children.Length is 0 or block.instructions.Last.kind is InstructionType.Return
 		return block
 	block.Ended(returnType)
-Looped(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
+Loop(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
 	PackedLoop.instructions.Length is 12 and PackedLoop.instructions(-2).texts(1) is "from"
-	SumsLoop.instructions(-2).texts(1) is "from" and Packing.Looped(SumsBody, Blank, "Sums") is Added
-	Packing.Looped(Packed, Blank, "Pack") is Unlooped and BoxLoop is Boxed and TextLoop is TextSummed
+	SumsLoop.instructions(-2).texts(1) is "from" and Packing.Loop(SumsBody, Blank, "Sums") is Added
+	Packing.Loop(Packed, Blank, "Pack") is Unlooped and BoxLoop is Boxed and TextLoop is TextSummed
 	loops = LoopCodegen(value)
 	member = values.inference.types.ValueOf(returnType)
 	loop = BranchValues(returnType).LastLoop(body)
 	isLooped = loop.Kind is "For" and loops.Aggregation(body, returnType) is in ("", "add")
 	isListed = isLooped and ListFits(values.inference.types).IsList(member)
-	valued = isListed then values.TypeOf(loop.children.Last.children.Last, loops.Declared(loop, block)) else returnType
+	valued = isListed then values.TypeOf(loop.children.Last.children.Last, loops.Declare(loop, block)) else returnType
 	if valued is returnType
-		return loops.Aggregated(body, block, returnType)
-	values.Expression(SyntaxNode("Call", returnType, ForResults), loops.Aggregated(body, block, member))
+		return loops.Aggregate(body, block, returnType)
+	values.Expression(SyntaxNode("Call", returnType, ForResults), loops.Aggregate(body, block, member))
 Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Log(SyntaxNode("Binary", "+", (ValueCodegen.Hi, NoNode)), InRun).instructions.Length is 2
 	Plain.Log(SyntaxNode("Binary", "+", (One, NoNode)), InRun).instructions.Length is 4
@@ -72,29 +72,29 @@ Production(body SyntaxNode, block CodeBlock) SyntaxNode
 	Plain.Generate(BodyParser("Run Number", "\tx + 2").Block(1, 1), NoScope, "Number").instructions.Last.payload is (2)
 	Plain.Generate(BodyParser("Run", "\tlet a = 1").Block(1, 1), NoScope, "None").instructions.Last.payload is (0)
 	Plain.Production(BodyParser("Run", "\tconstant a = 2", "\ta").Block(1, 1), CodeBlock.Empty).Lines("") is ("2")
-	inlined = ConstantFolding(values.target.TypeName, values.inference).Inlined(TestLines(values).Without(body, block))
-	rounded = StepRounding(values).Rounded(inlined, block)
-	IndexCodegen(values).Unnested(values.isOptimizing then LoopHoisting(values).Hoisted(rounded, block) else rounded)
+	inlined = ConstantFolding(values.target.TypeName, values.inference).Inline(TestLines(values).Without(body, block))
+	rounded = StepRounding(values).Round(inlined, block)
+	IndexCodegen(values).Unnest(values.isOptimizing then LoopHoisting(values).Hoist(rounded, block) else rounded)
 Body(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Body(BodyParser("Run", "\tRun", "\t2").Block(1, 1), CodeBlock.Empty).register is 1
 	Plain.Body(BodyParser("Run", "\tRun", "\t2").Block(1, 1), CodeBlock.Empty).instructions.Last.line is 3
 	Plain.Generate(BodyParser("Run", "\tRun").Block(1, 1), NoScope, "None").instructions.Last.payload is (1)
-	Valued(body, block, "")
-Valued(body SyntaxNode, block CodeBlock, wanted Text) CodeBlock
-	Plain.Valued(Letter, CodeBlock.Empty.Declare("x", "Text"), "Text").instructions(3).texts(1) is "to"
-	Plain.Valued(Letter, CodeBlock.Empty.Declare("x", "Text"), "").instructions.Length is 3
+	Value(body, block, "")
+Value(body SyntaxNode, block CodeBlock, wanted Text) CodeBlock
+	Plain.Value(Letter, CodeBlock.Empty.Declare("x", "Text"), "Text").instructions(3).texts(1) is "to"
+	Plain.Value(Letter, CodeBlock.Empty.Declare("x", "Text"), "").instructions.Length is 3
 	mutable result = block
 	for body.children
 		isLast = index is body.children.Length - 1
-		dropped = ErrorScope(values).Dropped(value, result)
+		dropped = ErrorScope(values).Drop(value, result)
 		used = isLast and wanted is not "None" then dropped else ErrorScope(values).Used(dropped, result)
-		rewritten = ConversionCodegen(values).Wanted(used, isLast then wanted else "", result)
+		rewritten = ConversionCodegen(values).Want(used, isLast then wanted else "", result)
 		statement = Statement(rewritten, result.At(block.register), HasElse(body, index))
-		result = Lined(statement, result.instructions.Length, value.line)
+		result = Line(statement, result.instructions.Length, value.line)
 	CodeBlock(result.instructions, result.register, result.nextId, block.scope)
-Lined(block CodeBlock, start Number, line Number) CodeBlock
-	Plain.Lined(Plain.Body(BodyParser("Run", "\t1").Block(1, 1), CodeBlock.Empty), 0, 7).instructions(0).line is 2
-	Plain.Lined(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), 0, 5).instructions.First.line is 5
+Line(block CodeBlock, start Number, line Number) CodeBlock
+	Plain.Line(Plain.Body(BodyParser("Run", "\t1").Block(1, 1), CodeBlock.Empty), 0, 7).instructions(0).line is 2
+	Plain.Line(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), 0, 5).instructions.First.line is 5
 	if line is 0
 		return block
 	mutable lined = block.instructions
@@ -115,14 +115,14 @@ HasElse(body SyntaxNode, position Number) Boolean
 	position + 1 < body.children.Length and body.children(position + 1).Kind is in ("ElseIf", "Else")
 Statement(node SyntaxNode, previous CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Statement(SyntaxNode("Return", "", One), CodeBlock.Empty, false).instructions.Length is 2
-	block = ListCodegen(values).Disowned(node, previous, false)
+	block = ListCodegen(values).Disown(node, previous, false)
 	if node.Kind is in ("Declaration", "Reassignment")
-		return Assignment(IndexCodegen(values).Keyed(node, block), block)
+		return Assignment(IndexCodegen(values).Key(node, block), block)
 	if node.Kind is in ("If", "ElseIf", "Else")
 		return node.Kind is "If" then Conditional(node, block, hasElse, "") else Else(node, block, hasElse)
 	if node.Kind is "For"
 		return node.text is "slices" then Slices(node, block) else LoopCodegen(MethodCodegen(values)).Loop(node, block, "")
-	generated = ErrorCodegen(values).Statement(ConversionCodegen(values).Returned(node, block), block)
+	generated = ErrorCodegen(values).Statement(ConversionCodegen(values).ConvertReturn(node, block), block)
 	node.Kind is "Return" and node.HasValue then generated.Add(InstructionEntry.Return(generated.Result)) else generated
 Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a") is "Number"
@@ -132,26 +132,26 @@ Assignment(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Assignment(ElementAssignment, CodeBlock.Empty).instructions.Last.texts is ("x.a(1)")
 	Plain.Assignment(ListCodegen.Appending, ListCodegen.Owned).instructions(1).kind is InstructionType.InvokeWriteToList
 	if ListCodegen(values).IsAppend(node, block)
-		return ListCodegen(values).Added(SyntaxNode("MethodCall", "Add", node.children.Last.children), block)
+		return ListCodegen(values).Add(SyntaxNode("MethodCall", "Add", node.children.Last.children), block)
 	name = AssignedName(node)
-	assigned = ConversionCodegen(values).Assigned(node, block)
-	stored = Stored(assigned, name, block, node.Kind is "Declaration")
-	node.Kind is "Declaration" then Declared(stored, name, assigned, node.text.StartsWith("mutable ")) else stored
-Stored(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) CodeBlock
-	Plain.Stored(One, "a", CodeBlock.Empty, true).instructions.Length is 1
-	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty, true).instructions(0).texts is ("a")
-	Plain.Stored(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
-	Plain.Stored(One, "a(0)", CodeBlock.Empty, false).instructions.Last.kind is InstructionType.StoreRegisterToVariable
+	assigned = ConversionCodegen(values).Assign(node, block)
+	stored = Store(assigned, name, block, node.Kind is "Declaration")
+	node.Kind is "Declaration" then Declare(stored, name, assigned, node.text.StartsWith("mutable ")) else stored
+Store(assigned SyntaxNode, name Text, block CodeBlock, isDeclaration Boolean) CodeBlock
+	Plain.Store(One, "a", CodeBlock.Empty, true).instructions.Length is 1
+	Plain.Store(SyntaxNode("Identifier", "Error"), "a", CodeBlock.Empty, true).instructions(0).texts is ("a")
+	Plain.Store(SyntaxNode("Identifier", "Error"), "a", InRun, false).instructions(0).texts is ("Run")
+	Plain.Store(One, "a(0)", CodeBlock.Empty, false).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	named = isDeclaration then block.Declare(CodeBlock.ErrorMarker, name) else block
 	isLocal = isDeclaration or ErrorScope(values).IsFallible(name, block)
-	generated = isLocal then ErrorCodegen(values).Handled(assigned, named) else values.Expression(assigned, named)
+	generated = isLocal then ErrorCodegen(values).Handle(assigned, named) else values.Expression(assigned, named)
 	restored = CodeBlock(generated.instructions, generated.register, generated.nextId, block.scope)
 	isConstant = assigned.IsLiteral and name.IndexOf("(") < 0
 	isConstant then block.Add(StoreConstant(generated.instructions.Last, name)) else restored.Stored(name)
 AssignedName(node SyntaxNode) Text
-	Plain.Stored(ErrorCodegen.Greeting, "a", CodeBlock.Empty, true).instructions.Length is 2
-	Plain.Stored(ErrorCodegen.Greeting, "a", CodeBlock.Empty, false).instructions.Length is 3
-	Plain.Stored(ErrorCodegen.Greeting, "a", ErrorCodegen.FallibleA, false).instructions.Length is 2
+	Plain.Store(ErrorCodegen.Greeting, "a", CodeBlock.Empty, true).instructions.Length is 2
+	Plain.Store(ErrorCodegen.Greeting, "a", CodeBlock.Empty, false).instructions.Length is 3
+	Plain.Store(ErrorCodegen.Greeting, "a", ErrorCodegen.FallibleA, false).instructions.Length is 2
 	Plain.AssignedName(SyntaxNode("Declaration", "let a", One)) is "a"
 	Plain.AssignedName(ElementAssignment) is "x.a(1)"
 	Plain.AssignedName(SyntaxNode("Reassignment", "", (SyntaxNode("Member", "Y", NoNode), One))) is "Y"
@@ -159,17 +159,17 @@ AssignedName(node SyntaxNode) Text
 		return Tokenizer(node.text).Tokens.Last
 	target = node.children(0)
 	target.Kind is "Member" then target.text else target to Text
-Declared(block CodeBlock, name Text, assigned SyntaxNode, isMutable Boolean) CodeBlock
-	Plain.Declared(CodeBlock.Empty, "a", MixedList, false).Owns("a")
+Declare(block CodeBlock, name Text, assigned SyntaxNode, isMutable Boolean) CodeBlock
+	Plain.Declare(CodeBlock.Empty, "a", MixedList, false).Owns("a")
 	Plain.Assignment(SyntaxNode("Declaration", "let a", ErrorCodegen.BareError), InRun).instructions(0).texts is ("a")
 	Plain.Assignment(SyntaxNode("Reassignment", "", ErrorCodegen.IsError.children), InRun).instructions(0).texts is ("Run")
 	Plain.Assignment(SyntaxNode("Reassignment", "", (NoNode, One)), CodeBlock.Empty).scope.TypeOf("x") is ""
 	Plain.Assignment(SyntaxNode("Declaration", "let a", One), CodeBlock.Empty).scope.TypeOf("a mutable") is ""
-	Plain.Declared(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode, false).Owns("a") is false
-	Plain.Declared(CodeBlock.Empty, "a", ErrorCodegen.Greeting, false).scope.TypeOf("a fallible") is "fallible"
+	Plain.Declare(CodeBlock.Empty.Declare("x", "Numbers"), "a", NoNode, false).Owns("a") is false
+	Plain.Declare(CodeBlock.Empty, "a", ErrorCodegen.Greeting, false).scope.TypeOf("a fallible") is "fallible"
 	typed = block.Declare(name, values.TypeOf(assigned, block))
 	shared = typed.Sharing(name, ListCodegen(values).IsNew(assigned) is false)
-	ErrorScope(values).Declared(name, assigned, isMutable, shared)
+	ErrorScope(values).Declare(name, assigned, isMutable, shared)
 StoreConstant(load InstructionEntry, name Text) InstructionEntry
 	Plain.StoreConstant(InstructionEntry.Print("b"), "a").payload is (0, -2, 0)
 	Plain.StoreConstant(InstructionEntry.Print("b"), "a").texts is ("b", "a")
@@ -197,12 +197,12 @@ Conditional(node SyntaxNode, block CodeBlock, hasElse Boolean, aggregation Text)
 	Plain.Generate(IfBody, NoScope, "Number").instructions.Length is 9
 	Plain.Conditional(SelectorCodegen.Picked, CodeBlock.Empty, false, "").instructions.Length is 14
 	if MethodBodies(values.target.TypeName, values.target.shape, values.inference).IsSelector(node)
-		return SelectorCodegen(values).Selected(node, block)
+		return SelectorCodegen(values).Select(node, block)
 	condition = OperatorCodegen(values).Condition(node.children(0), block)
 	wanted = aggregation is "" then "None" else ""
-	narrowed = Valued(node.children.Last, ErrorCodegen(values).Narrowed(node.children(0), condition), wanted)
+	narrowed = Value(node.children.Last, ErrorCodegen(values).Narrow(node.children(0), condition), wanted)
 	branch = CodeBlock(narrowed.instructions, narrowed.register, narrowed.nextId, condition.scope)
-	body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collected(branch, aggregation)
+	body = aggregation is "" then branch else LoopCodegen(MethodCodegen(values)).Collect(branch, aggregation)
 	skipsElse = hasElse and body.instructions.Last.kind is not InstructionType.Return
 	(skipsElse then body.Flagged else body).Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
@@ -210,9 +210,9 @@ Else(node SyntaxNode, block CodeBlock, hasElse Boolean) CodeBlock
 	Plain.Generate(ReturnElse, NoScope, "None").instructions.Length is 9
 	last = node.children.Last
 	if block.instructions(block.instructions.Length - 2).kind is InstructionType.Return
-		return node.Kind is "ElseIf" then Conditional(node, block, hasElse, "") else Valued(last, block, "None")
+		return node.Kind is "ElseIf" then Conditional(node, block, hasElse, "") else Value(last, block, "None")
 	jumped = block.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, block.nextId)).WithNextId
-	inner = node.Kind is "ElseIf" then Conditional(node, jumped, hasElse, "") else Valued(last, jumped, "None")
+	inner = node.Kind is "ElseIf" then Conditional(node, jumped, hasElse, "") else Value(last, jumped, "None")
 	inner.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
 Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Log(SyntaxNode("Text", "\"Hi\""), CodeBlock.Empty).instructions(0).texts is ("Hi")
@@ -221,7 +221,7 @@ Log(argument SyntaxNode, block CodeBlock) CodeBlock
 	if argument.Kind is "Text"
 		return argument.Unquoted is "" then block else block.Add(InstructionEntry.Print(argument.Unquoted))
 	hasPrefix = argument.Kind is "Binary" and argument.text is "+" and argument.children(0).Kind is "Text"
-	printed = ConversionCodegen(values).Converted(hasPrefix then argument.children(1) else argument, "Text", block)
+	printed = ConversionCodegen(values).Convert(hasPrefix then argument.children(1) else argument, "Text", block)
 	generated = values.Expression(printed, block)
 	prefix = hasPrefix then argument.children(0).Unquoted else ""
 	generated.Add(InstructionEntry.PrintValue(prefix, generated.Result, values.TypeOf(printed, generated) is "Text"))
@@ -234,4 +234,4 @@ Slices(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Generate(BodyParser("Run", "\tif 1 > 2", "\t\tRun", "\telse", "\t\t4").Block(1, 1), NoScope, "None") is Error
 	Plain.Generate(BodyParser("Run", "\tfor 3", "\t\tindex").Block(1, 1), NoScope, "None") is Error
 	loops = LoopCodegen(MethodCodegen(values))
-	loops.Loop(node, loops.Started(block, "Numbers", "list").Declare("forResult", "Numbers").At(block.register), "list")
+	loops.Loop(node, loops.Start(block, "Numbers", "list").Declare("forResult", "Numbers").At(block.register), "list")

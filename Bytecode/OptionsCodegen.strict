@@ -12,16 +12,16 @@ Lines(names Texts) Texts
 	Settings.Lines(List(Text) + "Usage").First is "Usage Text"
 	parsed = automatic.IsWanted("Parsed", names) then Parsed else List(Text)
 	parsed + (automatic.IsWanted("Usage", names) then Usage else List(Text))
-Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
-	Settings.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
-	Memberless.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, HelloParsed) is TypeEntry.HelloLogger
+Complete(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
+	Settings.Complete(TypeCodegen.Hello, TypeEntry.HelloLogger, List(Text)) is TypeEntry.HelloLogger
+	Memberless.Complete(TypeCodegen.Hello, TypeEntry.HelloLogger, HelloParsed) is TypeEntry.HelloLogger
 	prefix = main.fullName + "."
 	wanted = (prefix + "Parsed") is in targets or prefix + "Usage" is in targets
 	if wanted is false or automatic.instantiation.types.Inherit(automatic.instance, "Parsed") is ""
 		return entry
 	names = entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text)
 	missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))
-	automatic.Appended(main, entry, automatic.lines + Lines(missing))
+	automatic.Append(main, entry, automatic.lines + Lines(missing))
 Parsed Texts
 	Settings.Parsed.First is "Parsed(arguments Texts) Settings"
 	SettingsParsed(1).EndsWith("\"loras\", \"jsonOutput\")).Checked")
@@ -30,7 +30,7 @@ Parsed Texts
 	Single.Parsed(1) is "\tlet line = CommandLine(arguments, List(Text) + \"count\").Checked"
 	Rendering.Parsed.Last.StartsWith("\tRendering(Resolution(line.Numeric(\"width\", 720), ")
 	members = Members
-	line = "\tlet line = CommandLine(arguments, " + Joined(Quoted(MemberNames(members)), "Text") + ").Checked"
+	line = "\tlet line = CommandLine(arguments, " + Join(Quote(MemberNames(members)), "Text") + ").Checked"
 	built = "\t" + automatic.instance + "(" + Text.Combine(MemberArguments(members), ", ") + ")"
 	(List(Text) + ("Parsed(arguments Texts) " + automatic.instance) + line) + built
 Usage Texts
@@ -40,11 +40,11 @@ Usage Texts
 	members = Members
 	shown = MemberShown(members)
 	described = MemberDescriptions("", members)
-	usage = ").Usage(" + Joined(shown, "Text") + ", " + Joined(described, "Text") + ")"
-	(List(Text) + "Usage Text") + ("\tCommandLine(List(Text), " + Joined(Quoted(MemberNames(members)), "Text") + usage)
+	usage = ").Usage(" + Join(shown, "Text") + ", " + Join(described, "Text") + ")"
+	(List(Text) + "Usage Text") + ("\tCommandLine(List(Text), " + Join(Quote(MemberNames(members)), "Text") + usage)
 Listed Text
 	Single.Listed is "List(Text) + \"count\""
-	Joined(Quoted(Names), "Text")
+	Join(Quote(Names), "Text")
 Members List(OptionMember)
 	Settings.Members.Length is 5
 	for automatic.Stored
@@ -86,16 +86,16 @@ MemberDescriptions(prefix Text, members List(OptionMember)) Texts
 	mutable plain = 0
 	mutable described = List(Text)
 	for members
-		described = described + value.Described(help, plain)
+		described = described + value.Describe(help, plain)
 		plain = plain + (value.IsNested then 0 else 1)
 	described
-Quoted(texts Texts) Texts
-	Settings.Quoted(("a", "b")) is ("\"a\"", "\"b\"")
+Quote(texts Texts) Texts
+	Settings.Quote(("a", "b")) is ("\"a\"", "\"b\"")
 	for texts
 		"\"" + value + "\""
-Joined(expressions Texts, type Text) Text
-	Settings.Joined(("a", "b"), "Text") is "(a, b)"
-	Settings.Joined(List(Text) + "1", "Number") is "List(Number) + 1"
+Join(expressions Texts, type Text) Text
+	Settings.Join(("a", "b"), "Text") is "(a, b)"
+	Settings.Join(List(Text) + "1", "Number") is "List(Number) + 1"
 	if expressions.Length is 1
 		return "List(" + type + ") + " + expressions.First
 	"(" + Text.Combine(expressions, ", ") + ")"

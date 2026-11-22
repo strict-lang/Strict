@@ -9,7 +9,7 @@ Types Texts
 	Mentions(("Run", "\tconstant Limit = 3", "\tLimit + Size")).Types is ("Size")
 	shape = TypeShape(lines)
 	own = shape.MemberScope.names + shape.MethodScope.names + Constants
-	typed = Typed(shape)
+	typed = CollectTypes(shape)
 	Distinct(CollectedNames(lines) + typed, typed, own)
 Distinct(tokens Texts, typed Texts, own Texts) Texts
 	Mentions(List(Text)).Distinct(("a", "a", "b"), List(Text) + "b", List(Text) + "a") is ("b")
@@ -26,8 +26,8 @@ CollectedNames(sources Texts) Texts
 	for sources
 		names = names + Tokenizer(value.Trim).Names
 	names
-Typed(shape Expressions/TypeShape) Texts
-	Units.Typed(TypeShape(Units.lines)) is ("Units", "Logger", "Shape", "Number")
+CollectTypes(shape Expressions/TypeShape) Texts
+	Units.CollectTypes(TypeShape(Units.lines)) is ("Units", "Logger", "Shape", "Number")
 	Mentions(("Size Size", "\touter.Size(1, 2)")).Types is ("Size")
 	mutable types = shape.MemberScope.types
 	for lines
@@ -39,8 +39,8 @@ Typed(shape Expressions/TypeShape) Texts
 Outer(tokens Texts) Texts
 	Mentions.Outer(("outer", ".", "Key", ".", "F")) is ("Key")
 	Mentions.Outer(("outer", "x", "A", "inner", ".", "B", "Key", "outer", ".")).Length is 0
-	Mentions("\tRun(value Size)").Typed(TypeShape("has x Number")) is ("Number")
-	Mentions.Declared(TypeShape(("has x List(Size)", "Run", "A Number", "B Number"))) is ("Sizes", "None", "Number")
+	Mentions("\tRun(value Size)").CollectTypes(TypeShape("has x Number")) is ("Number")
+	Mentions.Declare(TypeShape(("has x List(Size)", "Run", "A Number", "B Number"))) is ("Sizes", "None", "Number")
 	for tokens
 		if index > 1 and tokens(index - 1) is "." and tokens(index - 2) is "outer"
 			value
@@ -48,9 +48,9 @@ Missing(files Texts) Texts
 	Typo.Missing(Directory.Files(".", "*.strict")) is ("Numbr")
 	Mentions(("Run", "\tVectr2(1, 2)")).Missing(Directory.Files(".", "*.strict")) is ("Vectr2")
 	Mentions(("has Size", "Run", "\tWidth + Area + Depth")).Missing(Directory.Files("Math", "*.strict")) is ("Depth")
-	Unknown(Names(files) + Composed(files))
-Composed(files Texts) Texts
-	Mentions(("has Size", "has logger")).Composed(("Math/Size.strict", "Logger.strict")).First is "Width"
+	Unknown(Names(files) + Compose(files))
+Compose(files Texts) Texts
+	Mentions(("has Size", "has logger")).Compose(("Math/Size.strict", "Logger.strict")).First is "Width"
 	members = TypeShape(lines).MemberScope.types
 	mutable names = List(Mutable(Text))
 	for files
@@ -61,8 +61,8 @@ Composed(files Texts) Texts
 	names
 Unknown(names Texts) Texts
 	Typo.Unknown(List(Text) + "Number") is ("Numbr", "Other")
-	all = Named(names + Constants)
-	for Declared(TypeShape(lines)) + TypeShape(lines).UsedTypes
+	all = MarkNames(names + Constants)
+	for Declare(TypeShape(lines)) + TypeShape(lines).UsedTypes
 		if IsKnown(value, all) is false
 			value
 Constants Texts
@@ -71,9 +71,9 @@ Constants Texts
 	for lines
 		if value.Trim.StartsWith("constant ")
 			Tokenizer(value.Trim).Tokens(1)
-Unmatched(names Texts, files Texts) Texts
-	Mentions.Unmatched(("Vector2s", "Missing"), List(Text) + "./Math/Vector2.strict") is ("Missing")
-	known = Named(Names(files))
+Unmatch(names Texts, files Texts) Texts
+	Mentions.Unmatch(("Vector2s", "Missing"), List(Text) + "./Math/Vector2.strict") is ("Missing")
+	known = MarkNames(Names(files))
 	for names
 		if IsKnown(value, known) is false
 			value
@@ -83,22 +83,22 @@ Names(files Texts) Texts
 	for files
 		known.Add(Path(value.Replace("\\", "/")).FileName.RemoveExtension.text)
 	known
-Named(names Texts) Dictionary(Text, Boolean)
-	Mentions.Named(("a", "b", "a")).Length is 2
+MarkNames(names Texts) Dictionary(Text, Boolean)
+	Mentions.MarkNames(("a", "b", "a")).Length is 2
 	mutable named = Dictionary(Text, Boolean)
 	for names
 		named(value) = true
 	named
 IsKnown(name Text, known Dictionary(Text, Boolean)) Boolean
-	Mentions.IsKnown("Numbers", Named(List(Text) + "Number"))
-	Mentions.IsKnown("Numbr", Named(List(Text) + "Number")) is false
-	Mentions.IsKnown("Numberss", Named(List(Text) + "Number"))
-	Mentions.IsKnown("Sizes", Named(List(Text) + "Number")) is false
+	Mentions.IsKnown("Numbers", MarkNames(List(Text) + "Number"))
+	Mentions.IsKnown("Numbr", MarkNames(List(Text) + "Number")) is false
+	Mentions.IsKnown("Numberss", MarkNames(List(Text) + "Number"))
+	Mentions.IsKnown("Sizes", MarkNames(List(Text) + "Number")) is false
 	name is in known then true else name.EndsWith("s") and IsKnown(name.Substring(0, name.Length - 1), known)
-Declared(shape Expressions/TypeShape) Texts
-	Mentions.Declared(TypeShape(Typo.lines)) is ("Numbr", "Numbers", "Other", "Number")
+Declare(shape Expressions/TypeShape) Texts
+	Mentions.Declare(TypeShape(Typo.lines)) is ("Numbr", "Numbers", "Other", "Number")
 	calls = shape.CallScope(List(Text))
-	mutable types = shape.MemberScope.types + Returned(shape)
+	mutable types = shape.MemberScope.types + CollectReturns(shape)
 	for calls.names
 		if value.LastIndexOf(" types") > 0
 			types = types + calls.types(index).Split(",")
@@ -108,9 +108,9 @@ Declared(shape Expressions/TypeShape) Texts
 		if name is not "" and name.IndexOf(")") < 0 and name.IndexOf(" ") < 0 and name is not in result
 			result.Add(name)
 	result
-Returned(shape Expressions/TypeShape) Texts
-	Mentions.Returned(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
-	Mentions.Returned(TypeShape(("has x Number", "Area = 1", "Add(other) Number", "\tother"))) is ("Number")
+CollectReturns(shape Expressions/TypeShape) Texts
+	Mentions.CollectReturns(TypeShape(("constant Pair = (1, 2)", "Add(other) Number", "	other"))) is ("Number")
+	Mentions.CollectReturns(TypeShape(("has x Number", "Area = 1", "Add(other) Number", "\tother"))) is ("Number")
 	for shape.lines
 		if shape.IsMethodHeader(value) and shape.IsComputed(value) is false
 			HeaderTokens(Tokenizer(value).Tokens).ReturnType

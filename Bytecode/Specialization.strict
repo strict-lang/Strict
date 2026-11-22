@@ -15,11 +15,11 @@ constant Wrap = SyntaxParser(Tokenizer("Wrapped(w)").Tokens).Parse
 constant Doubled = KnownTypes("Using", KnownTypes.NoMembers, Scope(("Through", "Through"), ("Number", "Number")), Scope(("Through", "Through types", "Through", "Through types"), ("wrapped", "Wrapped", "other", "Number")))
 constant Overloaded = Specialization(ValueCodegen(TypeInference(Doubled, List(Scope) + KnownTypes.NoMembers), Scope(List(Text), List(Text)), CallTarget(Doubled, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
 constant Targets = List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver), Number)"
-Signed(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts
-	Plain.Signed(Passing, "Using", "Number", Wrapping)(1) is Halving
-	Plain.Signed(Passing, "Using", "Number", CodeBlock.Empty.Declare("w", "Wrapped"))(1) is "Through"
-	Plain.Signed(Passing, "Using", "Number", Wrapping) is ("Strict/Boxes/Using", Halving, "Strict/Number", "wrapped")
-	Plain.Signed(Wrap, "Wrapped", "Wrapped", Wrapping) is ("Strict/Wrapped", "from", "Wrapped")
+Sign(node SyntaxNode, owner Text, returnType Text, block CodeBlock) Texts
+	Plain.Sign(Passing, "Using", "Number", Wrapping)(1) is Halving
+	Plain.Sign(Passing, "Using", "Number", CodeBlock.Empty.Declare("w", "Wrapped"))(1) is "Through"
+	Plain.Sign(Passing, "Using", "Number", Wrapping) is ("Strict/Boxes/Using", Halving, "Strict/Number", "wrapped")
+	Plain.Sign(Wrap, "Wrapped", "Wrapped", Wrapping) is ("Strict/Wrapped", "from", "Wrapped")
 	argumentTypes = ConversionCodegen(values).ArgumentTypes(node, owner, block)
 	signature = values.target.Signature(node.text, owner, returnType, argumentTypes)
 	parameters = values.target.ParameterTypes(node.text, owner, argumentTypes)
@@ -40,9 +40,9 @@ Name(node SyntaxNode, parameters Texts, owner Text, block CodeBlock) Text
 	actuals.Length is 0 then node.text else node.text + "(" + Text.Combine(arguments) + ")"
 Arguments(node SyntaxNode, block CodeBlock) Texts
 	Plain.Start(("Through(wrapped Wrapped) Number", "	1", "Through(other Number) Number", "	2"), "Through(Number)") is 0
-	Plain.Specialized(Coding, 1, Halving).instructions.Length is 2
-	Plain.Completed(Coding, Unused, ("Strict/Boxes/Using." + Halving, "Strict/Boxes/Using." + Halving)).methods.Length is 1
-	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Usage.Through(Wrapped(Halver))").methods.Length is 0
+	Plain.Specialize(Coding, 1, Halving).instructions.Length is 2
+	Plain.Complete(Coding, Unused, ("Strict/Boxes/Using." + Halving, "Strict/Boxes/Using." + Halving)).methods.Length is 1
+	Plain.Complete(Coding, Unused, List(Text) + "Strict/Boxes/Usage.Through(Wrapped(Halver))").methods.Length is 0
 	Plain.Name(Passing, List(Text) + "Halver", "Using", CodeBlock.Empty.Declare("w", "Halver(Number)")) is "Through"
 	Plain.Name(Passing, List(Text) + "Generic", "Wrapped", Wrapping) is "Through"
 	Plain.Name(Passing, ("Wrapped", "Wrapped"), "Using", Wrapping) is Halving
@@ -113,7 +113,7 @@ Methods(codegen TypeCodegen, names Texts) List(MethodEntry)
 	for names
 		start = value.IndexOf("(") > 0 then Start(codegen.lines, value) else -1
 		if start >= 0
-			Specialized(codegen, start, value)
+			Specialize(codegen, start, value)
 Start(lines Texts, method Text) Number
 	Plain.Start(Using, "Through") is 1
 	Plain.Start(Using, "Missing") is -1
@@ -127,19 +127,19 @@ Start(lines Texts, method Text) Number
 			if ordinal < 0 or seen is ordinal
 				return index
 	Number.NotFound
-Specialized(codegen TypeCodegen, start Number, name Text) MethodEntry
-	Plain.Specialized(Coding, 1, Halving).Name is Halving
+Specialize(codegen TypeCodegen, start Number, name Text) MethodEntry
+	Plain.Specialize(Coding, 1, Halving).Name is Halving
 	Overloaded.Start(("Through(wrapped Wrapped) Number", "	1", "Through(o Number) Number", "	2"), "Through(Number)") is 2
 	Overloaded.Start(Using, "Through(Wrapped)") is 1
-	Plain.Completed(Coding, Plain.Completed(Coding, Unused, Targets), Targets).methods.Length is 1
+	Plain.Complete(Coding, Plain.Complete(Coding, Unused, Targets), Targets).methods.Length is 1
 	header = Header(codegen.lines(start), name)
 	lines = codegen.lines.Slice(0, start) + header + codegen.lines.Slice(start + 1, codegen.lines.Length - start - 1)
 	method = TypeCodegen(codegen, lines = lines).Method(start)
 	MethodEntry(name, method.parameters, method.declaredType, method.instructions)
-Completed(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
-	Plain.Completed(Coding, Unused, List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver))").methods.Length is 1
-	Plain.Completed(TypeCodegen.Texted, TypeEntry.Converting, List(Text) + "Strict/Digit.to Text").methods.Length is 2
-	Plain.Completed(Coding, Unused, List(Text) + "Strict/Other.Go").methods.Length is 0
+Complete(codegen TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
+	Plain.Complete(Coding, Unused, List(Text) + "Strict/Boxes/Using.Through(Wrapped(Halver))").methods.Length is 1
+	Plain.Complete(TypeCodegen.Texted, TypeEntry.Converting, List(Text) + "Strict/Digit.to Text").methods.Length is 2
+	Plain.Complete(Coding, Unused, List(Text) + "Strict/Other.Go").methods.Length is 0
 	prefix = codegen.fullName + "."
 	mutable names = List(Text)
 	for targets

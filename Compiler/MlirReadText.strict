@@ -23,7 +23,7 @@ Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry,
 	LoadReuse(function.method.instructions).Reads(join) is (read.payload(0), literal.payload(0))
 IsUnused(register Number, joined Number) Boolean
 	steps = function.method.instructions
-	if LoadReuse(steps).Written(steps(joined)) is register
+	if LoadReuse(steps).Write(steps(joined)) is register
 		return true
 	for Range(joined + 1, steps.Length)
 		result = Outcome(steps(value), register)
@@ -34,7 +34,7 @@ Outcome(entry InstructionEntry, register Number) Number
 	reuse = LoadReuse(function.method.instructions)
 	if register is in reuse.Reads(entry)
 		return Number.NotFound
-	if reuse.Written(entry) is register or entry.kind is InstructionType.Return
+	if reuse.Write(entry) is register or entry.kind is InstructionType.Return
 		return 1
 	reuse.IsBoundary(entry) and entry.kind is not InstructionType.CheckError then Number.NotFound else 0
 IsCall(entry InstructionEntry, owner Text, name Text) Boolean

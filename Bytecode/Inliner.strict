@@ -65,16 +65,16 @@ Methods(type TypeEntry) List(MethodEntry)
 	Sample.Inlinable(Caller, Calling.instructions(1), StructLanes.Calling(5)).Name is ""
 	Inliner((Caller, StructLanes.Pair)).Inlinable(Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
 	Splitting.Inlinable(StructLanes.Caller, StructLanes.Constructed, StructLanes.Calling(3)).Name is ""
-	Sample.Expanded(Caller, Calling.instructions + Calling.instructions, 1)(9).texts.First is "inline5_elements"
+	Sample.Expand(Caller, Calling.instructions + Calling.instructions, 1)(9).texts.First is "inline5_elements"
 	Sample.Methods(Caller).First.instructions(3).kind is InstructionType.IndexCall
 	Failed.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(6)).Name is ""
 	Sample.Inlinable(StructLanes.Caller, StructLanes.Calling(4), StructLanes.Calling(5)).Name is ""
 	Inliner(List(TypeEntry) + Owner).Inlinable(Owner, CallingY, InstructionEntry.Return(1)).Name is "Y"
 	for type.methods
-		MethodEntry(value.Name, value.parameters, value.declaredType, Expanded(type, value.instructions, 3), value.Slots)
-Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) List(InstructionEntry)
-	Sample.Expanded(Caller, Calling.instructions, 0) is Calling.instructions
-	Sample.Expanded(Caller, Calling.instructions, 1).Length is 6
+		MethodEntry(value.Name, value.parameters, value.declaredType, Expand(type, value.instructions, 3), value.Slots)
+Expand(owner TypeEntry, instructions List(InstructionEntry), depth Number) List(InstructionEntry)
+	Sample.Expand(Caller, Calling.instructions, 0) is Calling.instructions
+	Sample.Expand(Caller, Calling.instructions, 1).Length is 6
 	mutable result = List(Mutable(InstructionEntry))
 	mutable base = LoadReuse(instructions).RegisterCount
 	isWatching = IsWatching(instructions)
@@ -82,16 +82,16 @@ Expanded(owner TypeEntry, instructions List(InstructionEntry), depth Number) Lis
 		next = index + 1 < instructions.Length then instructions(index + 1) else value
 		callee = depth > 0 then Inlinable(owner, value, next, isWatching) else NoMethod
 		spliced = callee.Name is "" then List(InstructionEntry) + value else Splice(owner, callee, value, base).Spliced
-		base = base + Reserved(callee, value)
+		base = base + Reserve(callee, value)
 		result = result + spliced
-	result.Length is instructions.Length then instructions else Expanded(owner, Looped(result), depth - 1)
-Reserved(callee MethodEntry, call InstructionEntry) Number
-	Splitting.Reserved(NoMethod, StructLanes.Calling(4)) is 0
-	Inliner((Caller, StructLanes.Pair)).Reserved(First, StructLanes.Calling(4)) is 2
-	Splitting.Reserved(First, Calling.instructions(1)) is 2
-	Splitting.Reserved(StructLanes.Squared, StructLanes.Calling(4)) is 17
-	Sample.Reserved(First, Calling.instructions(1)) is 2
-	Sample.Reserved(NoMethod, Calling.instructions(1)) is 0
+	result.Length is instructions.Length then instructions else Expand(owner, Loop(result), depth - 1)
+Reserve(callee MethodEntry, call InstructionEntry) Number
+	Splitting.Reserve(NoMethod, StructLanes.Calling(4)) is 0
+	Inliner((Caller, StructLanes.Pair)).Reserve(First, StructLanes.Calling(4)) is 2
+	Splitting.Reserve(First, Calling.instructions(1)) is 2
+	Splitting.Reserve(StructLanes.Squared, StructLanes.Calling(4)) is 17
+	Sample.Reserve(First, Calling.instructions(1)) is 2
+	Sample.Reserve(NoMethod, Calling.instructions(1)) is 0
 	if callee.Name is ""
 		return 0
 	isLaned = isSplitting and StructLanes(types).Members(TypeOf(call.texts(0))).Length > 0
@@ -144,10 +144,10 @@ Callee(type TypeEntry, call InstructionEntry) MethodEntry
 	Sample.Callee(TypeEntry.Scaling, Scaled).parameters(0).Name is "scale"
 	Sample.Callee(Listed, Calling.instructions(1)).Name is "X"
 	Sample.Callee(Shifter, Unfilled).Name is ""
-	callee = Declared(type, call)
+	callee = Declare(type, call)
 	callee.parameters.Length > call.payload(5 + call.payload(3)) then NoMethod else callee
-Declared(type TypeEntry, call InstructionEntry) MethodEntry
-	Sample.Declared(Shifter, Unfilled).Name is "Shift"
+Declare(type TypeEntry, call InstructionEntry) MethodEntry
+	Sample.Declare(Shifter, Unfilled).Name is "Shift"
 	mutable names = List(Text)
 	for call.texts
 		if index > 2
@@ -162,7 +162,7 @@ Splice(owner TypeEntry, callee MethodEntry, call InstructionEntry, base Number) 
 	rules = InlineRules(callee, types)
 	type = TypeOf(call.texts(0))
 	isLaned = isSplitting and rules.IsLaned(type, call, IsReturning(callee))
-	member = rules.IsOwn(call) or isLaned then "" else rules.Wrapped(type)
+	member = rules.IsOwn(call) or isLaned then "" else rules.Wrap(type)
 	kept = rules.IsOwn(call) then rules.MemberNames(owner) + "value" else List(Text)
 	fields = isLaned then LaneNesting(types).DirectFields(type) else List(Text)
 	InlineSplice(callee, call, base, member, kept, fields, base + LoadReuse(callee.instructions).RegisterCount)
@@ -174,17 +174,17 @@ IsReturning(callee MethodEntry) Boolean
 	Splitting.IsReturning(StructLanes.Squared)
 	Splitting.IsReturning(First) is false
 	StructLanes(types).Members(TypeOf(callee.declaredType)).Length > 0
-Looped(instructions List(InstructionEntry)) List(InstructionEntry)
-	Sample.Looped(Calling.instructions + MethodEntry.CountingLoop.instructions).Last.payload is (1)
-	Sample.Looped(Calling.instructions) is Calling.instructions
-	Sample.Looped(MethodEntry.CountingLoop.instructions) is MethodEntry.CountingLoop.instructions
+Loop(instructions List(InstructionEntry)) List(InstructionEntry)
+	Sample.Loop(Calling.instructions + MethodEntry.CountingLoop.instructions).Last.payload is (1)
+	Sample.Loop(Calling.instructions) is Calling.instructions
+	Sample.Loop(MethodEntry.CountingLoop.instructions) is MethodEntry.CountingLoop.instructions
 	method = MethodEntry("", List(MemberEntry), "None", instructions)
 	for instructions
-		value.kind is InstructionType.LoopEnd then Ended(value, index - method.LoopBeginOf(index)) else value
-Ended(entry InstructionEntry, steps Number) InstructionEntry
-	Sample.Ended(InstructionEntry(InstructionType.LoopEnd, List(Text), (172, 2, 200, 7)), 5).payload is (5, 200, 7)
-	Sample.Ended(InstructionEntry.Jump(InstructionType.LoopEnd, 2), 5).payload is (5)
-	Sample.Ended(InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)), 5).payload is (5, -1)
+		value.kind is InstructionType.LoopEnd then End(value, index - method.LoopBeginOf(index)) else value
+End(entry InstructionEntry, steps Number) InstructionEntry
+	Sample.End(InstructionEntry(InstructionType.LoopEnd, List(Text), (172, 2, 200, 7)), 5).payload is (5, 200, 7)
+	Sample.End(InstructionEntry.Jump(InstructionType.LoopEnd, 2), 5).payload is (5)
+	Sample.End(InstructionEntry(InstructionType.LoopEnd, List(Text), (1, -1)), 5).payload is (5, -1)
 	mutable rest = List(Number)
 	mutable isSteps = true
 	for entry.payload

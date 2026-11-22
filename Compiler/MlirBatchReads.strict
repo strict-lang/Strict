@@ -15,7 +15,7 @@ Prefetched(at Number) Texts
 	if entry.kind is InstructionType.IndexCall
 		return Saved(at)
 	feeding = MlirFeeding(function, at)
-	written = LoadReuse(function.method.instructions).Written(entry)
+	written = LoadReuse(function.method.instructions).Write(entry)
 	stored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 	needed = stored then feeding.IsLoaded(at, entry.texts.Last) else feeding.IsFeeding(at, written)
 	needed then MlirDeviceStatements(function, at).Emitted else List(Text)
@@ -55,7 +55,7 @@ IsComputed(at Number, entry InstructionEntry) Boolean
 	feeding = MlirFeeding(function, at)
 	if entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return feeding.IsFloatedVariable(at, entry.texts.Last)
-	written = LoadReuse(function.method.instructions).Written(entry)
+	written = LoadReuse(function.method.instructions).Write(entry)
 	written < 0 or feeding.IsFloated(at, written)
 Cached(at Number) Texts
 	temp = "%d" + at

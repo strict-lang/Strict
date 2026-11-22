@@ -29,7 +29,7 @@ IsEntry(position Number) Boolean
 Entry(position Number) ZipEntry
 	Sample.Entry(0) is ZipWriter.Sample.entries.First
 	size = Read(position + SizeOffset, 4)
-	name = ByteEncoder(bytes).Spelled(position + LocalHeaderSize, Read(position + NameLengthOffset, 2))
+	name = ByteEncoder(bytes).Spell(position + LocalHeaderSize, Read(position + NameLengthOffset, 2))
 	ZipEntry(name, Content(End(position) - size, size))
 End(position Number) Number
 	Sample.End(0) is 33
@@ -44,7 +44,7 @@ Read(start Number, size Number) Number
 Content(start Number, size Number) Numbers
 	ZipReader(1, 2, 3).Content(1, 2) is (2, 3)
 	bytes.Slice(start, size)
-Copied(file Bytes, start Number, size Number) Numbers
-	ZipReader.Copied(List(Byte) + Byte(7) + Byte(8), 1, 1) is (8)
+Copy(file Bytes, start Number, size Number) Numbers
+	ZipReader.Copy(List(Byte) + Byte(7) + Byte(8), 1, 1) is (8)
 	for Range(start, start + size)
 		file(value).number

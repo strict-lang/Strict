@@ -70,7 +70,7 @@ Bodies(functions List(PtxFunction)) Texts
 Placed(base Text, ending Text, release Text) slow
 	sidecar = base + ending
 	if File(sidecar).Exists and File(sidecar).Length > 0
-		File(BuildOutput.Shipped(release, sidecar)).Write(File(sidecar).ReadBytes)
+		File(BuildOutput.Ship(release, sidecar)).Write(File(sidecar).ReadBytes)
 		if ending is in Endings
 			Copied(Reached(sidecar, ending), ending, release)
 	if ending is ".ptx"

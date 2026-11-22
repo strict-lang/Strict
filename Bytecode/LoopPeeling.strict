@@ -6,16 +6,16 @@ constant Texted = LoopPeeling(MethodCodegen.Plain, CodeBlock.Empty.Declare("text
 constant Sigmas = BodyParser("Run", "\tfor steps + 1", "\t\tindex is steps then 0 else width * index").Block(1, 1).children(0)
 constant Joining = BodyParser("Run", "\tfor texts", "\t\t(index is 0 then \"\" else separator) + value").Block(1, 1).children(0)
 constant Summing = BodyParser("Run", "\tmutable sum = 0", "\tfor 3", "\t\tsum = sum + (index is 0 then 0 else index * width)").Method(1).children(1)
-constant Shifted = Steps.Peeled(Sigmas, "list")
-constant Joined = Texted.Peeled(Joining, "sum")
-constant Summed = Steps.Peeled(Summing, "")
-constant Trailing = Texted.Peeled(BodyParser("Run", "\tfor texts", "\t\tindex is texts.Length - 1 then index else value + index").Block(1, 1).children(0), "")
-constant Indexed = Texted.Peeled(BodyParser("Run", "\tfor texts", "\t\tindex is 0 then index else value + index").Block(1, 1).children(0), "")
-constant Unpeeled = Texted.Peeled(BodyParser("Run", "\tfor separator", "\t\tindex is 0 then value else separator").Block(1, 1).children(0), "")
+constant Shifted = Steps.Peel(Sigmas, "list")
+constant Joined = Texted.Peel(Joining, "sum")
+constant Summed = Steps.Peel(Summing, "")
+constant Trailing = Texted.Peel(BodyParser("Run", "\tfor texts", "\t\tindex is texts.Length - 1 then index else value + index").Block(1, 1).children(0), "")
+constant Indexed = Texted.Peel(BodyParser("Run", "\tfor texts", "\t\tindex is 0 then index else value + index").Block(1, 1).children(0), "")
+constant Unpeeled = Texted.Peel(BodyParser("Run", "\tfor separator", "\t\tindex is 0 then value else separator").Block(1, 1).children(0), "")
 constant Listed = LoopPeeling(MethodCodegen.Plain, Counted.Declare("ones", "List(Number)"))
-Peeled(loop SyntaxNode, aggregation Text) SyntaxNode
+Peel(loop SyntaxNode, aggregation Text) SyntaxNode
 	Shifted.Kind is "Body" and Shifted.text is "peeled"
-	Steps.Peeled(Summing, "any").Kind is "For"
+	Steps.Peel(Summing, "any").Kind is "For"
 	Unpeeled.Kind is "For"
 	edges = LoopEdge(loop)
 	edge = edges.Find(loop.children.Last)
@@ -42,57 +42,57 @@ Element(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Summed.children(0) to Text is "for Range(0, 1.Clamp(0, 3))"
 	Trailing.children(1).children(0).children(1) to Text is "(texts.Length - 1).Clamp(0, texts.Length)"
 	count = kind is "count" then loop.children(0) else Length(loop)
-	one = Clamped(MethodCodegen.One, count)
-	last = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
-	range = SyntaxNode("Call", "Range", isFirst then (Zero, one) else (last, Clamped(count, count)))
+	one = Clamp(MethodCodegen.One, count)
+	last = Clamp(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
+	range = SyntaxNode("Call", "Range", isFirst then (Zero, one) else (last, Clamp(count, count)))
 	sliced = SyntaxNode("MethodCall", "Slice", (loop.children(0), isFirst then Zero else last, one))
 	at = isFirst then SyntaxNode("Identifier", "index") else edge.children(1)
-	body = Simplified(Substituted(loop.children.Last, at, edge, true))
+	body = Simplify(Substitute(loop.children.Last, at, edge, true))
 	SyntaxNode("For", loop.text, (kind is "count" then range else sliced, body), loop.line)
 Rest(loop SyntaxNode, edge SyntaxNode, kind Text, isFirst Boolean) SyntaxNode
 	Shifted.children(0) to Text is "for (steps + 1 - 1).Clamp(0, steps + 1)"
 	Joined.children(1) to Text is "for texts.Slice(1, (texts.Length - 1).Clamp(0, texts.Length))"
 	Summed.children(1) to Text is "for Range(1.Clamp(0, 3), 3.Clamp(0, 3))"
 	count = kind is "count" then loop.children(0) else Length(loop)
-	fewer = Clamped(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
-	range = SyntaxNode("Call", "Range", (Clamped(MethodCodegen.One, count), Clamped(count, count)))
+	fewer = Clamp(SyntaxNode("Binary", "-", (count, MethodCodegen.One)), count)
+	range = SyntaxNode("Call", "Range", (Clamp(MethodCodegen.One, count), Clamp(count, count)))
 	counted = isFirst then range else fewer
 	sliced = SyntaxNode("MethodCall", "Slice", (loop.children(0), isFirst then MethodCodegen.One else Zero, fewer))
 	index = SyntaxNode("Identifier", "index")
 	at = isFirst and kind is "list" then SyntaxNode("Binary", "+", (index, MethodCodegen.One)) else index
-	body = Simplified(Substituted(loop.children.Last, at, edge, false))
+	body = Simplify(Substitute(loop.children.Last, at, edge, false))
 	SyntaxNode("For", loop.text, (kind is "count" then counted else sliced, body), loop.line)
 Length(loop SyntaxNode) SyntaxNode
 	Texted.Length(Joining) to Text is "texts.Length"
 	Counted.scope.names is ("steps", "width", "sum") and Counted.scope.types is ("Number", "Number", "Number")
 	Texted.block.scope.names is ("texts", "separator") and Texted.block.scope.types is ("Texts", "Text")
-	Steps.Peeled(BodyParser("Run", "\tfor steps", "\t\twidth").Block(1, 1).children(0), "").Kind is "For"
+	Steps.Peel(BodyParser("Run", "\tfor steps", "\t\twidth").Block(1, 1).children(0), "").Kind is "For"
 	Texted.Kind(BodyParser("Run", "\tfor item in texts", "\t\titem").Block(1, 1).children(0)) is ""
 	Steps.Kind(BodyParser("Run", "\tfor as long as steps", "\t\tindex").Block(1, 1).children(0)) is ""
 	Trailing.children(0) to Text is "for texts.Slice(0, (texts.Length - 1).Clamp(0, texts.Length))"
-	Steps.Substituted(SyntaxNode("Text", "index"), Zero, Sigmas, true) is SyntaxNode("Text", "index")
+	Steps.Substitute(SyntaxNode("Text", "index"), Zero, Sigmas, true) is SyntaxNode("Text", "index")
 	Listed.block.scope.names.Last is "ones" and Listed.block.scope.types.Last is "List(Number)"
 	Trailing.children(0).children.Last.children(0) to Text is "value + index"
 	SyntaxNode("Member", "Length", List(SyntaxNode) + loop.children(0))
-Clamped(number SyntaxNode, count SyntaxNode) SyntaxNode
-	Steps.Clamped(MethodCodegen.One, SyntaxNode("Identifier", "steps")) to Text is "1.Clamp(0, steps)"
-	Steps.Simplified(StatementParser(Tokenizer("x then 1 else 2").Tokens).ParseStatement) to Text is "x then 1 else 2"
-	Steps.Simplified(StatementParser(Tokenizer("x is true").Tokens).ParseStatement) to Text is "x is true"
-	Steps.Simplified(StatementParser(Tokenizer("x > 1 and true").Tokens).ParseStatement) to Text is "x > 1"
-	Steps.Simplified(StatementParser(Tokenizer("x and y").Tokens).ParseStatement) to Text is "x and y"
-	Steps.Simplified(StatementParser(Tokenizer("false and x").Tokens).ParseStatement) to Text is "false"
-	Steps.Simplified(StatementParser(Tokenizer("false or x").Tokens).ParseStatement) to Text is "x"
-	Steps.Simplified(StatementParser(Tokenizer("true or x").Tokens).ParseStatement) to Text is "true"
+Clamp(number SyntaxNode, count SyntaxNode) SyntaxNode
+	Steps.Clamp(MethodCodegen.One, SyntaxNode("Identifier", "steps")) to Text is "1.Clamp(0, steps)"
+	Steps.Simplify(StatementParser(Tokenizer("x then 1 else 2").Tokens).ParseStatement) to Text is "x then 1 else 2"
+	Steps.Simplify(StatementParser(Tokenizer("x is true").Tokens).ParseStatement) to Text is "x is true"
+	Steps.Simplify(StatementParser(Tokenizer("x > 1 and true").Tokens).ParseStatement) to Text is "x > 1"
+	Steps.Simplify(StatementParser(Tokenizer("x and y").Tokens).ParseStatement) to Text is "x and y"
+	Steps.Simplify(StatementParser(Tokenizer("false and x").Tokens).ParseStatement) to Text is "false"
+	Steps.Simplify(StatementParser(Tokenizer("false or x").Tokens).ParseStatement) to Text is "x"
+	Steps.Simplify(StatementParser(Tokenizer("true or x").Tokens).ParseStatement) to Text is "true"
 	SyntaxNode("MethodCall", "Clamp", (number, Zero, count))
 Zero SyntaxNode
 	Steps.Zero to Text is "0"
-	Steps.Simplified(StatementParser(Tokenizer("not false").Tokens).ParseStatement) is SyntaxNode("Boolean", "true")
-	Steps.Folded(SyntaxNode("Not", "not", List(SyntaxNode) + SyntaxNode("Identifier", "x"))).Kind is "Not"
+	Steps.Simplify(StatementParser(Tokenizer("not false").Tokens).ParseStatement) is SyntaxNode("Boolean", "true")
+	Steps.Fold(SyntaxNode("Not", "not", List(SyntaxNode) + SyntaxNode("Identifier", "x"))).Kind is "Not"
 	SyntaxNode("Number", "0")
-Substituted(node SyntaxNode, at SyntaxNode, edge SyntaxNode, isEdge Boolean) SyntaxNode
-	Steps.Substituted(SyntaxNode("Identifier", "index"), MethodCodegen.One, Sigmas, true) to Text is "1"
-	Steps.Substituted(Shifted.children(0), Zero, Sigmas, true) is Shifted.children(0)
-	Steps.Substituted(SyntaxNode("Identifier", "width"), Zero, Sigmas, true) is SyntaxNode("Identifier", "width")
+Substitute(node SyntaxNode, at SyntaxNode, edge SyntaxNode, isEdge Boolean) SyntaxNode
+	Steps.Substitute(SyntaxNode("Identifier", "index"), MethodCodegen.One, Sigmas, true) to Text is "1"
+	Steps.Substitute(Shifted.children(0), Zero, Sigmas, true) is Shifted.children(0)
+	Steps.Substitute(SyntaxNode("Identifier", "width"), Zero, Sigmas, true) is SyntaxNode("Identifier", "width")
 	if node is edge
 		return SyntaxNode("Boolean", isEdge to Text)
 	if node.Kind is "Identifier" and node.text is "index"
@@ -100,17 +100,17 @@ Substituted(node SyntaxNode, at SyntaxNode, edge SyntaxNode, isEdge Boolean) Syn
 	kept = node.Kind is "For" then node.children.Length - 1 else node.children.Length
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
-		children.Add(index < kept then Substituted(value, at, edge, isEdge) else value)
+		children.Add(index < kept then Substitute(value, at, edge, isEdge) else value)
 	SyntaxNode(node.Kind, node.text, children, node.line)
-Simplified(node SyntaxNode) SyntaxNode
-	Steps.Simplified(StatementParser(Tokenizer("false then 1 else 2").Tokens).ParseStatement) to Text is "2"
-	Steps.Simplified(StatementParser(Tokenizer("true and (x > 1)").Tokens).ParseStatement) to Text is "x > 1"
+Simplify(node SyntaxNode) SyntaxNode
+	Steps.Simplify(StatementParser(Tokenizer("false then 1 else 2").Tokens).ParseStatement) to Text is "2"
+	Steps.Simplify(StatementParser(Tokenizer("true and (x > 1)").Tokens).ParseStatement) to Text is "x > 1"
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
-		children.Add(Simplified(value))
-	Folded(SyntaxNode(node.Kind, node.text, children, node.line))
-Folded(node SyntaxNode) SyntaxNode
-	Steps.Folded(SyntaxNode("Not", "not", List(SyntaxNode) + SyntaxNode("Boolean", "true"))) to Text is "false"
+		children.Add(Simplify(value))
+	Fold(SyntaxNode(node.Kind, node.text, children, node.line))
+Fold(node SyntaxNode) SyntaxNode
+	Steps.Fold(SyntaxNode("Not", "not", List(SyntaxNode) + SyntaxNode("Boolean", "true"))) to Text is "false"
 	first = node.children.Length > 0 then node.children(0) else node
 	if node.text is "else" and first.text is "then" and first.children(0).Kind is "Boolean"
 		return first.children(0).text is "true" then first.children(1) else node.children(1)
@@ -121,8 +121,8 @@ Folded(node SyntaxNode) SyntaxNode
 	if node.text is not in ("and", "or") or literal.Kind is not "Boolean"
 		return node
 	(literal.text is "true") is (node.text is "and") then other else literal
-Emitted(peeled SyntaxNode, loops LoopCodegen, aggregation Text) CodeBlock
-	Steps.Emitted(Summed, LoopCodegen(MethodCodegen.Plain), "").instructions.Last.kind is InstructionType.LoopEnd
+Emit(peeled SyntaxNode, loops LoopCodegen, aggregation Text) CodeBlock
+	Steps.Emit(Summed, LoopCodegen(MethodCodegen.Plain), "").instructions.Last.kind is InstructionType.LoopEnd
 	Joined.children(0).children.Last.children(0) to Text is "\"\" + value"
 	Summed.children(0).children.Last.children(0).children(1) to Text is "sum + 0"
 	Shifted.children(1).children.Last.children(0) to Text is "0"

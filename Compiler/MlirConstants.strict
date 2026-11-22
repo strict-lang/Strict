@@ -73,7 +73,7 @@ IsLoaded(register Number) Boolean
 		previous = function.method.instructions(position - 1 - index)
 		if reuse.IsBoundary(previous)
 			return false
-		if reuse.Written(previous) is register
+		if reuse.Write(previous) is register
 			return previous.kind is InstructionType.LoadConstantToRegister
 	false
 Cache Text

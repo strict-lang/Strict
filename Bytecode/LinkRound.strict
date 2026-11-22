@@ -27,14 +27,14 @@ Entries(signed Texts) List(TypeEntry) slow
 	Twice.Entries(Twice.signatures).First is Linker.Go
 	positions = ResolveCheck.Positions(signatures)
 	fresh = LinkFresh(value, ResolveCheck.Positions(Types))
-	compiled = fresh.Precompiled(signed, positions)
+	compiled = fresh.Precompile(signed, positions)
 	for signed
 		fresh.Entry(value, positions, compiled)
-Forwarded(targets Texts, seen Texts = List(Text)) Texts
-	Wrapping.Forwarded(List(Text) + "Strict/Character.Floor") is ("Strict/Number.Floor")
-	Wrapping.Forwarded(("Strict/Character.from", "Strict/Dictionary(Text).in")).Length is 0
-	Wrapping.Forwarded(List(Text) + "Strict/Character.Round").Length is 0
-	Chained.Forwarded(List(Text) + "Strict/Angle.Floor") is ("Strict/Degrees.Floor", "Strict/Number.Floor")
+Forward(targets Texts, seen Texts = List(Text)) Texts
+	Wrapping.Forward(List(Text) + "Strict/Character.Floor") is ("Strict/Number.Floor")
+	Wrapping.Forward(("Strict/Character.from", "Strict/Dictionary(Text).in")).Length is 0
+	Wrapping.Forward(List(Text) + "Strict/Character.Round").Length is 0
+	Chained.Forward(List(Text) + "Strict/Angle.Floor") is ("Strict/Degrees.Floor", "Strict/Number.Floor")
 	indices = Indices
 	mutable forwarded = List(Mutable(Text))
 	for targets - seen
@@ -42,7 +42,7 @@ Forwarded(targets Texts, seen Texts = List(Text)) Texts
 		if target is not ""
 			forwarded.Add(target)
 	fresh = (forwarded - seen - targets).Unique
-	forwarded + (fresh.Length is 0 then List(Text) else Forwarded(fresh, seen + targets))
+	forwarded + (fresh.Length is 0 then List(Text) else Forward(fresh, seen + targets))
 ForwardedTarget(target Text, indices Dictionary(Text, Number)) Text
 	type = target.Substring(0, target.LastIndexOf("."))
 	method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
@@ -52,7 +52,7 @@ ForwardedTarget(target Text, indices Dictionary(Text, Number)) Text
 IsForwarded(type Text, index Number, method Text) Boolean
 	Wrapping.IsForwarded("Strict/Character", 1, "Floor")
 	Wrapping.IsForwarded("Strict/Character", 1, "Round") is false
-	Cycled.Forwarded(List(Text) + "Strict/Angle.Floor").Length is 2
+	Cycled.Forward(List(Text) + "Strict/Angle.Floor").Length is 2
 	Wrapping.IsForwarded("Strict/Character", 0, "Floor")
 	Wrapping.IsForwarded("Strict/Character", 0, "from") is false
 	isRequested = index is 0 or method is in Signature(signatures(index - 1)).Names
@@ -73,17 +73,17 @@ TypeNames Texts
 		value.Name.IndexOf("/") < 0 then folder + value.Name else value.Name
 Checked List(TypeEntry)
 	Writing.Checked.Length is 1
-	Linker.Sample.Linked(Linker.Iterating, List(Text)).entries.Length is 1
+	Linker.Sample.Link(Linker.Iterating, List(Text)).entries.Length is 1
 	missing = Unresolved
 	if missing.Length > 0
-		Logger.Log(Explained(missing.First))
+		Logger.Log(Explain(missing.First))
 		return List(TypeEntry)
 	entries
-Explained(target Text) Text
-	Single.Explained("Strict/Missing.Go") is "UnresolvedLink: Strict/Missing.Go"
-	Single.Explained("Strict/Logger.Log") is "UnresolvedLink: Strict/Logger.Log"
+Explain(target Text) Text
+	Single.Explain("Strict/Missing.Go") is "UnresolvedLink: Strict/Missing.Go"
+	Single.Explain("Strict/Logger.Log") is "UnresolvedLink: Strict/Logger.Log"
 	PtxCache("Compiler/output/Stray").Saved(".strict", "Run\n\t1\nconstant A = 1") is not Error
-	Single.Explained("Strict/Compiler/output/Stray.A").EndsWith(":line 3: MembersMustComeBeforeMethods: constant A = 1")
+	Single.Explain("Strict/Compiler/output/Stray.A").EndsWith(":line 3: MembersMustComeBeforeMethods: constant A = 1")
 	path = linker.SourcePath(target.Substring(0, target.LastIndexOf(".")))
 	misplaced = File(path).Exists then ResolveCheck.Misplace(path, File(path).ReadLines) else List(Text)
 	misplaced.Length > 0 then misplaced.First else "UnresolvedLink: " + target

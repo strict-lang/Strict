@@ -9,9 +9,9 @@ Element Text
 	Rg.Element is "Rg"
 	MemberAverage("Strict/Number", Rg.types).Element is ""
 	MemberAverage("Strict/List(Key, Value)", Rg.types).Element is ""
-	Rg.Replaced("Average Generic") is Rg.Lines
-	Rg.Replaced(("Average Generic", "Median Number")) is Rg.Lines + "Median Number"
-	Rg.Replaced("Median Number") is ("Median Number")
+	Rg.Replace("Average Generic") is Rg.Lines
+	Rg.Replace(("Average Generic", "Median Number")) is Rg.Lines + "Median Number"
+	Rg.Replace("Median Number") is ("Median Number")
 	start = type.IndexOf("List(")
 	inner = start < 0 then "" else type.Substring(start + 5, type.Length - start - 6)
 	inner.IndexOf(",") >= 0 then "" else TypeEntry.ShortName(inner)
@@ -41,16 +41,16 @@ Lines Texts
 Averages(members Scope) Texts
 	Rg.Averages(Rg.types.MembersOf("Rg")) is ("Byte(sumRed / Length)", "Byte(sumGreen / Length)")
 	Rg.Averages(Xy.MembersOf("Xy")) is ("sumX / Length", "sumY / Length")
-	Rg.Replaced(Averaging).Length is 9
-	Rg.Replaced(Averaging).Slice(1, 7) is Rg.Lines
-	Rg.Replaced(("\tx", "Average Generic", "\ty")) is ("\tx") + Rg.Lines
+	Rg.Replace(Averaging).Length is 9
+	Rg.Replace(Averaging).Slice(1, 7) is Rg.Lines
+	Rg.Replace(("\tx", "Average Generic", "\ty")) is ("\tx") + Rg.Lines
 	for members.names
 		average = "sum" + value + " / Length"
 		members.types(index) is "Number" then average else members.types(index) + "(" + average + ")"
-Replaced(lines Texts) Texts
-	Rg.Replaced(Averaging)(1) is "Average Rg"
-	Rg.Replaced(Averaging).Last is "Median Number"
-	MemberAverage("Strict/List(Byte)", Rg.types).Replaced(Averaging) is Averaging
+Replace(lines Texts) Texts
+	Rg.Replace(Averaging)(1) is "Average Rg"
+	Rg.Replace(Averaging).Last is "Median Number"
+	MemberAverage("Strict/List(Byte)", Rg.types).Replace(Averaging) is Averaging
 	start = lines.Index("Average Generic")
 	if start < 0 or IsAveraged is false
 		return lines

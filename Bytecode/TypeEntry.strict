@@ -81,9 +81,9 @@ ShortName(typeName Text) Text
 		return ShortName(typeName.Replace("Mutable(", "").Substring(0, typeName.Length - 9))
 	slash = typeName.Substring(0, open).LastIndexOf("/")
 	slash < 0 then typeName else typeName.Substring(slash + 1, typeName.Length - slash - 1)
-Based(typeName Text) Text
-	HelloLogger.Based("Strict/List(Strict/Number)") is "List"
-	HelloLogger.Based("Strict/Number") is "Number"
+Base(typeName Text) Text
+	HelloLogger.Base("Strict/List(Strict/Number)") is "List"
+	HelloLogger.Base("Strict/Number") is "Number"
 	if typeName is in ("Number", "Text", "Boolean", "List", "None")
 		return typeName
 	short = ShortName(typeName)

@@ -45,7 +45,7 @@ HasBound(at Number) Boolean
 	Row.HasBound(7) is false
 	entry = function.method.instructions(at)
 	isStored = entry.kind is InstructionType.StoreRegisterToVariable
-	isStored or MlirWhole(function, position).IsBounded(LoadReuse(function.method.instructions).Written(entry), at + 1)
+	isStored or MlirWhole(function, position).IsBounded(LoadReuse(function.method.instructions).Write(entry), at + 1)
 Measured(at Number) Text
 	Row.Measured(10) is "    %t10wb = llvm.intr.fabs(%t6wh1f) : (f64) -> f64"
 	Row.Measured(12) is "    %t12wb = arith.constant 0x4010000000000000 : f64"

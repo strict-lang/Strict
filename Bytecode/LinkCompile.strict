@@ -5,13 +5,13 @@ constant Adding = TypeEntry("Strict/Logger", List(MemberEntry), List(MethodEntry
 LinkedType(type Text, methods Texts, compiled TypeEntry) TypeEntry slow
 	Sample.LinkedType("Strict/Logger", List(Text), Sample.Compiling("Strict/Logger", List(Text))).Name is "Strict/Logger"
 	Sample.LinkedType("Strict/Bytecode/Crc", List(Text), Sample.Compiling("Strict/Bytecode/Crc", List(Text))).Name is "Crc"
-	Housed.Homed("Strict/Logger", List(Text) + "Missing").methods.Length is 0
-	Housed.Homed("Strict/Bytecode/Logged", "Run").Name is "Logged"
-	homed = Assembled(type, methods, compiled)
+	Housed.Home("Strict/Logger", List(Text) + "Missing").methods.Length is 0
+	Housed.Home("Strict/Bytecode/Logged", "Run").Name is "Logged"
+	homed = Assemble(type, methods, compiled)
 	if Linker.IsChecking is false
 		return homed
-	checked = Compiled(type, methods)
-	if BinaryLinks.User.Picked(checked, methods) is not BinaryLinks.User.Picked(homed, methods)
+	checked = Compile(type, methods)
+	if BinaryLinks.User.Pick(checked, methods) is not BinaryLinks.User.Pick(homed, methods)
 		Logger.Log("LinkCheckFailed: " + type + " " + Text.Combine(methods, ", "))
 	checked
 Own(type Text) TypeEntry
@@ -31,36 +31,36 @@ IsCompiled(type Text, methods Texts) Boolean
 Compiling(type Text, methods Texts) TypeEntry slow
 	Sample.Compiling("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
 	Housed.Compiling("Strict/Logger", List(Text) + "Run") is BinaryLinks.Unknown
-	IsCompiled(type, methods) then Compiled(type, Absent(type, methods)) else BinaryLinks.Unknown
-Assembled(type Text, methods Texts, compiled TypeEntry) TypeEntry
-	Housed.Assembled("Strict/Logger", List(Text) + "Run", BinaryLinks.Unknown).methods.Length is 1
-	Housed.Assembled("Strict/Logger", List(Text), Linker.Go) is Linker.Go
-	Housed.Assembled("Strict/Logger", ("Run", "Add"), Adding).methods.Length is 2
-	Housed.Assembled("Strict/Logger", List(Text) + "Run", Linker.Reading).members is TypeEntry.HelloLogger.members
-	Sample.Assembled("Strict/Logger", List(Text) + "Run", Linker.Reading).members is Linker.Reading.members
+	IsCompiled(type, methods) then Compile(type, Absent(type, methods)) else BinaryLinks.Unknown
+Assemble(type Text, methods Texts, compiled TypeEntry) TypeEntry
+	Housed.Assemble("Strict/Logger", List(Text) + "Run", BinaryLinks.Unknown).methods.Length is 1
+	Housed.Assemble("Strict/Logger", List(Text), Linker.Go) is Linker.Go
+	Housed.Assemble("Strict/Logger", ("Run", "Add"), Adding).methods.Length is 2
+	Housed.Assemble("Strict/Logger", List(Text) + "Run", Linker.Reading).members is TypeEntry.HelloLogger.members
+	Sample.Assemble("Strict/Logger", List(Text) + "Run", Linker.Reading).members is Linker.Reading.members
 	if methods.Length is 0
 		return compiled
 	own = Own(type)
 	whole = TypeEntry(own, methods = own.methods + compiled.methods)
 	members = own.Name is "" then compiled.members else own.members
-	TypeEntry(linker.main.Local(type), members, BinaryLinks.User.Picked(whole, methods))
-Homed(type Text, methods Texts) TypeEntry slow
-	Housed.Homed("Strict/Logger", "Run").Name is "Strict/Logger"
-	Sample.Homed("Strict/Logger", ("Log", "Reset")).methods.First.Name is "Log"
-	Assembled(type, methods, Compiling(type, methods))
-Compiled(type Text, methods Texts) TypeEntry slow
-	Sample.Compiled("Strict/Bytecode/Crc", List(Text)).methods.Length is 0
-	Housed.Homed("Strict/Logger", ("Run", "from")).methods.Length is 1
-	Housed.Homed("Strict/Logger", List(Text) + "from").Name is "Strict/Logger"
-	Generated(type, Prepared(type, methods), methods)
-Prepared(type Text, methods Texts) Texts slow
-	Sample.Prepared("Strict/Bytecode/Crc", List(Text)).Length > 0
+	TypeEntry(linker.main.Local(type), members, BinaryLinks.User.Pick(whole, methods))
+Home(type Text, methods Texts) TypeEntry slow
+	Housed.Home("Strict/Logger", "Run").Name is "Strict/Logger"
+	Sample.Home("Strict/Logger", ("Log", "Reset")).methods.First.Name is "Log"
+	Assemble(type, methods, Compiling(type, methods))
+Compile(type Text, methods Texts) TypeEntry slow
+	Sample.Compile("Strict/Bytecode/Crc", List(Text)).methods.Length is 0
+	Housed.Home("Strict/Logger", ("Run", "from")).methods.Length is 1
+	Housed.Home("Strict/Logger", List(Text) + "from").Name is "Strict/Logger"
+	Generate(type, Prepare(type, methods), methods)
+Prepare(type Text, methods Texts) Texts slow
+	Sample.Prepare("Strict/Bytecode/Crc", List(Text)).Length > 0
 	folder = Path(linker.SourcePath(type)).PathOnly.text
 	source = Fusion(File(linker.SourcePath(type)).ReadLines, folder).Fused
 	generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(linker.main.inference.types))
 	automatic = generator.Lines(methods) + OptionsCodegen(generator, folder).Lines(methods)
-	MemberAverage(type, linker.main.inference.types).Replaced(automatic)
-Generated(type Text, lines Texts, methods Texts) TypeEntry
-	Sample.Generated("Strict/Logger", ("Run", "\t1"), List(Text)).Name is "Strict/Logger"
+	MemberAverage(type, linker.main.inference.types).Replace(automatic)
+Generate(type Text, lines Texts, methods Texts) TypeEntry
+	Sample.Generate("Strict/Logger", ("Run", "\t1"), List(Text)).Name is "Strict/Logger"
 	generator = TypeCodegen(type, lines, linker.main.inference, linker.main.typeNames)
-	TypeEntry(generator.Selected(methods), Name = linker.main.Local(type))
+	TypeEntry(generator.Select(methods), Name = linker.main.Local(type))

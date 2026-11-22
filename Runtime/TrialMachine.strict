@@ -3,8 +3,8 @@ has machine Machine
 has inputs Dictionary(Text, TypeEntry)
 constant None = TrialMachine(List(TypeEntry), Machine.Hello, Dictionary(Text, TypeEntry))
 constant IsReused = Process.Variable("STRICT_TRIAL_MACHINE") is not "0"
-constant Adding = FileCompiler.Compiled("Examples/PureAdder.strict", ".", true)
-constant Counting = FileCompiler.Compiled("Examples/FindNumberCount.strict", ".", true)
+constant Adding = FileCompiler.Compile("Examples/PureAdder.strict", ".", true)
+constant Counting = FileCompiler.Compile("Examples/FindNumberCount.strict", ".", true)
 constant Added = TrialMachine.Prepared(Adding, "./Examples/PureAdder.strict")
 constant Counted = TrialMachine.Prepared(Counting, "./Examples/FindNumberCount.strict")
 Prepared(types List(TypeEntry), path Text) TrialMachine slow
@@ -54,7 +54,7 @@ Stage(trial TypeEntry, folder Text) Machine slow
 	entries = machine.prototypes.entries
 	fresh = (List(VmValue) + Natives(types).Fresh(trial)) + entries.Slice(1, entries.Length - 1)
 	mutable sources = machine.sources
-	sources(trial.Name) = TypeSource(trial).Located(folder)
+	sources(trial.Name) = TypeSource(trial).Locate(folder)
 	mutable places = machine.places
 	places(trial.Name) = 0
 	Machine(machine, types = types, prototypes = ConstantCache(fresh), folder = folder, sources = sources, places = places)

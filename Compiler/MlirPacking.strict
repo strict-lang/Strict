@@ -32,13 +32,13 @@ Kind(written Text) Text
 	Listing.Kind("Pairing") is "List(Number)" and Listing.Kind("Number") is "Number"
 	MlirPacking(Packed.function, 2).Kind("List(Number)") is "Pairing" and Packed.Kind("Numbers") is "Pairing"
 	reuse = LoadReuse(function.method.instructions)
-	register = reuse.Written(function.method.instructions(position))
+	register = reuse.Write(function.method.instructions(position))
 	if register < 0 or written is not in ("List(Number)", "Numbers") and IsPacked(written) is false
 		return written
 	for Range(position + 1, function.method.instructions.Length)
 		reader = function.method.instructions(value)
 		expected = register is in reuse.Reads(reader) then Expected(reader, register, written) else ""
-		if expected is not "" or reuse.Written(reader) is register
+		if expected is not "" or reuse.Write(reader) is register
 			return expected is "" then written else expected
 	written
 Expected(reader InstructionEntry, register Number, written Text) Text
@@ -86,7 +86,7 @@ Repacked Texts
 	Listing.Repacked(1) is "    %t0cl = func.call @strict_two_list(%t0c) : (f64) -> f64"
 	Packed.Repacked(1) is "    %t0cl = func.call @strict_two_from_list(%t0c) : (f64) -> f64"
 	Halved.Repacked(1) is "    %t0cl = func.call @strict_flat_list(%t0c) : (f64) -> f64"
-	register = LoadReuse(function.method.instructions).Written(function.method.instructions(position))
+	register = LoadReuse(function.method.instructions).Write(function.method.instructions(position))
 	written = register < 0 then "" else MlirKinds(function).WrittenKind(position)
 	converted = register < 0 then "" else Kind(written)
 	if converted is written

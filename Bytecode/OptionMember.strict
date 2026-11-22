@@ -73,7 +73,7 @@ Argument Text
 	Type + "(" + Text.Combine(NestedOf(source).Arguments, ", ") + ")"
 ChosenArgument(choices Scope) Text
 	Count.ChosenArgument(Kind.Choices).StartsWith("line.Chosen(\"count\", (\"set\", \"add\", ")
-	listed = options.Joined(options.Quoted(choices.names), "Text") + ", " + options.Joined(choices.types, "Number")
+	listed = options.Join(options.Quote(choices.names), "Text") + ", " + options.Join(choices.types, "Number")
 	"line.Chosen(\"" + Name + "\", " + listed + ", " + Default + ")"
 Shown Texts
 	Count.Shown is ("1 to Text")
@@ -91,12 +91,12 @@ Displayed Text
 		return Default + " to Text"
 	choices = ChoicesOf(source)
 	names = choices.names
-	chosen = options.Joined(options.Quoted(names), "Text") + "(" + options.Joined(choices.types, "Number")
+	chosen = options.Join(options.Quote(names), "Text") + "(" + options.Join(choices.types, "Number")
 	chosen + ".Index(" + Default + ")) + \" (" + Text.Combine(names, "|") + ")\""
-Described(help Text, at Number) Texts
-	Count.Described("Help", 2) is ("Help(2)")
-	Count.Described("", 0) is ("\"\"")
-	Sized.Described("", 0) is ("Resolution.Help(0)", "Resolution.Help(1)")
+Describe(help Text, at Number) Texts
+	Count.Describe("Help", 2) is ("Help(2)")
+	Count.Describe("", 0) is ("\"\"")
+	Sized.Describe("", 0) is ("Resolution.Help(0)", "Resolution.Help(1)")
 	source = Source
 	if source.Length > 0 and IsEnumeratedSource(source) is false
 		return NestedOf(source).Descriptions(Type + ".")

@@ -72,7 +72,7 @@ Collected(path Text, root Text) List(TypeEntry)
 Qualified(types List(TypeEntry), path Text, root Text) List(TypeEntry)
 	NativeFolder.Qualified(Greeting, Hellos.First, ".").First.Name is "Strict/Examples/HelloLogger"
 	NativeFolder.Qualified(List(TypeEntry) + Counting, Hellos.First, ".").First.Name is "Strict/A"
-	package = Path(FileCompiler.FullName(FileCompiler.Normalized(path), root)).PathOnly.text
+	package = Path(FileCompiler.FullName(FileCompiler.Normalize(path), root)).PathOnly.text
 	for types
 		value.Name.IndexOf("/") < 0 then TypeEntry(value, Name = package + "/" + value.Name) else value
 Leading(types List(TypeEntry), count Number) List(TypeEntry)
@@ -81,7 +81,7 @@ Leading(types List(TypeEntry), count Number) List(TypeEntry)
 		types(value)
 Counted(paths Texts, root Text) List(TypeEntry) slow
 	NativeFolder.Counted(Hellos, ".")(1).Name is "Strict/Examples/HelloLogger"
-	files = SourceFiles(root).Of(FileCompiler.Normalized(paths.First), paths)
+	files = SourceFiles(root).Of(FileCompiler.Normalize(paths.First), paths)
 	rounds = Rounds(paths, root, files, ResolveCheck.Inference(files))
 	if rounds.Length < paths.Length
 		return List(TypeEntry)
@@ -109,7 +109,7 @@ Typed(path Text, root Text, files Texts, inference TypeInference, known Dictiona
 		return FileCompiler.Unlinked
 	if selection is "" and Execute.Stale(List(Text) + path).Length is 0
 		return FileCompiler.Unlinked.With(Execute.Load(path, root))
-	linked = FileCompiler(false, selection).Built(path, root, true, files, inference, known)
+	linked = FileCompiler(false, selection).Build(path, root, true, files, inference, known)
 	if linked.entries.Length is 0
 		logger.Log("CompilationFailed: " + path)
 	linked

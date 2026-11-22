@@ -57,7 +57,7 @@ Member(index Number) VmValue
 	Numbered.Member(1).items.Length is 2
 	if kind is in ("Text", "Number", "Boolean", "List") or kind.StartsWith("Strict/List(")
 		return value
-	isBase = TypeEntry.Based(kind) is in ("Text", "Number", "Boolean", "List")
+	isBase = TypeEntry.Base(kind) is in ("Text", "Number", "Boolean", "List")
 	isBase then value else index < items.Length then items(index) else None
 As(typeName Text) VmValue
 	OfText("a").As("Strict/Number").number is 97 and OfList(OfText("c")).As("Strict/Number").items.Length is 1

@@ -16,7 +16,7 @@ Stamp Text
 	(isWhole then "whole " else "unit ") + HashCode(source).number + " " + Version
 Location Text
 	Sample.Location.EndsWith("Cached.mutations")
-	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".mutations")
+	BinaryFile(FileCompiler.Normalize(path)).Path.Replace(".strictbinary", ".mutations")
 IsCurrent Boolean
 	Sample.Save(Survived) is not Error and Sample.IsCurrent
 	MutationCache("Compiler/output/Cached.strict", true).IsCurrent is false

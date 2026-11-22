@@ -8,11 +8,11 @@ Root Text
 		return "."
 	folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
 	File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
-Located(folder Text) Text
-	Sizing.Located("./Fonts") is "Math/Size.strict"
-	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Located("") is "List.strict"
-	TypeSource(TypeEntry.HelloLogger).Located("./Examples") is "Examples/HelloLogger.strict"
-	TypeSource(TypeEntry("Strict/Examples/Sum", List(MemberEntry), List(MethodEntry))).Located("") is "Examples/Sum.strict"
+Locate(folder Text) Text
+	Sizing.Locate("./Fonts") is "Math/Size.strict"
+	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Locate("") is "List.strict"
+	TypeSource(TypeEntry.HelloLogger).Locate("./Examples") is "Examples/HelloLogger.strict"
+	TypeSource(TypeEntry("Strict/Examples/Sum", List(MemberEntry), List(MethodEntry))).Locate("") is "Examples/Sum.strict"
 	open = entry.Source.IndexOf("(")
 	file = open < 0 then entry.Source else entry.Source.Substring(0, open) + ".strict"
 	relative = folder.StartsWith("./") then folder.Substring(2) else folder
@@ -21,9 +21,9 @@ Located(folder Text) Text
 		return local
 	root = Root
 	root is "." or File(root + "/" + file).Exists is false then file else root + "/" + file
-Resolved(owner Text, folder Text) Text
-	TypeSource.Resolved("Strict/Math/Size", "./Fonts") is "Math/Size.strict"
-	TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Located(folder)
+Resolve(owner Text, folder Text) Text
+	TypeSource.Resolve("Strict/Math/Size", "./Fonts") is "Math/Size.strict"
+	TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Locate(folder)
 Location(methodName Text, file Text) Text
 	TypeSource(TypeEntry.CharacterEntry).Location("Lower", "Character.strict") is "Character.Lower in Character.strict"
 	TypeEntry.ShortName(entry.Name) + "." + methodName + " in " + file
@@ -44,9 +44,9 @@ Absolute(path Text) Text
 	inside = slashed.StartsWith("./") then slashed.Substring(2) else slashed
 	current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
-Cased(path Text) Text
-	Sizing.Cased("strict") is "Strict.strict" and Sizing.Cased("Examples/sum.STRICT") is "Examples/Sum.strict"
-	Sizing.Cased("Missing") is "Missing" and Sizing.Cased("Examples") is "Examples"
+Case(path Text) Text
+	Sizing.Case("strict") is "Strict.strict" and Sizing.Case("Examples/sum.STRICT") is "Examples/Sum.strict"
+	Sizing.Case("Missing") is "Missing" and Sizing.Case("Examples") is "Examples"
 	slashed = path.Replace("\\", "/")
 	named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed
 	folder = named.IndexOf("/") < 0 then "." else Path(named).PathOnly.text

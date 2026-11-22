@@ -35,7 +35,7 @@ IsAllowed(at Number) Boolean
 	if entry.kind is InstructionType.StoreRegisterToVariable
 		return IsStored(at)
 	isNextStored = function.method.instructions(at + 1).kind is InstructionType.StoreRegisterToVariable
-	isNextStored and IsStored(at + 1) or IsBounded(LoadReuse(function.method.instructions).Written(entry), at + 1)
+	isNextStored and IsStored(at + 1) or IsBounded(LoadReuse(function.method.instructions).Write(entry), at + 1)
 IsStored(at Number) Boolean
 	Row.IsStored(18)
 	Row.IsStored(17) is false

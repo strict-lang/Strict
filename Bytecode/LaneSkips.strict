@@ -13,7 +13,7 @@ from(types List(TypeEntry))
 	Sizes.structs is ("Size") and Drawn.fields is ("Drawer.offset Pair")
 	found = Lanes(types)
 	lanes = found
-	relevant = Built(found) + Called(types, found)
+	relevant = Build(found) + Call(types, found)
 	firsts = Firsts(types)
 	structs = Structs(types, firsts)
 	fields = Fields(types, firsts)
@@ -22,7 +22,7 @@ Lanes(types List(TypeEntry)) Texts
 	Drawn.lanes is ("Pair", "Drawer")
 	calls = LaneCalls(types)
 	for types
-		if StructLanes(types).Members(value).Length > 0 or calls.Laned(value.members).Length > 0
+		if StructLanes(types).Members(value).Length > 0 or calls.Lane(value.members).Length > 0
 			TypeEntry.ShortName(value.Name)
 IsUntouched(type TypeEntry, method MethodEntry) Boolean
 	Paired.IsUntouched(StructLanes.Caller, MethodEntry.CountingLoop)
@@ -66,17 +66,17 @@ Structs(types List(TypeEntry), firsts List(TypeEntry)) Texts
 			TypeEntry.ShortName(value.Name)
 Fields(types List(TypeEntry), firsts List(TypeEntry)) Texts
 	Drawn.Fields((StructLanes.Pair, LaneCalls.Drawer), (StructLanes.Pair, LaneCalls.Drawer)) is ("Drawer.offset Pair")
-	for type, field in firsts, LaneCalls(types).Laned(type.members)
+	for type, field in firsts, LaneCalls(types).Lane(type.members)
 		TypeEntry.ShortName(type.Name) + "." + field
 IsTabled(name Text) Boolean
 	Drawn.IsTabled("Strict/Drawer") and Drawn.IsTabled("Strict/List(Pair)") is false and None.IsTabled("Pair") is false
 	lanes.Length > 0 and "(" is not in name
-Built(names Texts) Texts
-	Paired.Built(Paired.lanes) is ("Pair.from")
+Build(names Texts) Texts
+	Paired.Build(Paired.lanes) is ("Pair.from")
 	for names
 		value + ".from"
-Called(types List(TypeEntry), names Texts) Texts
-	Drawn.Called(List(TypeEntry) + LaneCalls.Drawer, Drawn.lanes) is ("Drawer.Shifted")
+Call(types List(TypeEntry), names Texts) Texts
+	Drawn.Call(List(TypeEntry) + LaneCalls.Drawer, Drawn.lanes) is ("Drawer.Shifted")
 	for type, method in types, type.methods
 		if IsMentioned(method.parameters to Text, names)
 			TypeEntry.ShortName(type.Name) + "." + method.Name
@@ -88,7 +88,7 @@ IsPlainCall(entry InstructionEntry) Boolean
 	if entry.kind is not InstructionType.Invoke or entry.texts.Length < 2 or lanes.Length is 0
 		return false
 	TypeEntry.ShortName(entry.texts(0)) + "." + entry.texts(1) is not in relevant
-Checked(type TypeEntry, rewritten MethodEntry, full MethodEntry)
-	Paired.Checked(StructLanes.Caller, MethodEntry.CountingLoop, MethodEntry.CountingLoop) is not Error
+Check(type TypeEntry, rewritten MethodEntry, full MethodEntry)
+	Paired.Check(StructLanes.Caller, MethodEntry.CountingLoop, MethodEntry.CountingLoop) is not Error
 	if isChecked then rewritten.instructions is not full.instructions else false
 		Logger.Log("LaneSkipMismatch: " + type.Name + "." + rewritten.Name)

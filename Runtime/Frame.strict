@@ -144,7 +144,7 @@ Trace(error VmValue, position Number, slots List(VmValue)) VmValue
 		return VmValue(error.kind, error.number, error.text, (Trace(error.items(0), position, slots), error.items(1)))
 	traces = error.items(1).items
 	isShown = traces.Length < 2 and slots.Length > MembersSlot and owner is in machine.places
-	resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolved(owner, machine.folder)
+	resolved = owner is in machine.sources then machine.sources(owner) else TypeSource.Resolve(owner, machine.folder)
 	rest = isShown then slots.Slice(MembersSlot, slots.Length - MembersSlot) else List(VmValue)
 	start = isShown then machine.types(machine.places(owner)).members.Length else -1
 	trace = TraceEntry(method, owner, start).Trace(rest, resolved, method.instructions(position).line)

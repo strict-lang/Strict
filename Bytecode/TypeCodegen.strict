@@ -29,14 +29,14 @@ Entry TypeEntry slow
 	ConstantMethods.Counting.Methods(List(Text)).Length is 2
 	Specialization.Coding.Methods(List(Text) + Specialization.Halving).Length is 1
 	TypeEntry(Generator.target.TypeName, Members, Methods(List(Text)))
-Selected(names Texts) TypeEntry slow
-	Limit.Selected("Run").Name is "Strict/Limit"
-	Limit.Selected("Missing").methods.Length is 0
-	Limit.Selected(List(Text)).methods.Length is 0
-	Limit.Selected("Run").methods.Length is 1
-	Limit.Selected("to Number").methods.Length is 0
-	TypeCodegen("Strict/S", ("W Number", "H Number"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 2
-	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Selected(List(Text)).methods.Length is 0
+Select(names Texts) TypeEntry slow
+	Limit.Select("Run").Name is "Strict/Limit"
+	Limit.Select("Missing").methods.Length is 0
+	Limit.Select(List(Text)).methods.Length is 0
+	Limit.Select("Run").methods.Length is 1
+	Limit.Select("to Number").methods.Length is 0
+	TypeCodegen("Strict/S", ("W Number", "H Number"), NoTypes, List(Text)).Select(List(Text)).methods.Length is 2
+	TypeCodegen("Strict/B", ("Not Boolean", "\ttrue"), NoTypes, List(Text)).Select(List(Text)).methods.Length is 0
 	membersOnly = names.Length is 0 and TypeShape(lines).IsTrait is false
 	TypeEntry(fullName, Members, membersOnly then List(MethodEntry) else Methods(names))
 Generator ValueCodegen
@@ -83,7 +83,7 @@ Initial(node SyntaxNode) List(InstructionEntry)
 	Hello.Initial(SyntaxNode("Call", "Range")).Length is 0
 	Vectors.Initial(SyntaxParser(Tokenizer("Vector2(1, 2)").Tokens).Parse).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
 	Hello.Initial(SyntaxParser("(", "1", ",", "2", ")").ParseRange(0, 5)).First.payload is (6, -1, 2, 1, 1, 1, 2, 0)
-	literal = ConstantFolding(Generator.target.TypeName, inference, isOptimizing).Unwrapped(node)
+	literal = ConstantFolding(Generator.target.TypeName, inference, isOptimizing).Unwrap(node)
 	if literal.IsLiteral is false
 		return List(InstructionEntry)
 	load = Generator.Expression(literal, CodeBlock.Empty).instructions(0)
@@ -122,16 +122,16 @@ Method(start Number) MethodEntry slow
 	header = HeaderTokens(Tokenizer(lines(start)).Tokens)
 	constant generator = Generator
 	scope = MethodScope(header, generator.target)
-	returnType = Declared(header)
-	body = TestLines(generator).Guarded(BodyParser(lines).Method(start + 1), header, start + 1, scope)
+	returnType = Declare(header)
+	body = TestLines(generator).Guard(BodyParser(lines).Method(start + 1), header, start + 1, scope)
 	code = MethodCodegen(generator).Generate(body, scope, BodyType(header))
-	optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Kept(code).instructions).Optimized
+	optimized = LoadReuse(ChangedInstance(generator, header.tokens(0)).Keep(code).instructions).Optimized
 	MethodEntry(header.tokens(0), Parameters(header), returnType, optimized)
-Declared(header HeaderTokens) Text
-	Hello.Declared(HeaderTokens(Tokenizer("Run Number slow").Tokens)) is "Slow(Strict/Number)"
-	Created.Declared(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Strict/C"
+Declare(header HeaderTokens) Text
+	Hello.Declare(HeaderTokens(Tokenizer("Run Number slow").Tokens)) is "Slow(Strict/Number)"
+	Created.Declare(HeaderTokens(Tokenizer("from(b Number)").Tokens)) is "Strict/C"
 	Hello.Member(HeaderTokens("constant", "Add"), 0, Unscoped).IsConstant
-	result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(Returned(header))
+	result = header.tokens(0) is "from" then Generator.target.TypeName else Concrete(FindReturn(header))
 	full = Generator.target.FullName(result)
 	header.ReturnsSlow then "Slow(" + full + ")" else full
 MethodScope(header HeaderTokens, target CallTarget) Scope
@@ -147,14 +147,14 @@ BodyType(header HeaderTokens) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generic") is "Number"
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Text") is "Text"
 	members = Generator.target.shape.MemberScope.types
-	returnType = header.tokens(0) is "from" and members.Length is 1 then members.First else Returned(header)
+	returnType = header.tokens(0) is "from" and members.Length is 1 then members.First else FindReturn(header)
 	Concrete(returnType.StartsWith("Iterator(") then inference.types.ElementType(returnType) + "s" else returnType)
-Returned(header HeaderTokens) Text
-	Hello.Returned(HeaderTokens("Run", "Number")) is "Number"
-	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "A")) is "y"
-	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "B")) is "B"
-	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "A")) is "A"
-	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).Returned(HeaderTokens("x", "=")) is "y"
+FindReturn(header HeaderTokens) Text
+	Hello.FindReturn(HeaderTokens("Run", "Number")) is "Number"
+	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).FindReturn(HeaderTokens("x", "A")) is "y"
+	TypeCodegen("S/A(B)", List(Text), NoTypes, List(Text)).FindReturn(HeaderTokens("x", "B")) is "B"
+	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).FindReturn(HeaderTokens("x", "A")) is "A"
+	TypeCodegen("S/A", List(Text), NoTypes, List(Text)).FindReturn(HeaderTokens("x", "=")) is "y"
 	returned = header.ReturnType
 	name = Generator.target.TypeName
 	isTemplate = returned is inference.types.BaseName(name) and name.IndexOf("(") > 0

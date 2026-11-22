@@ -36,11 +36,11 @@ NativePackaged(isCrossing Boolean)
 	Content(Parent + "/Release/Content")
 	ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
-		return Refreshed(Parent + "/Release", "", BuildOutput.Delivered(base), (ending, ".shell.html"))
+		return Refreshed(Parent + "/Release", "", BuildOutput.Deliver(base), (ending, ".shell.html"))
 	if Platform.Current is Platform.MacOS
 		return MacOSBundle(base).Released
 	folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
-	Refreshed(folder, folder + "/Content", BuildOutput.Delivered(base), (ending, ".shell.html"))
+	Refreshed(folder, folder + "/Content", BuildOutput.Deliver(base), (ending, ".shell.html"))
 	linux = Parent + "/Release/Linux"
 	if isCrossing and Platform.Current is Platform.Windows and File(linux + "/" + Named(base)).Exists
 		Refreshed(linux, linux + "/Content", base, List(Text))
@@ -63,7 +63,7 @@ Icon Text
 	Release("Examples/NativeAdd/Adder").Icon is "Examples/NativeAdd/NativeAdd.ico"
 	Release("Missing/App").Icon is TypeSource.Root + "/Strict.ico"
 	Release("Examples/NativeAdd/obj/NativeAdd").Icon is "Examples/NativeAdd/NativeAdd.ico"
-	own = BuildOutput.Delivered(base) + ".ico"
+	own = BuildOutput.Deliver(base) + ".ico"
 	folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
 	File(own).Exists then own else File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
 Refreshed(release Text, content Text, stem Text, endings Texts)

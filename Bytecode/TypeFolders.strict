@@ -5,17 +5,17 @@ constant Single = Dictionary(("A", "."))
 constant Mathematics = TypeFolders(Dictionary(("Vector2", "./Math")), Dictionary(("Vector2", "./Math"), ("Size", "../Other")))
 Of(root Text) TypeFolders
 	"Vector2" is in TypeFolders.Of(".").locals and TypeFolders.Of(".").folders.Length >= TypeFolders.Of(".").locals.Length
-	None.Indexed(List(Text) + ".", Single).Length > Single.Length
-	local = Indexed(List(Text) + root, Dictionary(Text, Text))
+	None.IndexFolders(List(Text) + ".", Single).Length > Single.Length
+	local = IndexFolders(List(Text) + root, Dictionary(Text, Text))
 	mutable parents = List(Text)
 	for Directory.Directories("..")
 		project = Path(value.Replace("\\", "/")).FileName.text
 		if project(0) is project(0).Upper and project(0) is not project(0).Lower
 			parents = parents + ("../" + project)
-	TypeFolders(local, parents.Length is 0 then local else Indexed(parents, local))
-Indexed(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
-	"Vector2" is in None.Indexed(List(Text) + ".", Dictionary(Text, Text))
-	None.Indexed(List(Text) + "./Missing", Single).Length is 1
+	TypeFolders(local, parents.Length is 0 then local else IndexFolders(parents, local))
+IndexFolders(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
+	"Vector2" is in None.IndexFolders(List(Text) + ".", Dictionary(Text, Text))
+	None.IndexFolders(List(Text) + "./Missing", Single).Length is 1
 	mutable map = known
 	for parents
 		parent = value
@@ -29,14 +29,14 @@ Indexed(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
 Files(types Texts) Texts
 	TypeFolders.Of(".").Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	None.Files(List(Text) + "Vector2").Length is 0
-	local = Matched(locals, types)
+	local = Match(locals, types)
 	mutable files = List(Mutable(Text))
-	for local.Length < types.Length then Matched(folders, types) else local
+	for local.Length < types.Length then Match(folders, types) else local
 		files = files + Directory.Files(value, "*.strict")
 	files
-Matched(indexed Dictionary(Text, Text), types Texts) Texts
-	Mathematics.Matched(Mathematics.locals, List(Text) + "Vector2s") is ("./Math")
-	Mathematics.Matched(Mathematics.folders, ("Sizes", "Vector2", "Size")) is ("../Other", "./Math")
+Match(indexed Dictionary(Text, Text), types Texts) Texts
+	Mathematics.Match(Mathematics.locals, List(Text) + "Vector2s") is ("./Math")
+	Mathematics.Match(Mathematics.folders, ("Sizes", "Vector2", "Size")) is ("../Other", "./Math")
 	mutable matched = List(Mutable(Text))
 	for types
 		mutable name = value

@@ -18,32 +18,32 @@ SubFields(member MemberEntry, bits Number, owner Text) Texts
 		return List(Text)
 	for StructLanes(types).Members(sub)
 		StructLanes.Lane(member.Name, value)
-Built(entry InstructionEntry, laned Texts, base Number) List(InstructionEntry)
-	Sample.Built(StructLanes.Constructed, List(Text), 8).Last.texts is ("lanes2_imaginary")
-	Sample.Built(DefaultedCall, List(Text), 8).Last.texts is ("lanes2_low")
+Build(entry InstructionEntry, laned Texts, base Number) List(InstructionEntry)
+	Sample.Build(StructLanes.Constructed, List(Text), 8).Last.texts is ("lanes2_imaginary")
+	Sample.Build(DefaultedCall, List(Text), 8).Last.texts is ("lanes2_low")
 	owner = Inliner(types).TypeOf(entry.texts(0))
 	mutable lines = List(InstructionEntry)
 	for LoadReuse(List(InstructionEntry)).InvokeReads(entry)
-		lines = lines + Assigned(entry, Member(owner, entry.texts(3 + index)), entry.payload(value), laned, base)
+		lines = lines + Assign(entry, Member(owner, entry.texts(3 + index)), entry.payload(value), laned, base)
 	lines + Defaults(entry, owner, entry.texts.Slice(3, entry.texts.Length - 3), base)
-Assigned(entry InstructionEntry, member MemberEntry, source Number, laned Texts, base Number) List(InstructionEntry)
-	Sample.Assigned(NestedCall, Nested.members.First, 0, "0 Pair", 8).First.texts is ("lanes0_real")
+Assign(entry InstructionEntry, member MemberEntry, source Number, laned Texts, base Number) List(InstructionEntry)
+	Sample.Assign(NestedCall, Nested.members.First, 0, "0 Pair", 8).First.texts is ("lanes0_real")
 	target = StructLanes.Lane("lanes" + entry.payload(0), member.Name)
 	subType = Inliner(types).TypeOf(member.typeName)
 	if StructLanes.IsLane(member) or StructLanes(types).Members(subType).Length is 0
-		return List(InstructionEntry) + StructLanes.Named(InstructionType.StoreRegisterToVariable, source, target, entry.line)
-	if LaneFlow(types).Typed(laned, source to Text) is not ""
+		return List(InstructionEntry) + StructLanes.Label(InstructionType.StoreRegisterToVariable, source, target, entry.line)
+	if LaneFlow(types).FindType(laned, source to Text) is not ""
 		return StructLanes(types).Moves("lanes" + source, target, subType.Name, base, entry.line)
-	Unpacked(source, subType, target, base, entry.line)
-Unpacked(source Number, subType TypeEntry, target Text, base Number, line Number) List(InstructionEntry)
-	Sample.Unpacked(0, StructLanes.Pair, "lanes2_left", 8, 0).First.texts is ("real", "Pair")
-	Sample.Unpacked(0, Nested, "lanes2_box", 8, 0).First.texts is ("left", "Nested")
-	Sample.Unpacked(0, Nested, "lanes2_box", 8, 0)(1).texts is ("real", "Pair")
+	Unpack(source, subType, target, base, entry.line)
+Unpack(source Number, subType TypeEntry, target Text, base Number, line Number) List(InstructionEntry)
+	Sample.Unpack(0, StructLanes.Pair, "lanes2_left", 8, 0).First.texts is ("real", "Pair")
+	Sample.Unpack(0, Nested, "lanes2_box", 8, 0).First.texts is ("left", "Nested")
+	Sample.Unpack(0, Nested, "lanes2_box", 8, 0)(1).texts is ("real", "Pair")
 	mutable lines = List(InstructionEntry)
 	short = TypeEntry.ShortName(subType.Name)
 	calls = LaneCalls(types)
 	for StructLanes(types).Members(subType)
-		stored = StructLanes.Named(InstructionType.StoreRegisterToVariable, base, StructLanes.Lane(target, value), line)
+		stored = StructLanes.Label(InstructionType.StoreRegisterToVariable, base, StructLanes.Lane(target, value), line)
 		lines = lines + calls.Field(source, short, value, base, line) + stored
 	lines
 Defaults(entry InstructionEntry, owner TypeEntry, passed Texts, base Number) List(InstructionEntry)
@@ -61,7 +61,7 @@ DefaultLane(entry InstructionEntry, member MemberEntry, base Number) List(Instru
 	loaded = InstructionEntry.LoadNumber(base, number)
 	numbered = InstructionEntry(loaded.kind, loaded.texts, loaded.payload, entry.line)
 	target = StructLanes.Lane("lanes" + entry.payload(0), member.Name)
-	(numbered, StructLanes.Named(InstructionType.StoreRegisterToVariable, base, target, entry.line))
+	(numbered, StructLanes.Label(InstructionType.StoreRegisterToVariable, base, target, entry.line))
 Rebuilt(register Number, type Text, base Number, line Number) List(InstructionEntry)
 	Sample.Rebuilt(2, "Strict/Nested", 8, 0).Last.texts(3) is "left"
 	BuiltFrom("lanes" + register, Inliner(types).TypeOf(type), register, base, line)
@@ -85,7 +85,7 @@ LaneBuilt(lane Text, member MemberEntry, target Number, line Number) List(Instru
 	Sample.LaneBuilt("lanes2_left", Nested.members.First, 8, 0).Last.texts(1) is "from"
 	sub = Inliner(types).TypeOf(member.typeName)
 	if StructLanes.IsLane(member) or StructLanes(types).Members(sub).Length is 0
-		return List(InstructionEntry) + StructLanes.Named(InstructionType.LoadVariableToRegister, target, lane, line)
+		return List(InstructionEntry) + StructLanes.Label(InstructionType.LoadVariableToRegister, target, lane, line)
 	SubBuilt(lane, sub, target, line)
 SubBuilt(lane Text, sub TypeEntry, target Number, line Number) List(InstructionEntry)
 	Sample.SubBuilt("lanes2_left", StructLanes.Pair, 8, 0).Last.texts(1) is "from"
@@ -112,16 +112,16 @@ MembersOf(type Text) Texts
 	StructLanes(types).Members(Inliner(types).TypeOf(type))
 MethodSignature(type TypeEntry, call InstructionEntry) Texts
 	LaneNesting((StructLanes.Pair, LaneCalls.Stub)).MethodSignature(LaneCalls.Stub, LaneCalls.Shift).Length is 0
-	callee = Inliner(types).Declared(type, call)
-	StructLanes(types).Members(type).Length > 0 or callee.instructions.Length is 0 then List(Text) else Fixed(callee)
-Fixed(method MethodEntry) Texts
-	Sample.Fixed(LaneCalls.Shifting) is ("offset Pair")
-	Sample.Fixed(MethodEntry("F", LaneCalls.Offset, "None", LaneCalls.Changed)).Length is 0
+	callee = Inliner(types).Declare(type, call)
+	StructLanes(types).Members(type).Length > 0 or callee.instructions.Length is 0 then List(Text) else Fix(callee)
+Fix(method MethodEntry) Texts
+	Sample.Fix(LaneCalls.Shifting) is ("offset Pair")
+	Sample.Fix(MethodEntry("F", LaneCalls.Offset, "None", LaneCalls.Changed)).Length is 0
 	for method.instructions
 		isChanged = value.kind is InstructionType.StoreRegisterToVariable and value.texts(0).StartsWith("changed_")
 		if isChanged and value.texts(0).Length > 8 and Tokenizer.IsDigit(value.texts(0)(8))
 			return List(Text)
-	LaneCalls(types).Laned(method.parameters)
+	LaneCalls(types).Lane(method.parameters)
 IsPlainType(name Text) Boolean
 	LaneNesting.IsPlainType("Strict/Text") and LaneNesting.IsPlainType("Strict/Pair") is false
 	name is in ("Strict/Text", "Strict/Boolean", "Strict/Error", "Strict/Character", "Strict/None") or "(" is in name

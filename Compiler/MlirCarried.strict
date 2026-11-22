@@ -60,7 +60,7 @@ IsKeptRead(at Number, name Text, depth Number) Boolean
 	for Range(at + 1, instructions.Length)
 		if IsSafeUse(value, register, name, depth) is false
 			return false
-		if reuse.Written(instructions(value)) is register
+		if reuse.Write(instructions(value)) is register
 			return true
 	true
 IsSafeUse(at Number, register Number, name Text, depth Number) Boolean

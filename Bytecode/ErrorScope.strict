@@ -29,20 +29,20 @@ constant OwnNext = SyntaxNode("Call", "Next")
 constant OwnSize = SyntaxNode("Call", "Size")
 constant ListMutated = CodeBlock.Empty.Declare("a", "List").Declare("a" + MutableMarker, "mutable")
 constant Listed = CodeBlock.Empty.Declare("a", "Counts").Declare("a" + MutableMarker, "mutable").Declare("Counts" + MutableMarker, "mutable")
-Prepared(body SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Prepared(Reassigning, CodeBlock.Empty).scope.TypeOf("a fallible") is "fallible"
-	Plain.Prepared(Adding, CodeBlock.Empty).scope.names.Length is 0
-	Plain.Prepared(BodyParser("Run", "\ttext = Greet").Block(1, 1), CodeBlock.Empty).scope.names.Length is 0
-	Plain.Reassigned(SyntaxNode("Binary", "+", (Increment.children(0), Increment))).Length is 0
-	Plain.Reassigned(SyntaxNode("Reassignment", "", (Increment, Increment))).Length is 0
-	Plain.Reassigned(SyntaxNode("Reassignment", "", (Increment.children(0), ValueCodegen.One))).Length is 0
+Prepare(body SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Prepare(Reassigning, CodeBlock.Empty).scope.TypeOf("a fallible") is "fallible"
+	Plain.Prepare(Adding, CodeBlock.Empty).scope.names.Length is 0
+	Plain.Prepare(BodyParser("Run", "\ttext = Greet").Block(1, 1), CodeBlock.Empty).scope.names.Length is 0
+	Plain.Reassign(SyntaxNode("Binary", "+", (Increment.children(0), Increment))).Length is 0
+	Plain.Reassign(SyntaxNode("Reassignment", "", (Increment, Increment))).Length is 0
+	Plain.Reassign(SyntaxNode("Reassignment", "", (Increment.children(0), ValueCodegen.One))).Length is 0
 	mutable prepared = block
-	for Reassigned(body)
+	for Reassign(body)
 		if values.target.IsMember(values.target.TypeName, value) is false
 			prepared = Fallible(value, prepared)
 	prepared
-Reassigned(node SyntaxNode) Texts
-	Plain.Reassigned(BodyParser("Run", "\tmutable a = 1", "\tfor 2", "\t\ta = Greet").Method(1)) is ("a")
+Reassign(node SyntaxNode) Texts
+	Plain.Reassign(BodyParser("Run", "\tmutable a = 1", "\tfor 2", "\t\ta = Greet").Method(1)) is ("a")
 	constant safe = ("Number", "Text", "Boolean", "Not", "Negate")
 	if node.Kind is "Reassignment" and node.children(0).Kind is "Identifier"
 		assigned = node.children(1)
@@ -50,13 +50,13 @@ Reassigned(node SyntaxNode) Texts
 		return assigned.Kind is in safe or isOperator then List(Text) else List(Text) + node.children(0).text
 	mutable names = List(Mutable(Text))
 	for node.children
-		names = names + Reassigned(value)
+		names = names + Reassign(value)
 	names
-Dropped(node SyntaxNode, block CodeBlock) SyntaxNode
-	Counting.Dropped(Increment, CodeBlock.Empty.Declare("a", "Count")) to Text is "a.Increment"
-	Counting.Dropped(Increment, Mutated) to Text is "a = a.Increment"
-	Listing.Dropped(SyntaxNode("Member", "Add", Increment.children), ListMutated) to Text is "a = a.Add"
-	Counting.Dropped(SyntaxNode("Ignore", "ignore", Increment), Mutated) is Error
+Drop(node SyntaxNode, block CodeBlock) SyntaxNode
+	Counting.Drop(Increment, CodeBlock.Empty.Declare("a", "Count")) to Text is "a.Increment"
+	Counting.Drop(Increment, Mutated) to Text is "a = a.Increment"
+	Listing.Drop(SyntaxNode("Member", "Add", Increment.children), ListMutated) to Text is "a = a.Add"
+	Counting.Drop(SyntaxNode("Ignore", "ignore", Increment), Mutated) is Error
 	if node.Kind is "Ignore"
 		return IsMutating(node.children(0), block) then Error("IgnoredCallMustNotChange: " + node + Ignoring) else node
 	if IsMutating(node, block) is false
@@ -119,32 +119,32 @@ IsGrowing(node SyntaxNode, block CodeBlock) Boolean
 	if node.Kind is not in ("MethodCall", "Member") or node.text is not in ("Add", "Remove")
 		return false
 	block.scope.TypeOf(node.children(0).text + MutableMarker) is not ""
-Declared(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) CodeBlock
-	Plain.Declared("a", ErrorCodegen.Greeting, false, CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
-	Plain.Declared("a", ValueCodegen.One, true, CodeBlock.Empty).scope.TypeOf("a" + MutableMarker) is "mutable"
-	Plain.Declared("a", ValueCodegen.One, false, CodeBlock.Empty).scope.names.Length is 0
-	Plain.Declared("a", Remaining, false, Scalar).scope.TypeOf("a" + FallibleMarker) is "fallible"
+Declare(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) CodeBlock
+	Plain.Declare("a", ErrorCodegen.Greeting, false, CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
+	Plain.Declare("a", ValueCodegen.One, true, CodeBlock.Empty).scope.TypeOf("a" + MutableMarker) is "mutable"
+	Plain.Declare("a", ValueCodegen.One, false, CodeBlock.Empty).scope.names.Length is 0
+	Plain.Declare("a", Remaining, false, Scalar).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	marked = isMutable then block.Declare(name + MutableMarker, "mutable") else block
 	errors = ErrorCodegen(values)
-	folded = errors.Folded(assigned, block)
+	folded = errors.Fold(assigned, block)
 	errors.CanFail(folded, block) or IsRemainder(folded) then Fallible(name, marked) else marked
 Fallible(name Text, block CodeBlock) CodeBlock
 	Plain.Fallible("a", CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
-	Plain.Reassigned(SyntaxNode("Reassignment", "", (Increment.children(0), ValueCodegen.ToText))) is ("a")
-	Plain.Reassigned(SyntaxNode("Reassignment", "", (Increment.children(0), Increment))) is ("a")
-	Counting.Dropped(Increment.children(0), Mutated) is Increment.children(0)
-	Counting.Dropped(SyntaxNode("MethodCall", "Increment", Increment.children), Mutated).Kind is "Reassignment"
-	Counting.Dropped(SyntaxNode("Member", "Twice", Increment.children), Mutated).Kind is "Member"
+	Plain.Reassign(SyntaxNode("Reassignment", "", (Increment.children(0), ValueCodegen.ToText))) is ("a")
+	Plain.Reassign(SyntaxNode("Reassignment", "", (Increment.children(0), Increment))) is ("a")
+	Counting.Drop(Increment.children(0), Mutated) is Increment.children(0)
+	Counting.Drop(SyntaxNode("MethodCall", "Increment", Increment.children), Mutated).Kind is "Reassignment"
+	Counting.Drop(SyntaxNode("Member", "Twice", Increment.children), Mutated).Kind is "Member"
 	block.Declare(name + FallibleMarker, "fallible")
 IsFallible(name Text, block CodeBlock) Boolean
 	Plain.IsFallible("a", Plain.Fallible("a", CodeBlock.Empty))
 	Plain.IsFallible("a", CodeBlock.Empty) is false
-	Listing.Dropped(Increment, Listed).Kind is "Reassignment"
-	Listing.Dropped(SyntaxNode("Member", "Add", Increment.children), Listed).Kind is "Member"
-	Listing.Dropped(SyntaxNode("Member", "Remove", Increment.children), Listed).Kind is "Member"
-	Listing.Dropped(SyntaxNode("Member", "Increment", SyntaxNode("Call", "Counts")), Listed).Kind is "Member"
+	Listing.Drop(Increment, Listed).Kind is "Reassignment"
+	Listing.Drop(SyntaxNode("Member", "Add", Increment.children), Listed).Kind is "Member"
+	Listing.Drop(SyntaxNode("Member", "Remove", Increment.children), Listed).Kind is "Member"
+	Listing.Drop(SyntaxNode("Member", "Increment", SyntaxNode("Call", "Counts")), Listed).Kind is "Member"
 	block.scope.TypeOf(name + FallibleMarker) is not ""
-Guarded(name Text, block CodeBlock) CodeBlock
-	Plain.Guarded("a", Plain.Fallible("a", Numbered)).instructions.Last.kind is InstructionType.CheckError
-	Plain.Guarded("a", Numbered).instructions.Length is 0
+Guard(name Text, block CodeBlock) CodeBlock
+	Plain.Guard("a", Plain.Fallible("a", Numbered)).instructions.Last.kind is InstructionType.CheckError
+	Plain.Guard("a", Numbered).instructions.Length is 0
 	IsFallible(name, block) then values.Expression(SyntaxNode("Identifier", name), block).At(block.register) else block

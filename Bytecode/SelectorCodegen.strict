@@ -7,8 +7,8 @@ constant Taken = SyntaxNode("Binary", "then", (One, One), 3)
 constant Cased = Plain.Case(IsOne, Taken, CodeBlock.Empty)
 constant ACase = SyntaxNode("Binary", "then", (SyntaxNode("Identifier", "A"), One))
 constant Picked = BodyParser("Pick Number", "\tif 2 is", "\t\t1 then 10", "\t\t2 then 20").Block(1, 1).children(0)
-Selected(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Selected(Picked, CodeBlock.Empty).instructions.Length is 14
+Select(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Select(Picked, CodeBlock.Empty).instructions.Length is 14
 	Plain.Case(Typed, ACase, CodeBlock.Empty.Declare("x", "B")).instructions.Length is 0
 	mutable result = block
 	mutable isDecided = false
@@ -26,9 +26,9 @@ Case(selector SyntaxNode, line SyntaxNode, block CodeBlock) CodeBlock
 	isElse = line.Kind is "ElseValue" or typed is "true"
 	comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
 	condition = isElse then block else OperatorCodegen(values).Condition(comparison, block)
-	generated = ErrorCodegen(values).Handled(line.children.Last, condition)
+	generated = ErrorCodegen(values).Handle(line.children.Last, condition)
 	added = generated.Add(InstructionEntry.Return(generated.Result))
-	returned = MethodCodegen(values).Lined(added, condition.instructions.Length, line.line)
+	returned = MethodCodegen(values).Line(added, condition.instructions.Length, line.line)
 	isElse then returned else returned.Add(InstructionEntry.Jump(InstructionType.JumpEnd, condition.nextId - 1))
 TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text
 	Plain.TypeCase(Typed, ACase, CodeBlock.Empty.Declare("x", "A")) is "true"
@@ -36,4 +36,4 @@ TypeCase(selector SyntaxNode, line SyntaxNode, block CodeBlock) Text
 	Plain.TypeCase(IsOne, SyntaxNode("Binary", "then", (One, One)), CodeBlock.Empty) is ""
 	Plain.TypeCase(Typed, SyntaxNode("ElseValue", "", ACase.children), CodeBlock.Empty.Declare("x", "B")) is ""
 	comparison = SyntaxNode("Binary", selector.text, (selector.children(0), line.children(0)))
-	line.Kind is "ElseValue" then "" else OperatorCodegen(values).Decided(comparison, block)
+	line.Kind is "ElseValue" then "" else OperatorCodegen(values).Decide(comparison, block)

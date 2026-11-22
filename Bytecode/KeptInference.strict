@@ -29,10 +29,10 @@ Of(files Texts, path Text) KeptInference
 		return Replaced(files, at)
 	rest = Rest(files, path)
 	isKept = IsKept(rest)
-	names = isKept then mentioned else Mentioned(rest)
+	names = isKept then mentioned else Mention(rest)
 	name = ResolveCheck.TypeName(path)
 	if at < 0 or name is in names or name + "s" is in names
-		return at < 0 then KeptInference(value, joined = ResolveCheck.Inference(files)) else Mentioned(files, at)
+		return at < 0 then KeptInference(value, joined = ResolveCheck.Inference(files)) else Mention(files, at)
 	(isKept then value else Fresh(rest, names)).Joined(files, at)
 Matches(files Texts, path Text) Boolean
 	Writing.Matches(Pair, "TextWriter.strict") and Writing.Matches(Pair, "Logger.strict") is false
@@ -48,9 +48,9 @@ Signature(lines Texts) Text
 	Empty.Signature(("has items Generics", "Run", "\t1")) is not Empty.Signature(("has items Numbers", "Run", "\t1"))
 	Empty.Signature(Reading) is not Empty.Signature(("mutable n Number", "Go Number", "\tn = 1"))
 	marks = Changes(lines).Methods + "|" + Changes(lines, true).Methods
-	Text.Combine(Unindented(lines) + marks, "\n")
-Unindented(lines Texts) Texts
-	Empty.Unindented(("Run", "\t1")) is ("Run")
+	Text.Combine(Unindent(lines) + marks, "\n")
+Unindent(lines Texts) Texts
+	Empty.Unindent(("Run", "\t1")) is ("Run")
 	for lines
 		if value.StartsWith("\t") is false
 			value
@@ -87,12 +87,12 @@ Stamps(sources Texts) Numbers
 	Empty.Stamps(List(Text) + "Missing.strict") is (0)
 	for sources
 		File(value).Modified
-Mentioned(sources Texts) Texts
-	Empty.Mentioned(Pair).Slice(0, 3) is ("Logger", "TextWriter", "Boolean")
-	"Logger" is not in Empty.Mentioned(Writer)
+Mention(sources Texts) Texts
+	Empty.Mention(Pair).Slice(0, 3) is ("Logger", "TextWriter", "Boolean")
+	"Logger" is not in Empty.Mention(Writer)
 	mutable names = ResolveCheck.TypeNames(sources)
 	for sources
-		names = names + SourceFiles(".").Mentioned(value)
+		names = names + SourceFiles(".").Mention(value)
 	names
 Fresh(rest Texts, names Texts) KeptInference
 	Empty.Fresh(Writer, List(Text)).refined is ResolveCheck.Inference(Writer)

@@ -110,7 +110,7 @@ Shaded(program Text, base Text, isWritten Boolean) Text
 	program.Substring(0, marker)
 Shell(base Text) Text
 	Missing.Shell("Compiler/output/missing") is "C:/s/Compiler/WebShell.html"
-	shell = BuildOutput.Delivered(base) + ".shell.html"
+	shell = BuildOutput.Deliver(base) + ".shell.html"
 	File(shell).Exists then shell else tools.root + "/Compiler/WebShell.html"
 Runtime Text
 	Missing.Runtime is " --js-library \"C:/s/Compiler/WebRuntime.js\" --pre-js \"C:/s/Compiler/NativeRuntimeWgsl.js\""

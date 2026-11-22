@@ -18,7 +18,7 @@ Lines(left Text, right Text, kinds Texts, slot Text, exact Boolean, expanded Tex
 	if kinds.First is "Number"
 		return List(Text) + ("let testEqual" + slot + " = " + left + ".IsNearlyEqual(" + right + ")")
 	if IsCalled(kinds.First, expanded)
-		return Repeated(left, right, kinds.First, slot)
+		return Repeat(left, right, kinds.First, slot)
 	if types.BaseName(kinds.First) is "List"
 		return Elements(left, right, kinds.First, slot, expanded + kinds.First)
 	IsRecord(kinds.First) then Fields(left, right, kinds.First, slot, expanded + kinds.First) else same
@@ -34,8 +34,8 @@ IsCalled(kind Text, expanded Texts) Boolean
 	Nested.Lines("a", "b", ("Outer", "Outer"), "0", false, List(Text)).Length is 3
 	isGeneric = kind.IndexOf("(") >= 0 or "Generic" is in types.ParameterScope(kind).types
 	kind is in expanded or expanded.Length > 0 and IsRecord(kind) and isGeneric is false
-Repeated(left Text, right Text, kind Text, slot Text) Texts
-	Plain.Repeated("left", "right", "Number", "0") is ("let testEqual0 = left is right")
+Repeat(left Text, right Text, kind Text, slot Text) Texts
+	Plain.Repeat("left", "right", "Number", "0") is ("let testEqual0 = left is right")
 	NumberElements.Length is 7 and NumberElements(0) is "mutable testEqual0 = a.Length is b.Length"
 	NumberElements(1) is "if testEqual0" and NumberElements(2) is "\tfor a.Length"
 	NumberElements(3) is "\t\tlet testLeft0x = a(index)" and NumberElements(4) is "\t\tlet testRight0x = b(index)"

@@ -47,7 +47,7 @@ Files Dictionary(Text, Text)
 	mutable files = Dictionary(Text, Text)
 	for functions
 		if value.type.Name is not in files
-			files.Add(value.type.Name, TypeSource(value.type).Located(""))
+			files.Add(value.type.Name, TypeSource(value.type).Locate(""))
 	files
 Function(function MlirFunction, file Text) Texts
 	Counted.Function(MlirCalls.Shapes, "Shape.strict").Length is 3

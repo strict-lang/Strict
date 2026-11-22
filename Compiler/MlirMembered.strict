@@ -32,7 +32,7 @@ Rebuilding(register Number) Number
 		step = steps(value)
 		if (step.kind is InstructionType.Invoke then step.texts(1) is "from" else false) and register is in reuse.Reads(step)
 			return value
-		if reuse.Written(step) is register
+		if reuse.Write(step) is register
 			return Number.NotFound
 	Number.NotFound
 Slot(at Number, register Number) Number

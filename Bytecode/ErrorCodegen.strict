@@ -16,8 +16,8 @@ constant LogHi = SyntaxNode("MethodCall", "Log", (A, ValueCodegen.Hi))
 constant IsError = SyntaxNode("Binary", "is", (A, BareError))
 constant AnyCall = SyntaxNode("Call", "Error", SyntaxNode("Text", "\"\""))
 constant FailingSum = SyntaxNode("Binary", "is", (GreetingPlusOne, BareError))
-constant LeftSum = Plain.Compared(FailingSum, GreetingPlusOne, CodeBlock.Empty)
-constant RightSum = Plain.Compared(IsError, GreetingPlusOne, CodeBlock.Empty)
+constant LeftSum = Plain.Compare(FailingSum, GreetingPlusOne, CodeBlock.Empty)
+constant RightSum = Plain.Compare(IsError, GreetingPlusOne, CodeBlock.Empty)
 constant IsOne = SyntaxNode("Binary", "is", (A, ValueCodegen.One))
 constant TextA = CodeBlock.Empty.Declare("a", "Text")
 constant FallibleA = ErrorScope.Plain.Fallible("a", CodeBlock.Empty.Declare("a", "Number"))
@@ -25,14 +25,14 @@ constant NewSize = SyntaxNode("Call", "Size", ValueCodegen.One)
 constant SizeParameters = List(Scope) + Scope(List(Text) + TypeShape.Constrained, List(Text) + "2")
 constant SizeTypes = KnownTypes(List(Text) + "Size", List(Scope) + Scope(List(Text) + "Width", List(Text) + "Number"), List(Scope) + KnownTypes.NoMembers, SizeParameters)
 constant Sizing = ErrorCodegen(ValueCodegen(TypeInference(SizeTypes, CallTarget.NoScopes), KnownTypes.NoMembers, CallTarget.Plain))
-Folded(node SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Folded(ValueCodegen.One, CodeBlock.Empty).text is "1"
-	Plain.Folded(SyntaxParser(Tokenizer("outer.B.Greet").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Type"
+Fold(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Fold(ValueCodegen.One, CodeBlock.Empty).text is "1"
+	Plain.Fold(SyntaxParser(Tokenizer("outer.B.Greet").Tokens).Parse, CodeBlock.Empty).children(0).Kind is "Type"
 	folding = ConstantFolding(values.target.TypeName, values.inference, values.isOptimizing)
 	typed = block.scope.TypeOf("outer") is "" then folding.Outer(node) else node
-	ConversionCodegen(values).Typed(folding.Folded(typed), block)
-Handled(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Handled(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	ConversionCodegen(values).Retype(folding.Fold(typed), block)
+Handle(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Handle(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	Plain.CanFail(SyntaxNode("Call", "Error", ValueCodegen.Hi), CodeBlock.Empty) is false
 	Plain.CanFail(ValueCodegen.ToText, CodeBlock.Empty)
 	Plain.CanFail(SyntaxNode("Call", "List", Greeting), CodeBlock.Empty) is false
@@ -42,13 +42,13 @@ Handled(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.CanFail(SyntaxNode("MethodCall", "Add", (A, ValueCodegen.One)), ErrorScope.Numbered)
 	Plain.CanFail(SyntaxNode("Index", "", (A, ValueCodegen.One)), ErrorScope.Numbered)
 	Plain.CanFail(ValueCodegen.GreeterText, CodeBlock.Empty) is false
-	Dispatched(Folded(node, block), block)
-Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Dispatched(ValueCodegen.One, CodeBlock.Empty).register is 1
-	Plain.Dispatched(ValueCodegen.ToText, CodeBlock.Empty) is Plain.values.Call(ValueCodegen.ToText, CodeBlock.Empty)
-	Plain.Dispatched(ValueCodegen.GreeterText, Counted) is Plain.values.Call(ValueCodegen.GreeterText, Counted)
-	Plain.Dispatched(Greeting, CodeBlock.Empty) is Plain.values.Call(Greeting, CodeBlock.Empty)
-	Plain.Dispatched(IsOne, CodeBlock.Empty) is OperatorCodegen(Plain.values).Operation(IsOne, CodeBlock.Empty)
+	Dispatch(Fold(node, block), block)
+Dispatch(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Dispatch(ValueCodegen.One, CodeBlock.Empty).register is 1
+	Plain.Dispatch(ValueCodegen.ToText, CodeBlock.Empty) is Plain.values.Call(ValueCodegen.ToText, CodeBlock.Empty)
+	Plain.Dispatch(ValueCodegen.GreeterText, Counted) is Plain.values.Call(ValueCodegen.GreeterText, Counted)
+	Plain.Dispatch(Greeting, CodeBlock.Empty) is Plain.values.Call(Greeting, CodeBlock.Empty)
+	Plain.Dispatch(IsOne, CodeBlock.Empty) is OperatorCodegen(Plain.values).Operation(IsOne, CodeBlock.Empty)
 	if IsLog(node, block)
 		return MethodCodegen(values).Log(node.children(1), block)
 	if node.Kind is in ("Number", "Text", "Boolean", "List", "Identifier")
@@ -56,13 +56,13 @@ Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
 	if node.Kind is in ("Call", "Member", "MethodCall", "Not", "Index") or node.text is "to"
 		return values.Call(node, block)
 	OperatorCodegen(values).Operation(node, block)
-Checked(node SyntaxNode, block CodeBlock, isRemainder = false) CodeBlock
-	Plain.Checked(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
-	Plain.Checked(ValueCodegen.One, CodeBlock.Empty).instructions.Length is 1
-	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar, true).instructions.Last.kind is InstructionType.CheckError
-	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar).instructions.Last.kind is not InstructionType.CheckError
-	folded = Folded(node, block)
-	generated = Dispatched(folded, block)
+Guard(node SyntaxNode, block CodeBlock, isRemainder = false) CodeBlock
+	Plain.Guard(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
+	Plain.Guard(ValueCodegen.One, CodeBlock.Empty).instructions.Length is 1
+	Plain.Guard(ErrorScope.Remaining, ErrorScope.Scalar, true).instructions.Last.kind is InstructionType.CheckError
+	Plain.Guard(ErrorScope.Remaining, ErrorScope.Scalar).instructions.Last.kind is not InstructionType.CheckError
+	folded = Fold(node, block)
+	generated = Dispatch(folded, block)
 	isRemainder or CanFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
 Check(register Number, block CodeBlock) InstructionEntry
 	Plain.Check(2, CodeBlock.Empty).payload is List(Number) + 2
@@ -78,8 +78,8 @@ IsLog(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsLog(SyntaxNode("Identifier", "Log"), Logging) is false
 	Plain.IsLog(SyntaxNode("MethodCall", "Reset", (A, A)), Logging) is false
 	Plain.CanFail(LogHi, Logging) is false
-	Plain.Dispatched(LogHi, Logging).instructions.Last.kind is InstructionType.Print
-	Plain.Dispatched(LogHi, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+	Plain.Dispatch(LogHi, Logging).instructions.Last.kind is InstructionType.Print
+	Plain.Dispatch(LogHi, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	if node.Kind is not "MethodCall" or node.text is not "Log"
 		return false
 	TypeEntry.ShortName(values.TypeOf(node.children(0), block)) is "Logger"
@@ -113,11 +113,11 @@ IsOverloaded(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsOverloaded(SyntaxNode("Binary", "xor", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
 	operators = OperatorCodegen(values)
 	operators.IsCustom(node, block) and operators.IsBits(node, block) is false
-Narrowed(condition SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Narrowed(IsError, Counted).scope.TypeOf("a") is "Error"
-	Plain.Narrowed(IsOne, Counted).scope.TypeOf("a") is "Count"
-	Plain.Narrowed(SyntaxNode("Binary", "is not", IsError.children), Counted) is Counted
-	Plain.Narrowed(SyntaxNode("Binary", "is", (Greeting, BareError)), Counted) is Counted
+Narrow(condition SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Narrow(IsError, Counted).scope.TypeOf("a") is "Error"
+	Plain.Narrow(IsOne, Counted).scope.TypeOf("a") is "Count"
+	Plain.Narrow(SyntaxNode("Binary", "is not", IsError.children), Counted) is Counted
+	Plain.Narrow(SyntaxNode("Binary", "is", (Greeting, BareError)), Counted) is Counted
 	if IsErrorComparison(condition, block) is false
 		return block
 	target = condition.children(0)
@@ -153,36 +153,36 @@ Statement(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Statement(SyntaxNode("Return", ""), CodeBlock.Empty.At(2)) is CodeBlock.Empty.At(2).Nothing
 	Plain.Statement(Failing, CodeBlock.Empty).instructions.Last.kind is InstructionType.CheckError
 	if node.Kind is in ("Return", "Ignore")
-		return node.HasValue then Handled(node.children(0), block) else block.Nothing
-	Checked(node, block, values.TypeOf(node, block) is in ErrorTypes)
+		return node.HasValue then Handle(node.children(0), block) else block.Nothing
+	Guard(node, block, values.TypeOf(node, block) is in ErrorTypes)
 Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Plain.Right(IsError, CodeBlock.Empty, false).instructions is (InstructionEntry.LoadAnyError(0))
-	Plain.Right(IsError, Counted, true) is Plain.Compared(IsError, AnyCall, Counted)
-	Plain.Right(IsError, Counted, false) is Plain.Compared(IsError, AnyCall, Counted)
+	Plain.Right(IsError, Counted, true) is Plain.Compare(IsError, AnyCall, Counted)
+	Plain.Right(IsError, Counted, false) is Plain.Compare(IsError, AnyCall, Counted)
 	Plain.IsFailing(SyntaxNode("Binary", "then", (A, A)), CodeBlock.Empty)
 	Plain.IsFailing(SyntaxNode("Binary", "+", (A, A)), CodeBlock.Empty.Declare("a", "List(Number)"))
 	Plain.IsFailing(SyntaxNode("Binary", "is", (A, A)), ErrorScope.Numbered) is false
 	any = AnyError(node, block)
 	convert = isConverted and IsErrorComparison(node, block) is false
-	Compared(node, convert then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
-Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
-	Plain.Kept(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
+	Compare(node, convert then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
+Keep(node SyntaxNode, name Text, block CodeBlock) CodeBlock
+	Plain.Keep(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
 	Plain.CanFail(A, CodeBlock.Empty.Declare("a", "Number")) is false
 	Plain.CanFail(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty)
 	FallibleA.scope.TypeOf("a") is "Number"
 	ErrorScope.Plain.IsFallible("a", FallibleA)
-	Handled(node, block).Stored(name).At(block.register).WithNextId.Declare(name, values.TypeOf(node, block))
-Compared(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Compared(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
-	Plain.Compared(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2
+	Handle(node, block).Stored(name).At(block.register).WithNextId.Declare(name, values.TypeOf(node, block))
+Compare(comparison SyntaxNode, operand SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Compare(IsError, Greeting, CodeBlock.Empty).instructions.Length is 1
+	Plain.Compare(IsOne, Greeting, CodeBlock.Empty).instructions.Length is 2
 	LeftSum.instructions(1).texts is List(Text) + Tested
 	LeftSum.instructions.Last.texts is List(Text) + Tested
 	LeftSum.scope.TypeOf(Tested) is not ""
-	RightSum.instructions(1).texts.Length is 0 and Plain.Compared(IsError, A, CodeBlock.Empty).instructions.Length is 1
+	RightSum.instructions(1).texts.Length is 0 and Plain.Compare(IsError, A, CodeBlock.Empty).instructions.Length is 1
 	if IsErrorComparison(comparison, block) is false
-		return Checked(operand, block, ErrorScope(values).IsRemainder(Folded(operand, block)))
+		return Guard(operand, block, ErrorScope(values).IsRemainder(Fold(operand, block)))
 	if operand is not comparison.children(0) or operand.children.Length is 0
-		return operand is AnyCall then block.Load(InstructionEntry.LoadAnyError(block.register)) else Handled(operand, block)
+		return operand is AnyCall then block.Load(InstructionEntry.LoadAnyError(block.register)) else Handle(operand, block)
 	caught = Caught(comparison, operand, block).Declare(Tested, values.TypeOf(operand, block))
 	caught.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, caught.register, Tested))
 Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock
@@ -193,15 +193,15 @@ Caught(comparison SyntaxNode, node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Caught(IsOne, Greeting, InTest).instructions.Last.texts is List(Text) + Tested
 	isError = IsErrorComparison(comparison, block)
 	caught = isError then block.WithNextId.Declare(FailureMarker, block.nextId to Text) else block
-	stored = Handled(node, caught).Stored(Tested).At(block.register)
+	stored = Handle(node, caught).Stored(Tested).At(block.register)
 	if isError is false
 		return stored
 	joined = stored.Add(InstructionEntry.Jump(InstructionType.JumpEnd, block.nextId))
 	joined.Declare(FailureMarker, block.scope.TypeOf(FailureMarker))
-Validated(node SyntaxNode, block CodeBlock, constructed CodeBlock) CodeBlock
-	Sizing.Validated(NewSize, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.texts(1) is "Validated"
-	Plain.Validated(Greeting, CodeBlock.Empty, CodeBlock.Empty).instructions.Length is 0
-	Sizing.Validated(SyntaxNode("Call", "Size", IsOne.children), CodeBlock.Empty, CodeBlock.Empty) is CodeBlock.Empty
+Validate(node SyntaxNode, block CodeBlock, constructed CodeBlock) CodeBlock
+	Sizing.Validate(NewSize, CodeBlock.Empty, CodeBlock.Empty).instructions.Last.texts(1) is "Validated"
+	Plain.Validate(Greeting, CodeBlock.Empty, CodeBlock.Empty).instructions.Length is 0
+	Sizing.Validate(SyntaxNode("Call", "Size", IsOne.children), CodeBlock.Empty, CodeBlock.Empty) is CodeBlock.Empty
 	type = values.TypeOf(node, block)
 	types = values.inference.types
 	isConstructor = node.Kind is "Call" and types.BaseName(type) is node.text

@@ -48,8 +48,8 @@ Executable(base Text) Text
 	OnLinux.Executable("./Examples/obj/ProcessImage") is "./Examples/ProcessImage"
 	Toolchain(OnWindows, isWeb = true).Executable("./A/obj/B") is "./A/Release/Web/B.html"
 	if isWeb
-		return BuildOutput.Released(base, "Web") + ".html"
-	program = BuildOutput.Delivered(base)
+		return BuildOutput.ReleasePath(base, "Web") + ".html"
+	program = BuildOutput.Deliver(base)
 	isCommand = Path(program).FileName.text is "Strict"
 	(isCommand then program.Substring(0, program.Length - 6) + "strict" else program) + Extension
 Missing(names Texts) Texts

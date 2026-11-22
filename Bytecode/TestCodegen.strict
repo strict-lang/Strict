@@ -77,55 +77,54 @@ Method(start Number, block CodeBlock) CodeBlock slow
 	kind = header.ReturnsSlow then "Budgeted" else TypeSource.IsSlow(types.fullName, header) then "Slow" else ""
 	mutable result = block.Declare(" slow test", kind).Declare(CodeBlock.ErrorMarker, name)
 	for TestLines(types.Generator).Tests(BodyParser(types.lines).Method(start + 1), block)
-		result = MethodCodegen(types.Generator).Lined(Line(value, name, result.At(0)), result.instructions.Length, value.line)
+		result = MethodCodegen(types.Generator).Line(Line(value, name, result.At(0)), result.instructions.Length, value.line)
 	result
 Line(line SyntaxNode, method Text, code CodeBlock) CodeBlock slow
 	Even.Line(OneIsOne, "IsEven", Counter).instructions.Length > 4
 	Even.Line(Declaring, "IsEven", Counter).instructions(4).kind is InstructionType.StoreConstantToVariable
 	Even.Line(Declaring, "IsEven", Counter).scope.TypeOf(ErrorCodegen.Tested) is "Error"
 	if line.Kind is not "Declaration"
-		return Checked(line, method, code)
-	marked = Started(code, Place(line, method)).WithNextId.Declare(ErrorCodegen.FailureMarker, code.nextId to Text)
+		return Check(line, method, code)
+	marked = Start(code, Place(line, method)).WithNextId.Declare(ErrorCodegen.FailureMarker, code.nextId to Text)
 	declared = MethodCodegen(types.Generator).Statement(line, marked, false).Declare(ErrorCodegen.FailureMarker, "")
 	skip = declared.Flagged.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, declared.nextId)).WithNextId
 	error = skip.Add(InstructionEntry.Jump(InstructionType.JumpEnd, code.nextId)).Declare(ErrorCodegen.Tested, "Error")
-	printed = Got(Finished(error).Add(InstructionEntry.Print("Test error: " + Place(line, method))))
-	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, skip.nextId - 1))
-Checked(test SyntaxNode, method Text, block CodeBlock) CodeBlock slow
-	Even.Checked(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
+	printed = Get(Finish(error).Add(InstructionEntry.Print("Test error: " + Place(line, method))))
+	CountFailure(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, skip.nextId - 1))
+Check(test SyntaxNode, method Text, block CodeBlock) CodeBlock slow
+	Even.Check(SyntaxNode("Boolean", "true"), "A", Counter).instructions.Last.kind is InstructionType.JumpEnd
 	failure = block.nextId
-	timed = Started(block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text), Place(test, method))
-	rounded = StepRounding(types.Generator).Rounded(test, timed)
-	compared = Compared(rounded, timed).Declare(ErrorCodegen.FailureMarker, "")
+	timed = Start(block.WithNextId.Declare(ErrorCodegen.FailureMarker, failure to Text), Place(test, method))
+	compared = Compare(StepRounding(types.Generator).Round(test, timed), timed).Declare(ErrorCodegen.FailureMarker, "")
 	place = Place(test, method)
-	reported = Passed(compared, place)
+	reported = Pass(compared, place)
 	jumped = reported.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, reported.nextId)).WithNextId
 	failed = jumped.Add(InstructionEntry.Jump(InstructionType.JumpEnd, failure))
-	printed = Got(Timed(Finished(failed), "Test failed: " + place))
-	Counted(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
-Compared(test SyntaxNode, block CodeBlock) CodeBlock slow
-	Even.Compared(OneIsOne, Counter).instructions.Last.kind is InstructionType.Equal
-	Even.Compared(OneIsOne, Counter).scope.TypeOf(ErrorCodegen.Tested) is "Number"
+	printed = Get(TimeTest(Finish(failed), "Test failed: " + place))
+	CountFailure(printed).Add(InstructionEntry.Jump(InstructionType.JumpEnd, jumped.nextId - 1))
+Compare(test SyntaxNode, block CodeBlock) CodeBlock slow
+	Even.Compare(OneIsOne, Counter).instructions.Last.kind is InstructionType.Equal
+	Even.Compare(OneIsOne, Counter).scope.TypeOf(ErrorCodegen.Tested) is "Number"
 	isComparison = test.Kind is "Binary" and test.text is in ("is", "is not")
 	left = isComparison then test.children(0) else test
-	stored = TestComparison(types.Generator).Stored(test, left, block)
+	stored = TestComparison(types.Generator).Store(test, left, block)
 	declared = stored.Declare(ErrorCodegen.Tested, types.Generator.TypeOf(left, block))
 	right = isComparison then test.children(1) else SyntaxNode("Boolean", "true")
-	generated = TestComparison(types.Generator).Checked(test, left, right, declared)
-	finished = Finished(generated)
+	generated = TestComparison(types.Generator).Check(test, left, right, declared)
+	finished = Finish(generated)
 	truth = finished.Load(InstructionEntry.LoadBoolean(finished.register, true))
 	truth.Add(InstructionEntry.Binary(InstructionType.Equal, (generated.Result, truth.Result)))
 Place(test SyntaxNode, method Text) Text
 	Even.Place(OneIsOne, "IsEven") is "1 is 1 in IsEven at Even.strict:line 0"
 	file = TypeEntry(types.fullName, List(MemberEntry), List(MethodEntry)).Source
 	test to Text + " in " + method + " at " + file + ":line " + test.line
-Passed(compared CodeBlock, place Text) CodeBlock slow
-	Even.Passed(Counter, "x").instructions.Index(InstructionEntry.Print("Test passed: x")) is -1
+Pass(compared CodeBlock, place Text) CodeBlock slow
+	Even.Pass(Counter, "x").instructions.Index(InstructionEntry.Print("Test passed: x")) is -1
 	passed = compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
-	shown = isQuiet then passed else Timed(passed, "Test passed: " + place)
-	Budgeted(shown, place).Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
-Budgeted(block CodeBlock, place Text) CodeBlock
-	Even.Budgeted(Counter, "x") is Counter
+	shown = isQuiet then passed else TimeTest(passed, "Test passed: " + place)
+	Budget(shown, place).Add(InstructionEntry.Jump(InstructionType.JumpEnd, passed.nextId - 1))
+Budget(block CodeBlock, place Text) CodeBlock
+	Even.Budget(Counter, "x") is Counter
 	if block.scope.TypeOf(" slow test") is not "Budgeted" or selection.StartsWith(Everything)
 		return block
 	elapsed = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "elapsed"))
@@ -136,45 +135,45 @@ Budgeted(block CodeBlock, place Text) CodeBlock
 	over = again.Load(InstructionEntry.Invoke(again.register, Overrun, List(Number) + again.Result, -1))
 	sum = over.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, over.register, "failed"))
 	sum.Load(InstructionEntry.Binary(InstructionType.Add, (sum.Result, over.Result, sum.register))).Stored("failed")
-Timed(block CodeBlock, message Text) CodeBlock slow
-	Even.Timed(Counter, "x").instructions.Last.texts is ("x (")
-	Even.Timed(Counter, "x").instructions(0).texts is ("elapsed")
-	Even.Timed(Counter, "x").instructions(1) is TookCall
-	TestCodegen(Even.types, true).Timed(Counter, "x").instructions.Last.texts is ("x")
+TimeTest(block CodeBlock, message Text) CodeBlock slow
+	Even.TimeTest(Counter, "x").instructions.Last.texts is ("x (")
+	Even.TimeTest(Counter, "x").instructions(0).texts is ("elapsed")
+	Even.TimeTest(Counter, "x").instructions(1) is TookCall
+	TestCodegen(Even.types, true).TimeTest(Counter, "x").instructions.Last.texts is ("x")
 	if isQuiet
 		return block.Add(InstructionEntry.Print(message))
 	elapsed = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "elapsed"))
 	signature = (types.fullName, Runner + "Took", "Strict/Text", "elapsed")
 	duration = elapsed.Load(InstructionEntry.Invoke(elapsed.register, signature, List(Number) + elapsed.Result, -1))
 	duration.Add(InstructionEntry.PrintValue(message + " (", duration.Result, true))
-Got(block CodeBlock) CodeBlock slow
-	Even.Got(TestedNumber).instructions.Last.kind is InstructionType.Print
-	Even.Got(TestedNumber).instructions.First.texts is List(Text) + ErrorCodegen.Tested
-	Even.Got(TestedNumber).instructions(1) is GotCall
-	Even.Got(Even.Got(TestedNumber)).scope.Count(TestReports.Showing) is 1
+Get(block CodeBlock) CodeBlock slow
+	Even.Get(TestedNumber).instructions.Last.kind is InstructionType.Print
+	Even.Get(TestedNumber).instructions.First.texts is List(Text) + ErrorCodegen.Tested
+	Even.Get(TestedNumber).instructions(1) is GotCall
+	Even.Get(Even.Get(TestedNumber)).scope.Count(TestReports.Showing) is 1
 	type = block.scope.TypeOf(ErrorCodegen.Tested)
 	marked = TestReports.Mark(block, TestReports.Showing, type)
 	load = InstructionEntry.Named(InstructionType.LoadVariableToRegister, marked.register, ErrorCodegen.Tested)
 	tested = marked.Load(load)
-	ordinal = TestReports.Marked(marked.scope, TestReports.Showing).Index(type)
+	ordinal = TestReports.MarkAll(marked.scope, TestReports.Showing).Index(type)
 	signature = (types.fullName, Runner + "Got" + ordinal, "Strict/Text", ErrorCodegen.Tested)
 	shown = tested.Load(InstructionEntry.Invoke(tested.register, signature, List(Number) + tested.Result, -1))
 	shown.Add(InstructionEntry.PrintValue("  got: ", shown.Result, true))
-Counted(block CodeBlock) CodeBlock
-	Even.Counted(Counter).instructions.Last.texts is ("failed")
-	Even.Counted(Counter).instructions.First.texts is ("failed")
-	Even.Counted(Counter).instructions(1) is InstructionEntry.LoadNumber(1, 1)
-	Even.Counted(Counter).instructions(2) is InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
-	Even.Counted(Counter).instructions.Last.payload is (2, -1)
+CountFailure(block CodeBlock) CodeBlock
+	Even.CountFailure(Counter).instructions.Last.texts is ("failed")
+	Even.CountFailure(Counter).instructions.First.texts is ("failed")
+	Even.CountFailure(Counter).instructions(1) is InstructionEntry.LoadNumber(1, 1)
+	Even.CountFailure(Counter).instructions(2) is InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))
+	Even.CountFailure(Counter).instructions.Last.payload is (2, -1)
 	failed = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "failed"))
 	one = failed.Load(InstructionEntry.LoadNumber(failed.register, 1))
 	one.Load(InstructionEntry.Binary(InstructionType.Add, (failed.Result, one.Result, one.register))).Stored("failed")
-Started(block CodeBlock, place Text) CodeBlock
+Start(block CodeBlock, place Text) CodeBlock
 	named = block.Load(InstructionEntry.LoadText(block.register, place))
 	slow = named.Load(InstructionEntry.LoadBoolean(named.register, block.scope.TypeOf(" slow test") is not ""))
 	constant signature = ("Strict/Runtime/TestBudget", "Start", "Strict/Number", "place", "isSlow")
 	slow.Load(InstructionEntry.Invoke(slow.register, signature, (named.Result, slow.Result), -1)).Stored("started")
-Finished(block CodeBlock) CodeBlock
+Finish(block CodeBlock) CodeBlock
 	started = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "started"))
 	constant signature = ("Strict/Runtime/TestBudget", "Finish", "Strict/Number", "started")
 	started.Load(InstructionEntry.Invoke(started.register, signature, List(Number) + started.Result, -1)).Stored("elapsed")

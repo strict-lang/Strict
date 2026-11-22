@@ -72,7 +72,7 @@ Receive(socket Number, ending Text) Text
 		isOpen = (available is Error) is false
 		chunk = isOpen then Socket.Receive(socket, available > 0 then available else 1) else List(Number)
 		isOpen = isOpen and chunk is Error is false
-		gathered = isOpen then gathered + ByteEncoder(chunk).Spelled(0, chunk.Length) else gathered
+		gathered = isOpen then gathered + ByteEncoder(chunk).Spell(0, chunk.Length) else gathered
 	gathered
 Opened Number
 	server = Socket.Local(0)

@@ -5,7 +5,7 @@ Hoped Texts
 	Sample.Hoped is ("a Pair", "b Pair")
 	LaneHopes(LaneFlow.Sample, ("a Pair", "b -")).Hoped is ("a Pair")
 	open = Open(Names)
-	Resolved(open, List(Text), open.Length)
+	Resolve(open, List(Text), open.Length)
 Names Texts
 	Sample.Names is ("a", "b", "c", "d", "e", "f", "g")
 	mutable names = List(Mutable(Text))
@@ -37,12 +37,12 @@ IsOpen(name Text, names Texts) Boolean
 		if Name(value) is name and (value.EndsWith(" -") or source is not "" and source is not in names)
 			return false
 	true
-Resolved(open Texts, known Texts, rounds Number) Texts
-	Sample.Resolved(("a", "b"), List(Text), 2) is ("a Pair", "b Pair")
-	next = Typed(open, known)
-	next is known or rounds is 0 then next else Resolved(open, next, rounds - 1)
-Typed(open Texts, known Texts) Texts
-	Sample.Typed(("a", "b"), List(Text)) is List(Text) + "a Pair"
+Resolve(open Texts, known Texts, rounds Number) Texts
+	Sample.Resolve(("a", "b"), List(Text), 2) is ("a Pair", "b Pair")
+	next = TypeHops(open, known)
+	next is known or rounds is 0 then next else Resolve(open, next, rounds - 1)
+TypeHops(open Texts, known Texts) Texts
+	Sample.TypeHops(("a", "b"), List(Text)) is List(Text) + "a Pair"
 	for open
 		type = TypeOf(value, known)
 		if type is not ""
@@ -62,4 +62,4 @@ Kind(store Text, known Texts) Text
 	Sample.Kind("a ?b", List(Text)) is ""
 	source = Source(store)
 	start = Name(store).Length + 1
-	source is "" then store.Substring(start) else flow.Typed(known, source)
+	source is "" then store.Substring(start) else flow.FindType(known, source)

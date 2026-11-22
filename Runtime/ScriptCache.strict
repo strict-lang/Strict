@@ -103,7 +103,7 @@ MethodTargets(entries List(TypeEntry)) Texts
 	result
 Linked(entry TypeEntry, main TypeCodegen) ScriptCache
 	fast = Linker(root, main, known, Linker.Unsourced, isFast = true)
-	round = fast.Linked((List(TypeEntry) + entry) + BaseRaw, signatures)
+	round = fast.Link((List(TypeEntry) + entry) + BaseRaw, signatures)
 	if round.entries.Length is 0
 		return ScriptCache(value, code = 1)
 	nextMachine = outer.Execute.Start(round.entries, Scripted.Path, false, true)
@@ -150,7 +150,7 @@ IsValidated(lines Texts, merged TypeInference, logger Logger) Boolean
 		logger.Log(value)
 	issues.Length is 0
 RanLines(lines Texts, texts List(VmValue), currentRoot Text, logger Logger, path = "") ScriptCache
-	base = BaseLoaded(lines, currentRoot, logger, path is "" then "" else FileCompiler.Normalized(path))
+	base = BaseLoaded(lines, currentRoot, logger, path is "" then "" else FileCompiler.Normalize(path))
 	if base.code > 0
 		return ScriptCache(value, code = 1)
 	merged = base.MergedInference(lines)

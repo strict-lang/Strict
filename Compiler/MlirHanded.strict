@@ -23,7 +23,7 @@ First(register Number) Number
 		isChecked = steps(value).kind is InstructionType.CheckError
 		if register is in reuse.Reads(steps(value)) and isChecked is false
 			return value
-		if IsFlow(steps(value).kind) or reuse.Written(steps(value)) is register
+		if IsFlow(steps(value).kind) or reuse.Write(steps(value)) is register
 			return Number.NotFound
 	Number.NotFound
 IsFlow(kind Number) Boolean

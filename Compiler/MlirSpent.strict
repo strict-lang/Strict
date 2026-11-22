@@ -38,6 +38,6 @@ IsUnread(register Number) Boolean
 	for Range(position + 1, reuse.instructions.Length)
 		if register is in reuse.Reads(reuse.instructions(value))
 			return false
-		if reuse.Written(reuse.instructions(value)) is register
+		if reuse.Write(reuse.instructions(value)) is register
 			return true
 	true

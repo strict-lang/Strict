@@ -24,21 +24,21 @@ Rewritten List(TypeEntry)
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
 	Sample.Methods(Counter).First.instructions.First is Start
-	Sample.Followed(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "x"), "%v_x") is "%r2"
-	Sample.Followed(Kept, "%v_conditional0") is "" and Sample.Followed(Again, "%r1") is ""
-	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), 1), "%r1") is "%r1"
-	Sample.Followed(InstructionEntry(InstructionType.CheckError, List(Text), 1), "%r2") is ""
+	Sample.Follow(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "x"), "%v_x") is "%r2"
+	Sample.Follow(Kept, "%v_conditional0") is "" and Sample.Follow(Again, "%r1") is ""
+	Sample.Follow(InstructionEntry(InstructionType.CheckError, List(Text), 1), "%r1") is "%r1"
+	Sample.Follow(InstructionEntry(InstructionType.CheckError, List(Text), 1), "%r2") is ""
 	Sample.IsTail(TypeEntry("Strict/Other", List(MemberEntry), Counting), Counting, 1) is false
 	Sample.IsTail(TypeEntry("Strict/Counting", List(MemberEntry), List(MethodEntry)), Counting, 1) is false
 	for type.methods
-		Looped(type, value)
-Looped(type TypeEntry, method MethodEntry) MethodEntry
-	Sample.Looped(Counter, Counting).instructions.First is Start
-	Sample.Looped(Counter, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
-	TailCalls(List(TypeEntry) + Constant).Looped(Constant, Itself) is Itself
+		Loop(type, value)
+Loop(type TypeEntry, method MethodEntry) MethodEntry
+	Sample.Loop(Counter, Counting).instructions.First is Start
+	Sample.Loop(Counter, MethodEntry.CountingLoop) is MethodEntry.CountingLoop
+	TailCalls(List(TypeEntry) + Constant).Loop(Constant, Itself) is Itself
 	mutable instructions = List(Mutable(InstructionEntry))
 	for method.instructions
-		replaced = IsTail(type, method, index) then Jumped(method, value) else List(InstructionEntry) + value
+		replaced = IsTail(type, method, index) then Jump(method, value) else List(InstructionEntry) + value
 		instructions = instructions + replaced
 	if instructions.Length is method.instructions.Length
 		return method
@@ -64,11 +64,11 @@ IsLooped(method MethodEntry, position Number) Boolean
 		kind = method.instructions(value).kind
 		depth = depth + (kind is InstructionType.LoopBegin then 1 else kind is InstructionType.LoopEnd then -1 else 0)
 	depth > 0
-Jumped(method MethodEntry, call InstructionEntry) List(InstructionEntry)
-	Sample.Jumped(Counting, Again).Length is 4
-	Sample.Jumped(Counting, Again).First.texts is ("number")
-	Sample.Jumped(Counting, Again).Last is Restart
-	Sample.Jumped(Counting, Again).First.payload is (0, -1)
+Jump(method MethodEntry, call InstructionEntry) List(InstructionEntry)
+	Sample.Jump(Counting, Again).Length is 4
+	Sample.Jump(Counting, Again).First.texts is ("number")
+	Sample.Jump(Counting, Again).Last is Restart
+	Sample.Jump(Counting, Again).First.payload is (0, -1)
 	reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	result = call.payload(0)
 	mutable lines = List(Mutable(InstructionEntry))
@@ -83,13 +83,13 @@ Returns(instructions List(InstructionEntry), register Number, start Number) Bool
 	Sample.Returns(Branched, 2, 1) is false
 	mutable current = "%r" + register
 	for Range(start, instructions.Length)
-		current = Followed(instructions(value), current)
+		current = Follow(instructions(value), current)
 		if current is in ("", "returned")
 			return current is "returned"
 	false
-Followed(entry InstructionEntry, current Text) Text
-	Sample.Followed(Kept, "%r1") is "%v_conditional0"
-	Sample.Followed(InstructionEntry.Return(2), "%r1") is ""
+Follow(entry InstructionEntry, current Text) Text
+	Sample.Follow(Kept, "%r1") is "%v_conditional0"
+	Sample.Follow(InstructionEntry.Return(2), "%r1") is ""
 	if entry.kind is InstructionType.JumpEnd
 		return current
 	register = "%r" + entry.payload(0)

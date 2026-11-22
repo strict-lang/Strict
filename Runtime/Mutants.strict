@@ -33,7 +33,7 @@ RunMutants(types List(TypeEntry), root Text, files Texts, inference TypeInferenc
 	held = part is "" then cache.Hold(TypeSource.Root + "/obj") else List(Text)
 	isFresh = part is not "" or cache.IsCurrent is false
 	unoptimized = FileCompiler(true, isWhole then "*" else "", false)
-	survivors = Survivors(isFresh then unoptimized.Built(path, root, true, files, inference).entries else types)
+	survivors = Survivors(isFresh then unoptimized.Build(path, root, true, files, inference).entries else types)
 	if cache.IsReleased(held) is false
 		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
 	survivors.Length
@@ -94,7 +94,7 @@ Round(types List(TypeEntry), ready List(TypeEntry), methods List(MethodEntry), b
 Alone(ready List(TypeEntry), position Number, mutant MethodEntry) Machine
 	Sample.Alone(Resolver(Doubled).Resolved, 0, Mutation.Twice.Mutant(13)).types.First.methods.First is Started13
 	first = ready.First
-	looped = TailCalls(ready).Looped(first, mutant)
+	looped = TailCalls(ready).Loop(first, mutant)
 	placed = Resolver(ready).Methods(TypeEntry(first, methods = List(MethodEntry) + looped)).First
 	changed = Replace(ready, List(MethodEntry) + first.methods(position), List(MethodEntry) + placed)
 	Machine(changed, ConstantCache(List(VmValue)), Path(path).PathOnly.text).Prepared

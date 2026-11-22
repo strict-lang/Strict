@@ -1,14 +1,14 @@
 constant Sample = BodyParser("Run", "\tmutable pi = 0", "\tfor Range(1, rounds + 1)", "\t\tpi = pi + (1 - 2 * (value % 2)) / (2 * value + 1)").Method(1).children(1)
 constant PlainSum = BodyParser("Run", "\tmutable sum = 0", "\tfor Range(0, rounds)", "\t\tsum = sum + value").Method(1).children(1)
-Merged(loop SyntaxNode) SyntaxNode
-	FractionLoop.Merged(PlainSum).Kind is "For"
-	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("2500") > 0
-	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("sum = sum + -2") > 0
+Merge(loop SyntaxNode) SyntaxNode
+	FractionLoop.Merge(PlainSum).Kind is "For"
+	Text.Combine(FractionLoop.Merge(Sample).Lines(""), " ").IndexOf("2500") > 0
+	Text.Combine(FractionLoop.Merge(Sample).Lines(""), " ").IndexOf("sum = sum + -2") > 0
 	term = Term(loop)
 	if term.Kind is not "Binary" or term.text is not "/"
 		return loop
 	parts = (term.children(0) to Text) is "1 - 2 * (value % 2)" then Linear(term.children(1), "value") else ""
-	parts is "" or Bound(loop).Kind is not "Number" then loop else Built(loop, parts)
+	parts is "" or Bound(loop).Kind is not "Number" then loop else Build(loop, parts)
 Term(loop SyntaxNode) SyntaxNode
 	body = loop.Kind is "For" then loop.children.Last else loop
 	statement = body.Kind is "Body" then (body.children.Length is 1 then body.children(0) else loop) else body
@@ -38,7 +38,7 @@ Product(node SyntaxNode, name Text) Text
 	if left.Kind is "Number" and right.Kind is "Identifier" and right.text is name
 		return left.text
 	right.Kind is "Number" and left.Kind is "Identifier" and left.text is name then right.text else ""
-Built(loop SyntaxNode, parts Text) SyntaxNode
+Build(loop SyntaxNode, parts Text) SyntaxNode
 	coefficient = parts.Split("*")(0)
 	offset = parts.Split("*")(1)
 	start = loop.children(0).children(0)

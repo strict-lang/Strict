@@ -147,7 +147,7 @@ IsGreeted(socket Number) Boolean
 	if waited is Error or waited is not 1
 		return false
 	greeting = Resident.Greeting
-	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
+	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spell(0, greeting.Length) is greeting
 Stream(socket Number) Number
 	Sample.Stream(0) is Dropped
 	mutable code = -2

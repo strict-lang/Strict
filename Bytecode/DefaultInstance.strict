@@ -10,17 +10,17 @@ constant Computing = TypeInference(KnownTypes(Bags, parameters = Flats), Bagged.
 constant Computed = DefaultInstance(ValueCodegen(Owned.values, inference = Computing))
 constant Starter = "$Start"
 constant Starting = TypeEntry("A", List(MemberEntry), MethodEntry(MethodEntry.HelloRun, Name = Starter))
-Called(node SyntaxNode, block CodeBlock) CodeBlock
-	Bagged.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "from"
-	Owned.Called(Counting, CodeBlock.Empty).instructions.First.texts(1) is "Count"
-	instanced = Instanced(node, block)
-	arranged = NamedArguments(values).Arranged(node, block)
+Call(node SyntaxNode, block CodeBlock) CodeBlock
+	Bagged.Call(Counting, CodeBlock.Empty).instructions.First.texts(1) is "from"
+	Owned.Call(Counting, CodeBlock.Empty).instructions.First.texts(1) is "Count"
+	instanced = Instance(node, block)
+	arranged = NamedArguments(values).Arrange(node, block)
 	instanced is node then values.Replacing(arranged, block) else values.InstanceCall(instanced, block)
-Instanced(node SyntaxNode, block CodeBlock) SyntaxNode
-	Bagged.Instanced(Counting, CodeBlock.Empty).children(0).Kind is "Call"
-	Bagged.Instanced(Plainly, CodeBlock.Empty).children(0).Kind is "Identifier"
-	Bagged.Instanced(Counting, CodeBlock.Empty.Declare("Bag", "Number")) is Counting
-	Computed.Instanced(Counting, CodeBlock.Empty).children(0).Kind is "Call"
+Instance(node SyntaxNode, block CodeBlock) SyntaxNode
+	Bagged.Instance(Counting, CodeBlock.Empty).children(0).Kind is "Call"
+	Bagged.Instance(Plainly, CodeBlock.Empty).children(0).Kind is "Identifier"
+	Bagged.Instance(Counting, CodeBlock.Empty.Declare("Bag", "Number")) is Counting
+	Computed.Instance(Counting, CodeBlock.Empty).children(0).Kind is "Call"
 	if node.Kind is not in ("Member", "MethodCall") or node.children.Length is 0
 		return node
 	type = node.children(0).text

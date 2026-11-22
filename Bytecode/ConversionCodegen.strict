@@ -23,20 +23,20 @@ constant Ranged = SyntaxNode("Call", "Range", (ValueCodegen.One, ValueCodegen.On
 constant Ranging = Plain.Elements(Ranged, "Numbers", CodeBlock.Empty)
 ArgumentTypes(node SyntaxNode, owner Text, block CodeBlock) Texts
 	Plain.ArgumentTypes(SyntaxNode("Call", "Greet", ValueCodegen.One), "Greeter", CodeBlock.Empty) is ("Unknown")
-	Plain.Typed(SyntaxNode("Binary", "+", Typing.children), CodeBlock.Empty).text is "+"
-	Plain.Typed(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).Kind is "Call"
-	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty.Declare("x", "Number")) is ValueCodegen.ToText
-	Plain.Replaced(SyntaxNode("Call", "Greeter", (Pixels, Pixels))) to Text is "Greeter(pixels, pixels)"
-	Plain.Replaced(SyntaxNode("Call", "Unknown", Repainted.children)).Kind is "Call"
-	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions.Length is 9
-	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(0).texts(1) is "converted0"
+	Plain.Retype(SyntaxNode("Binary", "+", Typing.children), CodeBlock.Empty).text is "+"
+	Plain.Retype(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).Kind is "Call"
+	Plain.Retype(ValueCodegen.ToText, CodeBlock.Empty.Declare("x", "Number")) is ValueCodegen.ToText
+	Plain.Replace(SyntaxNode("Call", "Greeter", (Pixels, Pixels))) to Text is "Greeter(pixels, pixels)"
+	Plain.Replace(SyntaxNode("Call", "Unknown", Repainted.children)).Kind is "Call"
+	Colored.Loop(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions.Length is 9
+	Colored.Loop(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(0).texts(1) is "converted0"
 	Kinded.Textual(SyntaxNode("", "", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), Pixelated).Kind is "Binary"
 	isOverloaded = values.target.IsOverloaded(node.text, owner)
 	for Range(values.ArgumentStart(node), node.children.Length)
 		isOverloaded then values.TypeOf(node.children(value), block) else "Unknown"
-Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Assigned(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
-	Colored.Assigned(Repainted.children(1), CodeBlock.Empty.Declare("c", "Color")).text is "Color"
+Assign(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Assign(SyntaxNode("Declaration", "let a", ValueCodegen.One), CodeBlock.Empty).Kind is "Number"
+	Colored.Assign(Repainted.children(1), CodeBlock.Empty.Declare("c", "Color")).text is "Color"
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.One, SyntaxNode("Call", "Kind"))), Pixelated).text is "Kind"
 	Kinded.Operand(SyntaxNode("Binary", "-", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), Pixelated).text is "Kind"
 	Plain.Operand(Nesting, CodeBlock.Empty.Declare("x", "List(Numbers)")).Kind is "List"
@@ -46,24 +46,24 @@ Assigned(node SyntaxNode, block CodeBlock) SyntaxNode
 	Colored.Operand(SyntaxNode("Binary", "-", (Pixels, Pixels)), Pixelated) is Pixels
 	Plain.Operand(SyntaxNode("", "-", Nesting.children), CodeBlock.Empty.Declare("x", "Numberss")) to Text is "(1, 1)"
 	right = node.children.Last
-	node.Kind is "Declaration" then right else Converted(right, values.TypeOf(node.children(0), block), block)
-Converted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
-	Colored.Converted(NewColorValue, "Color", CodeBlock.Empty).text is "Color"
-	Colored.Converted(NewColor, "ColorValue", CodeBlock.Empty).text is "to"
-	Colored.Converted(Pixels, "Colors", Pixelated).Kind is "Converted"
-	Colored.Converted(ValueCodegen.Ones, "ColorValue", CodeBlock.Empty).text is "ColorValue"
-	Kinded.Converted(SyntaxNode("Call", "Kind"), "Text", CodeBlock.Empty).text is "to"
+	node.Kind is "Declaration" then right else Convert(right, values.TypeOf(node.children(0), block), block)
+Convert(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Colored.Convert(NewColorValue, "Color", CodeBlock.Empty).text is "Color"
+	Colored.Convert(NewColor, "ColorValue", CodeBlock.Empty).text is "to"
+	Colored.Convert(Pixels, "Colors", Pixelated).Kind is "Converted"
+	Colored.Convert(ValueCodegen.Ones, "ColorValue", CodeBlock.Empty).text is "ColorValue"
+	Kinded.Convert(SyntaxNode("Call", "Kind"), "Text", CodeBlock.Empty).text is "to"
 	if values.inference.types.IsPlural(type)
-		return Elements(Held(node, type, block), type, block)
+		return Elements(Hold(node, type, block), type, block)
 	isConstructed = values.inference.types.IsKnown(type) and type is not in TypeInference.Primitives
 	if node.Kind is "List" and isConstructed and type is not "List"
 		return SyntaxNode("Call", type, node.children)
 	converter = values.inference.Converter(values.TypeOf(node, block), type)
-	type is "Text" and converter is "" then Bracketed(node, block) else Changed(node, converter, type, block)
-Held(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
-	Colored.Held(NewColor, "Byte", CodeBlock.Empty).text is "Red"
-	Colored.Held(NewColor, "ColorValue", CodeBlock.Empty) is NewColor
-	Colored.Held(NewColor, "Number", CodeBlock.Empty) is NewColor
+	type is "Text" and converter is "" then Bracket(node, block) else Change(node, converter, type, block)
+Hold(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Colored.Hold(NewColor, "Byte", CodeBlock.Empty).text is "Red"
+	Colored.Hold(NewColor, "ColorValue", CodeBlock.Empty) is NewColor
+	Colored.Hold(NewColor, "Number", CodeBlock.Empty) is NewColor
 	types = values.inference.types
 	source = values.TypeOf(node, block)
 	index = types.MembersOf(source).types.Index(type)
@@ -73,10 +73,10 @@ Held(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	traitMethods = types.MethodsOf(type).names
 	isImplemented = traitMethods.Length > 0 and (traitMethods - types.MethodsOf(source).names).Length is 0
 	isImplemented then node else SyntaxNode("Member", types.MembersOf(source).names(index), List(SyntaxNode) + node)
-Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
-	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty).text is "+"
-	Plain.Bracketed(ValueCodegen.One, CodeBlock.Empty) is ValueCodegen.One
-	Mapped.Bracketed(SyntaxNode("Call", "Dictionary", ValueCodegen.Ones), CodeBlock.Empty).Kind is "Call"
+Bracket(node SyntaxNode, block CodeBlock) SyntaxNode
+	Stepped.Bracket(SyntaxNode("Call", "Step"), CodeBlock.Empty).text is "+"
+	Plain.Bracket(ValueCodegen.One, CodeBlock.Empty) is ValueCodegen.One
+	Mapped.Bracket(SyntaxNode("Call", "Dictionary", ValueCodegen.Ones), CodeBlock.Empty).Kind is "Call"
 	type = values.TypeOf(node, block)
 	members = values.inference.types.MembersOf(type)
 	if members.names.Length is not 1 or type.StartsWith("Dictionary(")
@@ -86,21 +86,21 @@ Bracketed(node SyntaxNode, block CodeBlock) SyntaxNode
 	member = SyntaxNode("Member", members.names(0), List(SyntaxNode) + node)
 	closed = SyntaxNode("Binary", "+", (member, SyntaxNode("Text", "\")\"")))
 	SyntaxNode("Binary", "+", (SyntaxNode("Text", "\"(\""), closed))
-Changed(node SyntaxNode, converter Text, type Text, block CodeBlock) SyntaxNode
-	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty).text is "to"
-	Plain.Changed(ValueCodegen.One, "", "Text", CodeBlock.Empty) is ValueCodegen.One
-	Stepped.Changed(SyntaxNode("Call", "Step"), "", "Number", CodeBlock.Empty).Kind is "Call"
-	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty).children(1).Kind is "Identifier"
+Change(node SyntaxNode, converter Text, type Text, block CodeBlock) SyntaxNode
+	Plain.Change(ValueCodegen.One, "to", "Text", CodeBlock.Empty).text is "to"
+	Plain.Change(ValueCodegen.One, "", "Text", CodeBlock.Empty) is ValueCodegen.One
+	Stepped.Change(SyntaxNode("Call", "Step"), "", "Number", CodeBlock.Empty).Kind is "Call"
+	Plain.Change(ValueCodegen.One, "to", "Text", CodeBlock.Empty).children(1).Kind is "Identifier"
 	if converter is "to"
 		return SyntaxNode("Binary", "to", (node, SyntaxNode("Identifier", type)))
 	if converter is "from"
 		return SyntaxNode("Call", type, node)
-	values.inference.types.ValueOf(values.TypeOf(node, block)) is type then node else Held(node, type, block)
-Typed(node SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Typed(HelperType, CodeBlock.Empty) to Text is "Type(\"Helper\", \"Strict/Examples\")"
-	Plain.Typed(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText
-	Plain.Typed(Typing, CodeBlock.Empty) to Text is "Type(\"Number\", \"Strict\")"
-	Plain.Typed(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).text is "to"
+	values.inference.types.ValueOf(values.TypeOf(node, block)) is type then node else Hold(node, type, block)
+Retype(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Retype(HelperType, CodeBlock.Empty) to Text is "Type(\"Helper\", \"Strict/Examples\")"
+	Plain.Retype(ValueCodegen.ToText, CodeBlock.Empty) is ValueCodegen.ToText
+	Plain.Retype(Typing, CodeBlock.Empty) to Text is "Type(\"Number\", \"Strict\")"
+	Plain.Retype(SyntaxNode("Call", "to", Typing.children), CodeBlock.Empty).text is "to"
 	if (node.Kind is "Binary" and node.text is "to" and node.children(1).text is "Type") is false
 		return node
 	source = node.children(0)
@@ -111,55 +111,54 @@ Typed(node SyntaxNode, block CodeBlock) SyntaxNode
 TypeValue(full Text) SyntaxNode
 	Plain.TypeValue("Strict/Number") to Text is "Type(\"Number\", \"Strict\")"
 	Plain.TypeValue("Strict/Number").children(0).Kind is "Text" and Plain.TypeValue("A/B").children(1).Kind is "Text"
-	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty) to Text is "\"(\" + (Step().step + \")\")"
-	Plain.Changed(ValueCodegen.One, "to", "Text", CodeBlock.Empty) to Text is "1 to Text"
-	Colored.Held(NewColor, "Byte", CodeBlock.Empty) to Text is "Color(1).Red"
-	Stepped.Converted(SyntaxNode("Call", "Step"), "Text", CodeBlock.Empty).text is "+"
-	Stepped.Converted(SyntaxNode("Call", "Step"), "Number", CodeBlock.Empty).text is "Step"
-	Colored.Converted(ValueCodegen.Ones, "Color", CodeBlock.Empty) to Text is "Color(1, 1)"
-	Plain.Typed(SyntaxNode("Binary", "to", (ValueCodegen.ToText, Typing.children(1))), CodeBlock.Empty).text is "to"
+	Stepped.Bracket(SyntaxNode("Call", "Step"), CodeBlock.Empty) to Text is "\"(\" + (Step().step + \")\")"
+	Plain.Change(ValueCodegen.One, "to", "Text", CodeBlock.Empty) to Text is "1 to Text"
+	Colored.Hold(NewColor, "Byte", CodeBlock.Empty) to Text is "Color(1).Red"
+	Stepped.Convert(SyntaxNode("Call", "Step"), "Text", CodeBlock.Empty).text is "+"
+	Stepped.Convert(SyntaxNode("Call", "Step"), "Number", CodeBlock.Empty).text is "Step"
+	Colored.Convert(ValueCodegen.Ones, "Color", CodeBlock.Empty) to Text is "Color(1, 1)"
+	Plain.Retype(SyntaxNode("Binary", "to", (ValueCodegen.ToText, Typing.children(1))), CodeBlock.Empty).text is "to"
 	split = full.LastIndexOf("/")
 	name = SyntaxNode("Text", "\"" + full.Substring(split + 1, full.Length - split - 1) + "\"")
 	SyntaxNode("Call", "Type", (name, SyntaxNode("Text", "\"" + full.Substring(0, split) + "\"")))
 ConvertedElements(node SyntaxNode, type Text, block CodeBlock) List(SyntaxNode)
 	Colored.ConvertedElements(SyntaxNode("List", "", NewColorValue), "Color", CodeBlock.Empty).Length is 1
 	Plain.Operand(SyntaxNode("", "-", Nesting.children), CodeBlock.Empty.Declare("x", "Numbers")) to Text is "(1, 1)"
-	Colored.Converted(ValueCodegen.Ones, "Color", CodeBlock.Empty).Kind is "Call"
-	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty).children(0).Kind is "Text"
-	Stepped.Bracketed(SyntaxNode("Call", "Step"), CodeBlock.Empty).children(1).children(1).Kind is "Text"
-	Colored.Converted(ValueCodegen.Ones, "List", CodeBlock.Empty) is ValueCodegen.Ones
+	Colored.Convert(ValueCodegen.Ones, "Color", CodeBlock.Empty).Kind is "Call"
+	Stepped.Bracket(SyntaxNode("Call", "Step"), CodeBlock.Empty).children(0).Kind is "Text"
+	Stepped.Bracket(SyntaxNode("Call", "Step"), CodeBlock.Empty).children(1).children(1).Kind is "Text"
+	Colored.Convert(ValueCodegen.Ones, "List", CodeBlock.Empty) is ValueCodegen.Ones
 	for node.children
-		Converted(value, type, block)
+		Convert(value, type, block)
 Elements(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
 	Colored.Elements(SyntaxNode("List", "", NewColorValue), "Colors", CodeBlock.Empty).children(0).text is "Color"
 	Colored.Elements(Pixels, "Colors", Pixelated).children(1).text is "Color" and Ranging.Kind is "Converted"
 	Colored.Elements(Pixels, "ColorValues", Pixelated).Kind is "Identifier"
-	Colored.Held(Pixels, "Color", Pixelated) is Pixels
+	Colored.Hold(Pixels, "Color", Pixelated) is Pixels
 	types = values.inference.types
 	if node.Kind is "List"
 		return SyntaxNode("List", "", ConvertedElements(node, types.ElementType(type), block))
 	source = values.TypeOf(node, block)
 	scoped = block.Declare("value", types.ElementType(source))
 	constant element = SyntaxNode("Identifier", "value")
-	converted = types.IsPlural(source) then Converted(element, types.ElementType(type), scoped) else element
+	converted = types.IsPlural(source) then Convert(element, types.ElementType(type), scoped) else element
 	converted.text is "value" and source is not "Range" then node else SyntaxNode("Converted", type, (node, converted))
-Wanted(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
-	Plain.Wanted(Letter, "Text", Lettered).children(1).text is "Text"
-	Plain.Wanted(Letter, "", Lettered) is Letter
-	Plain.Wanted(ValueCodegen.One, "Text", Lettered) is ValueCodegen.One
-	Plain.Wanted(SyntaxNode("Return", "", Letter), "Text", Lettered).Kind is "Return"
+Want(node SyntaxNode, type Text, block CodeBlock) SyntaxNode
+	Plain.Want(Letter, "Text", Lettered).children(1).text is "Text"
+	Plain.Want(Letter, "", Lettered) is Letter
+	Plain.Want(ValueCodegen.One, "Text", Lettered) is ValueCodegen.One
+	Plain.Want(SyntaxNode("Return", "", Letter), "Text", Lettered).Kind is "Return"
 	if type is not "Text" or BranchValues.Returning.IsValue(node) is false
 		return node
-	values.TypeOf(node, block) is "Character" then Changed(node, "to", "Text", block) else node
-Returned(node SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Returned(SyntaxNode("Return", "", Letter), Lettered).children(0).text is "to"
-	Plain.Returned(SyntaxNode("Return", "", Letter), Pixelated) is SyntaxNode("Return", "", Letter)
-	Plain.Returned(SyntaxNode("Return", ""), Lettered) is SyntaxNode("Return", "")
-	Plain.Returned(Letter, Lettered) is Letter
+	values.TypeOf(node, block) is "Character" then Change(node, "to", "Text", block) else node
+ConvertReturn(node SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.ConvertReturn(SyntaxNode("Return", "", Letter), Lettered).children(0).text is "to"
+	Plain.ConvertReturn(SyntaxNode("Return", "", Letter), Pixelated) is SyntaxNode("Return", "", Letter)
+	Plain.ConvertReturn(SyntaxNode("Return", ""), Lettered) is SyntaxNode("Return", "")
+	Plain.ConvertReturn(Letter, Lettered) is Letter
 	if node.Kind is not "Return" or node.HasValue is false
 		return node
-	wanted = Wanted(node.children(0), block.scope.TypeOf(CodeBlock.ReturnMarker), block)
-	SyntaxNode("Return", node.text, wanted, node.line)
+	SyntaxNode("Return", node.text, Want(node.children(0), block.scope.TypeOf(CodeBlock.ReturnMarker), block), node.line)
 Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	Colored.Operand(SyntaxNode("Binary", "+", (Pixels, NewColor)), Pixelated).text is "to"
 	Plain.Operand(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty).text is "1"
@@ -172,7 +171,7 @@ Operand(node SyntaxNode, block CodeBlock) SyntaxNode
 	if types.IsPlural(listType) is false
 		return node.text is "+" then Textual(node, block) else operand
 	isList = operand.Kind is "List" or types.IsPlural(values.TypeOf(operand, block))
-	Converted(operand, isList then listType else types.ElementType(listType), block)
+	Convert(operand, isList then listType else types.ElementType(listType), block)
 IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
 	Plain.IsElement("List(Numbers)", Nesting.children.Last, CodeBlock.Empty)
 	Plain.IsElement("Numberss", Nesting.children.Last, CodeBlock.Empty)
@@ -197,23 +196,23 @@ Textual(node SyntaxNode, block CodeBlock) SyntaxNode
 	left = values.TypeOf(node.children(0), block)
 	isText = "Text" is in (left, types.ValueOf(left))
 	if types.MethodsOf(type).Has("to", "Text") is false or TypeEntry.IsBaseName(type)
-		return isText then Bracketed(operand, block) else operand
+		return isText then Bracket(operand, block) else operand
 	isText then SyntaxNode("Binary", "to", (operand, SyntaxNode("Identifier", "Text"))) else operand
-Looped(node SyntaxNode, block CodeBlock) CodeBlock
-	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(4).kind is InstructionType.Invoke
-	Colored.Looped(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(7).payload is (6)
+Loop(node SyntaxNode, block CodeBlock) CodeBlock
+	Colored.Loop(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(4).kind is InstructionType.Invoke
+	Colored.Loop(Colored.Elements(Pixels, "Colors", Pixelated), Pixelated).instructions(7).payload is (6)
 	name = "converted" + block.nextId
 	empty = InstructionEntry(InstructionType.LoadConstantToRegister, values.target.FullName(node.text), (0, 6, -1, 0))
 	started = block.Add(MethodCodegen.StoreConstant(empty, name)).WithNextId
-	begun = LoopCodegen(MethodCodegen(values)).Declared(SyntaxNode("For", "", node.children), started)
+	begun = LoopCodegen(MethodCodegen(values)).Declare(SyntaxNode("For", "", node.children), started)
 	element = values.Expression(node.children(1), begun)
 	written = element.Add(InstructionEntry.Named(InstructionType.InvokeWriteToList, element.Result, name))
 	end = InstructionEntry.Jump(InstructionType.LoopEnd, written.instructions.Length - started.instructions.Length)
 	ended = CodeBlock(written.instructions + end, block.register, written.nextId, block.scope)
 	ended.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, name))
-Replaced(call SyntaxNode) SyntaxNode
-	Plain.Replaced(Repainted) to Text is "Greeter(pixels.text)"
-	Plain.Replaced(NewColor) is NewColor
+Replace(call SyntaxNode) SyntaxNode
+	Plain.Replace(Repainted) to Text is "Greeter(pixels.text)"
+	Plain.Replace(NewColor) is NewColor
 	names = values.target.FromNames(call.text, List(Text) + call.text)
 	if call.children.Length < 2 or call.children(1).Kind is not "Reassignment" or names.Length is 0
 		return call

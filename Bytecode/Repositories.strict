@@ -6,13 +6,13 @@ constant Listing = ("  \"tree\": [", "      \"path\": \"Math/Vector2.strict\",",
 constant Readme = ("See https://github.com/strict-lang/Strict.", "[a](https://github.com/b/c.git) github.com/d")
 constant Nested = ("Math/Vector2.strict", "Math/Shapes/Circle.strict", "Text.strict")
 constant Listed = ("  {", "    \"full_name\": \"strict-lang/Strict\",", "    \"full_name\": \"strict-lang/sdk\",")
-Downloaded(type Text) Text
+Download(type Text) Text
 	for Clones
 		local = SourceFiles(value).SubfolderWith(value, type)
 		if local is not "" and IsHere(value) is false
-			return Directory.Exists(target + "/" + Path(local).FileName.text) then "" else Copied(local, type)
+			return Directory.Exists(target + "/" + Path(local).FileName.text) then "" else Copy(local, type)
 	for Directory.Exists(Development + "/strict-lang") then List(Text) else Candidates
-		folder = Fetched(value, type)
+		folder = FetchFile(value, type)
 		if folder is not ""
 			return folder
 	""
@@ -26,55 +26,55 @@ IsHere(folder Text) Boolean
 Clones Texts
 	(Repositories.Clones.Length > 0) is Directory.Exists(Repositories.Development + "/strict-lang")
 	file = File(target + "/README.md")
-	readme = file.Exists then Linked(file.ReadLines) else List(Text)
+	readme = file.Exists then Link(file.ReadLines) else List(Text)
 	mutable clones = List(Mutable(Text))
-	for readme + Owned("strict-lang")
+	for readme + Own("strict-lang")
 		if Directory.Exists(Development + "/" + value) and Development + "/" + value is not in clones
 			clones.Add(Development + "/" + value)
 	clones
-Owned(owner Text) Texts
-	Repositories.Owned("missing-owner").Length is 0
+Own(owner Text) Texts
+	Repositories.Own("missing-owner").Length is 0
 	for Directory.Directories(Development + "/" + owner)
 		owner + "/" + Path(value.Replace("\\", "/")).FileName.text
 Candidates Texts
 	file = File(target + "/README.md")
-	mutable candidates = file.Exists then Linked(file.ReadLines) else List(Text)
-	for Quoted(Fetch(Organization), "full_name")
+	mutable candidates = file.Exists then Link(file.ReadLines) else List(Text)
+	for Quote(Fetch(Organization), "full_name")
 		if value is not in candidates
 			candidates = candidates + value
 	candidates
-Fetched(repository Text, type Text) Text
-	paths = Quoted(Fetch("https://api.github.com/repos/" + repository + "/git/trees/HEAD?recursive=1"), "path")
+FetchFile(repository Text, type Text) Text
+	paths = Quote(Fetch("https://api.github.com/repos/" + repository + "/git/trees/HEAD?recursive=1"), "path")
 	folder = Folder(paths, type)
 	if folder is ""
 		return ""
 	local = target + "/" + Path(folder is "." then repository else folder).FileName.text
 	for Files(paths, folder)
-		Downloaded(Raw + repository + "/HEAD/" + value, local + "/" + Relative(value, folder))
+		Download(Raw + repository + "/HEAD/" + value, local + "/" + Relative(value, folder))
 	File(local + "/.origin").Write(List(Text) + "https://github.com/" + repository + "/tree/HEAD/" + folder)
 	logger.Log("Downloaded " + local + " from https://github.com/" + repository)
-	Provided(local, type)
-Downloaded(url Text, file Text)
-	Repositories("artifacts").Downloaded("https://missing.invalid/a", "Compiler/output/a") is Error
+	Provide(local, type)
+Download(url Text, file Text)
+	Repositories("artifacts").Download("https://missing.invalid/a", "Compiler/output/a") is Error
 	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + url + "\"").HasFailed
 		return Error("DownloadFailed: " + url)
-Copied(folder Text, type Text) Text slow
-	Repositories("artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
+Copy(folder Text, type Text) Text slow
+	Repositories("artifacts").Copy("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
 	local = target + "/" + Path(folder).FileName.text
-	for BinaryFile(folder).Contained(folder)
+	for BinaryFile(folder).Contain(folder)
 		if value.EndsWith(".strict") or value.Replace("\\", "/").IndexOf("/native/") > 0
 			File(local + "/" + Relative(value.Replace("\\", "/"), folder)).Write(File(value).ReadBytes)
 	File(local + "/.origin").Write(List(Text) + folder)
 	logger.Log("Copied " + local + " from " + folder)
-	Provided(local, type)
+	Provide(local, type)
 Fetch(url Text) Texts
 	token = Process.RunTool("gh", "auth token")
 	isAuthorized = token.HasSucceeded and token.Output.Trim is not ""
 	header = isAuthorized then "-H \"Authorization: Bearer " + token.Output.Trim + "\" " else ""
 	Process.RunTool("curl", "-sfL " + header + "\"" + url + "\"").Output.Split("\n")
-Linked(lines Texts) Texts
-	Repositories.Linked(Readme) is ("strict-lang/Strict", "b/c")
-	Repositories.Linked(("github.com/a/b", "docs/c/d", "github.com/a/b")) is ("a/b")
+Link(lines Texts) Texts
+	Repositories.Link(Readme) is ("strict-lang/Strict", "b/c")
+	Repositories.Link(("github.com/a/b", "docs/c/d", "github.com/a/b")) is ("a/b")
 	constant host = "github.com/"
 	mutable repositories = List(Mutable(Text))
 	for lines
@@ -97,15 +97,15 @@ Repository(link Text) Text
 	repository = link.Substring(0, end).Replace(".git", "")
 	last = repository.Length - 1
 	repository.EndsWith(".") then repository.Substring(0, last) else repository
-Quoted(lines Texts, key Text) Texts
-	Repositories.Quoted(Listing, "path") is ("Math/Vector2.strict", "Math/Size.strict", "Math/README.md", "Vector2.strict")
-	Repositories.Quoted(Listed, "full_name") is ("strict-lang/Strict", "strict-lang/sdk")
+Quote(lines Texts, key Text) Texts
+	Repositories.Quote(Listing, "path") is ("Math/Vector2.strict", "Math/Size.strict", "Math/README.md", "Vector2.strict")
+	Repositories.Quote(Listed, "full_name") is ("strict-lang/Strict", "strict-lang/sdk")
 	for lines
 		start = value.IndexOf("\"" + key + "\": \"")
 		if start >= 0
 			value.Substring(start + key.Length + 5, value.LastIndexOf("\"") - start - key.Length - 5)
 Folder(paths Texts, type Text) Text
-	Repositories.Folder(Repositories.Quoted(Listing, "path"), "Vector2") is "Math"
+	Repositories.Folder(Repositories.Quote(Listing, "path"), "Vector2") is "Math"
 	Repositories.Folder(List(Text) + "Vector2.strict", "Vector2s") is "."
 	Repositories.Folder(List(Text) + "Math/Size.strict", "Vector2") is ""
 	singular = type.EndsWith("s") then type.Substring(0, type.Length - 1) else type
@@ -114,8 +114,8 @@ Folder(paths Texts, type Text) Text
 			return value.IndexOf("/") < 0 then "." else value.Substring(0, value.LastIndexOf("/"))
 	""
 Files(paths Texts, folder Text) Texts
-	Repositories.Files(Repositories.Quoted(Listing, "path"), "Math") is ("Math/Vector2.strict", "Math/Size.strict")
-	Repositories.Files(Repositories.Quoted(Listing, "path"), ".").Last is "Vector2.strict"
+	Repositories.Files(Repositories.Quote(Listing, "path"), "Math") is ("Math/Vector2.strict", "Math/Size.strict")
+	Repositories.Files(Repositories.Quote(Listing, "path"), ".").Last is "Vector2.strict"
 	Repositories.Files(Nested, "Math") is ("Math/Vector2.strict", "Math/Shapes/Circle.strict")
 	Repositories.Files(("Pack/A.strict", "Pack/native/A.c", "Pack/B.txt"), "Pack") is ("Pack/A.strict", "Pack/native/A.c")
 	prefix = folder is "." then "" else folder + "/"
@@ -126,20 +126,20 @@ Relative(path Text, folder Text) Text
 	Repositories.Relative("Math/Shapes/Circle.strict", "Math") is "Shapes/Circle.strict"
 	Repositories.Relative("Vector2.strict", ".") is "Vector2.strict"
 	folder is "." then path else path.Substring(folder.Length + 1, path.Length - folder.Length - 1)
-Provided(local Text, type Text) Text
-	Repositories.Provided("./Math", "Vector2") is "./Math"
-	Repositories.Provided("./Math", "Missing") is ""
-	for BinaryFile(local).Contained(local)
+Provide(local Text, type Text) Text
+	Repositories.Provide("./Math", "Vector2") is "./Math"
+	Repositories.Provide("./Math", "Missing") is ""
+	for BinaryFile(local).Contain(local)
 		if value.Replace("\\", "/").EndsWith("/" + type + ".strict")
 			return local
 	""
-Updated(folder Text) Number
-	Repositories.Updated("./Math") is 0
+Update(folder Text) Number
+	Repositories.Update("./Math") is 0
 	mutable updated = 0
 	for Directory.Directories(folder)
 		files = Directory.Files(value, "*.strict")
 		if File(value + "/.origin").Exists and files.Length > 0
 			type = Path(files.First.Replace("\\", "/")).FileName.text
-			if Repositories(folder).Downloaded(type.Substring(0, type.Length - 7)) is not ""
+			if Repositories(folder).Download(type.Substring(0, type.Length - 7)) is not ""
 				updated = updated + 1
 	updated

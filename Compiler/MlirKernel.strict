@@ -126,7 +126,7 @@ Terms(register Number, before Number) Texts
 	Rejecting.Terms(9, 11) is ("")
 	for before - position - 1
 		at = before - 1 - index
-		if LoadReuse(function.method.instructions).Written(function.method.instructions(at)) is register
+		if LoadReuse(function.method.instructions).Write(function.method.instructions(at)) is register
 			return Termed(at)
 	List(Text) + ""
 Termed(at Number) Texts

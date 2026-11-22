@@ -36,7 +36,7 @@ IsRead(at Number, register Number) Boolean
 	for Range(at + 1, steps.Length)
 		if register is in reuse.Reads(steps(value)) and IsPlain(steps(value)) is false
 			return false
-		if reuse.Written(steps(value)) is register
+		if reuse.Write(steps(value)) is register
 			return true
 	true
 IsPlain(entry InstructionEntry) Boolean

@@ -58,7 +58,7 @@ OtherSignature(name Text, type Text, returnType Text, argumentTypes Texts) Texts
 	Plain.OtherSignature("Greeter", "Greeter", "Greeter", List(Text))(3) is "text"
 	if name is type or type.StartsWith(name + "(")
 		return (FullName(type), "from", type) + FromNames(type, argumentTypes)
-	(FullName(type), name, FullName(returnType)) + Declared(type, name, argumentTypes, "")
+	(FullName(type), name, FullName(returnType)) + Declare(type, name, argumentTypes, "")
 ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Plain.ParameterTypes("Greeter", "Greeter", List(Text)) is ("Text")
 	Adder.ParameterTypes("Add", "C", List(Text)) is ("Numbers")
@@ -67,10 +67,10 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	Counting.ParameterTypes("Twice", "Count", List(Text) + "Number") is ("Number")
 	Optioned.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
 	OwnOptions.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
-	declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
+	declared = Declare(type, name is type then "from" else name, argumentTypes, " types")
 	isUndeclared = type is TypeName then Header(name).tokens.Length is 0 else declared.Length is 0
 	if name is not type and isUndeclared and types.Inherit(type, name) is not ""
-		return Declared("Any", name, argumentTypes, " types")
+		return Declare("Any", name, argumentTypes, " types")
 	if type is TypeName and (name is not type or Header(name).tokens.Length > 0)
 		return HeaderEntries(Chosen(name, argumentTypes), types.MethodsOf(type)).ParameterTypes
 	if name is not type or declared.Length > 0
@@ -88,7 +88,7 @@ FromNames(type Text, argumentTypes Texts = List(Text)) Texts
 	if argumentTypes.Length is 0
 		return types.ParametersOf(type, "from", -1)
 	isCopy = types.BaseName(argumentTypes.First) is types.BaseName(type)
-	isCopy then types.MembersOf(type).names else Declared(type, "from", argumentTypes, "")
+	isCopy then types.MembersOf(type).names else Declare(type, "from", argumentTypes, "")
 Chosen(name Text, argumentTypes Texts) HeaderTokens
 	Overloaded.Chosen("Members", List(Text) + "Number").ParameterNames is ("lines")
 	Overloaded.Chosen("Members", List(Text)).ParameterNames.Length is 0
@@ -106,8 +106,8 @@ IsOverloaded(name Text, type Text) Boolean
 	Counting.IsOverloaded("Twice", "Count")
 	Counting.IsOverloaded("Increment", "Count") is false
 	types.ParameterScope(type).Count(name) > 1
-Declared(type Text, name Text, argumentTypes Texts, suffix Text) Texts
-	Counting.Declared("Count", "Twice", List(Text) + "Number", " types") is ("Number")
+Declare(type Text, name Text, argumentTypes Texts, suffix Text) Texts
+	Counting.Declare("Count", "Twice", List(Text) + "Number", " types") is ("Number")
 	scope = types.ParameterScope(type)
 	ordinal = Overloads(types).Chosen(type, name, argumentTypes)
 	if ordinal < 0

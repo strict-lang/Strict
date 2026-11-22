@@ -13,7 +13,7 @@ IsPrecise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
 	fields = values.inference.types.MembersOf(kinds.First).names.Length > 0
 	list = values.inference.types.BaseName(kinds.First) is "List"
 	kinds.First is not "Number" and fields is false and list is false
-Checked(test SyntaxNode, left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
+Check(test SyntaxNode, left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
 	tested = SyntaxNode("Identifier", ErrorCodegen.Tested)
 	operator = test.text is in ("is", "is not") then test.text else "is"
 	Nearly(SyntaxNode("Binary", operator, (tested, right), test.line), IsPrecise(left, right, block), block)
@@ -21,34 +21,34 @@ Nearly(comparison SyntaxNode, isPrecise Boolean, block CodeBlock) CodeBlock
 	Plain.Nearly(Logical.children.Last, true, CodeBlock.Empty).scope.Count(TestReports.Nearing) is 0
 	if isPrecise
 		return values.Expression(comparison, block)
-	compared = Compared(comparison.children(0), comparison.children(1), block)
+	compared = Compare(comparison.children(0), comparison.children(1), block)
 	comparison.text is "is not" then compared.Negated else compared
 IsLogical(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsLogical(Logical, CodeBlock.Empty)
 	Plain.IsLogical(SyntaxNode("Binary", "and", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
 	node.Kind is "Binary" and node.text is in ("and", "or") and OperatorCodegen(values).IsCustom(node, block) is false
-Evaluated(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Evaluated(Logical.children.Last, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
+Evaluat(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Evaluat(Logical.children.Last, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	if IsLogical(node, block)
 		return OperatorCodegen(values, true).Logical(node, block)
 	if node.Kind is "Binary" and node.text is in ("is", "is not")
 		return Nearly(node, IsPrecise(node.children(0), node.children(1), block), block)
 	values.Expression(node, block)
-Compared(left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Compared(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).instructions.Last.texts(1) is "$TestsNear0"
-	Plain.Compared(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).scope.TypeOf(" near") is "Number"
+Compare(left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Compare(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).instructions.Last.texts(1) is "$TestsNear0"
+	Plain.Compare(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).scope.TypeOf(" near") is "Number"
 	key = values.TypeOf(left, block)
 	marked = TestReports.Mark(block, TestReports.Nearing, key)
 	expected = values.Expression(right, marked)
 	tested = values.Expression(left, expected)
-	name = TestCodegen.Runner + "Near" + TestReports.Marked(marked.scope, TestReports.Nearing).Index(key)
+	name = TestCodegen.Runner + "Near" + TestReports.MarkAll(marked.scope, TestReports.Nearing).Index(key)
 	signature = (values.target.fullName, name, "Strict/Boolean", ErrorCodegen.Tested, TestReports.Expected)
 	tested.Load(InstructionEntry.Invoke(tested.register, signature, (tested.Result, expected.Result), -1))
-Stored(test SyntaxNode, left SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Stored(Logical, Logical, CodeBlock.Empty).scope.TypeOf(TestReports.Nearing) is "Number"
+Store(test SyntaxNode, left SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Store(Logical, Logical, CodeBlock.Empty).scope.TypeOf(TestReports.Nearing) is "Number"
 	if IsLogical(test, block) is false
 		return ErrorCodegen(values).Caught(test, left, block)
-	Evaluated(test, block).Stored(ErrorCodegen.Tested).At(block.register)
+	Evaluat(test, block).Stored(ErrorCodegen.Tested).At(block.register)
 Shortcut(left Text, lines Texts) Texts
 	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text))(2) is "\tif (testEqual0 is false) and (x is not Error)"
 	TestComparison(ValueCodegen.Plain).Shortcut("x", List(Text))(0) is "Run"

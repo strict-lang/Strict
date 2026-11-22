@@ -1,7 +1,7 @@
 has ignored Texts = List(Text)
 Canonical(path Text) Text
 	DataFiles.Canonical("Tools/../x").Length > 0
-	normalized = FileCompiler.Normalized(path)
+	normalized = FileCompiler.Normalize(path)
 	Process.OperatingSystem is "Windows" then normalized.Lower else normalized
 IsExcluded(path Text) Boolean
 	DataFiles(("./Tools/", "./generated/")).IsExcluded("Tools")

@@ -8,11 +8,11 @@ Of(path Text, others Texts = List(Text)) Texts slow
 	"./Math/Size.strict" is in SourceFiles(".").Of("./Math/Vector2.strict", List(Text) + "Math/Size.strict")
 	"./Xml/Xml.strict" is in SourceFiles(".").Of("./Xml")
 	mutable start = List(Mutable(Text))
-	for Added(List(Text) + path, others + Folder(path))
+	for Add(List(Text) + path, others + Folder(path))
 		if File(value).Exists
-			start = Added(start, List(Text) + FileCompiler.Normalized(value))
+			start = Add(start, List(Text) + FileCompiler.Normalize(value))
 	base = Directory.Files(root, "*.strict")
-	reached = Reached(Added(Indexed(start), base), start, base)
+	reached = Traverse(Add(IndexPaths(start), base), start, base)
 	TypeChoice(File(path).Exists then File(path).ReadLines else List(Text)).Chosen(reached, path)
 Folder(path Text) Texts
 	Plain.Folder("./Math").Length > 10
@@ -23,33 +23,33 @@ Folder(path Text) Texts
 	for ResolveCheck.Tree(path)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Indexed(paths Texts) Texts
-	"./Math/Size.strict" is in SourceFiles(".").Indexed(List(Text) + "./Math/Vector2.strict")
+IndexPaths(paths Texts) Texts
+	"./Math/Size.strict" is in SourceFiles(".").IndexPaths(List(Text) + "./Math/Vector2.strict")
 	project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
 	mutable local = List(Mutable(Text))
 	for paths
-		local = Added(local, List(Text) + Path(value).PathOnly.text)
+		local = Add(local, List(Text) + Path(value).PathOnly.text)
 	mutable files = List(Mutable(Text))
-	for project.Length > 0 then Added(project, local) else Folders(local, 3)
+	for project.Length > 0 then Add(project, local) else Folders(local, 3)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Reached(known Texts, frontier Texts, reached Texts, searched = List(Text), folders = TypeFolders.None) Texts slow
-	"./Compression/Inflate.strict" is in Plain.Reached(Compressed, Imaging, List(Text))
+Traverse(known Texts, frontier Texts, reached Texts, searched = List(Text), folders = TypeFolders.None) Texts slow
+	"./Compression/Inflate.strict" is in Plain.Traverse(Compressed, Imaging, List(Text))
 	if frontier.Length is 0
 		return reached
 	mutable names = List(Mutable(Text))
 	for frontier
-		names = names + Mentioned(value)
+		names = names + Mention(value)
 	mentioned = names.Unique
-	unmatched = Mentions.Unmatched(mentioned, known) - searched
+	unmatched = Mentions.Unmatch(mentioned, known) - searched
 	indexed = unmatched.Length is 0 or folders.folders.Length > 0 then folders else TypeFolders.Of(root)
-	grown = unmatched.Length is 0 then known else Added(known, TypeChoice(known).Unique(indexed.Files(unmatched)))
-	visited = Added(reached, frontier)
-	Reached(grown, Matching(mentioned, grown) - visited, visited, searched + unmatched, indexed)
+	grown = unmatched.Length is 0 then known else Add(known, TypeChoice(known).Unique(indexed.Files(unmatched)))
+	visited = Add(reached, frontier)
+	Traverse(grown, Matching(mentioned, grown) - visited, visited, searched + unmatched, indexed)
 Matching(names Texts, files Texts) Texts
-	SourceFiles(".").Reached(Imaging, List(Text), Imaging) is Imaging
+	SourceFiles(".").Traverse(Imaging, List(Text), Imaging) is Imaging
 	SourceFiles(".").Matching(("Vector2s", "Missing"), Imaging + "./Math/Vector2.strict") is ("./Math/Vector2.strict")
-	wanted = Mentions.Named(names)
+	wanted = Mentions.MarkNames(names)
 	for files
 		slashed = value.IndexOf("\\") >= 0 then value.Replace("\\", "/") else value
 		slash = slashed.LastIndexOf("/")
@@ -61,10 +61,10 @@ Folders(folders Texts, depth Number, scanned = 0) Texts
 	SourceFiles(".").Folders(List(Text) + "./Missing", 2).Length is 1
 	mutable result = folders
 	for Range(scanned, folders.Length)
-		result = Added(result, Referenced(folders(value)))
+		result = Add(result, Reference(folders(value)))
 	depth is 0 or result.Length is folders.Length then result else Folders(result, depth - 1, folders.Length)
-Added(folders Texts, more Texts) Texts
-	SourceFiles(".").Added(("a", "b"), ("b", "c")) is ("a", "b", "c")
+Add(folders Texts, more Texts) Texts
+	SourceFiles(".").Add(("a", "b"), ("b", "c")) is ("a", "b", "c")
 	if more.Length is 0
 		return folders
 	mutable seen = Seen(folders)
@@ -80,11 +80,11 @@ Seen(texts Texts) Dictionary(Text, Boolean)
 	for texts
 		seen(value) = true
 	seen
-Referenced(folder Text) Texts
-	SourceFiles(".").Referenced("./Missing").Length is 0
+Reference(folder Text) Texts
+	SourceFiles(".").Reference("./Missing").Length is 0
 	mutable result = List(Mutable(Text))
 	for Directory.Files(folder, "*.strict")
-		result = Added(result, Packages(value))
+		result = Add(result, Packages(value))
 	result
 Packages(file Text) Texts
 	SourceFiles(".").Packages("./Bytecode/SourceFiles.strict") is List(Text)
@@ -95,8 +95,8 @@ Packages(file Text) Texts
 	found = PackagesIn(File(file).ReadLines)
 	stored = Memo.Keep(file, kind, found.Length is 0 then List(Text) + Nothing else found)
 	found.Length is 0 then List(Text) else stored
-Mentioned(file Text) Texts
-	"Number" is in SourceFiles(".").Mentioned("./Math/Vector2.strict")
+Mention(file Text) Texts
+	"Number" is in SourceFiles(".").Mention("./Math/Vector2.strict")
 	constant kind = "mentions"
 	cached = Memo.Texts(file, kind)
 	if cached.Length > 0
@@ -110,7 +110,7 @@ PackagesIn(lines Texts) Texts
 	for lines
 		if value.IndexOf("/") >= 0
 			if value.Trim.StartsWith("//") is false and value.Replace(" / ", "").IndexOf("/") >= 0
-				result = Added(result, PackageNames(Tokenizer(value).Tokens))
+				result = Add(result, PackageNames(Tokenizer(value).Tokens))
 	result
 PackageNames(tokens Texts) Texts
 	SourceFiles(".").PackageNames("Bytecode", "/", "X", "Strict", "/", "Y") is List(Text) + "./Bytecode"

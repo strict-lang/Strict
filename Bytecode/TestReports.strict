@@ -12,23 +12,23 @@ constant Erring = TestReports(TypeCodegen("Strict/Erring", ("Error(number Number
 constant ProcessMethods = (Scope(List(Text) + "Elapsed", List(Text) + "Number"), Scope(List(Text) + "Process", List(Text) + "Image"))
 constant ProcessTypes = KnownTypes(("Process", "Image"), KnownTypes.NoMemberPair, ProcessMethods, KnownTypes.NoMemberPair)
 constant Processing = TestReports(TypeCodegen("Strict/Image", ("Process(number Number) Image", "	Process(1) is Image", "	Image"), TypeInference(ProcessTypes, KnownTypes.NoMemberPair), List(Text)))
-constant GotNumber = TestCodegen.Even.Got(TestCodegen.TestedNumber).scope
+constant GotNumber = TestCodegen.Even.Get(TestCodegen.TestedNumber).scope
 constant Plainly = SyntaxParser(Tokenizer(ErrorShown + "tested to Text").Tokens).Parse
 constant Either = TestCodegen.Counter.Declare(Showing, "Boolean or Text")
 constant Nothing = SyntaxParser(Tokenizer(ErrorShown + "\"None\"").Tokens).Parse
 constant NearNumbers = Even.Near("Numbers", 0)
 constant NearText = NearNumbers.instructions to Text
 constant ElapsedParameter = MemberEntry("elapsed", "Strict/Number", List(InstructionEntry), false)
-Marked(scope Scope, marker Text) Texts
-	TestReports.Marked(TestCodegen.Even.Got(TestCodegen.Even.Got(TestCodegen.TestedNumber)).scope, Showing) is ("Number")
-	TestReports.Marked(GotNumber, Nearing).Length is 0
+MarkAll(scope Scope, marker Text) Texts
+	TestReports.MarkAll(TestCodegen.Even.Get(TestCodegen.Even.Get(TestCodegen.TestedNumber)).scope, Showing) is ("Number")
+	TestReports.MarkAll(GotNumber, Nearing).Length is 0
 	for scope.names
 		if value is marker
 			scope.types(index)
 Mark(block CodeBlock, marker Text, key Text) CodeBlock
 	TestReports.Mark(TestCodegen.Counter, Showing, "Number").scope.TypeOf(Showing) is "Number"
 	TestReports.Mark(TestReports.Mark(TestCodegen.Counter, Nearing, "A"), Nearing, "A").scope.Count(Nearing) is 1
-	key is in Marked(block.scope, marker) then block else block.Declare(marker, key)
+	key is in MarkAll(block.scope, marker) then block else block.Declare(marker, key)
 Helpers(scope Scope) List(MethodEntry) slow
 	Even.Helpers(GotNumber).First.Name is "$TestsGot0" and Even.Helpers(GotNumber).First.instructions.Length is 30
 	Even.Helpers(GotNumber.With(Nearing, "Number")).Last.Name is "$TestsNear0"
@@ -36,12 +36,12 @@ Helpers(scope Scope) List(MethodEntry) slow
 	TestReports(Even.types, true).Helpers(GotNumber).Length is 1
 	Even.Helpers(Either).First is Even.Helper("Got0", ErrorCodegen.Tested, "Boolean or Text", Plainly)
 	mutable helpers = List(Mutable(MethodEntry))
-	for Marked(scope, Showing)
+	for MarkAll(scope, Showing)
 		shown = value is "None" then Nothing else value.IndexOf(" or ") > 0 then Plainly else Shown
 		helpers.Add(Helper("Got" + index, ErrorCodegen.Tested, value, shown))
 	if isQuiet is false
 		helpers.Add(Helper("Took", "elapsed", "Number", Duration))
-	for Marked(scope, Nearing)
+	for MarkAll(scope, Nearing)
 		helpers.Add(Near(value, index))
 	helpers
 Helper(name Text, parameter Text, type Text, expression SyntaxNode) MethodEntry slow

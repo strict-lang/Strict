@@ -88,7 +88,7 @@ IsRead(at Number, register Number) Boolean
 	for Range(at + 1, steps.Length)
 		if register is in reuse.Reads(steps(value)) and IsHarmless(steps(value), value) is false
 			return false
-		if reuse.Written(steps(value)) is register
+		if reuse.Write(steps(value)) is register
 			return true
 	true
 IsHarmless(entry InstructionEntry, at Number) Boolean
@@ -132,7 +132,7 @@ IsUnshared(at Number, register Number, name Text) Boolean
 		isRead = register is in LoadReuse(steps).Reads(steps(value))
 		if isRead and isChecked is false and IsHarmless(steps(value), value) is false
 			return false
-		if LoadReuse(steps).Written(steps(value)) is register
+		if LoadReuse(steps).Write(steps(value)) is register
 			return true
 	true
 IsLast(at Number, name Text) Boolean

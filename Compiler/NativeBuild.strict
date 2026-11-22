@@ -143,7 +143,7 @@ Output(path Text, isProgram Boolean) Text
 	NativeBuild.Output("C:/s/A.strict", true) is "C:/s/obj/A"
 	NativeBuild.Output("Math", false) is "./Math/obj/Tests.test"
 	if Directory.Exists(path)
-		return FileCompiler.Normalized(path) + "/obj/Tests.test"
+		return FileCompiler.Normalize(path) + "/obj/Tests.test"
 	intermediate = BuildOutput.Intermediate(path)
 	intermediate.Substring(0, intermediate.Length - 7) + (isProgram then "" else ".test")
 Mlir(program Text, root Text, platform Number) Text slow

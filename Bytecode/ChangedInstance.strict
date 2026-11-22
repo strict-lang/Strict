@@ -14,11 +14,11 @@ constant Nexting = ChangedInstance(Ticking.Generator, "Next")
 constant Lowered = CodeBlock(Returning.instructions, 7, 0, CodeBlock.Empty.scope)
 constant Storing = CodeBlock.Empty.At(9).Stored(Name)
 constant Literal = SyntaxNode("Member", "Next", SyntaxNode("Text", "ticker"))
-Kept(code CodeBlock) CodeBlock
+Keep(code CodeBlock) CodeBlock
 	Ticking.Method(2).instructions.Last.kind is InstructionType.Return
 	Ticking.Method(2).instructions(Ticking.Method(2).instructions.Length - 2).texts is (Name)
 	Ticking.Method(5).instructions.Length is 2
-	built = Built(code)
+	built = Build(code)
 	if built.instructions.Length is 0
 		return code
 	mutable instructions = List(Mutable(InstructionEntry))
@@ -27,26 +27,26 @@ Kept(code CodeBlock) CodeBlock
 			instructions = instructions + built.instructions
 		instructions.Add(value)
 	CodeBlock(instructions, built.register, built.nextId, code.scope)
-Called(node SyntaxNode, call SyntaxNode, block CodeBlock) CodeBlock
-	Ticked.Called(Calling, Calling, Holding).instructions.First.kind is InstructionType.Invoke
-	ChangedInstance(Ticking.Generator, "Next").Called(OwnNext, OwnNext, CodeBlock.Empty).instructions(4).texts is ("#this")
+Call(node SyntaxNode, call SyntaxNode, block CodeBlock) CodeBlock
+	Ticked.Call(Calling, Calling, Holding).instructions.First.kind is InstructionType.Invoke
+	ChangedInstance(Ticking.Generator, "Next").Call(OwnNext, OwnNext, CodeBlock.Empty).instructions(4).texts is ("#this")
 	isOwn = call.Kind is in ("Identifier", "Call") and method is in Changes(values.target.shape.lines).Methods
 	current = isOwn then values.Expression(Instance, block).Stored("#this") else block
 	Back(call, values.Invoke(call, current, -1, values.TypeOf(node, block)), current)
 Back(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
 	Ticked.Back(Calling, Holding.At(1), Mutables).instructions.Length is 1
-	Nexting.Unpacked(CodeBlock.Empty.At(1)).instructions.Length is 5
-	Nexting.Unpacked(CodeBlock.Empty.At(1)).instructions(0).texts is ("count", "Ticker")
-	Nexting.Unpacked(CodeBlock.Empty.At(1)).instructions(0).payload is (2, 1, -1, -2)
-	Nexting.Unpacked(CodeBlock.Empty.At(1)).instructions(3).payload is (2, -1)
-	Nexting.Unpacked(CodeBlock.Empty.At(1)).instructions(3).texts is ("step")
-	Nexting.Unpacked(CodeBlock.Empty.At(1)).instructions(4).payload is (1, -1)
+	Nexting.Unpack(CodeBlock.Empty.At(1)).instructions.Length is 5
+	Nexting.Unpack(CodeBlock.Empty.At(1)).instructions(0).texts is ("count", "Ticker")
+	Nexting.Unpack(CodeBlock.Empty.At(1)).instructions(0).payload is (2, 1, -1, -2)
+	Nexting.Unpack(CodeBlock.Empty.At(1)).instructions(3).payload is (2, -1)
+	Nexting.Unpack(CodeBlock.Empty.At(1)).instructions(3).texts is ("step")
+	Nexting.Unpack(CodeBlock.Empty.At(1)).instructions(4).payload is (1, -1)
 	ChangedInstance(Ticked.values, "Size").StoredBack(Calling, Holding.At(1), Mutables).instructions.Length is 0
 	Ticked.StoredBack(Literal, Holding.At(1), Mutables).instructions.Length is 0
 	ChangedArguments(values, method).StoredBack(call, StoredBack(call, invoked, block), block)
-Unpacked(invoked CodeBlock) CodeBlock
-	ChangedInstance(Ticking.Generator, "Next").Unpacked(CodeBlock.Empty.At(1)).instructions.Last.texts is ("#this")
-	ChangedInstance(Ticking.Generator, "Size").Unpacked(CodeBlock.Empty.At(1)).instructions.Length is 0
+Unpack(invoked CodeBlock) CodeBlock
+	ChangedInstance(Ticking.Generator, "Next").Unpack(CodeBlock.Empty.At(1)).instructions.Last.texts is ("#this")
+	ChangedInstance(Ticking.Generator, "Size").Unpack(CodeBlock.Empty.At(1)).instructions.Length is 0
 	if method is not in Changes(values.target.shape.lines).Methods
 		return invoked
 	changed = invoked.register
@@ -56,14 +56,14 @@ Unpacked(invoked CodeBlock) CodeBlock
 		read = InstructionEntry(InstructionType.FieldLoad, (value, owner), (changed + 1, changed, -1, -2))
 		unpacked = unpacked.Add(read).Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, changed + 1, value))
 	unpacked.Add(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, changed, "#this"))
-Built(code CodeBlock) CodeBlock
-	ChangedInstance(Ticking.Generator, "Next").Built(CodeBlock.Empty).instructions.Last.texts is (Name)
-	ChangedInstance(Ticking.Generator, "Size").Built(CodeBlock.Empty).instructions.Length is 0
-	ChangedInstance(Ticking.Generator, "Next").Built(Returning).instructions.First.payload(0) is 6
+Build(code CodeBlock) CodeBlock
+	ChangedInstance(Ticking.Generator, "Next").Build(CodeBlock.Empty).instructions.Last.texts is (Name)
+	ChangedInstance(Ticking.Generator, "Size").Build(CodeBlock.Empty).instructions.Length is 0
+	ChangedInstance(Ticking.Generator, "Next").Build(Returning).instructions.First.payload(0) is 6
 	start = CodeBlock(List(InstructionEntry), Free(code), code.nextId, code.scope)
 	isChanging = method is not "from" and method is in Changes(values.target.shape.lines).Methods
 	instanced = isChanging then values.Expression(Instance, start).Stored(Name) else start
-	ChangedArguments(values, method).Stored(instanced)
+	ChangedArguments(values, method).StoreAll(instanced)
 Free(code CodeBlock) Number
 	ChangedInstance.Free(Returning) is 6
 	ChangedInstance.Free(CodeBlock.Empty) is 0
@@ -76,9 +76,9 @@ Free(code CodeBlock) Number
 	free
 Instance SyntaxNode
 	ChangedInstance(Ticking.Generator, "Next").Instance.children.Length is 2
-	ChangedInstance(Ticking.Generator, "Size").Kept(Returning) is Returning
-	Nexting.Kept(Storing).instructions.Length is Storing.instructions.Length
-	Nexting.Called(Calling, Calling, Holding).instructions.First.kind is InstructionType.Invoke
+	ChangedInstance(Ticking.Generator, "Size").Keep(Returning) is Returning
+	Nexting.Keep(Storing).instructions.Length is Storing.instructions.Length
+	Nexting.Call(Calling, Calling, Holding).instructions.First.kind is InstructionType.Invoke
 	mutable members = List(Mutable(SyntaxNode))
 	for values.target.shape.MemberScope.names
 		members.Add(SyntaxNode("Identifier", value))
@@ -87,7 +87,7 @@ StoredBack(call SyntaxNode, invoked CodeBlock, block CodeBlock) CodeBlock
 	Ticked.StoredBack(Calling, Holding.At(1), Mutables).instructions.First.payload is (1, -1)
 	Ticked.StoredBack(Calling, Holding.At(1), Holding).instructions.Length is 0
 	if call.Kind is in ("Identifier", "Call")
-		return Unpacked(invoked)
+		return Unpack(invoked)
 	target = call.children(0)
 	if target.Kind is not "Identifier" or block.scope.TypeOf(target.text + " mutable") is ""
 		return invoked

@@ -28,10 +28,10 @@ Operation(node SyntaxNode, block CodeBlock) CodeBlock
 	if node.children.Length < 2
 		return Negative(node.children(0), block)
 	if KindTests(values).IsRuntime(node, block)
-		return KindTests(values).Tested(node, block)
+		return KindTests(values).EmitTest(node, block)
 	if IsComposite(node, block)
 		return Composite(node, block)
-	left = ErrorCodegen(values).Compared(node, node.children(0), block)
+	left = ErrorCodegen(values).Compare(node, node.children(0), block)
 	right = ErrorCodegen(values).Right(node, left, true)
 	result = right.Load(InstructionEntry.Binary(OperatorType(node.text), (left.Result, right.Result, right.register)))
 	node.text is in (">=", "<=") then result.OrEqual(left.Result, right.Result) else result
@@ -81,12 +81,12 @@ IsComposite(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsComposite(Choose, CodeBlock.Empty)
 	Plain.IsComposite(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty) is false
 	isFixed = node.Kind is "Converted" or node.text is in ("and", "or", "is in", "is not in", "else")
-	isFixed or IsCustom(node, block) or Decided(node, block) is not ""
-Decided(node SyntaxNode, block CodeBlock) Text
-	Plain.Decided(Mismatched, CodeBlock.Empty) is "false"
-	Plain.Decided(SyntaxNode("Binary", "is not", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is "true"
-	Plain.Decided(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is ""
-	Hiding.Decided(SyntaxNode("Binary", "is", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is ""
+	isFixed or IsCustom(node, block) or Decide(node, block) is not ""
+Decide(node SyntaxNode, block CodeBlock) Text
+	Plain.Decide(Mismatched, CodeBlock.Empty) is "false"
+	Plain.Decide(SyntaxNode("Binary", "is not", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is "true"
+	Plain.Decide(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is ""
+	Hiding.Decide(SyntaxNode("Binary", "is", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is ""
 	if node.text is not in ("is", "is not")
 		return ""
 	wanted = node.children.Last
@@ -97,7 +97,7 @@ Decided(node SyntaxNode, block CodeBlock) Text
 IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
 	Plain.Composite(SyntaxNode("Binary", "and", (NoNode, NoNode)), CodeBlock.Empty.Declare("x", "Boolean")).nextId is 1
 	Plain.Composite(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
-	Plain.Decided(SyntaxNode("Binary", "<", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is ""
+	Plain.Decide(SyntaxNode("Binary", "<", (One, SyntaxNode("Identifier", "B"))), CodeBlock.Empty) is ""
 	Plain.Choice(Choose, CodeBlock.Empty).instructions(8).payload is (0)
 	Plain.Choice(Narrowing, CodeBlock.Empty.Declare("x", "Number")).scope.TypeOf("x") is "Number"
 	Plain.IsTypeTest(SyntaxNode("Identifier", "B"), CodeBlock.Empty)
@@ -105,7 +105,7 @@ IsTypeTest(wanted SyntaxNode, block CodeBlock) Boolean
 	isHiding = values.IsMethodCall(wanted, block) or wanted.text is "Error"
 	values.IsTypeName(wanted, block) and isHiding is false
 IsMismatched(node SyntaxNode, block CodeBlock) Boolean
-	Plain.Decided(SyntaxNode("", "is", (NoNode, Mismatched.children(1))), CodeBlock.Empty.Declare("x", "Dictionary")) is ""
+	Plain.Decide(SyntaxNode("", "is", (NoNode, Mismatched.children(1))), CodeBlock.Empty.Declare("x", "Dictionary")) is ""
 	Plain.IsMismatched(Mismatched, CodeBlock.Empty)
 	Plain.IsMismatched(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty) is false
 	Hashes.IsMismatched(SyntaxParser(Tokenizer("Hash(1) is Hash(\"a\")").Tokens).Parse, CodeBlock.Empty) is false
@@ -130,12 +130,12 @@ Matches(type Text, wanted Text) Boolean
 	type is wanted or types.BaseName(type) is wanted or wanted is "Iterator" and isIterable
 Composite(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Composite(Choose, CodeBlock.Empty).instructions.Last.kind is InstructionType.LoadVariableToRegister
-	if Decided(node, block) is not ""
-		return values.Expression(SyntaxNode("Boolean", Decided(node, block)), block)
+	if Decide(node, block) is not ""
+		return values.Expression(SyntaxNode("Boolean", Decide(node, block)), block)
 	if node.Kind is "Converted"
-		return ConversionCodegen(values).Looped(node, block)
+		return ConversionCodegen(values).Loop(node, block)
 	if IsCustom(node, block)
-		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", node.text, node.children), block)
+		return ErrorCodegen(values).Handle(SyntaxNode("MethodCall", node.text, node.children), block)
 	if node.text is in ("and", "or")
 		return Logical(node, block)
 	node.text is "else" then Choice(node, block) else Contains(node, block)
@@ -146,12 +146,12 @@ Choice(node SyntaxNode, block CodeBlock) CodeBlock
 	decision = node.children(0)
 	condition = Condition(decision.children(0), block)
 	name = "conditional" + (condition.nextId - 1)
-	narrowed = ErrorCodegen(values).Narrowed(decision.children(0), condition)
-	chosen = ErrorCodegen(values).Handled(decision.children(1), narrowed).Chosen(name, condition.nextId - 1)
+	narrowed = ErrorCodegen(values).Narrow(decision.children(0), condition)
+	chosen = ErrorCodegen(values).Handle(decision.children(1), narrowed).Chosen(name, condition.nextId - 1)
 	isNarrowed = narrowed.scope.names.Length > condition.scope.names.Length
 	target = isNarrowed then decision.children(0).children(0).text else ""
 	restored = isNarrowed then chosen.Declare(target, condition.scope.TypeOf(target)) else chosen
-	ErrorCodegen(values).Handled(node.children(1), restored).Joined(name, chosen.nextId - 1)
+	ErrorCodegen(values).Handle(node.children(1), restored).Joined(name, chosen.nextId - 1)
 Logical(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Logical(SyntaxNode("", "and", (One, One)), CodeBlock.Empty).instructions(4).kind < InstructionType.JumpToIdIfTrue
 	Plain.Logical(SyntaxNode("", "or", (One, One)), CodeBlock.Empty).instructions(4).kind is InstructionType.JumpToIdIfTrue
@@ -169,38 +169,38 @@ Logical(node SyntaxNode, block CodeBlock) CodeBlock
 Operand(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Operand(TestComparison.Logical, CodeBlock.Empty).scope.Count(TestReports.Nearing) is 0
 	Testing.Operand(TestComparison.Logical, CodeBlock.Empty).scope.Count(TestReports.Nearing) is 1
-	isTestLine then TestComparison(values).Evaluated(node, block) else values.Expression(node, block)
+	isTestLine then TestComparison(values).Evaluat(node, block) else values.Expression(node, block)
 Contains(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Contains(SyntaxNode("", "is in", (One, NoNode)), CodeBlock.Empty.Declare("x", "Errors")).nextId is 1
 	Plain.Contains(InOnes, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	collection = node.children(1)
 	isErrors = values.inference.types.ElementType(values.TypeOf(collection, block)) is in ErrorCodegen.ErrorTypes
 	name = "contained" + block.nextId
-	stored = isErrors then ErrorCodegen(values).Kept(node.children(0), name, block) else block
+	stored = isErrors then ErrorCodegen(values).Keep(node.children(0), name, block) else block
 	element = isErrors then SyntaxNode("Identifier", name) else node.children(0)
 	call = SyntaxNode("MethodCall", "in", (collection, element))
 	values.InstanceCall(node.text is "is in" then call else SyntaxNode("Not", "", List(SyntaxNode) + call), stored)
 Condition(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Compared(SyntaxNode("Binary", "<", (One, One)), CodeBlock.Empty).instructions(2).kind is InstructionType.LessThan
-	Plain.Compared(SyntaxNode("Binary", ">", (One, One)), CodeBlock.Empty).instructions.Length is 3
-	Plain.Compared(SyntaxNode("Binary", "is not", (One, One)), CodeBlock.Empty).instructions.Length is 3
-	Plain.Compared(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty).instructions.Length is 3
-	Plain.Compared(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
-	Plain.Compared(Mismatched, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
+	Plain.Compare(SyntaxNode("Binary", "<", (One, One)), CodeBlock.Empty).instructions(2).kind is InstructionType.LessThan
+	Plain.Compare(SyntaxNode("Binary", ">", (One, One)), CodeBlock.Empty).instructions.Length is 3
+	Plain.Compare(SyntaxNode("Binary", "is not", (One, One)), CodeBlock.Empty).instructions.Length is 3
+	Plain.Compare(SyntaxNode("Binary", "is", (One, One)), CodeBlock.Empty).instructions.Length is 3
+	Plain.Compare(SyntaxNode("Binary", "+", (One, One)), CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
+	Plain.Compare(Mismatched, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
 	Plain.Condition(SyntaxNode("Boolean", "true"), CodeBlock.Empty).nextId is 1
 	Plain.Condition(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 4
-	compared = Compared(node, block)
+	compared = Compare(node, block)
 	compared.Add(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, compared.nextId)).WithNextId
-Compared(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Compared(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 3
-	Plain.Compared(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
-	Plain.Compared(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
+Compare(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.Compare(SyntaxNode("Binary", ">", (NoNode, NoNode)), CodeBlock.Empty).instructions.Length is 3
+	Plain.Compare(NoNode, CodeBlock.Empty).instructions.Last.kind is InstructionType.Equal
+	Plain.Compare(SyntaxNode("Identifier", "<"), CodeBlock.Empty.Declare("<", "Boolean")).instructions.Length is 3
 	isCompared = node.Kind is "Binary" and node.text is in ("is", "is not", "<", ">")
-	isPlain = Decided(node, block) is "" and KindTests(values).IsRuntime(node, block) is false
+	isPlain = Decide(node, block) is "" and KindTests(values).IsRuntime(node, block) is false
 	isComparison = isCompared and isPlain and IsCustom(node, block) is false
 	operand = isComparison then node.children(0) else node
 	errors = ErrorCodegen(values)
-	left = errors.Compared(node, operand, block)
+	left = errors.Compare(node, operand, block)
 	truth = InstructionEntry.LoadBoolean(left.register, true)
 	right = isComparison then errors.Right(node, left, false) else left.Load(truth)
 	type = isComparison then OperatorType(node.text) else InstructionType.Equal

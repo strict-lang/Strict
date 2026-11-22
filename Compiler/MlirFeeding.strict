@@ -20,7 +20,7 @@ Stored(number Text, target Text) Texts
 	entry = function.method.instructions(at)
 	if entry.kind is in MlirRational.Kinds
 		return List(Text) + MlirTyped(function.Float).Store(number, target)
-	if IsFeeding(at, LoadReuse(function.method.instructions).Written(entry))
+	if IsFeeding(at, LoadReuse(function.method.instructions).Write(entry))
 		return List(Text) + function.Store(number, target)
 	inexact = MlirExact(function, at).Set("%inexact", "%inexact", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + inexact
@@ -80,7 +80,7 @@ IsFeeding(position Number, register Number) Boolean
 		entry = function.method.instructions(value)
 		if register is in reuse.Reads(entry) and IsPositional(value, entry, register) or IsStored(value, entry, register)
 			return true
-		if reuse.Written(entry) is register
+		if reuse.Write(entry) is register
 			return false
 	false
 IsStored(position Number, entry InstructionEntry, register Number) Boolean
@@ -103,7 +103,7 @@ IsPositional(position Number, entry InstructionEntry, register Number) Boolean
 	if kind is InstructionType.IndexCall or isCompared or IsPassed(position, register)
 		return true
 	isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
-	written = LoadReuse(function.method.instructions).Written(entry)
+	written = LoadReuse(function.method.instructions).Write(entry)
 	(kind is InstructionType.Invoke or isCalculated) and IsFeeding(position, written)
 IsPassed(position Number, register Number) Boolean
 	Passing.IsPassed(6, 2)
@@ -139,7 +139,7 @@ IsFloated(position Number, register Number) Boolean
 		isRead = register is in reuse.Reads(entry) and IsFloating(value, entry)
 		if isRead or isStored and IsFloatedVariable(value, entry.texts(0))
 			return true
-		if reuse.Written(entry) is register
+		if reuse.Write(entry) is register
 			return false
 	false
 IsFloating(position Number, entry InstructionEntry) Boolean
@@ -151,7 +151,7 @@ IsFloating(position Number, entry InstructionEntry) Boolean
 		return false
 	isCalculated = kind > InstructionType.StoreSeparator and kind < InstructionType.ArithmeticSeparator
 	isWhole = kind is InstructionType.Invoke and entry.texts(1) is in ("Floor", "Length")
-	isCalculated or isWhole then IsFloated(position, LoadReuse(function.method.instructions).Written(entry)) else true
+	isCalculated or isWhole then IsFloated(position, LoadReuse(function.method.instructions).Write(entry)) else true
 IsFloatedVariable(position Number, name Text) Boolean
 	Chained.IsFloatedVariable(2, "offset") is false
 	Summing.IsFloatedVariable(10, "sum")

@@ -20,14 +20,14 @@ Rewritten(body SyntaxNode) SyntaxNode
 	start = ChainStart(body)
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
-		statements.Add(index >= start then Branch(Defaulted(value)) else value)
+		statements.Add(index >= start then Branch(Default(value)) else value)
 	SyntaxNode("Body", body.text, statements)
-Defaulted(node SyntaxNode) SyntaxNode
-	BranchValues("Boolean").Defaulted(Selector).children.Last.children.Last.children(0) is Unmatched
-	BranchValues("Texts").Defaulted(Selector).children.Last.children.Last.Kind is "ElseValue"
-	BranchValues("None").Defaulted(Selector) is Selector and Returning.Defaulted(Value) is Value
-	Returning.Defaulted(Returning.Defaulted(Selector)).children.Last.children.Length is 2
-	BranchValues("Text").Defaulted(Selector).children.Last.children(0) is Selector.children.Last.children(0)
+Default(node SyntaxNode) SyntaxNode
+	BranchValues("Boolean").Default(Selector).children.Last.children.Last.children(0) is Unmatched
+	BranchValues("Texts").Default(Selector).children.Last.children.Last.Kind is "ElseValue"
+	BranchValues("None").Default(Selector) is Selector and Returning.Default(Value) is Value
+	Returning.Default(Returning.Default(Selector)).children.Last.children.Length is 2
+	BranchValues("Text").Default(Selector).children.Last.children(0) is Selector.children.Last.children(0)
 	if mode is in ("", "None") or MethodBodies.IsSelector(node) is false
 		return node
 	cases = node.children.Last
@@ -53,43 +53,43 @@ Branch(node SyntaxNode) SyntaxNode
 		return node
 	mutable parts = List(Mutable(SyntaxNode))
 	for node.children
-		parts.Add(index is node.children.Length - 1 then LastWrapped(value) else value)
+		parts.Add(index is node.children.Length - 1 then LastWrap(value) else value)
 	SyntaxNode(node.Kind, node.text, parts, node.line)
-LastWrapped(block SyntaxNode) SyntaxNode
-	Returning.LastWrapped(SyntaxNode("Body", "", (Value, Value))).children(0) is Value
-	Returning.LastWrapped(SyntaxNode("Body", "", (Value, Value))).Kind is "Body"
-	Returning.LastWrapped(SyntaxNode("Body", "", Value)).children(0).Kind is "Return"
-	BranchValues("list").LastWrapped(Nested).children(0).children.Last.children(0).children.Last.children(0).text is "Add"
+LastWrap(block SyntaxNode) SyntaxNode
+	Returning.LastWrap(SyntaxNode("Body", "", (Value, Value))).children(0) is Value
+	Returning.LastWrap(SyntaxNode("Body", "", (Value, Value))).Kind is "Body"
+	Returning.LastWrap(SyntaxNode("Body", "", Value)).children(0).Kind is "Return"
+	BranchValues("list").LastWrap(Nested).children(0).children.Last.children(0).children.Last.children(0).text is "Add"
 	if block.children.Last.Kind is in ("If", "ElseIf", "Else")
 		return Rewritten(block)
 	mutable lines = List(Mutable(SyntaxNode))
 	for block.children
-		lines.Add(index is block.children.Length - 1 then Wrapped(value) else value)
+		lines.Add(index is block.children.Length - 1 then Wrap(value) else value)
 	SyntaxNode("Body", block.text, lines)
-Wrapped(line SyntaxNode) SyntaxNode
-	Returning.Wrapped(Value).Kind is "Return"
-	BranchValues("list").Wrapped(Value).text is "Add"
-	BranchValues("product").Wrapped(Value).children.Last.text is "*"
-	BranchValues("any").Wrapped(Value).Kind is "If"
-	BranchValues("add").Wrapped(Value).Kind is "Reassignment"
-	Returning.Wrapped(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
+Wrap(line SyntaxNode) SyntaxNode
+	Returning.Wrap(Value).Kind is "Return"
+	BranchValues("list").Wrap(Value).text is "Add"
+	BranchValues("product").Wrap(Value).children.Last.text is "*"
+	BranchValues("any").Wrap(Value).Kind is "If"
+	BranchValues("add").Wrap(Value).Kind is "Reassignment"
+	Returning.Wrap(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
 	if IsValue(line) is false
-		return line.Kind is "For" then Looped(line) else line
+		return line.Kind is "For" then Loop(line) else line
 	if mode is "any"
 		return SyntaxNode("If", "", (line, ReturnTrue), line.line)
-	mode is in ("sum", "product", "list", "add") then Accumulated(line) else SyntaxNode("Return", "", line, line.line)
-Looped(line SyntaxNode) SyntaxNode
-	BranchValues("list").Looped(Looping).Kind is "For"
-	BranchValues("list").Wrapped(Looping) is BranchValues("list").Looped(Looping)
-	BranchValues("list").Wrapped(ReturnTrue.children(0)) is ReturnTrue.children(0)
-	BranchValues("any").Wrapped(Value) is SyntaxNode("If", "", (Value, ReturnTrue))
-	Returning.Wrapped(Value).children(0) is Value
-	BranchValues("list").Looped(Looping).children.Last.children.Last.text is "Add"
-	Returning.Looped(Looping).children.Last.children.Last.Kind is "Identifier"
+	mode is in ("sum", "product", "list", "add") then Accumulate(line) else SyntaxNode("Return", "", line, line.line)
+Loop(line SyntaxNode) SyntaxNode
+	BranchValues("list").Loop(Looping).Kind is "For"
+	BranchValues("list").Wrap(Looping) is BranchValues("list").Loop(Looping)
+	BranchValues("list").Wrap(ReturnTrue.children(0)) is ReturnTrue.children(0)
+	BranchValues("any").Wrap(Value) is SyntaxNode("If", "", (Value, ReturnTrue))
+	Returning.Wrap(Value).children(0) is Value
+	BranchValues("list").Loop(Looping).children.Last.children.Last.text is "Add"
+	Returning.Loop(Looping).children.Last.children.Last.Kind is "Identifier"
 	if mode is not in ("sum", "product", "list", "add")
 		return line
 	heads = line.children.Slice(0, line.children.Length - 1)
-	SyntaxNode("For", line.text, heads + LastWrapped(line.children.Last), line.line)
+	SyntaxNode("For", line.text, heads + LastWrap(line.children.Last), line.line)
 LastLoop(body SyntaxNode) SyntaxNode
 	Returning.LastLoop(SyntaxNode("Body", "")) is SyntaxNode("Body", "")
 	Returning.LastLoop(SyntaxNode("Body", "", SyntaxNode("If", ""))).Kind is "If"
@@ -105,11 +105,11 @@ Reduction(line SyntaxNode) Text
 	Returning.Reduction(SyntaxNode("Identifier", "value")) is ""
 	Returning.Reduction(LoopCodegen.ProductBody.children(0).children.Last.children(0)) is "*"
 	line.Kind is "Binary" and line.children(0).Kind is "Missing" then line.text else ""
-Accumulated(line SyntaxNode) SyntaxNode
-	BranchValues("list").Accumulated(Value) is SyntaxNode("MethodCall", "Add", (Result, Value))
-	BranchValues("sum").Accumulated(Value).children is (Result, SyntaxNode("Binary", "+", (Result, Value)))
-	BranchValues("sum").Accumulated(Value).Kind is "Reassignment"
-	BranchValues("sum").Accumulated(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
+Accumulate(line SyntaxNode) SyntaxNode
+	BranchValues("list").Accumulate(Value) is SyntaxNode("MethodCall", "Add", (Result, Value))
+	BranchValues("sum").Accumulate(Value).children is (Result, SyntaxNode("Binary", "+", (Result, Value)))
+	BranchValues("sum").Accumulate(Value).Kind is "Reassignment"
+	BranchValues("sum").Accumulate(SyntaxNode("Number", "1", List(SyntaxNode), 6)).line is 6
 	constant result = SyntaxNode("Identifier", "forResult")
 	if mode is "list"
 		return SyntaxNode("MethodCall", "Add", (result, line), line.line)

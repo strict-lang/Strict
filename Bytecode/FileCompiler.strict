@@ -16,31 +16,31 @@ constant Tabbed = ("Run", "	1", "	")
 constant Marked = "ByteOrderMarkIsNotAllowed: save the file as UTF-8 without BOM"
 constant Project = ", run strict in the project folder"
 constant Tips = " is not in this folder, next to strict, in a GitHub repository linked in README.md or in github.com/strict-lang. Fix the typo, add its package to this folder or link its repository in README.md"
-Compiled(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
+Compile(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(TypeEntry)
 	started = Process.Elapsed
-	files = known.Length > 0 then known else SourceFiles(root).Of(Normalized(path))
+	files = known.Length > 0 then known else SourceFiles(root).Of(Normalize(path))
 	if known.Length is 0
 		BuildProfile.Reported("Frontend / source discovery (" + files.Length + " files)", started)
 	before = Process.Elapsed
 	inference = ResolveCheck.Inference(files)
 	BuildProfile.Reported("Frontend / type inference", before)
-	Built(path, root, withTests, files, inference).entries
-Built(path Text, root Text, withTests Boolean, files Texts, inference TypeInference, known = Dictionary(Text, TypeEntry)) LinkRound
-	source = Normalized(path)
+	Build(path, root, withTests, files, inference).entries
+Build(path Text, root Text, withTests Boolean, files Texts, inference TypeInference, known = Dictionary(Text, TypeEntry)) LinkRound
+	source = Normalize(path)
 	isParsed = BuildProfile.IsParsed(value, List(Text) + source)
 	missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
-		return Unlinked.With(Located(source, root, withTests, missing.First))
+		return Unlinked.With(Locate(source, root, withTests, missing.First))
 	if isParsed is false or IsResolved(source, inference, files) is false
 		return Unlinked
 	fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
 	entry = BuildProfile.Entry(main, withTests, isQuiet, selection)
 	linked = BuildProfile.Linked(Linker(root, main, known, BinarySources(files).Stamped), entry)
-	LinkHomes(linked.With(Checked(linked.linker, linked.entries, source, inference))).Saved
-Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
-	FileCompiler.Checked(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
-	sources = BinaryFile.Unchecked(Sources(linker, linked, source))
+	LinkHomes(linked.With(Check(linked.linker, linked.entries, source, inference))).Saved
+Check(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
+	FileCompiler.Check(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
+	sources = BinaryFile.Uncheck(Sources(linker, linked, source))
 	if sources.Length > 0 and BuildProfile.IsParsed(value, sources) is false
 		return List(TypeEntry)
 	mutable failures = 0
@@ -65,16 +65,16 @@ Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 			if path is not source and path is not in paths and File(path).Exists
 				paths.Add(path)
 	paths
-Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
-	normalized = Normalized(path)
+Locate(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
+	normalized = Normalize(path)
 	hidden = Mentions(File(normalized).ReadLines).Hidden(path, type)
 	above = SourceFiles(".").SubfolderWith("..", type) + SourceFiles(".").SubfolderWith("../..", type)
 	if hidden is not "" or above is not ""
 		logger.Log(hidden is "" then "TypeNotFound: " + type + " used in " + path + " is in " + above + Project else hidden)
 		return List(TypeEntry)
 	if normalized.StartsWith("./") and normalized.IndexOf("/../") < 0
-		if Repositories(".").Downloaded(type) is not ""
-			return Compiled(path, root, withTests)
+		if Repositories(".").Download(type) is not ""
+			return Compile(path, root, withTests)
 	logger.Log(ResolveCheck.Locate(path, LineOf(File(path).ReadLines, type), "TypeNotFound: " + type + Tips))
 	List(TypeEntry)
 Problems(files Texts) Texts slow
@@ -159,15 +159,15 @@ LineOf(lines Texts, name Text) Number
 		if value.Lower.IndexOf(name.Lower) >= 0
 			return index + 1
 	1
-Normalized(path Text) Text
-	Normalized("Bytecode\\A.strict") is "./Bytecode/A.strict"
-	Normalized("./A.strict") is "./A.strict"
-	Normalized("C:/s/A.strict") is "C:/s/A.strict"
-	Normalized("C:/s/./A.strict") is "C:/s/A.strict"
-	Normalized("C:\\s\\A.strict") is "C:/s/A.strict"
-	Normalized("A.strict") is "./A.strict"
-	Normalized("../DeltaEngine/A.strict") is "./../DeltaEngine/A.strict"
-	Normalized(Directory.Current + "/Sub/A.strict") is "./Sub/A.strict"
+Normalize(path Text) Text
+	Normalize("Bytecode\\A.strict") is "./Bytecode/A.strict"
+	Normalize("./A.strict") is "./A.strict"
+	Normalize("C:/s/A.strict") is "C:/s/A.strict"
+	Normalize("C:/s/./A.strict") is "C:/s/A.strict"
+	Normalize("C:\\s\\A.strict") is "C:/s/A.strict"
+	Normalize("A.strict") is "./A.strict"
+	Normalize("../DeltaEngine/A.strict") is "./../DeltaEngine/A.strict"
+	Normalize(Directory.Current + "/Sub/A.strict") is "./Sub/A.strict"
 	slashed = TypeSource.Relative(path).Replace("\\", "/").Replace("/./", "/")
 	isRelative = slashed.StartsWith("/") is false and slashed.IndexOf(":") < 0
 	isRelative and slashed.StartsWith("./") is false then "./" + slashed else slashed
@@ -184,7 +184,7 @@ FullName(path Text, root Text) Text
 	start = slashed.StartsWith(root + "/") then root.Length + 1 else (slashed.StartsWith("./") then 2 else 0)
 	"Strict/" + slashed.Substring(start, slashed.Length - start - 7)
 FullNames(files Texts, root Text) Texts
-	Unoptimized.Loop(LoopPeeling.Summing, Counted, "") is LoopCodegen.Plain.Unpeeled(LoopPeeling.Summing, Counted, "")
+	Unoptimized.Loop(LoopPeeling.Summing, Counted, "") is LoopCodegen.Plain.Unpeel(LoopPeeling.Summing, Counted, "")
 	FullNames(("C:/s/A.strict", "C:/s/B/C.strict"), "C:/s") is ("Strict/A", "Strict/B/C")
 	for files
 		FullName(value, root)

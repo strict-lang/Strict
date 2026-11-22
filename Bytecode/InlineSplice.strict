@@ -22,7 +22,7 @@ Spliced List(InstructionEntry)
 	mutable result = Prologue
 	for callee.instructions
 		if index < callee.instructions.Length - (IsChecked then 2 else 1)
-			result = result + Moved(value, returned)
+			result = result + Move(value, returned)
 	instance = Prefix + ChangedInstance.Name
 	changed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, call.payload(0) + 1, instance)
 	IsChanging then result + changed else result
@@ -43,24 +43,24 @@ Prologue List(InstructionEntry)
 	reads = LoadReuse(List(InstructionEntry)).InvokeReads(call)
 	mutable lines = List(Mutable(InstructionEntry))
 	for callee.parameters
-		lines.Add(Stored(call.payload(reads(index)), value.Name))
+		lines.Add(Store(call.payload(reads(index)), value.Name))
 	if member is ""
-		return lines + Fielded(reads)
+		return lines + ReadFields(reads)
 	instance = call.payload(reads.Last)
-	IsValued then lines + (Stored(instance, member), Stored(instance, "value")) else lines + Stored(instance, member)
-Moved(entry InstructionEntry, returned Number) InstructionEntry
-	Sample.Moved(Inliner.First.instructions(1), 3).payload is (1, 2, -1)
-	Sample.Moved(Inliner.First.instructions(1), 3).line is Inliner.Calling.instructions(1).line
-	Sample.Moved(InstructionEntry.Jump(InstructionType.JumpEnd, 2), 3).payload is (186, 23)
-	Owning.Moved(StructLanes.Squared.instructions(0), 3).texts is ("real")
-	rebased = LoadReuse(List(InstructionEntry)).Rebased(entry, base)
+	IsValued then lines + (Store(instance, member), Store(instance, "value")) else lines + Store(instance, member)
+Move(entry InstructionEntry, returned Number) InstructionEntry
+	Sample.Move(Inliner.First.instructions(1), 3).payload is (1, 2, -1)
+	Sample.Move(Inliner.First.instructions(1), 3).line is Inliner.Calling.instructions(1).line
+	Sample.Move(InstructionEntry.Jump(InstructionType.JumpEnd, 2), 3).payload is (186, 23)
+	Owning.Move(StructLanes.Squared.instructions(0), 3).texts is ("real")
+	rebased = LoadReuse(List(InstructionEntry)).Rebase(entry, base)
 	isNamed = entry.kind is in Inliner.Renamed and entry.texts.First is not in kept
 	texts = isNamed then List(Text) + (Prefix + entry.texts.First) else entry.texts
-	payload = entry.kind is in Jumps then Jumped(entry) else Registered(rebased, returned, call.payload(0))
+	payload = entry.kind is in Jumps then Jump(entry) else Register(rebased, returned, call.payload(0))
 	InstructionEntry(entry.kind, texts, payload, call.line)
-Registered(entry InstructionEntry, source Number, target Number) Numbers
-	Sample.Registered(InstructionEntry.Return(5), 5, 9) is (9)
-	Sample.Registered(InstructionEntry.LoadNumber(0, 5), 5, 9) is (0, 1, 5)
+Register(entry InstructionEntry, source Number, target Number) Numbers
+	Sample.Register(InstructionEntry.Return(5), 5, 9) is (9)
+	Sample.Register(InstructionEntry.LoadNumber(0, 5), 5, 9) is (0, 1, 5)
 	reuse = LoadReuse(List(InstructionEntry))
 	positions = reuse.ReadPositions(entry) + reuse.WritePosition(entry)
 	for entry.payload
@@ -71,9 +71,9 @@ IsChecked Boolean
 	instructions = callee.instructions
 	last = instructions.Length > 1 then instructions(instructions.Length - 2) else instructions.Last
 	last.kind is InstructionType.CheckError and last.payload(0) is instructions.Last.payload(0)
-Stored(register Number, name Text) InstructionEntry
-	Sample.Stored(4, "a").line is Inliner.Calling.instructions(1).line
-	Sample.Stored(4, "a").texts is ("inline2_a") and Sample.Stored(4, "a").payload is (4, -1)
+Store(register Number, name Text) InstructionEntry
+	Sample.Store(4, "a").line is Inliner.Calling.instructions(1).line
+	Sample.Store(4, "a").texts is ("inline2_a") and Sample.Store(4, "a").payload is (4, -1)
 	InstructionEntry(Inliner.Store, List(Text) + (Prefix + name), (register, -1), call.line)
 IsValued Boolean
 	Sample.IsValued is false
@@ -82,24 +82,24 @@ IsValued Boolean
 		if value.kind is InstructionType.LoadVariableToRegister and value.texts.First is "value"
 			return true
 	false
-Fielded(reads Numbers) List(InstructionEntry)
-	Squaring.Fielded(7).Length is 4
-	Squaring.Fielded(7)(3).texts is ("inline5_imaginary")
+ReadFields(reads Numbers) List(InstructionEntry)
+	Squaring.ReadFields(7).Length is 4
+	Squaring.ReadFields(7)(3).texts is ("inline5_imaginary")
 	Squaring.Spliced(4).texts is ("inline5_real")
 	Squaring.Spliced(5).payload is (3, 5, 5, 7)
-	Sample.Fielded(7).Length is 0
-	Owning.Fielded(7).Length is 0
+	Sample.ReadFields(7).Length is 0
+	Owning.ReadFields(7).Length is 0
 	if fields.Length is 0 or InlineRules(callee).IsOwn(call)
 		return List(InstructionEntry)
 	mutable lines = List(Mutable(InstructionEntry))
 	for fields
-		lines = lines + (Field(value, call.payload(reads.Last)), Stored(scratch, value))
+		lines = lines + (Field(value, call.payload(reads.Last)), Store(scratch, value))
 	lines
 Field(name Text, instance Number) InstructionEntry
 	Squaring.Field("imaginary", 2).texts is ("imaginary", "Pair")
 	Squaring.Field("imaginary", 2).payload is (18, 2, -1, -2)
 	owner = TypeEntry.ShortName(call.texts(0))
 	InstructionEntry(InstructionType.FieldLoad, (name, owner), (scratch, instance, -1, -2), call.line)
-Jumped(entry InstructionEntry) Numbers
-	Sample.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 300)) is (228, 25)
+Jump(entry InstructionEntry) Numbers
+	Sample.Jump(InstructionEntry.Jump(InstructionType.JumpEnd, 300)) is (228, 25)
 	InstructionEntry.Jump(entry.kind, ByteEncoder(entry.payload).Integers.First + (base + 1) * 1000).payload

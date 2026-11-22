@@ -13,24 +13,24 @@ constant Homing = LinkFresh(LinkRound(LinkRound.Single, linker = Linker.Housed),
 Entry(signature Text, positions Dictionary(Text, Number), compiled Dictionary(Text, TypeEntry)) TypeEntry slow
 	Twice.Entry("Strict/Logger:", ResolveCheck.Positions(LinkRound.Twice.signatures), Nothing) is Linker.Go
 	LinkFresh(LinkRound.Cached, Unplaced).Entry("Strict/Logger:", Unplaced, Nothing) is LinkRound.Rooted("Strict/Logger:")
-	Single.Entry("Strict/Logger:", Unplaced, Single.Precompiled(Logging, Unplaced)).Name is "Strict/Logger"
+	Single.Entry("Strict/Logger:", Unplaced, Single.Precompile(Logging, Unplaced)).Name is "Strict/Logger"
 	if signature is in positions
 		return round.entries(positions(signature) + 1)
 	known = Covering(signature)
 	if known is not ""
 		return TypeEntry(round.linker.Known(known), Name = round.linker.main.Local(Signature(signature).Type))
 	Fresh(signature, compiled(signature))
-Precompiled(signed Texts, positions Dictionary(Text, Number)) Dictionary(Text, TypeEntry) slow
-	Single.Precompiled(Logging, Unplaced)("Strict/Logger:").Name is "Strict/Logger"
-	fresh = Probed(signed, positions).Unique
+Precompile(signed Texts, positions Dictionary(Text, Number)) Dictionary(Text, TypeEntry) slow
+	Single.Precompile(Logging, Unplaced)("Strict/Logger:").Name is "Strict/Logger"
+	fresh = Probe(signed, positions).Unique
 	generated = Generating(fresh, Read(fresh))
 	mutable compiled = Dictionary(Text, TypeEntry)
 	for fresh
 		compiled.Add(value, generated(index))
 	compiled
-Probed(signed Texts, positions Dictionary(Text, Number)) Texts
-	Twice.Probed(("Strict/Logger:", "Strict/B:Go"), ResolveCheck.Positions(LinkRound.Twice.signatures)) is ("Strict/B:Go")
-	LinkFresh(LinkRound.Cached, Unplaced).Probed(Logging, Unplaced).Length is 0
+Probe(signed Texts, positions Dictionary(Text, Number)) Texts
+	Twice.Probe(("Strict/Logger:", "Strict/B:Go"), ResolveCheck.Positions(LinkRound.Twice.signatures)) is ("Strict/B:Go")
+	LinkFresh(LinkRound.Cached, Unplaced).Probe(Logging, Unplaced).Length is 0
 	for signed
 		if value is not in positions and Covering(value) is ""
 			value
@@ -41,8 +41,8 @@ Read(fresh Texts) List(Texts) slow
 	mutable read = List(Mutable(Texts))
 	for fresh
 		type = Signature(value).Type
-		wanted = Wanted(value)
-		read.Add(compile.IsCompiled(type, wanted) then compile.Prepared(type, compile.Absent(type, wanted)) else List(Text))
+		wanted = Want(value)
+		read.Add(compile.IsCompiled(type, wanted) then compile.Prepare(type, compile.Absent(type, wanted)) else List(Text))
 	read
 Generating(fresh Texts, read List(Texts)) List(TypeEntry)
 	Single.Generating(Logging, List(Texts) + List(Text)).First.Name is "Strict/Logger"
@@ -50,12 +50,12 @@ Generating(fresh Texts, read List(Texts)) List(TypeEntry)
 	compile = LinkCompile(round.linker)
 	for fresh
 		type = Signature(value).Type
-		wanted = Wanted(value)
+		wanted = Want(value)
 		absent = compile.Absent(type, wanted)
-		compile.IsCompiled(type, wanted) then compile.Generated(type, read(index), absent) else BinaryLinks.Unknown
-Compiled(signature Text) TypeEntry slow
-	Twice.Compiled("Strict/Logger:Log").methods.Length is 1
-	LinkCompile(round.linker).Compiling(Signature(signature).Type, Wanted(signature))
+		compile.IsCompiled(type, wanted) then compile.Generate(type, read(index), absent) else BinaryLinks.Unknown
+Compile(signature Text) TypeEntry slow
+	Twice.Compile("Strict/Logger:Log").methods.Length is 1
+	LinkCompile(round.linker).Compiling(Signature(signature).Type, Want(signature))
 IsWhole(signature Text) Boolean
 	Single.IsWhole("Strict/Logger:")
 	Twice.IsWhole("Strict/Logger:Log") is false
@@ -73,15 +73,15 @@ Earlier(signature Text) Number
 	Single.Earlier("Strict/Logger:Log") is -1
 	type = Signature(signature).Type
 	type is in earliest then earliest(type) else Number.NotFound
-Wanted(signature Text) Texts
-	Twice.Wanted("Strict/Logger:Log") is ("Log")
-	Logged.Wanted("Strict/Logger:Log;Reset") is ("Reset")
-	Running.Wanted("Strict/Logger:Log;Reset") is ("Log", "Reset")
+Want(signature Text) Texts
+	Twice.Want("Strict/Logger:Log") is ("Log")
+	Logged.Want("Strict/Logger:Log;Reset") is ("Reset")
+	Running.Want("Strict/Logger:Log;Reset") is ("Log", "Reset")
 	IsWhole(signature) then Signature(signature).Names else Signature(signature).Names - Older(signature)
 Fresh(signature Text, compiled TypeEntry) TypeEntry slow
-	Single.Fresh("Strict/Logger:", Single.Compiled("Strict/Logger:")).Name is "Strict/Logger"
-	Twice.Fresh("Strict/Logger:Log", Twice.Compiled("Strict/Logger:Log")).methods.Length is 2
-	linked = LinkCompile(round.linker).LinkedType(Signature(signature).Type, Wanted(signature), compiled)
+	Single.Fresh("Strict/Logger:", Single.Compile("Strict/Logger:")).Name is "Strict/Logger"
+	Twice.Fresh("Strict/Logger:Log", Twice.Compile("Strict/Logger:Log")).methods.Length is 2
+	linked = LinkCompile(round.linker).LinkedType(Signature(signature).Type, Want(signature), compiled)
 	if IsWhole(signature)
 		return linked
 	entry = round.entries(Earlier(signature) + 1)

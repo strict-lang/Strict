@@ -14,10 +14,10 @@ Overrun(elapsed Number) Number
 	elapsed > Slowest then 1 else 0
 Marker(path Text) Text
 	SlowTests.Marker("Examples/Sum.strict").EndsWith("Examples/obj/Sum.slowpassed")
-	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".slowpassed")
+	BinaryFile(FileCompiler.Normalize(path)).Path.Replace(".strictbinary", ".slowpassed")
 Unit(path Text) Text slow
 	SlowTests.Unit("Missing.strict") is "0"
-	File(BinaryFile(FileCompiler.Normalized(path)).Path).Modified to Text
+	File(BinaryFile(FileCompiler.Normalize(path)).Path).Modified to Text
 Pass(path Text) slow
 	File(Marker(path)).Write(List(Text) + Unit(path))
 IsPassed(path Text) Boolean slow

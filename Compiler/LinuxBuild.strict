@@ -13,7 +13,7 @@ Built(base Text) Text
 	compiled = ToolRunner(tools.Located("ld.lld")).Execute(LinuxBuild(linux).Relocatable(base + ".linux"))
 	if compiled.HasFailed
 		return "ld.lld failed: " + compiled.error
-	NativeSources(tools.natives).LinuxLinked(base, BuildOutput.Released(base, "Linux"), tools.root)
+	NativeSources(tools.natives).LinuxLinked(base, BuildOutput.ReleasePath(base, "Linux"), tools.root)
 Relocatable(base Text) Text
 	Missing.Relocatable("a").EndsWith(" -o \"a.o\"")
 	Missing.Relocatable("a").StartsWith("-r -m elf_x86_64 --lto-O3 --thinlto-jobs=all -mllvm -mcpu=native" + Sections)

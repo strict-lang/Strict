@@ -111,7 +111,7 @@ IsSafeRead(at Number, name Text) Boolean
 	for Range(at + 1, function.method.instructions.Length)
 		if IsEscaped(value, register, name)
 			return false
-		if reuse.Written(function.method.instructions(value)) is register
+		if reuse.Write(function.method.instructions(value)) is register
 			return true
 	true
 IsEscaped(at Number, register Number, name Text) Boolean

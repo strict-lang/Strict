@@ -35,67 +35,67 @@ Aggregation(body SyntaxNode, returnType Text) Text
 		return loop.Kind is not "For" then "" else (isList then "list" else "any")
 	if loop.children.Last.children.Length is 0
 		return Error(BodyMissing)
-	Reduced(BranchValues(returnType).Reduction(loop.children.Last.children.Last), returnType)
-Reduced(reduction Text, returnType Text) Text
-	LoopCodegen(Numbered).Reduced("*", "Count") is "product"
-	LoopCodegen(TypeSums.Paired.methods).Reduced("*", "Pair") is ""
-	LoopCodegen(Adding).Reduced("", "Plus") is "add" and Plain.Reduced("", "Generic") is "sum"
-	Plain.Aggregated(Three, CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "from"), "None") is not Error
-	Plain.Aggregated(Three, CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run"), "None") is Error
-	Plain.Aggregated(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
+	Reduce(BranchValues(returnType).Reduction(loop.children.Last.children.Last), returnType)
+Reduce(reduction Text, returnType Text) Text
+	LoopCodegen(Numbered).Reduce("*", "Count") is "product"
+	LoopCodegen(TypeSums.Paired.methods).Reduce("*", "Pair") is ""
+	LoopCodegen(Adding).Reduce("", "Plus") is "add" and Plain.Reduce("", "Generic") is "sum"
+	Plain.Aggregate(Three, CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "from"), "None") is not Error
+	Plain.Aggregate(Three, CodeBlock.Empty.Declare(CodeBlock.ErrorMarker, "Run"), "None") is Error
+	Plain.Aggregate(RowsBody, CodeBlock.Empty, "List(Numbers)").instructions(6).kind is InstructionType.Add
 	hasAdd = OperatorCodegen(methods.values).HasOperator(returnType, "+")
 	member = methods.values.inference.types.MembersOf(returnType).TypeOf("number")
 	if hasAdd is false and member is "Number" or returnType is in ("Number", "Text", "Generic")
 		return reduction is in ("", "+") then "sum" else (reduction is "*" then "product" else "")
 	reduction is "" and hasAdd then "add" else ""
-Aggregated(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
-	Plain.Aggregated(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
-	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
-	Plain.Aggregated(ProductBody, CodeBlock.Empty, "Number").instructions(0) is InstructionEntry.LoadNumber(0, 1)
-	Plain.Aggregated(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 13
+Aggregate(body SyntaxNode, block CodeBlock, returnType Text) CodeBlock
+	Plain.Aggregate(MethodCodegen.SumBody, CodeBlock.Empty, "Number").Result is 0
+	Plain.Aggregate(DoubledBody, CodeBlock.Empty, "Numbers").instructions(0).texts.Last is "forResult"
+	Plain.Aggregate(ProductBody, CodeBlock.Empty, "Number").instructions(0) is InstructionEntry.LoadNumber(0, 1)
+	Plain.Aggregate(DoubledBody, CodeBlock.Empty, "Boolean").instructions.Length is 13
 	aggregation = Aggregation(body, returnType)
 	wanted = block.scope.TypeOf(CodeBlock.ErrorMarker) is "from" then "" else returnType
 	if aggregation is in ("", "any")
-		return methods.Valued(aggregation is "any" then AnyTrue(body) else body, block, wanted)
-	started = Initialized(body, block, returnType, aggregation)
+		return methods.Value(aggregation is "any" then AnyTrue(body) else body, block, wanted)
+	started = Initialize(body, block, returnType, aggregation)
 	if body.children.Last.Kind is not "For"
-		return Finished(methods.Body(BranchValues(aggregation).Rewritten(body), started), block.register)
-	Finished(Loop(body.children.Last, started, aggregation), block.register)
-Initialized(body SyntaxNode, block CodeBlock, returnType Text, aggregation Text) CodeBlock
-	Plain.Initialized(DoubledBody, CodeBlock.Empty, "Numbers", "list").scope.TypeOf("forResult") is "Numbers"
-	Plain.Initialized(Leaded, CodeBlock.Empty, "Numbers", "list").instructions(0).texts.Last is "x"
-	Plain.Initialized(DoubledBody, Wanting, "Text", "sum").scope.TypeOf(CodeBlock.ElementMarker) is ""
-	Plain.Aggregated(Letters, CodeBlock.Empty.Declare("x", "Text"), "Texts").instructions(6).kind is InstructionType.Invoke
+		return Finish(methods.Body(BranchValues(aggregation).Rewritten(body), started), block.register)
+	Finish(Loop(body.children.Last, started, aggregation), block.register)
+Initialize(body SyntaxNode, block CodeBlock, returnType Text, aggregation Text) CodeBlock
+	Plain.Initialize(DoubledBody, CodeBlock.Empty, "Numbers", "list").scope.TypeOf("forResult") is "Numbers"
+	Plain.Initialize(Leaded, CodeBlock.Empty, "Numbers", "list").instructions(0).texts.Last is "x"
+	Plain.Initialize(DoubledBody, Wanting, "Text", "sum").scope.TypeOf(CodeBlock.ElementMarker) is ""
+	Plain.Aggregate(Letters, CodeBlock.Empty.Declare("x", "Text"), "Texts").instructions(6).kind is InstructionType.Invoke
 	leading = body.children.Last.Kind is "For" then Leading(body, block) else block
 	element = aggregation is "list" then methods.values.inference.types.ElementType(returnType) else ""
-	started = Started(leading, returnType, aggregation).Declare("forResult", returnType)
+	started = Start(leading, returnType, aggregation).Declare("forResult", returnType)
 	growing = started.Declare("forResult" + ErrorScope.MutableMarker, "mutable")
 	growing.Declare(CodeBlock.ElementMarker, element).At(block.register)
-Finished(looped CodeBlock, register Number) CodeBlock
-	Plain.Finished(CodeBlock.Empty.Declare("forResult", "Numbers"), 0).instructions.Last.texts.Last is "forResult"
-	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(0) is InstructionEntry.LoadText(0, "")
-	Plain.Started(CodeBlock.Empty, "Text", "sum").instructions(1).texts is ("forResult")
-	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions(1).texts is ("forResult")
-	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions(0) is InstructionEntry.LoadNumber(0, 0)
-	LoopCodegen(TypeSums.Paired.methods).Started(CodeBlock.Empty, "Pair", "add").instructions.Length is 5
-	LoopCodegen(TypeSums.Paired.methods).Collected(CodeBlock.Empty.At(1), "add").instructions.Length is 5
-	Plain.Collected(CodeBlock.Empty.At(1), "sum").instructions(1).kind is InstructionType.Add
-	Plain.Collected(CodeBlock.Empty.At(1), "sum").instructions(0).texts is ("forResult")
-	Plain.Collected(CodeBlock.Empty.At(1), "sum").instructions(2).texts is ("forResult")
+Finish(looped CodeBlock, register Number) CodeBlock
+	Plain.Finish(CodeBlock.Empty.Declare("forResult", "Numbers"), 0).instructions.Last.texts.Last is "forResult"
+	Plain.Start(CodeBlock.Empty, "Text", "sum").instructions(0) is InstructionEntry.LoadText(0, "")
+	Plain.Start(CodeBlock.Empty, "Text", "sum").instructions(1).texts is ("forResult")
+	Plain.Start(CodeBlock.Empty, "Number", "sum").instructions(1).texts is ("forResult")
+	Plain.Start(CodeBlock.Empty, "Number", "sum").instructions(0) is InstructionEntry.LoadNumber(0, 0)
+	LoopCodegen(TypeSums.Paired.methods).Start(CodeBlock.Empty, "Pair", "add").instructions.Length is 5
+	LoopCodegen(TypeSums.Paired.methods).Collect(CodeBlock.Empty.At(1), "add").instructions.Length is 5
+	Plain.Collect(CodeBlock.Empty.At(1), "sum").instructions(1).kind is InstructionType.Add
+	Plain.Collect(CodeBlock.Empty.At(1), "sum").instructions(0).texts is ("forResult")
+	Plain.Collect(CodeBlock.Empty.At(1), "sum").instructions(2).texts is ("forResult")
 	at = looped.At(register)
 	at.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, at.register, "forResult"))
 Leading(body SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Leading(MethodCodegen.SumBody, CodeBlock.Empty).instructions.Length is 0
-	Plain.Collected(CodeBlock.Empty.At(1), "list").instructions(0).texts is ("forResult")
+	Plain.Collect(CodeBlock.Empty.At(1), "list").instructions(0).texts is ("forResult")
 	LoopCodegen(TypeSums.Paired.methods).Aggregation(ProductBody, "Pair") is ""
 	Plain.Aggregation(MethodCodegen.SumBody, "Pair") is ""
 	Plain.Aggregation(BodyParser("Minus Number", "	for 3", "		/ index").Block(1, 1), "Number") is ""
-	Plain.Aggregated(BranchLoops, CodeBlock.Empty, "Numbers").scope.TypeOf("forResult") is "Numbers"
-	Plain.Aggregated(BranchLoops, CodeBlock.Empty, "Numbers").instructions.Length is 25
+	Plain.Aggregate(BranchLoops, CodeBlock.Empty, "Numbers").scope.TypeOf("forResult") is "Numbers"
+	Plain.Aggregate(BranchLoops, CodeBlock.Empty, "Numbers").instructions.Length is 25
 	mutable result = block
 	for body.children.Length - 1
 		statement = methods.Statement(body.children(index), result.At(block.register), methods.HasElse(body, index))
-		result = methods.Lined(statement, result.instructions.Length, body.children(index).line)
+		result = methods.Line(statement, result.instructions.Length, body.children(index).line)
 	result.At(block.register)
 AnyTrue(body SyntaxNode) SyntaxNode
 	Plain.AnyTrue(DoubledBody).children.Last.Kind is "Boolean"
@@ -108,27 +108,27 @@ AnyTrue(body SyntaxNode) SyntaxNode
 	for body.children
 		statements.Add(index is body.children.Length - 1 then BranchValues("any").Branch(value) else value)
 	SyntaxNode("Body", body.text, statements + SyntaxNode("Boolean", "false"))
-Started(block CodeBlock, returnType Text, aggregation Text) CodeBlock
-	Plain.Started(CodeBlock.Empty, "Number", "sum").instructions.Length is 2
-	Plain.Started(CodeBlock.Empty, "Numbers", "list").instructions.Length is 1
+Start(block CodeBlock, returnType Text, aggregation Text) CodeBlock
+	Plain.Start(CodeBlock.Empty, "Number", "sum").instructions.Length is 2
+	Plain.Start(CodeBlock.Empty, "Numbers", "list").instructions.Length is 1
 	if returnType is "Text"
 		return block.Load(InstructionEntry.LoadText(block.register, "")).Stored("forResult")
 	start = aggregation is "product" then 1 else 0
 	if aggregation is in ("sum", "product")
 		return block.Load(InstructionEntry.LoadNumber(block.register, start)).Stored("forResult")
 	if aggregation is "add"
-		return TypeSums(methods).Started(block, returnType)
+		return TypeSums(methods).Start(block, returnType)
 	type = methods.values.target.FullName(returnType)
 	empty = InstructionEntry(InstructionType.LoadConstantToRegister, type, (0, 6, -1, 0))
 	block.Add(MethodCodegen.StoreConstant(empty, "forResult"))
-Collected(block CodeBlock, aggregation Text) CodeBlock
-	Plain.Collected(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "sum").instructions.Length is 4
-	Plain.Collected(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "list").instructions.Length is 2
-	Plain.Collected(CodeBlock.Empty.At(1), "product").instructions(1).kind is InstructionType.Multiply
+Collect(block CodeBlock, aggregation Text) CodeBlock
+	Plain.Collect(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "sum").instructions.Length is 4
+	Plain.Collect(CodeBlock.Empty.Load(InstructionEntry.LoadNumber(0, 1)), "list").instructions.Length is 2
+	Plain.Collect(CodeBlock.Empty.At(1), "product").instructions(1).kind is InstructionType.Multiply
 	if aggregation is "list"
 		return block.Add(InstructionEntry.Named(InstructionType.InvokeWriteToList, block.Result, "forResult"))
 	if aggregation is "add"
-		return TypeSums(methods).Added(block)
+		return TypeSums(methods).Add(block)
 	loaded = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "forResult"))
 	operation = aggregation is "product" then InstructionType.Multiply else InstructionType.Add
 	loaded.Load(InstructionEntry.Binary(operation, (loaded.Result, block.Result, loaded.register))).Stored("forResult")
@@ -138,14 +138,14 @@ Loop(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 30
 	FileCompiler.Unoptimized.Loop(LoopPeeling.Summing, LoopPeeling.Counted, "").instructions.Length is 22
-	merged = methods.values.isOptimizing then FractionLoop.Merged(node) else node
+	merged = methods.values.isOptimizing then FractionLoop.Merge(node) else node
 	if merged.Kind is "Body"
 		return methods.Body(merged, block)
-	peeled = methods.values.isOptimizing then LoopPeeling(methods, block).Peeled(node, aggregation) else node
+	peeled = methods.values.isOptimizing then LoopPeeling(methods, block).Peel(node, aggregation) else node
 	if peeled.Kind is "Body"
-		return LoopPeeling(methods, block).Emitted(peeled, LoopCodegen(methods), aggregation)
-	Unpeeled(node, block, aggregation)
-Unpeeled(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
+		return LoopPeeling(methods, block).Emit(peeled, LoopCodegen(methods), aggregation)
+	Unpeel(node, block, aggregation)
+Unpeel(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.kind is InstructionType.LoopEnd
 	Plain.Loop(DoubledBody.children(0), CodeBlock.Empty, "list").instructions.Last.line is 2
 	Plain.Loop(Repeating.Counting, CodeBlock.Empty.Declare("value", "Text"), "").scope.TypeOf("outer") is ""
@@ -153,29 +153,29 @@ Unpeeled(node SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	loop = Repeating(methods.values).Rewritten(node)
 	isCollected = aggregation is not ""
 	copied = ListCodegen(methods.values).CopiedBefore(loop, block, isCollected)
-	declared = Declared(loop, copied)
-	collected = isCollected then ListCodegen(methods.values).Disowned(loop, declared, true) else declared
+	declared = Declare(loop, copied)
+	collected = isCollected then ListCodegen(methods.values).Disown(loop, declared, true) else declared
 	body = loop.children.Last
-	looped = isCollected then AggregatedLoop(body, collected, aggregation) else methods.Valued(body, declared, "None")
-	methods.Lined(Repeating(methods.values).Ended(node, looped, copied), block.instructions.Length, node.line)
-Declared(node SyntaxNode, block CodeBlock) CodeBlock
-	Iterating.Declared(ForA, CodeBlock.Empty.Declare("a", "A")).scope.TypeOf("value") is "Number"
-	Iterating.Declared(IndexA, CodeBlock.Empty.Declare("a", "A")).instructions(1).texts(1) is "Length"
-	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).instructions(0).texts is ("value")
-	OnText.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("value") is "Character"
-	iterator = Iterated(node.HasValue then node.children(0) else SyntaxNode("Identifier", "value"), block)
+	looped = isCollected then AggregatedLoop(body, collected, aggregation) else methods.Value(body, declared, "None")
+	methods.Line(Repeating(methods.values).End(node, looped, copied), block.instructions.Length, node.line)
+Declare(node SyntaxNode, block CodeBlock) CodeBlock
+	Iterating.Declare(ForA, CodeBlock.Empty.Declare("a", "A")).scope.TypeOf("value") is "Number"
+	Iterating.Declare(IndexA, CodeBlock.Empty.Declare("a", "A")).instructions(1).texts(1) is "Length"
+	Plain.Declare(BareFor, CodeBlock.Empty.Declare("value", "Text")).instructions(0).texts is ("value")
+	OnText.Declare(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("value") is "Character"
+	iterator = Iterate(node.HasValue then node.children(0) else SyntaxNode("Identifier", "value"), block)
 	isRange = iterator.Kind is "Call" and iterator.text is "Range"
 	bodies = MethodBodies(methods.values.target.TypeName, methods.values.target.shape, methods.values.inference)
 	iterated = node.HasValue then methods.values.TypeOf(iterator, block) else bodies.IteratedType
 	element = isRange then "Number" else bodies.Element(iterated)
-	begun = Begin(Counted(iterator, node.children.Last, block, element), block)
+	begun = Begin(Tally(iterator, node.children.Last, block, element), block)
 	nested = begun.Declare("index", "Number").Declare("outer", block.scope.TypeOf("value"))
 	nested.Declare("value", element).Sharing("value", true).Sharing("outer", true)
-Counted(iterator SyntaxNode, body SyntaxNode, block CodeBlock, element Text) SyntaxNode
-	Plain.Counted(SyntaxNode("Number", "3"), DoubledBody, CodeBlock.Empty, "Number").text is "3"
-	Plain.Counted(SyntaxNode("Identifier", "for"), DoubledBody, CodeBlock.Empty, "Number").text is "for"
-	Plain.Counted(SyntaxNode("Member", "for", BranchValues.Value), IndexA.children.Last, CodeBlock.Empty, "").text is "for"
-	Iterating.Declared(ForA, CodeBlock.Empty.Declare("a", "A")).instructions(1).texts(1) is "for"
+Tally(iterator SyntaxNode, body SyntaxNode, block CodeBlock, element Text) SyntaxNode
+	Plain.Tally(SyntaxNode("Number", "3"), DoubledBody, CodeBlock.Empty, "Number").text is "3"
+	Plain.Tally(SyntaxNode("Identifier", "for"), DoubledBody, CodeBlock.Empty, "Number").text is "for"
+	Plain.Tally(SyntaxNode("Member", "for", BranchValues.Value), IndexA.children.Last, CodeBlock.Empty, "").text is "for"
+	Iterating.Declare(ForA, CodeBlock.Empty.Declare("a", "A")).instructions(1).texts(1) is "for"
 	if iterator.Kind is not "Member" or iterator.text is not "for"
 		return iterator
 	type = methods.values.TypeOf(iterator.children(0), block)
@@ -196,12 +196,12 @@ UsesValue(body SyntaxNode, scope Scope) Boolean
 		if value is in ("value", "outer") or methods.values.target.ImplicitOwner(value, scope) is "value"
 			return true
 	false
-Iterated(iterator SyntaxNode, block CodeBlock) SyntaxNode
-	Iterating.Iterated(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "A")).text is "for"
-	Plain.Iterated(SyntaxNode("Number", "3"), CodeBlock.Empty).text is "3"
-	Iterating.Iterated(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "As")).text is "a"
-	Iterating.Iterated(SyntaxNode("Identifier", "r"), CodeBlock.Empty.Declare("r", "Range")).text is "r"
-	Iterating.Iterated(SyntaxNode("Identifier", "m"), CodeBlock.Empty.Declare("m", "List(Number or Text)")).text is "m"
+Iterate(iterator SyntaxNode, block CodeBlock) SyntaxNode
+	Iterating.Iterate(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "A")).text is "for"
+	Plain.Iterate(SyntaxNode("Number", "3"), CodeBlock.Empty).text is "3"
+	Iterating.Iterate(SyntaxNode("Identifier", "a"), CodeBlock.Empty.Declare("a", "As")).text is "a"
+	Iterating.Iterate(SyntaxNode("Identifier", "r"), CodeBlock.Empty.Declare("r", "Range")).text is "r"
+	Iterating.Iterate(SyntaxNode("Identifier", "m"), CodeBlock.Empty.Declare("m", "List(Number or Text)")).text is "m"
 	type = methods.values.TypeOf(iterator, block)
 	types = methods.values.inference.types
 	if type is "Range" or types.IsPlural(type) or types.ElementType(type).IndexOf(" or ") > 0
@@ -221,10 +221,10 @@ Begin(iterator SyntaxNode, block CodeBlock) CodeBlock
 RangeFields(iterator SyntaxNode, block CodeBlock) CodeBlock
 	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(1).texts is ("Start", "Range")
 	Plain.RangeFields(SyntaxNode("Identifier", "r"), CodeBlock.Empty).instructions(2).texts is ("ExclusiveEnd", "Range")
-	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("outer") is "Text"
-	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("index") is "Number"
-	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).Owns("outer") is false
-	Plain.Declared(BareFor, CodeBlock.Empty.Declare("value", "Text")).Owns("value") is false
+	Plain.Declare(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("outer") is "Text"
+	Plain.Declare(BareFor, CodeBlock.Empty.Declare("value", "Text")).scope.TypeOf("index") is "Number"
+	Plain.Declare(BareFor, CodeBlock.Empty.Declare("value", "Text")).Owns("outer") is false
+	Plain.Declare(BareFor, CodeBlock.Empty.Declare("value", "Text")).Owns("value") is false
 	range = methods.values.Expression(iterator, block)
 	start = methods.values.Field("Start", "Range", range, range.Result)
 	end = methods.values.Field("ExclusiveEnd", "Range", start, range.Result)
@@ -241,7 +241,7 @@ AggregatedLoop(body SyntaxNode, block CodeBlock, aggregation Text) CodeBlock
 	if last.Kind is "For"
 		return Loop(last, Leading(body, block), aggregation)
 	if BranchValues(aggregation).Reduction(last) is not ""
-		return Collected(methods.values.Expression(last.children(1), Leading(body, block)), aggregation)
+		return Collect(methods.values.Expression(last.children(1), Leading(body, block)), aggregation)
 	if last.Kind is not in ("If", "ElseIf", "Else")
-		return Collected(methods.Valued(body, block, block.scope.TypeOf(CodeBlock.ElementMarker)), aggregation)
+		return Collect(methods.Value(body, block, block.scope.TypeOf(CodeBlock.ElementMarker)), aggregation)
 	methods.Body(BranchValues(aggregation).Rewritten(body), block)

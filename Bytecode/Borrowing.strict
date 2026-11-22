@@ -12,7 +12,7 @@ IsBorrowed(call SyntaxNode, position Number, block CodeBlock) Boolean
 	Lending.IsBorrowed(BodyParser("Run", "\tPass(values)").Block(1, 1).children(0), 0, Owned)
 	Lending.IsBorrowed(BodyParser("Run", "\tAgain(values)").Block(1, 1).children(0), 0, Owned)
 	Lending.IsBorrowed(Reading, 0, CodeBlock.Empty) is false
-	ListCodegen(Lent).Disowned(Reading, Owned, false).Owns("values")
+	ListCodegen(Lent).Disown(Reading, Owned, false).Owns("values")
 	if call.Kind is not "Call"
 		return false
 	argument = call.children(position)
@@ -31,7 +31,7 @@ Keeps(name Text, count Number, position Number) Boolean
 	parameters = HeaderTokens(Tokenizer(lines(start)).Tokens).ParameterNames
 	checking = ListCodegen(values, borrowing + (name + "/" + position))
 	owned = CodeBlock.Empty.Sharing(parameters(position), false)
-	checking.Disowned(BodyParser(lines).Method(start + 1), owned, true).Owns(parameters(position)) is false
+	checking.Disown(BodyParser(lines).Method(start + 1), owned, true).Owns(parameters(position)) is false
 Header(name Text, count Number) Number
 	Lending.Header("Keep", 1) is 2
 	Lending.Header("Twice", 1) is -1

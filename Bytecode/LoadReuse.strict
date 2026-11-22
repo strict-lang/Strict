@@ -22,7 +22,7 @@ Optimized List(InstructionEntry)
 	mutable result = List(Mutable(InstructionEntry))
 	for instructions
 		if Source(index) < 0
-			result.Add(Remapped(value, index))
+			result.Add(Remap(value, index))
 	result
 Source(load Number) Number
 	Twice.Source(1) is 0
@@ -57,7 +57,7 @@ IsUnchanged(register Number, first Number, load Number) Boolean
 	Chain.Source(0) is -1
 	Twice.CanRedirect(0, 5)
 	for Range(first + 1, load)
-		if Written(instructions(value)) is register
+		if Write(instructions(value)) is register
 			return false
 	true
 CanRedirect(load Number, register Number) Boolean
@@ -69,9 +69,9 @@ CanRedirect(load Number, register Number) Boolean
 		entry = instructions(value)
 		if reloaded is in Reads(entry) and isBlocked
 			return false
-		if Written(entry) is reloaded
+		if Write(entry) is reloaded
 			return true
-		isBlocked = isBlocked or Written(entry) is register or IsBoundary(entry)
+		isBlocked = isBlocked or Write(entry) is register or IsBoundary(entry)
 	true
 Reads(entry InstructionEntry) Numbers
 	Twice.Reads(AddBoth) is (0, 1)
@@ -104,10 +104,10 @@ InvokeReads(entry InstructionEntry) Numbers
 		positions.Add(argumentCountPosition + 1 + index)
 	instancePosition = argumentCountPosition + 1 + argumentCount
 	entry.payload(instancePosition) is 1 then positions + (instancePosition + 1) else positions
-Written(entry InstructionEntry) Number
-	Twice.Written(AddBoth) is 2
-	Twice.Written(Indexed) is 1
-	Twice.Written(InstructionEntry.Return(2)) is -1
+Write(entry InstructionEntry) Number
+	Twice.Write(AddBoth) is 2
+	Twice.Write(Indexed) is 1
+	Twice.Write(InstructionEntry.Return(2)) is -1
 	position = WritePosition(entry)
 	position < 0 then Number.NotFound else entry.payload(position)
 Writer(register Number, before Number, after Number) Number
@@ -118,7 +118,7 @@ Writer(register Number, before Number, after Number) Number
 		return Number.NotFound
 	for before - after - 1
 		earlier = before - 1 - index
-		if Written(instructions(earlier)) is register
+		if Write(instructions(earlier)) is register
 			return earlier
 	Number.NotFound
 WritePosition(entry InstructionEntry) Number
@@ -136,16 +136,16 @@ RegisterCount Number
 	LoadReuse((InstructionEntry.Return(4), InstructionEntry.Return(5), InstructionEntry.Return(1))).RegisterCount is 6
 	mutable most = 0
 	for instructions
-		written = Written(value)
+		written = Write(value)
 		isCall = value.kind is InstructionType.Invoke
 		most = (isCall then written + 2 + value.payload(5 + value.payload(3)) else written + 1).Maximum(most)
 		for Reads(value)
 			most = value + 1 > most then value + 1 else most
 	most
-Rebased(entry InstructionEntry, base Number) InstructionEntry
-	Twice.Rebased(AddBoth, 6).payload is (3, 6, 7, 8)
-	Twice.Rebased(InstructionEntry.Return(2), 6).payload is List(Number) + 8
-	Twice.Rebased(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), 6).payload is (2, 6, 7)
+Rebase(entry InstructionEntry, base Number) InstructionEntry
+	Twice.Rebase(AddBoth, 6).payload is (3, 6, 7, 8)
+	Twice.Rebase(InstructionEntry.Return(2), 6).payload is List(Number) + 8
+	Twice.Rebase(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), 6).payload is (2, 6, 7)
 	positions = ReadPositions(entry) + WritePosition(entry)
 	mutable content = List(Mutable(Number))
 	for entry.payload
@@ -158,10 +158,10 @@ IsBoundary(entry InstructionEntry) Boolean
 	LoadReuse((LoadA, InstructionEntry.Jump(InstructionType.JumpEnd, 1), ReloadA)).EarlierLoad(2) is -1
 	LoadReuse((LoadA, ReloadA, InstructionEntry.Jump(InstructionType.JumpEnd, 1), AddBoth)).CanRedirect(1, 0) is false
 	entry.kind is InstructionType.Invoke or entry.kind >= InstructionType.LoopBegin
-Remapped(entry InstructionEntry, position Number) InstructionEntry
-	Twice.Remapped(AddBoth, 2).payload is (3, 0, 0, 2)
-	Twice.Remapped(InstructionEntry(InstructionType.Add, List(Text), (3, 0, 1, 2), 4), 2).line is 4
-	Twice.Remapped(InstructionEntry.Binary(InstructionType.Add, (0, 1, 1)), 2).payload is (3, 0, 0, 1)
+Remap(entry InstructionEntry, position Number) InstructionEntry
+	Twice.Remap(AddBoth, 2).payload is (3, 0, 0, 2)
+	Twice.Remap(InstructionEntry(InstructionType.Add, List(Text), (3, 0, 1, 2), 4), 2).line is 4
+	Twice.Remap(InstructionEntry.Binary(InstructionType.Add, (0, 1, 1)), 2).payload is (3, 0, 0, 1)
 	reads = ReadPositions(entry)
 	if reads.Length is 0
 		return entry

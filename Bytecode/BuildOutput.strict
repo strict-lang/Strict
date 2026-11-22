@@ -1,28 +1,28 @@
 Intermediate(path Text) Text
 	BuildOutput.Intermediate("Examples\Sum.strict") is "./Examples/obj/Sum.strict"
 	BuildOutput.Intermediate("C:/s/A") is "C:/s/obj/A"
-	normalized = FileCompiler.Normalized(path)
+	normalized = FileCompiler.Normalize(path)
 	slash = normalized.LastIndexOf("/")
 	normalized.Substring(0, slash) + "/obj" + normalized.Substring(slash)
-Delivered(base Text) Text
-	BuildOutput.Delivered("./Examples/obj/Sum") is "./Examples/Sum"
-	BuildOutput.Delivered("./obj/Strict") is "./Strict"
-	BuildOutput.Delivered("./Math/obj/Tests.test") is "./Math/obj/Tests.test"
-	BuildOutput.Delivered("Compiler/output/Sum") is "Compiler/output/Sum"
+Deliver(base Text) Text
+	BuildOutput.Deliver("./Examples/obj/Sum") is "./Examples/Sum"
+	BuildOutput.Deliver("./obj/Strict") is "./Strict"
+	BuildOutput.Deliver("./Math/obj/Tests.test") is "./Math/obj/Tests.test"
+	BuildOutput.Deliver("Compiler/output/Sum") is "Compiler/output/Sum"
 	slash = base.LastIndexOf("/")
 	isObj = base.EndsWith(".test") is false and slash >= 4 and base.Substring(slash - 4, 4) is "/obj"
 	isObj then base.Substring(0, slash - 4) + base.Substring(slash) else base
-Released(base Text, platformName Text) Text
-	BuildOutput.Released("./Examples/obj/Sum", "Linux") is "./Examples/Release/Linux/Sum"
-	BuildOutput.Released("./Math/obj/Tests.test", "Linux") is "./Math/obj/Tests.test"
+ReleasePath(base Text, platformName Text) Text
+	BuildOutput.ReleasePath("./Examples/obj/Sum", "Linux") is "./Examples/Release/Linux/Sum"
+	BuildOutput.ReleasePath("./Math/obj/Tests.test", "Linux") is "./Math/obj/Tests.test"
 	if base.EndsWith(".test")
 		return base
-	program = Delivered(base)
+	program = Deliver(base)
 	slash = program.LastIndexOf("/")
 	program.Substring(0, slash) + "/Release/" + platformName + program.Substring(slash)
-Shipped(release Text, sidecar Text) Text
-	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.ptx") is "Compiler/output/Unshipped/B.ptx"
-	BuildOutput.Shipped("Compiler/output/Unshipped", "A/obj/B.runtime.ptx").EndsWith("/Unshipped/shared.runtime.ptx")
+Ship(release Text, sidecar Text) Text
+	BuildOutput.Ship("Compiler/output/Unshipped", "A/obj/B.ptx") is "Compiler/output/Unshipped/B.ptx"
+	BuildOutput.Ship("Compiler/output/Unshipped", "A/obj/B.runtime.ptx").EndsWith("/Unshipped/shared.runtime.ptx")
 	name = Path(sidecar).FileName.text
 	at = name.IndexOf(".runtime.")
 	if at < 0
@@ -61,8 +61,8 @@ Newer(path Text, sources Texts) Text
 	path
 Fresh(base Text, extension Text, sources Texts) Text
 	BuildOutput.Fresh("Compiler/output/missing", ".exe", List(Text) + "BuildOutput.strict") is ""
-	delivered = Newer(Delivered(base) + extension, sources)
-	released = Newer(Released(base, Platform.NameOf(Platform.Current)) + extension, sources)
+	delivered = Newer(Deliver(base) + extension, sources)
+	released = Newer(ReleasePath(base, Platform.NameOf(Platform.Current)) + extension, sources)
 	if released is "" or delivered is ""
 		return released is "" then delivered else released
 	File(released).Modified >= File(delivered).Modified then released else delivered

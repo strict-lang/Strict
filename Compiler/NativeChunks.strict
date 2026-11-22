@@ -59,7 +59,7 @@ Saved(output Text, root Text, paths Texts)
 	counted = NativeFolder(selection, false).Counted(paths, root)
 	if counted.Length < paths.Length
 		return Error("ChunkNotCompiled")
-	File(output).Write(BinaryFile(output).Packed(List(Number), counted, List(Text)))
+	File(output).Write(BinaryFile(output).Pack(List(Number), counted, List(Text)))
 	Stamped(output, paths, root, counted)
 IsKept(output Text, paths Texts, root Text) Boolean
 	NativeChunks.IsKept(Unsaved, NativeFolder.Hellos, ".") is false
@@ -80,7 +80,7 @@ Stamped(output Text, paths Texts, root Text, types List(TypeEntry))
 	for paths
 		inputs = inputs + (Path(value).PathOnly.text + "/*")
 	for types
-		inputs = inputs + TypeSource(value).Located(Path(paths.First).PathOnly.text)
+		inputs = inputs + TypeSource(value).Locate(Path(paths.First).PathOnly.text)
 	lines = (List(Text) + Key(paths, root)) + NativeCache.Adding.Snapshot(inputs.Unique)
 	File(output + ".stamp").Write(Text.Combine(lines, "\n"))
 Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
@@ -96,5 +96,5 @@ Decoded(output Text, count Number) List(TypeEntry)
 	NativeChunks.Decoded(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
 	if File(output).Exists is false
 		return List(TypeEntry)
-	types = BinaryFile(output).Types(BinaryFile(output).Unpacked(File(output).ReadBytes))
+	types = BinaryFile(output).Types(BinaryFile(output).Unpack(File(output).ReadBytes))
 	types.Length < count then List(TypeEntry) else types

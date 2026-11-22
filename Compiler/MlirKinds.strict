@@ -82,7 +82,7 @@ Writer(position Number, register Number) Number
 	reuse = LoadReuse(function.method.instructions)
 	for position
 		at = position - 1 - index
-		if reuse.Written(function.method.instructions(at)) is register or IsChanged(at, register)
+		if reuse.Write(function.method.instructions(at)) is register or IsChanged(at, register)
 			return at
 	Number.NotFound
 VariableKind(position Number, name Text) Text

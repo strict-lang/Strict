@@ -30,7 +30,7 @@ Issue Text
 	instructions = function.method.instructions
 	end = function.method.LoopEndOf(position)
 	blocker = listed is "" then Blocker(function, position + 1, end, 0) else "its for over " + listed
-	file = TypeSource(function.type).Located("") + ":line " + instructions(position).line
+	file = TypeSource(function.type).Locate("") + ":line " + instructions(position).line
 	file + ": " + Rule + ": " + function.method.Name + " runs on the CPU because of " + blocker
 ContractedList Text
 	Laned.ContractedList is "List(Rgb)"

@@ -10,8 +10,8 @@ Homing(signed Texts) LinkRound
 	for signed
 		type = Signature(value).Type
 		if type is not in homes and type.IndexOf("(") < 0 and fresh.Covering(value) is ""
-			file = BinaryFile(FileCompiler.Normalized(round.linker.SourcePath(type)))
-			homes(type) = BinaryLinks(file).Owned(file.Head(File(file.Path).ReadBytes), stamps)
+			file = BinaryFile(FileCompiler.Normalize(round.linker.SourcePath(type)))
+			homes(type) = BinaryLinks(file).Claim(file.Head(File(file.Path).ReadBytes), stamps)
 			if file.source is in stamps and stamps(file.source) > 0
 				places(type) = file.source
 	LinkRound(round, linker = Linker(round.linker, Homes = homes, Places = places))
@@ -29,11 +29,11 @@ Saved LinkRound
 Grew(links BinaryLinks, own TypeEntry, entry TypeEntry)
 	Single.Grew(BinaryLinks.User, TypeEntry.HelloLogger, TypeEntry.HelloLogger) is not Error
 	File(BinaryLinks.User.file.Path).Exists is false
-	if own.Name is "" or links.Added(own, entry).Length > 0
+	if own.Name is "" or links.Add(own, entry).Length > 0
 		links.Grown(own, entry, SourceNames(links.file.source, entry), round.linker.Sourced)
 SourceNames(source Text, entry TypeEntry) Texts
 	"Number" is in Single.SourceNames("./Math/Vector2.strict", TypeEntry.HelloLogger)
-	mutable names = SourceFiles(".").Mentioned(source)
+	mutable names = SourceFiles(".").Mention(source)
 	for round.linker.UsedTypes(List(TypeEntry) + entry)
 		short = TypeEntry.ShortName(value)
 		names = names + (short.IndexOf("(") < 0 then short else short.Substring(0, short.IndexOf("(")))

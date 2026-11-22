@@ -24,7 +24,7 @@ Issue Text
 	wide = IsCandidate then Wide(Element, "", 0) else List(Text)
 	if wide.Length is 0
 		return ""
-	file = TypeSource(function.type).Located("") + ":line " + function.method.instructions(position).line
+	file = TypeSource(function.type).Locate("") + ":line " + function.method.instructions(position).line
 	loops = ": " + MlirNarrowing.Rule + ": " + function.method.Name + " loops over " + TypeEntry.ShortName(Element)
 	file + loops + " with 64 bit numbers (" + Text.Combine(wide, ", ") + Advice
 Element Text

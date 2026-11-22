@@ -129,7 +129,7 @@ Loaded(at Number, register Number) Text
 	reuse = LoadReuse(function.method.instructions)
 	for at
 		earlier = function.method.instructions(at - 1 - index)
-		if reuse.Written(earlier) is register
+		if reuse.Write(earlier) is register
 			return earlier.kind is InstructionType.LoadVariableToRegister then earlier.texts(0) else ""
 	""
 IsBytes(name Text) Boolean

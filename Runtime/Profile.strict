@@ -16,7 +16,7 @@ Sample(path Text, root Text) Number
 	Profile.Sample("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
-	types = FileCompiler(true, selection).Compiled(path, root, true)
+	types = FileCompiler(true, selection).Compile(path, root, true)
 	types.Length is 0 then 1 else Execute.Start(types, path, false, true, true).RunTests(types.First.Name)
 Report(lines Texts) Texts
 	Profile.Report(Lines).First is "3 ms sampled, slowest lines:"

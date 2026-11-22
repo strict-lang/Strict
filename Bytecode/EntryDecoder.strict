@@ -13,7 +13,7 @@ Names Texts
 	for stream.Length > 1 then stream(1) else 0
 		length = position < stream.Length then stream(position) else 0
 		position = position + 1 + length
-		ByteEncoder(stream).Spelled(position - length, length)
+		ByteEncoder(stream).Spell(position - length, length)
 Type TypeEntry
 	Hello.Type is TypeEntry.HelloLogger
 	EntryDecoder.Of(TypeEntry.Scaling.Bytes).Type is TypeEntry.Scaling

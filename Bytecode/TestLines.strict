@@ -89,10 +89,10 @@ IsCalling(line SyntaxNode, block CodeBlock) Boolean
 	if line.Kind is "Member"
 		return values.IsMethodCall(line, block) or IsCalling(line.children(0), block)
 	values.IsMethodCall(line, block)
-Guarded(body SyntaxNode, header HeaderTokens, line Number, scope Scope) SyntaxNode
-	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).Kind is "Body"
-	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children(1).Kind is "If"
-	Plain.Guarded(Framed, FramedHeader, 1, MethodCodegen.NoScope).children.Length is 3
+Guard(body SyntaxNode, header HeaderTokens, line Number, scope Scope) SyntaxNode
+	Plain.Guard(Framed, FramedHeader, 1, MethodCodegen.NoScope).Kind is "Body"
+	Plain.Guard(Framed, FramedHeader, 1, MethodCodegen.NoScope).children(1).Kind is "If"
+	Plain.Guard(Framed, FramedHeader, 1, MethodCodegen.NoScope).children.Length is 3
 	end = LeadingEnd(body, CodeBlock(List(InstructionEntry), 0, 0, scope))
 	checks = Validations(header) + Checks(header, line)
 	mutable statements = List(Mutable(SyntaxNode))

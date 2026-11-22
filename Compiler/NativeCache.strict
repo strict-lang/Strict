@@ -58,7 +58,7 @@ Saved(inputs Texts)
 Inputs(sources Texts) Texts
 	"./Content/**" is not in NativeCache("test", ("Math", ".", "native")).Inputs(List(Text))
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
-	source = FileCompiler.Normalized(rest(0))
+	source = FileCompiler.Normalize(rest(0))
 	runtimes = Directory.Files(rest(1) + "/Compiler", "NativeRuntime*.mlir")
 	tools = List(Text) + (rest(1) + "/strict" + Toolchain(Platform.Current, rest(1)).Extension)
 	web = WebBuild(Toolchain(Platform.Current, rest(1), isWeb = true))
@@ -70,7 +70,7 @@ Inputs(sources Texts) Texts
 Files Texts slow
 	"./Examples/NativeAdd/Adder.strict" is in Adding.Files
 	"./Examples/NativeAdd/native/Adder.c" is in Adding.Inputs(Adding.Files)
-	SourceFiles(rest(1)).Of(FileCompiler.Normalized(rest(0)))
+	SourceFiles(rest(1)).Of(FileCompiler.Normalize(rest(0)))
 Folders(sources Texts) Texts
 	mutable folders = List(Text)
 	for sources

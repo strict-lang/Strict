@@ -36,7 +36,7 @@ Typed(types List(TypeEntry), folder Text) BinarySources
 	Mixed.Typed(List(TypeEntry) + Listing, ".").sources.Length is 4
 	mutable added = List(Text)
 	for types
-		file = FileCompiler.Normalized(TypeSource(value).Located(folder))
+		file = FileCompiler.Normalize(TypeSource(value).Locate(folder))
 		if File(file).Exists and file is not in sources and file is not in added
 			added = added + file
 	found = BinarySources(added).Stamped

@@ -49,7 +49,7 @@ Issue Text
 	if IsCandidate is false
 		return ""
 	wide = Wide
-	file = TypeSource(function.type).Located("") + ":line "
+	file = TypeSource(function.type).Locate("") + ":line "
 	used = ": " + function.method.Name + " uses 64 bit numbers (" + Text.Combine(wide, ", ") + ")"
 	issue = file + function.method.instructions(position).line + ": " + Rule + used
 	wide.Length is 0 then "" else issue + Advice

@@ -1,21 +1,21 @@
 has source Text
 constant Probe = BinaryFile("./Bytecode/Probe.strict")
-constant Greeting = Probe.Packed(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
+constant Greeting = Probe.Pack(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
 constant Recorded = ("./Any.strict", "./Bytecode/Probe.strict")
-constant Packing = Probe.Unpacked(Greeting)
-constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + BinarySources.CompilerStamp + 5,List(TypeEntry) + TypeEntry.HelloLogger, List(Text)))
+constant Packing = Probe.Unpack(Greeting)
+constant Outdated = Probe.Unpack(Probe.Pack(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + BinarySources.CompilerStamp + 5,List(TypeEntry) + TypeEntry.HelloLogger, List(Text)))
 Path Text
 	Probe.Path is "./Bytecode/obj/Probe.strictbinary"
 	intermediate = BuildOutput.Intermediate(source)
 	intermediate.Substring(0, intermediate.Length - 7) + ".strictbinary"
-Saved(bytes Bytes)
-	Probe.Saved(Greeting) is not Error and File(Probe.Path).ReadBytes is Greeting
+Save(bytes Bytes)
+	Probe.Save(Greeting) is not Error and File(Probe.Path).ReadBytes is Greeting
 	temporary = Path + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(bytes)
 	File(temporary).Rename(Path)
-Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
-	Probe.Packed((1, 2), List(TypeEntry), List(Text)).Length > 50
-	Probe.Unpacked(Probe.Packed((1, 2), List(TypeEntry), List(Text) + "a")).Last.Name is "links"
+Pack(header Numbers, types List(TypeEntry), links Texts) Bytes
+	Probe.Pack((1, 2), List(TypeEntry), List(Text)).Length > 50
+	Probe.Unpack(Probe.Pack((1, 2), List(TypeEntry), List(Text) + "a")).Last.Name is "links"
 	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
 	for types
 		entries.Add(ZipEntry(value.Name + ".bytecode", value.Bytes))
@@ -23,19 +23,19 @@ Packed(header Numbers, types List(TypeEntry), links Texts) Bytes
 		entries.Add(ZipEntry("links", ByteEncoder.Empty.UnicodeBytes(Text.Combine(links, "\n"))))
 	for ZipWriter(entries, false).Bytes
 		Byte(value)
-Unpacked(bytes Bytes) List(ZipEntry)
+Unpack(bytes Bytes) List(ZipEntry)
 	Packing.Length is 2
 	Packing(0).content is ByteEncoder.Empty.SevenBits((1, 0, TypeEntry.FormatVersion, BinarySources.CompilerStamp)).bytes
-	ZipReader(ZipReader.Copied(bytes, 0, bytes.Length)).Entries
+	ZipReader(ZipReader.Copy(bytes, 0, bytes.Length)).Entries
 Head(bytes Bytes) List(ZipEntry)
 	Probe.Head(Greeting) is Packing
-	Probe.Head(Probe.Packed(1, (TypeEntry.HelloLogger, TypeEntry.HelloLogger), List(Text))).Length is 2
-	first = Ended(bytes, 0)
-	second = first < 0 then -1 else Ended(bytes, first)
-	second < 0 or second > bytes.Length then Unpacked(bytes) else (Entry(bytes, 0), Entry(bytes, first))
+	Probe.Head(Probe.Pack(1, (TypeEntry.HelloLogger, TypeEntry.HelloLogger), List(Text))).Length is 2
+	first = End(bytes, 0)
+	second = first < 0 then -1 else End(bytes, first)
+	second < 0 or second > bytes.Length then Unpack(bytes) else (Entry(bytes, 0), Entry(bytes, first))
 Rewritten(header Numbers, own TypeEntry, rest List(ZipEntry)) Bytes
-	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, Packing + ZipEntry("x", 97))).Last.Name is "x"
-	Probe.Unpacked(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, List(ZipEntry))).Length is 2
+	Probe.Unpack(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, Packing + ZipEntry("x", 97))).Last.Name is "x"
+	Probe.Unpack(Probe.Rewritten((1, 0, 7), TypeEntry.HelloLogger, List(ZipEntry))).Length is 2
 	mutable entries = List(Mutable(ZipEntry)) + ZipEntry("sources", ByteEncoder.Empty.SevenBits(header).bytes)
 	entries.Add(ZipEntry(own.Name + ".bytecode", own.Bytes))
 	for rest
@@ -43,8 +43,8 @@ Rewritten(header Numbers, own TypeEntry, rest List(ZipEntry)) Bytes
 			entries.Add(value)
 	for ZipWriter(entries, false).Bytes
 		Byte(value)
-Ended(bytes Bytes, position Number) Number
-	Probe.Ended(List(Byte), 0) is -1
+End(bytes Bytes, position Number) Number
+	Probe.End(List(Byte), 0) is -1
 	Probe.Head(Greeting.Slice(0, 50)).Length is 0
 	Probe.Head(List(Byte)).Length is 0
 	reader = Header(bytes, position)
@@ -56,27 +56,27 @@ Entry(bytes Bytes, position Number) ZipEntry
 	size = reader.Read(ZipReader.SizeOffset, 4)
 	start = position + reader.End(0) - size
 	named = reader.bytes.Length - ZipReader.LocalHeaderSize
-	ZipEntry(ByteEncoder(reader.bytes).Spelled(ZipReader.LocalHeaderSize, named), ZipReader.Copied(bytes, start, size))
+	ZipEntry(ByteEncoder(reader.bytes).Spell(ZipReader.LocalHeaderSize, named), ZipReader.Copy(bytes, start, size))
 Header(bytes Bytes, position Number) ZipReader
 	Probe.Header(List(Byte), 0).bytes.Length is 0
 	if position + ZipReader.LocalHeaderSize > bytes.Length
 		return ZipReader(List(Number))
-	header = ZipReader(ZipReader.Copied(bytes, position, ZipReader.LocalHeaderSize))
+	header = ZipReader(ZipReader.Copy(bytes, position, ZipReader.LocalHeaderSize))
 	start = position + ZipReader.LocalHeaderSize
 	named = (header.Read(ZipReader.NameLengthOffset, 2), bytes.Length - start).Minimum
-	ZipReader(header.bytes + ZipReader.Copied(bytes, start, named))
+	ZipReader(header.bytes + ZipReader.Copy(bytes, start, named))
 IsFresh(entries List(ZipEntry)) Boolean
 	Probe.IsFresh(Packing)
 	Probe.IsFresh(Packing + ZipEntry("links", ByteEncoder.Empty.UnicodeBytes("Missing\tStrict/Missing\t"))) is false
 	if IsCurrent(entries) is false or entries.Length < 2 or entries(1).Name.EndsWith(".bytecode") is false
 		return false
 	own = List(TypeEntry) + EntryDecoder.Of(entries(1).content).Type
-	for entries.Last.Name is "links" then BinaryLinks(BinaryFile(source)).Resolved(own, entries.Last) else own
+	for entries.Last.Name is "links" then BinaryLinks(BinaryFile(source)).Resolve(own, entries.Last) else own
 		if value.Name is ""
 			return false
 	true
-Unchecked(paths Texts) Texts
-	Probe.Unchecked(List(Text) + "./Missing.strict") is ("./Missing.strict")
+Uncheck(paths Texts) Texts
+	Probe.Uncheck(List(Text) + "./Missing.strict") is ("./Missing.strict")
 	for paths
 		cache = BinaryFile(value)
 		header = File(cache.Path).Exists then cache.Head(File(cache.Path).ReadBytes) else List(ZipEntry)
@@ -106,18 +106,18 @@ IsCurrent(entries List(ZipEntry), known = Dictionary(Text, Number)) Boolean
 	Probe.IsCurrent(Packing)
 	Probe.IsCurrent(Outdated) is false
 	Probe.IsCurrent(List(ZipEntry)) is false
-	Probe.IsCurrent(Probe.Unpacked(Probe.Packed((1, 2), List(TypeEntry), List(Text)))) is false
+	Probe.IsCurrent(Probe.Unpack(Probe.Pack((1, 2), List(TypeEntry), List(Text)))) is false
 	if entries.Length is 0 or entries.First.Name is not "sources"
 		return false
 	header = EntryDecoder.Of(entries.First.content)
 	start = 1 + header.stream(0)
 	complete = header.stream.Length is start + 2 + header.names.Length
-	stamped = BinarySources(Rooted(header.names)).Stamped(known)
+	stamped = BinarySources(Root(header.names)).Stamped(known)
 	isSameCompiler = complete and header.stream(start + 1) is BinarySources.CompilerStamp
 	isSameCompiler and header.stream(start) is TypeEntry.FormatVersion and stamped.Matches(header.stream, start + 2)
-Rooted(names Texts) Texts
-	Probe.Rooted(("./Bytecode/Probe.strict", "./Any.strict")) is ("./Bytecode/Probe.strict", "./Any.strict")
-	BinaryFile("C:/s/Bytecode/Probe.strict").Rooted(Recorded) is ("C:/s/Any.strict", "C:/s/Bytecode/Probe.strict")
+Root(names Texts) Texts
+	Probe.Root(("./Bytecode/Probe.strict", "./Any.strict")) is ("./Bytecode/Probe.strict", "./Any.strict")
+	BinaryFile("C:/s/Bytecode/Probe.strict").Root(Recorded) is ("C:/s/Any.strict", "C:/s/Bytecode/Probe.strict")
 	mutable base = ""
 	for names
 		if value.StartsWith("./") and source.EndsWith(value.Substring(1))
@@ -132,7 +132,7 @@ Types(entries List(ZipEntry)) List(TypeEntry)
 		if value.Name.EndsWith(".bytecode")
 			types.Add(EntryDecoder.Of(value.content).Type)
 		else if value.Name is "links"
-			return BinaryLinks(BinaryFile(source)).Resolved(types, value)
+			return BinaryLinks(BinaryFile(source)).Resolve(types, value)
 	types
 IsInput(name Text) Boolean
 	Probe.IsInput("Compiler/NativeRuntime.mlir")
@@ -140,11 +140,11 @@ IsInput(name Text) Boolean
 	Probe.IsInput("strict") is false
 	isOutput = name.EndsWith(".exe") or name.EndsWith(".test") or name.EndsWith(".strictbinary")
 	name.LastIndexOf(".") > name.LastIndexOf("/") + 1 and isOutput is false
-Contained(folder Text, ignored Texts = List(Text)) Texts
-	Probe.Contained("NeuralNetworks/images").Length is 2
+Contain(folder Text, ignored Texts = List(Text)) Texts
+	Probe.Contain("NeuralNetworks/images").Length is 2
 	if DataFiles(ignored).IsExcluded(folder)
 		return List(Text)
 	mutable files = Directory.Files(folder)
 	for Directory.Directories(folder)
-		files = files + Contained(value, ignored)
+		files = files + Contain(value, ignored)
 	files

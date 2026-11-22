@@ -65,7 +65,7 @@ Step(combined Text) Text
 	for function.method.instructions
 		natural = Natural(index, registers, variables, naturals)
 		naturals = naturals + natural
-		registers = MlirWholeValues(index).Written(registers, LoadReuse(function.method.instructions).Written(value), natural)
+		registers = MlirWholeValues(index).Written(registers, LoadReuse(function.method.instructions).Write(value), natural)
 		stored = Stored(index, registers, naturals)
 		variables = MlirWholeValues(index).Marked(variables, Named(value, stored), stored)
 	registers + "|" + variables + "|" + naturals

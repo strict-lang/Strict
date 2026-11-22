@@ -36,7 +36,7 @@ Released
 	folder = release.Parent + "/Release"
 	for (release.Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
-	release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Delivered(base), List(Text) + "")
+	release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Deliver(base), List(Text) + "")
 	Completed(release.Icon)
 Converting(icon Text) Text
 	MacOSBundle("Missing/App").Converting("a.ico").StartsWith("-s format icns \"a.ico\" --out ")

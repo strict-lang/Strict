@@ -73,7 +73,7 @@ File(type TypeEntry) Text
 	at = mainNames.Index(type.Name)
 	if at >= 0
 		return mainFiles(at)
-	TypeSource(type).Located(mainFiles.Length is 0 then "" else Path(mainFiles.First).PathOnly.text)
+	TypeSource(type).Locate(mainFiles.Length is 0 then "" else Path(mainFiles.First).PathOnly.text)
 Indexes(places Texts) Numbers
 	MlirLines(Unlined).Indexes(("Other.strict:1", "Shape.strict:3", "Shape.strict:2")) is (2, 1)
 	for Placed

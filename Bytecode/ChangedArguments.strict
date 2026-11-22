@@ -34,8 +34,8 @@ Owner(call SyntaxNode, block CodeBlock) Text
 	if values.ArgumentStart(call) > 0
 		return values.TypeOf(call.children(0), block)
 	values.inference.types.IsKnown(call.text) then call.text else values.target.TypeName
-Stored(block CodeBlock) CodeBlock
-	Painting.Stored(CodeBlock.Empty).instructions.Length is 0
+StoreAll(block CodeBlock) CodeBlock
+	Painting.StoreAll(CodeBlock.Empty).instructions.Length is 0
 	Immutable.scope.TypeOf("painter") is "Painter"
 	Immutable.scope.TypeOf("ticker") is "Ticker"
 	Painting.StoredBack(Repaint, Holding.At(1), Holding).instructions.Length is 1

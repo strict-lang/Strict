@@ -17,11 +17,11 @@ Alternatives(type Text) Texts
 	Plain.Alternatives("B or Text") is ("B", "Text") and Plain.Alternatives("B").Length is 0
 	names = type.Split(" or ")
 	names.Length > 1 then names else List(Text)
-Tested(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Tested(IsB, Mixed).instructions.Last.kind is InstructionType.OfType
-	Plain.Tested(IsB, Mixed).instructions.Last.texts is ("B", "B", "Text")
-	Plain.Tested(IsB, Mixed).instructions(1) is InstructionEntry.LoadText(1, "B")
-	Plain.Tested(SyntaxNode("Binary", "is not", IsB.children), Mixed).instructions.Last.texts(1) is "not"
+EmitTest(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.EmitTest(IsB, Mixed).instructions.Last.kind is InstructionType.OfType
+	Plain.EmitTest(IsB, Mixed).instructions.Last.texts is ("B", "B", "Text")
+	Plain.EmitTest(IsB, Mixed).instructions(1) is InstructionEntry.LoadText(1, "B")
+	Plain.EmitTest(SyntaxNode("Binary", "is not", IsB.children), Mixed).instructions.Last.texts(1) is "not"
 	if node.text is "is not"
 		tested = SyntaxNode("Binary", "is", node.children)
 		return values.Expression(SyntaxNode("Not", "not", List(SyntaxNode) + tested), block)

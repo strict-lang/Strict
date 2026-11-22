@@ -54,7 +54,7 @@ IsConstantList(node SyntaxNode) Boolean
 	MemberA.values.target is CallTarget(CallTarget.NoTypes, TypeShape("has A Text"), "Strict/C", List(Text))
 	Primed.IsConstantList(PrimeCall)
 	member = SyntaxNode("Member", node.text, node.children(0))
-	ConstantFolding(values.target.TypeName, values.inference).Folded(member).Kind is "List"
+	ConstantFolding(values.target.TypeName, values.inference).Fold(member).Kind is "List"
 IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	OwnA.IsIndexedCall(SyntaxNode("Call", "limits", One), CodeBlock.Empty)
 	OwnA.IsIndexedCall(SyntaxNode("Call", "A", One), CodeBlock.Empty)
@@ -67,25 +67,25 @@ IsIndexedCall(node SyntaxNode, block CodeBlock) Boolean
 	isNamed = block.scope.TypeOf(node.text) is not "" or isOwnMember or isConstant or isOwnList
 	isIndexed = node.children.Length is 1 and isNamed or node.children.Length is 2 and isOwnMember
 	isIndexed and (isConstant or isOwnList or values.inference.types.IsKnown(node.text) is false)
-Indexed(node SyntaxNode, block CodeBlock) CodeBlock
-	Plain.Indexed(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
-	Plain.Indexed(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
-	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
+EmitIndex(node SyntaxNode, block CodeBlock) CodeBlock
+	Plain.EmitIndex(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.kind is InstructionType.IndexCall
+	Plain.EmitIndex(SyntaxNode("Call", "failed", One), Failed).instructions.Last.kind is InstructionType.Invoke
+	Plain.EmitIndex(SyntaxNode("Call", "named", One), Named).instructions.Last.kind is InstructionType.Invoke
 	isCall = node.Kind is "Call"
 	named = Source(node)
 	type = values.TypeOf(named, block)
 	if type.StartsWith("Dictionary(") or values.inference.types.MethodsOf(type).TypeOf("get") is not ""
-		return ErrorCodegen(values).Handled(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
-	folded = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
+		return ErrorCodegen(values).Handle(SyntaxNode("MethodCall", "get", (named, node.children.Last)), block)
+	folded = ConstantFolding(values.target.TypeName, values.inference).Fold(SyntaxNode("Identifier", node.text))
 	isConstant = folded.Kind is "Call" and folded.text is "Error"
 	isError = isCall and (block.scope.TypeOf(node.text) is "Error" or isConstant)
 	isError then WithValue(node, block) else Element(node, block)
-Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
-	Plain.Keyed(One, Named) is One
-	Plain.Keyed(SyntaxNode("Reassignment", "", (SyntaxNode("Index", "named", One), One)), Named).children(1) is One
-	Plain.Keyed(SyntaxNode("Reassignment", "", (SyntaxNode("Call", "failed", One), One)), Failed).children(1) is One
-	Plain.Keyed(KeyedWrite, Named) to Text is "named = named.set(\"a\", 1)"
-	Plain.Keyed(Computed.children(0), Named) is Computed.children(0)
+Key(statement SyntaxNode, block CodeBlock) SyntaxNode
+	Plain.Key(One, Named) is One
+	Plain.Key(SyntaxNode("Reassignment", "", (SyntaxNode("Index", "named", One), One)), Named).children(1) is One
+	Plain.Key(SyntaxNode("Reassignment", "", (SyntaxNode("Call", "failed", One), One)), Failed).children(1) is One
+	Plain.Key(KeyedWrite, Named) to Text is "named = named.set(\"a\", 1)"
+	Plain.Key(Computed.children(0), Named) is Computed.children(0)
 	target = statement.Kind is "Reassignment" then statement.children(0) else One
 	named = SyntaxNode("Identifier", target.text)
 	if target.Kind is not "Call" or values.TypeOf(named, block).StartsWith("Dictionary(") is false
@@ -94,9 +94,9 @@ Keyed(statement SyntaxNode, block CodeBlock) SyntaxNode
 	SyntaxNode("Reassignment", statement.text, (named, set), statement.line)
 WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions.Last.payload.Length is 11
-	Plain.Indexed(SyntaxNode("Index", "failed", (Hi, One)), Failed).instructions.Last.kind is InstructionType.IndexCall
-	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Last.texts(1) is "get"
-	Plain.Indexed(SyntaxNode("Call", "named", One), Named).instructions.Length is 3
+	Plain.EmitIndex(SyntaxNode("Index", "failed", (Hi, One)), Failed).instructions.Last.kind is InstructionType.IndexCall
+	Plain.EmitIndex(SyntaxNode("Call", "named", One), Named).instructions.Last.texts(1) is "get"
+	Plain.EmitIndex(SyntaxNode("Call", "named", One), Named).instructions.Length is 3
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions(0).texts is ("failed")
 	Plain.WithValue(SyntaxNode("Call", "failed", One), Failed).instructions.Last.texts.Last is "Value"
 	error = values.Expression(SyntaxNode("Identifier", node.text), block)
@@ -106,12 +106,12 @@ WithValue(node SyntaxNode, block CodeBlock) CodeBlock
 Element(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Element(SyntaxNode("Call", "text", One), CodeBlock.Empty).instructions.Last.payload is (1, 0, -1)
 	Plain.Element(SyntaxNode("MethodCall", "text", (ValueCodegen.NewGreeter, One)), CodeBlock.Empty).nextId is 1
-	named = ConstantFolding(values.target.TypeName, values.inference).Folded(SyntaxNode("Identifier", node.text))
+	named = ConstantFolding(values.target.TypeName, values.inference).Fold(SyntaxNode("Identifier", node.text))
 	isComputed = named.Kind is not "Identifier" and named.IsLiteral is false
 	isMethod = values.target.Header(node.text).tokens.Length > 0
 	isNamed = node.Kind is "Call" and isComputed is false and isMethod is false
 	source = node.Kind is "Call" then (isMethod then SyntaxNode("Call", node.text) else named) else Source(node)
-	list = isNamed then ErrorScope(values).Guarded(node.text, block) else values.Expression(source, block)
+	list = isNamed then ErrorScope(values).Guard(node.text, block) else values.Expression(source, block)
 	name = isNamed then node.text else "list" + list.nextId
 	stored = isNamed then list else list.Stored(name).WithNextId
 	index = values.Expression(GridIndex(node), stored)
@@ -141,28 +141,28 @@ GridIndex(node SyntaxNode) SyntaxNode
 	size = first is 0 then SyntaxNode("Identifier", "Size") else SyntaxNode("Member", "Size", node.children(0))
 	width = SyntaxNode("Member", "Width", size)
 	SyntaxNode("Binary", "+", (node.children(first), SyntaxNode("Binary", "*", (width, node.children(first + 1)))))
-Unnested(body SyntaxNode) SyntaxNode
-	Plain.Unnested(Computed).Kind is "Body"
-	Plain.Unnested(Computed).children.Last.children.Last.Kind is "Number"
-	Plain.Unnested(Looped).children(0).children.Last.children.Length is 2
-	Plain.Unnested(Computed).children.Length is 2
-	Plain.Unnested(Computed).children.Last to Text is "values(elementIndex2) = 5"
+Unnest(body SyntaxNode) SyntaxNode
+	Plain.Unnest(Computed).Kind is "Body"
+	Plain.Unnest(Computed).children.Last.children.Last.Kind is "Number"
+	Plain.Unnest(Looped).children(0).children.Last.children.Length is 2
+	Plain.Unnest(Computed).children.Length is 2
+	Plain.Unnest(Computed).children.Last to Text is "values(elementIndex2) = 5"
 	Plain.Split(BodyParser("Run", "	x.v(1, 2) = 5").Block(1, 1).children(0)).Last to Text is "x.v(elementIndex2) = 5"
-	Plain.Unnested(Computed).children.Last.children(0).children.Last.Kind is "Identifier"
+	Plain.Unnest(Computed).children.Last.children(0).children.Last.Kind is "Identifier"
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
-		statements = statements + Split(value.HasBody then Nested(value) else value)
+		statements = statements + Split(value.HasBody then Nest(value) else value)
 	SyntaxNode("Body", body.text, statements, body.line)
-Nested(statement SyntaxNode) SyntaxNode
-	Plain.Nested(Looped.children(0)).children(0).Kind is "Number"
+Nest(statement SyntaxNode) SyntaxNode
+	Plain.Nest(Looped.children(0)).children(0).Kind is "Number"
 	Plain.Split(SyntaxNode("Reassignment", "", (ValueCodegen.NewGreeter, One))).Length is 1
 	Plain.Split(SyntaxNode("Reassignment", "", (ValueCodegen.GreeterText, One))).Length is 1
 	Plain.Split(SyntaxNode("Reassignment", "", (SyntaxNode("Call", "a", NoNode), One))).Length is 1
 	Plain.Split(SyntaxNode("Reassignment", "", (SyntaxNode("Call", "a", One), One))).Length is 1
-	Plain.Nested(Looped.children(0)).children.Last.children.Length is 2
+	Plain.Nest(Looped.children(0)).children.Last.children.Length is 2
 	mutable children = List(Mutable(SyntaxNode))
 	for statement.children
-		children.Add(index is statement.children.Length - 1 then Unnested(value) else value)
+		children.Add(index is statement.children.Length - 1 then Unnest(value) else value)
 	SyntaxNode(statement.Kind, statement.text, children, statement.line)
 Split(statement SyntaxNode) SyntaxNodes
 	Plain.Split(Computed.children(0)).First to Text is "let elementIndex2 = index + 1"
