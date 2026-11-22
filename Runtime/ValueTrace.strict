@@ -1,6 +1,6 @@
 has selection Text = ""
-constant SumEvents = ("$Hit Strict/Examples/Sum|2", "$Use Strict/Examples/Sum|2|b|5", "$Set Strict/Examples/Sum|2|a|7")
-constant Events = SumEvents + SumEvents + ("$Hit Sum|3", "$Result Sum|3|1", "$Hit Sum|3", "$Result Sum|3|2")
+constant SumEvents = ("$Hit Strict/Examples/Sum|1", "$Use Strict/Examples/Sum|1|b|5", "$Set Strict/Examples/Sum|1|a|7")
+constant Events = SumEvents + SumEvents + ("$Hit Sum|2", "$Result Sum|2|1", "$Hit Sum|2", "$Result Sum|2|2")
 constant Operators = ("+", "-", "*", "/", "%", "^", "is", "not", "and", "or", "xor", "to", "in", "then", "else", "=", ">", "<", ">=", "<=", ",", "(")
 constant Summed = "\nUse|b|5"
 Run(path Text, root Text) Number
@@ -27,12 +27,12 @@ Traced(path Text, root Text) Number
 	types = FileCompiler(true, selection).Compiled(path, root, true)
 	types.Length is 0 then 1 else Execute.Started(types, path, true).Tested(types.First.Name)
 Valued(lines Texts, folder Text) Texts
-	ValueTrace.Valued(Events, "Examples").First.EndsWith("line 2 hit 2 times")
-	ValueTrace.Valued(Events, "Examples").Last.EndsWith("line 3 hit 2 times, each: 1, 2")
+	ValueTrace.Valued(Events, "Examples").First.EndsWith("line 1 hit 2 times")
+	ValueTrace.Valued(Events, "Examples").Last.EndsWith("line 2 hit 2 times, each: 1, 2")
 	for Hits(lines)
 		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
-	ValueTrace.Hits(Events)("Sum|3") is ("Hit\nRes|1", "Hit\nRes|2")
+	ValueTrace.Hits(Events)("Sum|2") is ("Hit\nRes|1", "Hit\nRes|2")
 	ValueTrace.Hits(("$Use A|1|b|5", "a")).Length is 0
 	mutable hits = Dictionary(Text, Texts)
 	for lines
@@ -81,7 +81,7 @@ Help(code Text, summaries Texts) Text
 Each(results Texts) Text
 	ValueTrace.Each(("1", "2")) is ", each: 1, 2"
 	ValueTrace.Each(List(Text)) is ""
-	ValueTrace.Each(Events + "x").EndsWith("|3|2, ...")
+	ValueTrace.Each(Events + "x").EndsWith("|2|2, ...")
 	if results.Length is 0
 		return ""
 	mutable shown = List(Mutable(Text))
