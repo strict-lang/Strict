@@ -82,6 +82,7 @@
   llvm.func @execl(!llvm.ptr, !llvm.ptr, ...) -> i32
   llvm.func @_exit(i32)
   llvm.func @setsid() -> i32
+  llvm.func @prctl(i32, i64, i64, i64, i64) -> i32
   llvm.func @waitpid(i32, !llvm.ptr, i32) -> i32
   llvm.func @wait4(i32, !llvm.ptr, i32, !llvm.ptr) -> i32
   llvm.func @kill(i32, i32) -> i32
@@ -883,6 +884,12 @@
     %isChild = arith.cmpi eq, %child, %none : i32
     cf.cond_br %isChild, ^child, ^parent
   ^child:
+    // the child ends with its parent (PR_SET_PDEATHSIG, SIGKILL): a test child can not keep running without the strict
+    // that waits for it, the setting stays through the exec of the shell and of a single command it runs
+    %pdeathOption = arith.constant 1 : i32
+    %pdeathSignal = arith.constant 9 : i64
+    %pdeathZero = arith.constant 0 : i64
+    %pdeathSet = llvm.call @prctl(%pdeathOption, %pdeathSignal, %pdeathZero, %pdeathZero, %pdeathZero) : (i32, i64, i64, i64, i64) -> i32
     %executed = llvm.call @execl(%shell, %shellName, %shellCommand, %commandText, %null) vararg(!llvm.func<i32 (ptr, ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     llvm.call @_exit(%failure) : (i32) -> ()
     llvm.unreachable

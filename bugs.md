@@ -1,5 +1,6 @@
 # Bugs
 
+- A child that strict waits for ends with its parent on Windows (job with kill on close) and on Linux for `Process.RunTool` (PR_SET_PDEATHSIG), not yet on macOS (no parent death signal) and not for Linux `Process.Started`, which runs through `system()`.
 - A default argument that is a constant list breaks the split native build: `Ran(arguments Text, variables = EightThreads)` in `Runtime/CheckTests.strict` gave `mlir-opt failed: llvm.mlir.addressof op must reference a global` (`@cCheckTests_CheckPolicyRun_1_1_0`, defined in another module part); passing the constant explicitly builds.
 - A default argument of another package's method is linked under `Strict/`: `Strict.Testing(rest)` called from `Runtime/Trial.strict` fails with `UnresolvedLink: Strict/InferenceCache.None` (the default `inferred = InferenceCache.None` lives in `Runtime/`).
 - A test run inside a test (`Trial.Tested` on the VM) leaves the outer test with a negative time (`-2.3e8 ms`): both runs share the test clock of `TestBudget`.

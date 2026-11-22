@@ -847,6 +847,55 @@
     return %text : f64
   }
   // runs a program with the console of this one (its output appears right away) and returns its exit code
+  llvm.func @CreateJobObjectA(!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+  llvm.func @SetInformationJobObject(!llvm.ptr, i32, !llvm.ptr, i32) -> i32
+  llvm.func @AssignProcessToJobObject(!llvm.ptr, !llvm.ptr) -> i32
+  llvm.func @ResumeThread(!llvm.ptr) -> i32
+  // every child strict waits for runs in one job that ends it when strict ends (kill on job close), also when strict is
+  // killed or crashes, so no test child keeps spinning without its parent; it starts suspended and is resumed in the job
+  llvm.mlir.global internal @strict_child_job(0 : i64) : i64
+  func.func private @strict_child_joined(%started: i32, %information: !llvm.ptr) {
+    %none32 = arith.constant 0 : i32
+    %isStarted = arith.cmpi ne, %started, %none32 : i32
+    cf.cond_br %isStarted, ^job, ^done
+  ^job:
+    %zero = arith.constant 0 : i64
+    %jobSlot = llvm.mlir.addressof @strict_child_job : !llvm.ptr
+    %jobBits = llvm.load %jobSlot : !llvm.ptr -> i64
+    %hasJob = arith.cmpi ne, %jobBits, %zero : i64
+    cf.cond_br %hasJob, ^assign(%jobBits : i64), ^create
+  ^create:
+    %null = llvm.mlir.zero : !llvm.ptr
+    %created = llvm.call @CreateJobObjectA(%null, %null) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %size = arith.constant 144 : i64
+    %limits = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %clear = arith.constant 0 : i32
+    %cleared = llvm.call @memset(%limits, %clear, %size) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    %flagsSlot = llvm.getelementptr %limits[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %killOnCloseAndBreakaway = arith.constant 10240 : i32
+    llvm.store %killOnCloseAndBreakaway, %flagsSlot : i32, !llvm.ptr
+    %extendedLimits = arith.constant 9 : i32
+    %size32 = arith.constant 144 : i32
+    %set = llvm.call @SetInformationJobObject(%created, %extendedLimits, %limits, %size32) : (!llvm.ptr, i32, !llvm.ptr, i32) -> i32
+    %createdBits = llvm.ptrtoint %created : !llvm.ptr to i64
+    llvm.store %createdBits, %jobSlot : i64, !llvm.ptr
+    cf.br ^assign(%createdBits : i64)
+  ^assign(%job: i64):
+    %process = llvm.load %information : !llvm.ptr -> !llvm.ptr
+    %isJob = arith.cmpi ne, %job, %zero : i64
+    cf.cond_br %isJob, ^join, ^resume
+  ^join:
+    %jobHandle = llvm.inttoptr %job : i64 to !llvm.ptr
+    %assigned = llvm.call @AssignProcessToJobObject(%jobHandle, %process) : (!llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^resume
+  ^resume:
+    %threadSlot = llvm.getelementptr %information[8] : (!llvm.ptr) -> !llvm.ptr, i8
+    %thread = llvm.load %threadSlot : !llvm.ptr -> !llvm.ptr
+    %resumed = llvm.call @ResumeThread(%thread) : (!llvm.ptr) -> i32
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
     %count = arith.constant 1 : i64
     %startupSize = arith.constant 104 : i64
@@ -855,6 +904,7 @@
     %codeSize = arith.constant 4 : i64
     %inherit = arith.constant 1 : i32
     %noFlags = arith.constant 0 : i32
+    %suspended = arith.constant 4 : i32
     %infinite = arith.constant -1 : i32
     %quoteTextLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
     %quoteText = llvm.getelementptr %quoteTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -877,7 +927,8 @@
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_flush() : () -> ()
     %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
-    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %suspended, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    func.call @strict_child_joined(%started, %information) : (i32, !llvm.ptr) -> ()
     %failed = arith.cmpi eq, %started, %noFlags : i32
     cf.cond_br %failed, ^notStarted, ^running
   ^notStarted:
@@ -896,7 +947,8 @@
     %closedThread = llvm.call @CloseHandle(%thread) : (!llvm.ptr) -> i32
     return %exitNumber : f64
   }
-  // Process.Launched: a hidden child in its own process group that inherits no handles and is not waited for
+  // Process.Launched: a hidden child in its own process group that inherits no handles and is not waited for, outside
+  // the job of strict_child_joined (breakaway, again inside it when an outer job does not allow that)
   func.func private @strict_process_launched(%path: f64, %arguments: f64) -> f64 {
     %startupSize = arith.constant 104 : i64
     %startupLength = arith.constant 104 : i32
@@ -923,6 +975,11 @@
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_flush() : () -> ()
     %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
+    %breakaway = arith.constant 150995456 : i32
+    %startedAway = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %noInherit, %breakaway, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %awayFailed = arith.cmpi eq, %startedAway, %noInherit : i32
+    cf.cond_br %awayFailed, ^inJob, ^running
+  ^inJob:
     %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %noInherit, %hidden, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     %failed = arith.cmpi eq, %started, %noInherit : i32
     cf.cond_br %failed, ^notStarted, ^running
@@ -966,6 +1023,7 @@
     %informationSize = arith.constant 24 : i64
     %inherit = arith.constant 1 : i32
     %noFlags = arith.constant 0 : i32
+    %suspended = arith.constant 4 : i32
     %quoteTextLengths = llvm.mlir.addressof @strict_quote : !llvm.ptr
     %quoteText = llvm.getelementptr %quoteTextLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %quote = func.call @strict_bits(%quoteText) : (!llvm.ptr) -> f64
@@ -1008,7 +1066,8 @@
     func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
     %startedAt = func.call @strict_clock() : () -> f64
     %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
-    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %noFlags, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %suspended, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    func.call @strict_child_joined(%started, %information) : (i32, !llvm.ptr) -> ()
     func.call @strict_tool_environment(%toolShare, %null) : (i64, !llvm.ptr) -> ()
     %closedOutput = llvm.call @CloseHandle(%output) : (!llvm.ptr) -> i32
     %closedError = llvm.call @CloseHandle(%error) : (!llvm.ptr) -> i32

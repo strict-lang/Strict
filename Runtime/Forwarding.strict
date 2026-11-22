@@ -106,14 +106,13 @@ Started(slot Text) Number
 	executable = Process.Current.executable
 	isWindows = Process.OperatingSystem is "Windows"
 	served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
-	hidden = Starting + Quote + Quote + executable + Quote + served + Quote + "' -WindowStyle Hidden"
-	detached = isWindows then hidden else "-c \"nohup '" + executable + "'" + served + " &\""
-	started = Process.RunTool(isWindows then "powershell" else "sh", detached)
-	if started.exitCode is not 0
-		logger.Log("strict server " + slot + " did not start: " + started.Output + started.error)
+	command = "/c \"\"" + executable + "\"" + served + "\""
+	nohup = "-c \"nohup '" + executable + "'" + served + " &\""
+	if isWindows then Process.Find("cmd").Launched(command) is 0 else Process.RunTool("sh", nohup).exitCode is not 0
+		logger.Log("strict server " + slot + " did not start: " + executable + served)
 	Unserved
 Logged(objects Text, isWindows Boolean, slot Text) Text
-	Sample.Logged("Compiler", true, "").EndsWith(" 2>>" + Quote + "Compiler/server.errors.log" + Quote)
+	Sample.Logged("Compiler", true, "").EndsWith(" 2>>\"Compiler/server.errors.log\"")
 	Sample.Logged("Compiler", false, "2") is " >>'Compiler/server2.log' 2>>'Compiler/server2.errors.log'"
 	hasObjects = Directory.Create(objects) is not Error
 	output = Output.Replace("server", "server" + slot)
@@ -122,7 +121,7 @@ Logged(objects Text, isWindows Boolean, slot Text) Text
 	Kept(objects, errors)
 	if hasObjects is false
 		return isWindows then "" else " >/dev/null 2>&1"
-	mark = isWindows then Quote else "'"
+	mark = isWindows then "\"" else "'"
 	" >>" + mark + objects + output + mark + " 2>>" + mark + objects + errors + mark
 Kept(objects Text, log Text)
 	Missing.Kept("Compiler/output/Missing", Output) is not Error

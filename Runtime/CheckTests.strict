@@ -17,7 +17,9 @@ constant WaitLines = ("Delay Number", "	Waiting.Delay is 1", "	let started = Pro
 constant LoopLines = ("Spin Number slow", "	Loops.Spin is 1", "	started = Process.Elapsed", "	mutable count = 0", "	for as long as Process.Elapsed - started < 20", "		count = count + 1", "	count > 0 then 1 else 0")
 constant Pooled = ("set STRICT_THREADS=8&& ", "STRICT_THREADS=8 ")
 constant NoThreads = ("set STRICT_THREADS=& ", "env -u STRICT_THREADS ")
-constant ShortDeadline = ("set STRICT_THREADS=8&& set STRICT_DEADLINE=2&& ", "STRICT_THREADS=8 STRICT_DEADLINE=2 ")
+constant ShortDeadline = ("set STRICT_SERVER=0&& set STRICT_DEADLINE=2&& ", "STRICT_SERVER=0 STRICT_DEADLINE=2 ")
+constant WindowsChild = "\"cmd\", \"/c ping -n 7 127.0.0.1 >nul && echo alive> "
+constant LinuxChild = "\"sh\", \"-c 'sleep 6; echo alive > "
 constant PassedLine = "Test passed: LazyFixture.Check is \"seven\""
 Run Number
 	folder = "obj/TestPolicy" + 1000000.Random.Floor
@@ -140,7 +142,13 @@ CheckShares(folder Text) Boolean
 CheckDeadline(folder Text) Boolean
 	File(folder + "/Loops.strict").Write(LoopLines)
 	looped = Ran("test " + folder + "/Loops.strict Spin", ShortDeadline)
-	CheckFail(looped, "ran past its limit of 2 s", "LoopingTestWithoutDeadline")
+	marker = folder + "/alive.txt"
+	child = Process.OperatingSystem is "Windows" then WindowsChild + marker + "\")" else LinuxChild + marker + "'\")"
+	File(folder + "/Orphan.strict").Write("result = Process.RunTool(" + child + "\nlogger.Log(result.exitCode to Text)")
+	parent = Ran("run " + folder + "/Orphan.strict", ShortDeadline)
+	Process.Wait(8)
+	timed = CheckFail(looped, "ran past its limit of 2 s", "LoopingTestWithoutDeadline")
+	File(marker).Exists then Error("ChildOutlivedParent: " + parent.Output) else timed
 SharedCount(output Text) Number
 	mutable count = 0
 	for output.Lines
