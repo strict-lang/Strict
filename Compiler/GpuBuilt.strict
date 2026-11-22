@@ -55,8 +55,9 @@ Share(slots Texts) Texts slow
 	slots
 Optimizing(slots Texts) Texts
 	Sample.Optimizing(List(Text) + "a").First.StartsWith("\"a.mlir\" --symbol-dce")
+	Sample.Optimizing(List(Text) + "a").First.IndexOf("--mlir-disable-threading") > 0
 	for slots
-		Quote(value + ".mlir") + MlirSplit.Passes + " -o " + Quote(value + ".llvm.mlir")
+		Quote(value + ".mlir") + MlirSplit.Single + value + ".llvm.mlir\""
 Translating(slots Texts) Texts
 	Sample.Translating(List(Text) + "a").First.EndsWith("\"a.llvm.mlir\" -o \"a.ll\"")
 	for slots
