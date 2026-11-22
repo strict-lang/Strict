@@ -8,5 +8,5 @@ Reversed Text
 	"ba".Sorted is "ab"
 	"aba".Unique is "ab"
 	"aba".Count("a") is 2
-	TextLists("xay".Substring(1, 1) + "b").Reversed is "ba"
+	TextLists("xaby".Substring(1, 2)).Reversed is "ba"
 	text.Reverse
