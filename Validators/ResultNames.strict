@@ -1,7 +1,8 @@
 has lines Texts
 has typeName Text = ""
 constant Rule = "MethodNameMustFitItsResult"
-constant Irregular = ("Ran", "Run", "Built", "Build", "Sent", "Send", "Made", "Make", "Found", "Find", "Kept", "Keep", "Written", "Write", "Shown", "Show", "Taken", "Take", "Held", "Hold", "Got", "Get")
+constant Strong = ("Ran", "Run", "Built", "Build", "Sent", "Send", "Made", "Make", "Found", "Find", "Kept", "Keep", "Written", "Write", "Shown", "Show", "Taken", "Take", "Held", "Hold", "Got", "Get")
+constant Irregular = Strong + ("Cached", "Cache", "Routed", "Route", "Completed", "Complete")
 constant Hosting = ResultNames(("Hosted(command Text)", "\tlogger.Log(command)"), "Strict")
 Issues List(ValidationIssue)
 	Hosting.Issues.First to Text is Rule + ": Hosted returns nothing, an action is named with its verb: Host"
@@ -19,6 +20,8 @@ Issues List(ValidationIssue)
 Diagnose(header Text) Text
 	Hosting.Diagnose("Hosted(command Text)") is "Hosted returns nothing, an action is named with its verb: Host"
 	Hosting.Diagnose("Elapsed Number") is "" and Hosting.Diagnose("Speed(value Number) Number") is ""
+	Hosting.Diagnose("Cached(a Text)").EndsWith(": Cache") and Hosting.Diagnose("Routed(a Text)").EndsWith(": Route")
+	Hosting.Diagnose("Completed(a Text)").EndsWith(": Complete") and Hosting.Diagnose("Typed(a Text)").EndsWith(": Type")
 	tokens = HeaderTokens(Tokenizer(header).Tokens)
 	name = Tokenizer(header).Tokens.First
 	verb = Verb(name)
@@ -67,4 +70,4 @@ IsSingleVowel(stem Text) Boolean
 	last = stem(stem.Length - 1) to Text
 	isQu = stem.Length > 3 then before is "u" and (stem(stem.Length - 4) to Text).Lower is "q" else false
 	isLone = "aeiou".IndexOf(before) < 0 then true else isQu
-	"aiou".IndexOf(vowel) >= 0 and isLone and "wxy".IndexOf(last) < 0 and vowel + last is not "it"
+	"aiouy".IndexOf(vowel) >= 0 and isLone and "wxy".IndexOf(last) < 0 and vowel + last is not "it"
