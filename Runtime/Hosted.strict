@@ -19,7 +19,8 @@ constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLi
 constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Launched", "Process.Executed", "Process.Wait", "Process.Collected")
 constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan")
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
-constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.Detailed", "TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired", "ConstantCache.At", "ConstantCache.Stored")
+constant Budgeted = ("TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired")
+constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.IsDetailed", "ConstantCache.At", "ConstantCache.Stored") + Budgeted
 constant GpuMethods = ("GpuMemory.Released", "GpuMemory.Evicted", "GpuMemory.Yielded", "GpuMemory.Finished", "GpuMemory.Freed")
 constant MemoMethods = ("Memo.Has", "Memo.Texts", "Memo.Kept", "Sampler.Taken", "FrameSlots.Rooted", "Logger.Captured", "Strict.Test")
 constant ProcessKinds = ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots", "Logger", "Strict")
@@ -78,8 +79,8 @@ Read(name Text) Text
 Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	name = call.MethodName
-	if name is "Detailed"
-		return VmValue.OfBoolean(BuildProfile.Detailed)
+	if name is "IsDetailed"
+		return VmValue.OfBoolean(BuildProfile.IsDetailed)
 	if name is in ("Elapsed", "FilesRead", "Executed", "MemoryUsed", "Id")
 		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Reported(name)
 	if name is in ("OperatingSystem", "Built", "Variable")

@@ -109,7 +109,7 @@ UsedMethods(targets Texts) Dictionary(Text, Texts)
 				used(type) = methods + method
 	used
 IsNative(type Text, method Text) Boolean
-	Sample.IsNative("Strict/Compiler/BuildProfile", "Detailed")
+	Sample.IsNative("Strict/Compiler/BuildProfile", "IsDetailed")
 	(Sample.IsNative("Strict/Text", "Upper") or Sample.IsNative("Strict/Range", "Length")) is false
 	Sample.IsNative("Strict/Bytecode/B", "to") is false
 	Sample.IsNative("Strict/Dictionary(Number, Number)", "get")

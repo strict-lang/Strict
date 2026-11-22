@@ -3018,7 +3018,7 @@
   llvm.mlir.global internal @strict_pool_small(dense<0> : tensor<8192xi64>) : !llvm.array<8192 x i64>
   llvm.mlir.global internal @strict_gc_mutex(dense<0> : tensor<8xi64>) {alignment = 64 : i64} : !llvm.array<8 x i64>
   llvm.mlir.global internal constant @strict_build_profile_name("\14\00\00\00\00\00\00\00\14\00\00\00\00\00\00\00STRICT_BUILD_PROFILE\00") : !llvm.array<37 x i8>
-  func.func private @strict_buildprofile_detailed(%self: f64) -> f64 {
+  func.func private @strict_buildprofile_isdetailed(%self: f64) -> f64 {
     %nameLengths = llvm.mlir.addressof @strict_build_profile_name : !llvm.ptr
     %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr

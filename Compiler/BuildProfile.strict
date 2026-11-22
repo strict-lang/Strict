@@ -1,10 +1,10 @@
 constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
-Detailed Boolean
+IsDetailed Boolean
 	IsRequested
 Reported(phase Text, started Number)
 	elapsed = Process.Elapsed - started
-	if Detailed or elapsed >= 3
-		logger.Log((Detailed then "[build] " + phase else phase) + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
+	if IsDetailed or elapsed >= 3
+		logger.Log((IsDetailed then "[build] " + phase else phase) + ": " + elapsed.Round(IsDetailed then 4 else 2) + " s")
 IsCurrent(cache NativeCache, phase = "Compiler build cache") Boolean
 	started = Process.Elapsed
 	current = cache.IsCurrent

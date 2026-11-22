@@ -1,5 +1,5 @@
 constant ToolSeconds = 90
-constant ProbeLines = ("has profile Compiler/BuildProfile", "Run Number", "	BuildProfile(Logger).Reported(\"Fast profile probe\", Process.Elapsed)", "	(profile.Detailed is BuildProfile.Detailed) then 0 else 1")
+constant ProbeLines = ("has profile Compiler/BuildProfile", "Run Number", "	BuildProfile(Logger).Reported(\"Fast profile probe\", Process.Elapsed)", "	(profile.IsDetailed is BuildProfile.IsDetailed) then 0 else 1")
 constant ProgramLines = ("Run Number", "	0")
 constant StagesA = ("Dependency inventory", "Dependency snapshot", "Frontend / source discovery", "Frontend / shape loading and fusion", "Frontend / dependency linking", "Frontend / syntax validation")
 constant StagesB = ("Emission / reachability", "Emission / safety", "Emission / function bodies", "GPU preparation", "Host runtime assembly")
