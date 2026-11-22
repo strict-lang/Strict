@@ -12,6 +12,7 @@ constant Sample = LaneCalls((StructLanes.Pair, Drawer))
 constant Shifts = List(Text) + "offset Pair"
 constant Sizing = LaneCalls(List(TypeEntry) + StructLanes.Sized)
 constant Sized = MemberEntry("Size", "Strict/Size", List(InstructionEntry), false)
+constant Looped = TypeEntry("Looped", List(MemberEntry) + MemberEntry("sample", "Strict/Examples/Looped", List(InstructionEntry), false), List(MethodEntry))
 constant Twin = TypeEntry("Strict/Pair", StructLanes.Pair.members, List(MethodEntry) + Shifting)
 constant Stub = TypeEntry("Strict/Drawer", Drawer.members, List(MethodEntry) + MethodEntry("Shifted", (Offset, Counted), "Strict/Number", List(InstructionEntry)))
 constant Paired = InstructionEntry.Invoke(5, ("Strict/Pair", "Shifted", "Strict/Number", "offset", "count"), (4, 3), -1)
@@ -177,9 +178,10 @@ Spread(entry InstructionEntry, type Text, base Number) List(InstructionEntry)
 	lines
 LeafBits(type TypeEntry) Number
 	Sample.LeafBits(StructLanes.Pair) is 0
+	LaneCalls(List(TypeEntry) + Looped).LeafBits(Looped) is 0
 	if type.members.Length is 0
 		return 0
 	first = type.members.First
-	if first.Bits > 0 or first.typeName is in ("Strict/Number", type.Name) or LaneNesting.IsPlainType(first.typeName)
-		return first.Bits
-	LeafBits(Inliner(types).TypeOf(first.typeName))
+	member = Inliner(types).TypeOf(first.typeName)
+	isLeaf = first.typeName is "Strict/Number" or member.Name is type.Name or LaneNesting.IsPlainType(first.typeName)
+	first.Bits > 0 or isLeaf then first.Bits else LeafBits(member)
