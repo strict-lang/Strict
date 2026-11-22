@@ -17,12 +17,12 @@ Issues List(ValidationIssue)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if shape.IsMethodHeader(value)
-			issues = issues + Exceeded(index, Counts(index))
+			issues = issues + Exceed(index, Counts(index))
 	issues
-Exceeded(header Number, counts Numbers) List(ValidationIssue)
-	Busy.Exceeded(0, (11, 11, 1)).First to Text is "TestLinesMustNotExceedTen: Run has 11"
-	Busy.Exceeded(0, (11, 11, 1)).Last to Text is "LetLinesMustNotExceedTen: Run has 11"
-	Busy.Exceeded(0, (10, 10, 10)).Length is 0
+Exceed(header Number, counts Numbers) List(ValidationIssue)
+	Busy.Exceed(0, (11, 11, 1)).First to Text is "TestLinesMustNotExceedTen: Run has 11"
+	Busy.Exceed(0, (11, 11, 1)).Last to Text is "LetLinesMustNotExceedTen: Run has 11"
+	Busy.Exceed(0, (10, 10, 10)).Length is 0
 	name = Tokenizer(lines(header)).Tokens.First
 	constant rules = ("TestLinesMustNotExceedTen", "LetLinesMustNotExceedTen", "ProductionLinesMustNotExceedTen")
 	limits = (MaxTests, MaxLets, typeName + "." + name is in VmLoops then MaxVmLoop else MaxProduction)

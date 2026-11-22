@@ -21,19 +21,19 @@ Issues List(ValidationIssue)
 	LoopBody(Edged.loop, List(Text), false).Issues.Length is 0
 	LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0
 	Clean.loop.children.Last.children.Length is 3
-	Found(loop.children.Last, loop.line, LoopNames.Of(loop, constants, List(Text)))
-Found(node SyntaxNode, line Number, names LoopNames) List(ValidationIssue)
-	Hoisting.Found(SyntaxNode("Identifier", "steps"), 1, LoopNames.Steps).Length is 0
-	Hoisting.Found(Hoisting.loop, 1, LoopNames.Steps).Length is 0
-	Hoisting.Found(Hoisting.loop.children.Last, 7, LoopNames.Steps).First.Line is 3
-	Edged.Found(Edged.loop.children.Last, 7, LoopNames(List(Text), List(Text))).Length is 1
+	Find(loop.children.Last, loop.line, LoopNames.Of(loop, constants, List(Text)))
+Find(node SyntaxNode, line Number, names LoopNames) List(ValidationIssue)
+	Hoisting.Find(SyntaxNode("Identifier", "steps"), 1, LoopNames.Steps).Length is 0
+	Hoisting.Find(Hoisting.loop, 1, LoopNames.Steps).Length is 0
+	Hoisting.Find(Hoisting.loop.children.Last, 7, LoopNames.Steps).First.Line is 3
+	Edged.Find(Edged.loop.children.Last, 7, LoopNames(List(Text), List(Text))).Length is 1
 	at = node.line > 0 then node.line else line
 	own = Issue(node, at, names)
 	if own.Length > 0
 		return own
 	mutable found = List(Mutable(ValidationIssue))
 	for node.Kind is "For" then List(SyntaxNode) else node.children
-		found = found + Found(value, at, names)
+		found = found + Find(value, at, names)
 	found
 Issue(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Issue(SyntaxNode("Number", "1"), 1, LoopNames.Steps).Length is 0
@@ -47,13 +47,13 @@ Issue(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 		return Conditional(node.children(0).children(0), (node.children(0).children(1), node.children(1)), at, names)
 	if node.Kind is "If"
 		return Conditional(node.children(0), node.children.Last.children, at, names)
-	Hoisted(node, at, names)
-Hoisted(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
+	Hoist(node, at, names)
+Hoist(node SyntaxNode, at Number, names LoopNames) List(ValidationIssue)
 	Hoisting.Issues(0).target is "1000 / steps" + InvariantHint
 	Clean.Issues.Length is 0 and LoopBody(Hoisting.loop, List(Text), true, false).Issues.Length is 0
 	LoopBody(Guarding.loop, List(Text), false).Issues.Length is 0
-	Hoisting.Hoisted(StatementParser(Tokenizer("1000 / 8").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
-	Hoisting.Hoisted(SyntaxNode("Call", "*", SyntaxNode("Identifier", "steps")), 1, LoopNames.Steps).Length is 0
+	Hoisting.Hoist(StatementParser(Tokenizer("1000 / 8").Tokens).ParseStatement, 1, LoopNames.Steps).Length is 0
+	Hoisting.Hoist(SyntaxNode("Call", "*", SyntaxNode("Identifier", "steps")), 1, LoopNames.Steps).Length is 0
 	isArithmetic = node.Kind is "Binary" and node.text is in ("+", "-", "*", "/", "%", "^")
 	isNumeric = (node to Text).IndexOf("\"") < 0 and IsCostly(node)
 	isHoisted = isShort and isArithmetic and isNumeric and names.IsInvariant(node) and LoopNames.HasName(node)

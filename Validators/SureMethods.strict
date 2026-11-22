@@ -1,22 +1,22 @@
 has inference Expressions/TypeInference = TypeInference.NoInference
 constant Booleans = List(Text) + "Boolean.strict"
 constant Dictionaries = List(Text) + "Dictionary.strict"
-Named(paths Texts) Texts slow
-	SureMethods.Named(List(Text)).Length is 0
-	"Boolean.xor" is in SureMethods(ResolveCheck.Inference(Booleans)).Named(Booleans)
-	("Dictionary.get" is in SureMethods(ResolveCheck.Inference(Dictionaries)).Named(Dictionaries)) is false
+Collect(paths Texts) Texts slow
+	SureMethods.Collect(List(Text)).Length is 0
+	"Boolean.xor" is in SureMethods(ResolveCheck.Inference(Booleans)).Collect(Booleans)
+	("Dictionary.get" is in SureMethods(ResolveCheck.Inference(Dictionaries)).Collect(Dictionaries)) is false
 	bases = Bases(paths)
 	mutable records = List(Mutable(Text))
-	for Parsed(bases, InputOutputs.Read(bases))
+	for Parse(bases, InputOutputs.Read(bases))
 		records = records + value
-	Settled(records)
+	Settle(records)
 Bases(paths Texts) Texts
 	SureMethods.Bases(("Number.strict", "Networking/Socket.strict")) is ("Number.strict")
 	for paths
 		if IsBase(value)
 			value
-Parsed(paths Texts, contents List(Texts)) List(Texts)
-	SureMethods.Parsed(List(Text) + "A.strict", List(Texts) + ("Next Number", "\tlow + 1")).First.Length is 1
+Parse(paths Texts, contents List(Texts)) List(Texts)
+	SureMethods.Parse(List(Text) + "A.strict", List(Texts) + ("Next Number", "\tlow + 1")).First.Length is 1
 	for paths
 		Records(Path(value).FileName.RemoveExtension.text, contents(index))
 Records(type Text, lines Texts) Texts
@@ -53,9 +53,9 @@ Fails(body Text) Boolean
 	SureMethods.Fails("low + high") is false
 	tokens = Tokenizer(body).Tokens
 	"Error" is in tokens or "to" is in tokens
-Settled(records Texts) Texts
-	SureMethods.Settled(("Number.Floor|", "PseudoRandom.Next|Number.Floor")) is ("Number.Floor", "PseudoRandom.Next")
-	SureMethods.Settled(("Demo.Run|Index", "Demo.Twice|Demo.Twice")).Length is 0
+Settle(records Texts) Texts
+	SureMethods.Settle(("Number.Floor|", "PseudoRandom.Next|Number.Floor")) is ("Number.Floor", "PseudoRandom.Next")
+	SureMethods.Settle(("Demo.Run|Index", "Demo.Twice|Demo.Twice")).Length is 0
 	mutable sure = List(Mutable(Text))
 	mutable added = 1
 	for as long as added > 0

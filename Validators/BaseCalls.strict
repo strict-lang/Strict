@@ -28,33 +28,33 @@ Body(header Number) List(ValidationIssue)
 	start = FileCheck.LastLine(lines, header) - code.Length + 2
 	own = "." + Tokenizer(lines(header)).Tokens.First + "("
 	for code
-		suggestion = Suggested(value)
+		suggestion = Suggest(value)
 		if suggestion is not "" and suggestion.IndexOf(own) < 0
 			ValidationIssue("BaseMethodMustBeUsed", suggestion, start + index)
-Suggested(code Text) Text
-	Larger.Suggested("let rest = text.Substring(start, text.Length - start)").EndsWith("use text.Substring(start)")
-	Larger.Suggested("(flags / 2 ^ bit).Floor % 2 is 1").EndsWith("use flags.IsBitSet(bit)")
-	Larger.Suggested("start + (end - start) * amount").EndsWith("use start.Lerp(end, amount)")
-	Larger.Suggested("x.Round(0)").EndsWith("use x.Round") and Larger.Suggested("2 ^ 0.5").EndsWith("2.SquareRoot")
-	Larger.Suggested("a < b then a else b").EndsWith("use a.Minimum(b)")
-	Larger.Suggested("x < low then low else x").EndsWith("use x.Maximum(low)")
-	Larger.Suggested("width >= height then width else height").EndsWith("use width.Maximum(height)")
-	Larger.Suggested("value < limit and value > below then value else below") is ""
-	Larger.Suggested("x < a or x > a").EndsWith("use x is not a") and Larger.Suggested("width + height") is ""
-	Larger.Suggested("y * a + (b - a) * t") is ""
+Suggest(code Text) Text
+	Larger.Suggest("let rest = text.Substring(start, text.Length - start)").EndsWith("use text.Substring(start)")
+	Larger.Suggest("(flags / 2 ^ bit).Floor % 2 is 1").EndsWith("use flags.IsBitSet(bit)")
+	Larger.Suggest("start + (end - start) * amount").EndsWith("use start.Lerp(end, amount)")
+	Larger.Suggest("x.Round(0)").EndsWith("use x.Round") and Larger.Suggest("2 ^ 0.5").EndsWith("2.SquareRoot")
+	Larger.Suggest("a < b then a else b").EndsWith("use a.Minimum(b)")
+	Larger.Suggest("x < low then low else x").EndsWith("use x.Maximum(low)")
+	Larger.Suggest("width >= height then width else height").EndsWith("use width.Maximum(height)")
+	Larger.Suggest("value < limit and value > below then value else below") is ""
+	Larger.Suggest("x < a or x > a").EndsWith("use x is not a") and Larger.Suggest("width + height") is ""
+	Larger.Suggest("y * a + (b - a) * t") is ""
 	tokens = Tokenizer(code).Tokens
 	for Patterns
 		pattern = value
 		template = Templates(index)
 		for code.IndexOf(Keys(index)) < 0 then List(Text) else tokens
-			bindings = Matched(tokens, index, pattern)
+			bindings = Match(tokens, index, pattern)
 			if bindings.Length > 0
-				return Text.Combine(tokens.Slice(index, pattern.Length), " ") + ", use " + Filled(template, bindings)
+				return Text.Combine(tokens.Slice(index, pattern.Length), " ") + ", use " + Fill(template, bindings)
 	""
-Matched(tokens Texts, start Number, pattern Texts) Dictionary(Text, Text)
-	Larger.Matched(("a", ">", "b"), 0, ("$a", ">", "$b"))("$b") is "b"
-	Larger.Matched(("a", ">", "b"), 0, ("$a", "<", "$b")).Length is 0
-	Larger.Matched(("a", ">", "b"), 1, ("$a", ">", "$b")).Length is 0
+Match(tokens Texts, start Number, pattern Texts) Dictionary(Text, Text)
+	Larger.Match(("a", ">", "b"), 0, ("$a", ">", "$b"))("$b") is "b"
+	Larger.Match(("a", ">", "b"), 0, ("$a", "<", "$b")).Length is 0
+	Larger.Match(("a", ">", "b"), 1, ("$a", ">", "$b")).Length is 0
 	if IsFree(tokens, start, pattern.Length) is false
 		return Dictionary(Text, Text)
 	mutable bindings = Dictionary(Text, Text)
@@ -74,8 +74,8 @@ IsOperand(token Text) Boolean
 	Larger.IsOperand("width") and Larger.IsOperand("2")
 	Larger.IsOperand("(") is false and Larger.IsOperand(">") is false
 	token(0).Lower is not token(0).Upper or Tokenizer.IsDigit(token(0)) or token(0) is "\""
-Filled(template Text, bindings Dictionary(Text, Text)) Text
-	Larger.Filled("($a, $b).Maximum", Dictionary(("$a", "x"), ("$b", "y"))) is "(x, y).Maximum"
+Fill(template Text, bindings Dictionary(Text, Text)) Text
+	Larger.Fill("($a, $b).Maximum", Dictionary(("$a", "x"), ("$b", "y"))) is "(x, y).Maximum"
 	mutable filled = template
 	for bindings
 		filled = filled.Replace(value.Key, value.Value)

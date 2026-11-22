@@ -14,11 +14,11 @@ Issues List(ValidationIssue)
 		return List(ValidationIssue)
 	shape = TypeShape(lines)
 	for lines
-		if shape.IsMethodHeader(value) and Misnamed(value) is not ""
-			ValidationIssue(Rule, Misnamed(value), index + 1)
-Misnamed(header Text) Text
-	Hosting.Misnamed("Hosted(command Text)") is "Hosted returns nothing, an action is named with its verb: Host"
-	Hosting.Misnamed("Elapsed Number") is "" and Hosting.Misnamed("Speed(value Number) Number") is ""
+		if shape.IsMethodHeader(value) and Diagnose(value) is not ""
+			ValidationIssue(Rule, Diagnose(value), index + 1)
+Diagnose(header Text) Text
+	Hosting.Diagnose("Hosted(command Text)") is "Hosted returns nothing, an action is named with its verb: Host"
+	Hosting.Diagnose("Elapsed Number") is "" and Hosting.Diagnose("Speed(value Number) Number") is ""
 	tokens = HeaderTokens(Tokenizer(header).Tokens)
 	name = Tokenizer(header).Tokens.First
 	verb = Verb(name)

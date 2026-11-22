@@ -19,11 +19,11 @@ Issues List(ValidationIssue)
 		if TypeShape(lines).IsMethodHeader(value)
 			issues = issues + Leading(index)
 	issues
-Placed(header Number) List(ValidationIssue)
-	Parked.Placed(0).First to Text is "TestMustCallItsOwnMethod: Twice(4) is 8, move it to the method it tests"
-	Parked.Placed(0).First.Line is 3 and Parked.Placed(4).Length is 0 and Locking.Placed(1).Length is 0
-	Branched.Placed(0).First to Text is "MethodWithBranchMustHaveTestOrBeIO: Sign, write a test line for each branch"
-	Reading.Placed(0).Length is 0 and TestChecks(("Loaded Number slow", "	if a", "		1", "	2")).Placed(0).Length is 0
+Place(header Number) List(ValidationIssue)
+	Parked.Place(0).First to Text is "TestMustCallItsOwnMethod: Twice(4) is 8, move it to the method it tests"
+	Parked.Place(0).First.Line is 3 and Parked.Place(4).Length is 0 and Locking.Place(1).Length is 0
+	Branched.Place(0).First to Text is "MethodWithBranchMustHaveTestOrBeIO: Sign, write a test line for each branch"
+	Reading.Place(0).Length is 0 and TestChecks(("Loaded Number slow", "	if a", "		1", "	2")).Place(0).Length is 0
 	name = Tokenizer(lines(header)).Tokens.First
 	tests = Tests(header)
 	mutable issues = List(Mutable(ValidationIssue))

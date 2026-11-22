@@ -5,32 +5,32 @@ has path Text
 Passing(candidates Texts) Texts slow
 	if candidates.Length is 0
 		return List(Text)
-	types = Prepared(candidates)
+	types = Prepare(candidates)
 	if types.Length is 0
 		return List(Text)
 	mutable passed = List(Mutable(Text))
 	for candidates
-		changed = Changed(types, index)
+		changed = Change(types, index)
 		if Machine(changed, List(VmValue), Path(path).PathOnly.text).Prepared.Tested(changed.First.Name) is 0
 			passed.Add(value)
 	passed
-Prepared(candidates Texts) List(TypeEntry) slow
+Prepare(candidates Texts) List(TypeEntry) slow
 	mutable methods = List(Mutable(MethodEntry))
 	for candidates
-		methods.Add(Compiled(value, index))
+		methods.Add(Compile(value, index))
 	entry = main.Entry
 	tests = TestCodegen(main, true).Tests
 	runner = MethodEntry(tests.First, instructions = Mutants.Silent(tests.First.instructions))
 	combined = TypeEntry(entry, methods = entry.methods + methods + runner + (tests - tests.First))
 	Resolver(Linker(root, main, isFast = true).Linked(combined, List(Text))).Resolved
-Compiled(body Text, index Number) MethodEntry
+Compile(body Text, index Number) MethodEntry
 	generator = main.Generator
 	scope = main.MethodScope(header, generator.target)
 	expression = SyntaxParser(Tokenizer(body).Tokens).Parse
 	code = MethodCodegen(generator).Generate(SyntaxNode("Body", "", expression), scope, main.BodyType(header))
 	optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry("$Suggestion" + index, main.Parameters(header), main.Declared(header), optimized)
-Changed(types List(TypeEntry), candidate Number) List(TypeEntry)
+Change(types List(TypeEntry), candidate Number) List(TypeEntry)
 	mutable methods = types.First.methods
 	mutable replacement = methods.First
 	for methods

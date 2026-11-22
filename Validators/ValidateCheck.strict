@@ -4,34 +4,34 @@ Run(folder Text, root Text) Number
 	mutations = Mutations(ResolveCheck.AllFiles(root))
 	mutable issues = 0
 	for Parts(folder)
-		issues = issues + Validated(value, root, mutations)
+		issues = issues + Validate(value, root, mutations)
 	BuildProfile.Reported("Check validation", started)
 	before = Process.Elapsed
-	issues = issues + ProjectRules(root).Checked(folder)
+	issues = issues + ProjectRules(root).Check(folder)
 	BuildProfile.Reported("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
 	tested = Process.Elapsed
 	failed = issues is 0 then Folders.Tested(folder, root) else 0
 	BuildProfile.Reported("Check tests", tested)
 	issues + failed
-Validated(folder Text, root Text, mutations Texts) Number slow
-	Directory.Create(EmptyPart) is not Error and ValidateCheck.Validated(EmptyPart, ".", List(Text)) is 0
+Validate(folder Text, root Text, mutations Texts) Number slow
+	Directory.Create(EmptyPart) is not Error and ValidateCheck.Validate(EmptyPart, ".", List(Text)) is 0
 	File(EmptyPart + "/obj/Validated.stamp").Exists
 	if folder.EndsWith(".strict")
-		return Checked(folder, root, mutations)
+		return Check(folder, root, mutations)
 	key = Key(folder, root, mutations)
 	stamp = File(folder + "/obj/Validated.stamp")
 	stamp.Exists and stamp.ReadText is key then 0 else Fresh(folder, root, mutations, key)
 Fresh(folder Text, root Text, mutations Texts, key Text) Number slow
 	Directory.Create(EmptyPart) is not Error and ValidateCheck.Fresh(EmptyPart, ".", List(Text), "key") is 0
-	Changed(folder, key)
-	issues = Checked(folder, root, mutations)
+	Change(folder, key)
+	issues = Check(folder, root, mutations)
 	if issues is 0
 		Directory.Create(folder + "/obj")
 		File(folder + "/obj/Validated.stamp").Write(key)
 	issues
-Changed(folder Text, key Text) slow
-	ValidateCheck.Changed(EmptyPart, "key") is not Error
+Change(folder Text, key Text) slow
+	ValidateCheck.Change(EmptyPart, "key") is not Error
 	stamp = File(folder + "/obj/Validated.stamp")
 	if BuildProfile.IsDetailed and stamp.Exists
 		differing = key.Split("\n") - stamp.ReadLines
@@ -41,9 +41,9 @@ Key(folder Text, root Text, mutations Texts) Text slow
 	ValidateCheck.Key("Examples/LinkChain", ".", List(Text)).IndexOf("LinkChain.strict|") > 0
 	files = Files(folder)
 	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
-	Stamped(reached + Directory.Files(root, "*.strict"), mutations)
-Stamped(paths Texts, mutations Texts) Text slow
-	ValidateCheck.Stamped(List(Text) + "Missing.strict", List(Text) + "Next").EndsWith("\nMissing.strict|0\nNext")
+	Stamp(reached + Directory.Files(root, "*.strict"), mutations)
+Stamp(paths Texts, mutations Texts) Text slow
+	ValidateCheck.Stamp(List(Text) + "Missing.strict", List(Text) + "Next").EndsWith("\nMissing.strict|0\nNext")
 	compiler = "strict.exe|" + File(Process.Current.executable).Modified
 	Text.Combine((List(Text) + compiler) + Stamps(paths) + mutations, "\n")
 Stamps(paths Texts) Texts slow
@@ -54,19 +54,19 @@ Parts(path Text) Texts slow
 	ValidateCheck.Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck.Parts("./Math") is ResolveCheck.Tree("./Math")
 	path.EndsWith(".strict") then List(Text) + path else ResolveCheck.Tree(path)
-Checked(folder Text, root Text, known Texts) Number slow
+Check(folder Text, root Text, known Texts) Number slow
 	problems = FileCompiler.Problems(Files(folder))
-	files = Parsed(Files(folder), problems)
+	files = Parse(Files(folder), problems)
 	mutations = known + Mutations(files)
 	isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	inference = ResolveCheck.Inference(reached)
-	sure = SureMethods(inference).Named(reached)
-	reaching = InputOutputs(inference).Named(reached)
-	Reported(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching)).Sum
-Parsed(files Texts, problems Texts) Texts
-	ValidateCheck.Parsed(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
+	sure = SureMethods(inference).Collect(reached)
+	reaching = InputOutputs(inference).Collect(reached)
+	Report(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching)).Sum
+Parse(files Texts, problems Texts) Texts
+	ValidateCheck.Parse(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
 	for files
 		if problems(index) is ""
 			value
@@ -81,10 +81,10 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
 		reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
 		tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
-		Logged(value, found + reached + tested + TestFiles(value, lines, known(1)).Issues) + Unresolved(value, inference)
-Unresolved(path Text, inference Expressions/TypeInference) Number slow
-	Reported(ResolveCheck.Unresolved(path, inference))
-Reported(issues Texts) Number
+		Log(value, found + reached + tested + TestFiles(value, lines, known(1)).Issues) + Resolve(value, inference)
+Resolve(path Text, inference Expressions/TypeInference) Number slow
+	Report(ResolveCheck.Unresolved(path, inference))
+Report(issues Texts) Number
 	for issues
 		logger.Log(value)
 	issues.Length
@@ -98,7 +98,7 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based + SingleLists(lines).Issues
 	extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
 	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
-Logged(path Text, found List(ValidationIssue)) Number
+Log(path Text, found List(ValidationIssue)) Number
 	for found
 		logger.Log(ResolveCheck.Located(path, value.Line, value to Text))
 	found.Length

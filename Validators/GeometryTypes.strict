@@ -18,7 +18,7 @@ Issues List(ValidationIssue)
 	if typeName is in Exempt or IsOptions
 		return List(ValidationIssue)
 	scope = TypeShape(lines).MemberScope
-	SizeOrRectangleIssues(Lowered(scope.names), scope.types) + CoordinateIssues(Lowered(scope.names), scope.types)
+	SizeOrRectangleIssues(Lower(scope.names), scope.types) + CoordinateIssues(Lower(scope.names), scope.types)
 SizeOrRectangleIssues(names Texts, types Texts) List(ValidationIssue)
 	Sample.SizeOrRectangleIssues(("center", "size"), ("Vector2", "Size")).Length is 1
 	Sample.SizeOrRectangleIssues(("center", "width"), ("Vector2", "Number")).Length is 0
@@ -47,8 +47,8 @@ IsOptions Boolean
 		if value.StartsWith("constant Help =")
 			return true
 	false
-Lowered(names Texts) Texts
-	Sample.Lowered(("Width", "Y")) is ("width", "y")
+Lower(names Texts) Texts
+	Sample.Lower(("Width", "Y")) is ("width", "y")
 	for names
 		value.Lower
 IsNumber(names Texts, types Texts, target Text) Boolean

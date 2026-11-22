@@ -12,9 +12,9 @@ Candidates Texts
 Binary Texts
 	mutable found = List(Mutable(Text))
 	for values.names
-		found = found + Operations(value, values.types(index)) + Joined(value, values.types(index))
+		found = found + Operations(value, values.types(index)) + Join(value, values.types(index))
 	found
-Joined(left Text, type Text) Texts
+Join(left Text, type Text) Texts
 	if type is not "Text" or header.ReturnType is not "Text"
 		return List(Text)
 	for values.names
@@ -73,15 +73,15 @@ Call(prefix Text, type Text, name Text, receiver Text) Text
 	for parameters
 		matched = Argument(value, arguments + receiver)
 		if matched is ""
-			return index >= required then Called(prefix, arguments) else ""
+			return index >= required then FormatCall(prefix, arguments) else ""
 		arguments.Add(matched)
-	Called(prefix, arguments)
+	FormatCall(prefix, arguments)
 Argument(type Text, used Texts) Text
 	for values.names
 		if values.types(index) is type and value is not in used
 			return value
 	""
-Called(prefix Text, arguments Texts) Text
+FormatCall(prefix Text, arguments Texts) Text
 	arguments.Length is 0 then prefix else prefix + "(" + Text.Combine(arguments, ", ") + ")"
 Stem(name Text) Text
 	lower = name.Lower

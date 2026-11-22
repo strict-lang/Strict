@@ -33,7 +33,7 @@ Key(node SyntaxNode, scope Scope) Text
 	SureChecks.Key(NextCheck, Random) is "PseudoRandom.Next"
 	SureChecks.Key(PlainCall, Random) is "Sample.Get"
 	SureChecks.Key(Firsts, Scope("numbers", "Numbers")) is "List.First"
-	side = Compared(node)
+	side = Compare(node)
 	if side.Kind is not "Binary" or side.text is not "is" or IsReported(side.children(1)) is false
 		return ""
 	call = side.children(0)
@@ -73,17 +73,17 @@ IsAnswer(tokens Texts) Boolean
 	isCheck = offset is 0 then tokens.Slice(1, 2) is ("is", "Error") else negated
 	isBranching = isCheck then tokens(3 + offset) is "then" and tokens(5 + offset) is "else" else false
 	isBranching then tokens(4 + offset) is in Booleans and tokens(6 + offset) is in Booleans else false
-Compared(node SyntaxNode) SyntaxNode
-	SureChecks.Compared(NextCheck).text is "is"
-	SureChecks.Compared(PlainCall).text is "is"
-	SureChecks.Compared(Either).children(1).text is "Error"
-	SureChecks.Compared(Ordered).children(1).text is "Error"
-	SureChecks.Compared(SyntaxNode("Identifier", "and")).text is "and"
+Compare(node SyntaxNode) SyntaxNode
+	SureChecks.Compare(NextCheck).text is "is"
+	SureChecks.Compare(PlainCall).text is "is"
+	SureChecks.Compare(Either).children(1).text is "Error"
+	SureChecks.Compare(Ordered).children(1).text is "Error"
+	SureChecks.Compare(SyntaxNode("Identifier", "and")).text is "and"
 	if node.Kind is in ("If", "ElseIf")
-		return Compared(node.children(0))
+		return Compare(node.children(0))
 	if node.Kind is "Binary" and node.text is in ("and", "or")
-		right = Compared(node.children(1))
-		return right.text is "is" then right else Compared(node.children(0))
+		right = Compare(node.children(1))
+		return right.text is "is" then right else Compare(node.children(0))
 	node
 IsReported(node SyntaxNode) Boolean
 	SureChecks.IsReported(SyntaxNode("Identifier", "Error"))

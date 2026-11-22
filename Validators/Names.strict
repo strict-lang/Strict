@@ -24,7 +24,7 @@ LoopIssues(at Number) ValidationIssues
 	Tripled.LoopIssues(2).Length is 0
 	if IsNested(at) is false or IsNested(at - 1)
 		return List(ValidationIssue)
-	List(ValidationIssue) + ValidationIssue("NestedLoopsMustNameIterators", Merged(at, List(Text), List(Text)), at + 1)
+	List(ValidationIssue) + ValidationIssue("NestedLoopsMustNameIterators", Merge(at, List(Text), List(Text)), at + 1)
 IsNested(at Number) Boolean
 	Nested.IsNested(1)
 	Nested.IsNested(2) is false
@@ -32,14 +32,14 @@ IsNested(at Number) Boolean
 	Names(("Run", "\tfor 2", "\t\t\tfor 3", "\t\t\t\t1")).IsNested(1) is false
 	Tripled.IsNested(2)
 	Names(("Run", "\tfor 2")).IsNested(1) is false
-	isLoop = at + 1 < lines.Length and Iterated(lines(at)).Length > 0 and Iterated(lines(at + 1)).Length > 0
+	isLoop = at + 1 < lines.Length and Iterate(lines(at)).Length > 0 and Iterate(lines(at + 1)).Length > 0
 	isLoop and BodyParser.Indent(lines(at + 1)) is BodyParser.Indent(lines(at)) + 1 and IsShared(at) is false
-Iterated(line Text) Texts
-	Nested.Iterated("\tfor 2") is ("2")
-	Nested.Iterated("\tfor y, x in 2, Range(0, 3)") is ("2", "Range(0, 3)")
-	Nested.Iterated("\tfor width, height in sizes").Length is 0 and Nested.Iterated("\tlet fork = 2").Length is 0
-	Nested.Iterated("\tfor as long as true").Length is 0
-	Nested.Iterated("for Iterator(Number)").Length is 0
+Iterate(line Text) Texts
+	Nested.Iterate("\tfor 2") is ("2")
+	Nested.Iterate("\tfor y, x in 2, Range(0, 3)") is ("2", "Range(0, 3)")
+	Nested.Iterate("\tfor width, height in sizes").Length is 0 and Nested.Iterate("\tlet fork = 2").Length is 0
+	Nested.Iterate("\tfor as long as true").Length is 0
+	Nested.Iterate("for Iterator(Number)").Length is 0
 	code = line.Trim
 	if line.StartsWith("\t") is false or code.StartsWith("for ") is false or code.StartsWith("for as long as ")
 		return List(Text)
@@ -47,20 +47,20 @@ Iterated(line Text) Texts
 		return List(Text) + code.Substring(4)
 	parts = Callees.Parts(code.Substring(code.IndexOf(" in ") + 4, code.Length - code.IndexOf(" in ") - 4))
 	parts.Length > 1 then parts else List(Text)
-Merged(at Number, names Texts, iterables Texts) Text
-	Nested.Merged(1, List(Text), List(Text)) is "for first, second in 2, first + 1"
-	Tripled.Merged(1, List(Text), List(Text)) is "for first, y, x, fourth in 2, 3, 4, x + 5"
+Merge(at Number, names Texts, iterables Texts) Text
+	Nested.Merge(1, List(Text), List(Text)) is "for first, second in 2, first + 1"
+	Tripled.Merge(1, List(Text), List(Text)) is "for first, y, x, fourth in 2, 3, 4, x + 5"
 	tokens = Tokenizer(lines(at).Trim).Tokens
 	isNamed = StatementParser(tokens).IsNamed
 	named = names + (isNamed then StatementParser(tokens).IteratorNames else List(Text) + Ordinal(names.Length))
-	own = isNamed then Iterated(lines(at)) else List(Text) + Rewritten(Iterated(lines(at)).First, names)
+	own = isNamed then Iterate(lines(at)) else List(Text) + Rewritten(Iterate(lines(at)).First, names)
 	if IsNested(at)
-		return Merged(at + 1, named, iterables + own)
+		return Merge(at + 1, named, iterables + own)
 	"for " + Text.Combine(named) + " in " + Text.Combine(iterables + own)
 Rewritten(iterable Text, names Texts) Text
 	Nested.Rewritten("value + 1", List(Text) + "first") is "first + 1"
 	Nested.Rewritten("value + 1", List(Text)) is "value + 1"
-	names.Length is 0 then iterable else SyntaxParser(Renamed(Tokenizer(iterable).Tokens, names.Last)).Parse to Text
+	names.Length is 0 then iterable else SyntaxParser(Rename(Tokenizer(iterable).Tokens, names.Last)).Parse to Text
 Ordinal(position Number) Text
 	Nested.Ordinal(1) is "second"
 	Nested.Ordinal(9) is "iterator10"
@@ -77,11 +77,11 @@ IsShared(at Number) Boolean
 		if indent <= depth + 1
 			return indent is depth + 1
 	false
-Renamed(tokens Texts, name Text) Texts
-	Nested.Renamed(("value", "+", "1"), "first") is ("first", "+", "1")
-	Nested.Renamed(("x", ".", "value"), "first") is ("x", ".", "value")
-	Nested.Renamed(("value", "."), "first") is ("first", ".")
-	Nested.Renamed(("value", ".", "value", "+", "value"), "first") is ("first", ".", "value", "+", "first")
+Rename(tokens Texts, name Text) Texts
+	Nested.Rename(("value", "+", "1"), "first") is ("first", "+", "1")
+	Nested.Rename(("x", ".", "value"), "first") is ("x", ".", "value")
+	Nested.Rename(("value", "."), "first") is ("first", ".")
+	Nested.Rename(("value", ".", "value", "+", "value"), "first") is ("first", ".", "value", "+", "first")
 	for tokens
 		before = index is 0 then "" else tokens(index - 1)
 		value is "value" and before is not "." then name else value

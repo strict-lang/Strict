@@ -9,10 +9,10 @@ Issues List(ValidationIssue)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if shape.IsMethodHeader(value)
-			issues = issues + Repeated(index)
+			issues = issues + Repeat(index)
 	issues
-Repeated(header Number) List(ValidationIssue)
-	Filed.Repeated(0).Length is 1 and Typed.Repeated(0).Length is 0 and Fixed.Repeated(0).Length is 0
+Repeat(header Number) List(ValidationIssue)
+	Filed.Repeat(0).Length is 1 and Typed.Repeat(0).Length is 0 and Fixed.Repeat(0).Length is 0
 	code = ErrorDrops(lines).Code(header)
 	start = FileCheck.LastLine(lines, header) - code.Length + 2
 	changing = Changing(code)

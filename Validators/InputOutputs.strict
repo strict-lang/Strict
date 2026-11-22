@@ -13,19 +13,19 @@ constant Flagging = MethodBodies("Reader", TypeShape(Flags), Reading.inference)
 constant Constants = BodyParser(("Run", "\tconstant a = true", "\tconstant b = 1"))
 constant Reversed = ("Reader.Shown||Reader.Loaded", "Reader.Loaded||File.ReadLines", "File.ReadLines|slow|")
 constant Reached = ("File.ReadLines|slow|", "Reader.Loaded||File.ReadLines", "Reader.Shown||Reader.Loaded", "Reader.Twice||Number.+")
-Named(paths Texts) Texts slow
-	InputOutputs.Named(List(Text)).Length is 0
+Collect(paths Texts) Texts slow
+	InputOutputs.Collect(List(Text)).Length is 0
 	mutable records = List(Mutable(Text))
-	for Parsed(paths, Read(paths))
+	for Parse(paths, Read(paths))
 		records = records + value
-	Settled(records)
+	Settle(records)
 Read(paths Texts) List(Texts) slow
 	InputOutputs.Read(List(Text) + "Validators/InputOutputs.strict").First.First.StartsWith("has inference")
 	for paths
 		File(value).ReadLines
-Parsed(paths Texts, contents List(Texts)) List(Texts)
-	Reading.Parsed(List(Text) + "Demo/Reader.strict", List(Texts) + Loading).First is Reading.Records("Reader", Loading)
-	Reading.Parsed(List(Text) + "Demo/TextReader.strict", List(Texts) + Loading).First.First.StartsWith("File.Loaded")
+Parse(paths Texts, contents List(Texts)) List(Texts)
+	Reading.Parse(List(Text) + "Demo/Reader.strict", List(Texts) + Loading).First is Reading.Records("Reader", Loading)
+	Reading.Parse(List(Text) + "Demo/TextReader.strict", List(Texts) + Loading).First.First.StartsWith("File.Loaded")
 	"Reader.Loaded" is in Reading.Used(Flagging, Flagging.Statements, Flags, 0)
 	for paths
 		name = Path(value).FileName.RemoveExtension.text
@@ -62,10 +62,10 @@ IsTest(bodies MethodBodies, scoped ScopedStatement) Boolean
 	Reading.IsTest(Flagging, ScopedStatement(Constants.Statement(2, 1), KnownTypes.NoMembers, 2)) is false
 	isConstant = scoped.statement.text.StartsWith("constant ")
 	(scoped.statement.Kind is not "Declaration" or isConstant) and bodies.StatementType(scoped) is "Boolean"
-Settled(records Texts) Texts
-	InputOutputs.Settled(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
-	InputOutputs.Settled(List(Text) + "Reader.Loaded||File.ReadLines").Length is 0
-	InputOutputs.Settled(Reversed) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
+Settle(records Texts) Texts
+	InputOutputs.Settle(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
+	InputOutputs.Settle(List(Text) + "Reader.Loaded||File.ReadLines").Length is 0
+	InputOutputs.Settle(Reversed) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
 	mutable reaching = Seeds(records)
 	mutable added = reaching.Length
 	for as long as added > 0

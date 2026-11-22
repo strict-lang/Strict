@@ -15,14 +15,14 @@ Issues ValidationIssues
 	for lines
 		known = Known(index)
 		if known is not ""
-			name = Raised(value)
+			name = Raise(value)
 			fix = name + " knows " + known + ", write Error(\"" + name + ": \" + " + known + ")"
 			issues.Add(ValidationIssue("ErrorMustIncludeValue", fix, index + 1))
 	issues
-Raised(line Text) Text
-	Reading.Raised(Reading.lines(1)) is "FileNotFound" and Seeding.Raised(Seeded(1)) is ""
-	Seeding.Raised(Seeded(3)) is "InvalidSeed" and Detailed.Raised(Detailed.lines(1)) is ""
-	Seeding.Raised("\tError(\"Missing\")") is "Missing" and Seeding.Raised("\tlet x = Error(\"Missing\")") is ""
+Raise(line Text) Text
+	Reading.Raise(Reading.lines(1)) is "FileNotFound" and Seeding.Raise(Seeded(1)) is ""
+	Seeding.Raise(Seeded(3)) is "InvalidSeed" and Detailed.Raise(Detailed.lines(1)) is ""
+	Seeding.Raise("\tError(\"Missing\")") is "Missing" and Seeding.Raise("\tlet x = Error(\"Missing\")") is ""
 	at = line.IndexOf("Error(\"")
 	if at < 0
 		return ""
@@ -46,10 +46,10 @@ Parameters(at Number) Texts
 	Reading.Parameters(1) is ("path") and Other.Parameters(2) is ("name") and Seeding.Parameters(3) is ("seed")
 	for Range(0, at).Reverse
 		if lines(value).StartsWith("\t") is false
-			return Named(HeaderTokens(Tokenizer(lines(value)).Tokens))
+			return SelectValue(HeaderTokens(Tokenizer(lines(value)).Tokens))
 	List(Text)
-Named(header HeaderTokens) Texts
-	Reading.Named(HeaderTokens.Made) is ("count") and Reading.Named(HeaderTokens.Loading) is ("path")
+SelectValue(header HeaderTokens) Texts
+	Reading.SelectValue(HeaderTokens.Made) is ("count") and Reading.SelectValue(HeaderTokens.Loading) is ("path")
 	types = header.ParameterTypes
 	for header.ParameterNames
 		if types(index) is in Valued
@@ -58,7 +58,7 @@ Known(at Number) Text
 	Reading.Known(1) is "path" and Seeding.Known(3) is "seed" and Seeding.Known(1) is ""
 	Other.Known(2) is "" and Detailed.Known(1) is ""
 	condition = Condition(at).Trim
-	if Raised(lines(at)) is "" or condition.IndexOf(" is Error") >= 0
+	if Raise(lines(at)) is "" or condition.IndexOf(" is Error") >= 0
 		return ""
 	used = Tokenizer(condition).Tokens
 	for Parameters(at)

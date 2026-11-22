@@ -28,7 +28,7 @@ Endless List(ValidationIssue)
 		if TypeShape(lines).IsMethodHeader(value) and FileCheck.LastLine(lines, index) is index + 1
 			method = Tokenizer(value).Tokens.First
 			only = Tokenizer(lines(index + 1).Trim).Tokens
-			if method(0).Lower is not method(0) and method is in Called(only) and "then" is not in only
+			if method(0).Lower is not method(0) and method is in Call(only) and "then" is not in only
 				ValidationIssue("OnlyLineCallsItself", method + Hint, index + 2)
 Deep List(ValidationIssue)
 	Counting.Deep.First to Text is "DeepRecursion: Count nests 5000 calls" + DeepHint
@@ -93,18 +93,18 @@ Using(name Text, tokens Texts, visited Texts) Text
 	Looping.Using("Blood", List(Text) + "name", List(Text)) is ""
 	Looping.Using("Blood", ("Other", ".", "Parsed"), List(Text)) is ""
 	Looping.Using("Other", ParsedCall, List(Text)) is "" and Looping.Using("Blood", ParsedCall, ParsedCall) is ""
-	called = Called(tokens)
+	called = Call(tokens)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value) and Tokenizer(value).Tokens.First is in called
 			method = Tokenizer(value).Tokens.First
 			body = Tokenizer(Duplicates.Implementation(lines, index)).Tokens
-			if method is not in visited and (name is in Called(body) or Using(name, body, visited + method) is not "")
+			if method is not in visited and (name is in Call(body) or Using(name, body, visited + method) is not "")
 				return method
 	""
-Called(tokens Texts) Texts
-	"Parsed" is not in Looping.Called(("Other", ".", "Parsed", "Make"))
-	"Blood" is in Looping.Called(("Splash", ".", "Blood"))
-	"Blood" is in Looping.Called(("Blood", "."))
+Call(tokens Texts) Texts
+	"Parsed" is not in Looping.Call(("Other", ".", "Parsed", "Make"))
+	"Blood" is in Looping.Call(("Splash", ".", "Blood"))
+	"Blood" is in Looping.Call(("Blood", "."))
 	Chained.Using("Xx", "A", List(Text)) is "A" and Chained.Using("X", "D", List(Text)) is ""
 	Recursions(("has number", "\tnumber"), "R").Using("number", "has", List(Text)) is ""
 	for tokens

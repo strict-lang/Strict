@@ -13,7 +13,7 @@ Issues List(ValidationIssue)
 	Same.Issues.Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
-		issues = issues + Repeated(index) + Blocks(index)
+		issues = issues + Repeat(index) + Blocks(index)
 	issues
 Blocks(at Number) List(ValidationIssue)
 	Same.Blocks(4).First to Text is "ConditionalBranchesMustDiffer: both branches are Log(0), use it without the condition"
@@ -35,10 +35,10 @@ Header(at Number, depth Number) Number
 Issue(branch Text, at Number) ValidationIssue
 	Same.Issue("1", 0).Line is 1
 	ValidationIssue("ConditionalBranchesMustDiffer", "both branches are " + branch + Hint, at + 1)
-Repeated(at Number) List(ValidationIssue)
-	Doubled.Repeated(1).Length is 1
-	Doubled.Repeated(0).Length is 0
-	Branches(List(Text) + "\tb 1 else 1").Repeated(0).Length is 0
+Repeat(at Number) List(ValidationIssue)
+	Doubled.Repeat(1).Length is 1
+	Doubled.Repeat(0).Length is 0
+	Branches(List(Text) + "\tb 1 else 1").Repeat(0).Length is 0
 	Branches(List(Text) + "constant One = a then 1 else 1").Issues.Length is 1
 	tokens = Tokenizer(lines(at).Trim).Tokens
 	for tokens

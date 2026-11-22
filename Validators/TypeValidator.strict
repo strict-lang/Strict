@@ -108,18 +108,18 @@ Copied Texts
 	mutable copied = List(Mutable(Text))
 	for shape.lines
 		if shape.IsMethodHeader(value)
-			copied = copied + Unnamed(BodyParser(shape.lines).Method(index + 1))
+			copied = copied + FindUnset(BodyParser(shape.lines).Method(index + 1))
 	copied
-Unnamed(node SyntaxNode) Texts
-	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, a = 1)").Tokens).Parse) is ("b")
-	Replacing.Unnamed(SyntaxParser(Tokenizer("D(value, a = 1)").Tokens).Parse).Length is 0
-	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value)").Tokens).Parse).Length is 0
-	Replacing.Unnamed(SyntaxParser(Tokenizer("C(value, 3)").Tokens).Parse).Length is 0
-	Replacing.Unnamed(SyntaxParser(Tokenizer("D(C(value, a = 1), 2)").Tokens).Parse) is ("b")
-	Replacing.Unnamed(SyntaxNode("Body", "C", SyntaxParser(Tokenizer("C(b, a = 1)").Tokens).Parse.children)).Length is 0
+FindUnset(node SyntaxNode) Texts
+	Replacing.FindUnset(SyntaxParser(Tokenizer("C(value, a = 1)").Tokens).Parse) is ("b")
+	Replacing.FindUnset(SyntaxParser(Tokenizer("D(value, a = 1)").Tokens).Parse).Length is 0
+	Replacing.FindUnset(SyntaxParser(Tokenizer("C(value)").Tokens).Parse).Length is 0
+	Replacing.FindUnset(SyntaxParser(Tokenizer("C(value, 3)").Tokens).Parse).Length is 0
+	Replacing.FindUnset(SyntaxParser(Tokenizer("D(C(value, a = 1), 2)").Tokens).Parse) is ("b")
+	Replacing.FindUnset(SyntaxNode("Body", "C", SyntaxParser(Tokenizer("C(b, a = 1)").Tokens).Parse.children)).Length is 0
 	mutable unnamed = List(Mutable(Text))
 	for node.children
-		unnamed = unnamed + Unnamed(value)
+		unnamed = unnamed + FindUnset(value)
 	if node.Kind is not "Call" or node.text is not typeName or node.children.Length < 2
 		return unnamed
 	node.children(1).Kind is "Reassignment" then unnamed + Unread(node) else unnamed

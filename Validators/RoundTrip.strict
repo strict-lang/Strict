@@ -1,11 +1,11 @@
 constant Digits = "1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2,3,4,5,6,7,8,9,1,2"
 constant Packed = "\t(" + Digits + "," + Digits + ")"
-Formatted(lines Texts) Texts
-	RoundTrip.Formatted(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
-	RoundTrip.Formatted(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
-	RoundTrip.Formatted(("Run", "\t1", "")) is ("Run", "\t1") and RoundTrip.Formatted(("has x", "\t1")) is ("has x")
+Format(lines Texts) Texts
+	RoundTrip.Format(("Run", "	let x=(1,2)")) is ("Run", "	let x = (1, 2)")
+	RoundTrip.Format(("has number ", "Twice Number", "	number*2")) is ("has number", "Twice Number", "	number * 2")
+	RoundTrip.Format(("Run", "\t1", "")) is ("Run", "\t1") and RoundTrip.Format(("has x", "\t1")) is ("has x")
 	shape = TypeShape(lines)
-	end = Ended(lines)
+	end = End(lines)
 	mutable formatted = List(Mutable(Text))
 	for lines
 		if value.StartsWith("	") is false and index < end
@@ -13,8 +13,8 @@ Formatted(lines Texts) Texts
 			if shape.IsMethodHeader(value)
 				formatted = formatted + Body(lines, index + 1)
 	formatted
-Ended(lines Texts) Number
-	RoundTrip.Ended(("Run", "\t1", "", "")) is 2
+End(lines Texts) Number
+	RoundTrip.End(("Run", "\t1", "", "")) is 2
 	mutable end = 0
 	for lines
 		if value.Trim is not ""
@@ -26,34 +26,34 @@ Body(lines Texts, start Number) Texts slow
 	RoundTrip.Body(("Run", "\t1", Packed), 1) is ("\t1", Packed)
 	for BodyParser(lines).Block(start, 1).Lines("	")
 		value.Length > Limits.MaxCharacters then lines(start + index) else value
-Tabbed(lines Texts) Texts
-	RoundTrip.Tabbed(("Run", "    1")) is ("Run", "\t1")
-	RoundTrip.Tabbed(("    Run", "        1")) is ("Run", "\t1")
-	RoundTrip.Tabbed(("    Run", "", "        1")) is ("Run", "", "\t1")
+Tab(lines Texts) Texts
+	RoundTrip.Tab(("Run", "    1")) is ("Run", "\t1")
+	RoundTrip.Tab(("    Run", "        1")) is ("Run", "\t1")
+	RoundTrip.Tab(("    Run", "", "        1")) is ("Run", "", "\t1")
 	mutable indented = List(Mutable(Text))
 	for lines
-		indented.Add(Indented(value))
-	shared = Shared(indented)
+		indented.Add(Indent(value))
+	shared = Share(indented)
 	for indented
 		value.Length < shared then "" else value.Substring(shared)
-Shared(lines Texts) Number
-	RoundTrip.Shared(("\tRun", "\t\t1", "")) is 1
-	RoundTrip.Shared(("Run", "\t1")) is 0
+Share(lines Texts) Number
+	RoundTrip.Share(("\tRun", "\t\t1", "")) is 1
+	RoundTrip.Share(("Run", "\t1")) is 0
 	mutable shared = 1000
 	for lines
 		if value.Trim is not ""
 			shared = (shared, value.Length + 1 - (value + "x").Trim.Length).Minimum
 	shared
-Indented(line Text) Text
-	RoundTrip.Indented("    a") is "\ta"
-	RoundTrip.Indented("\t      b") is "\t\t\tb"
-	RoundTrip.Indented("a  b") is "a  b"
-	RoundTrip.Indented("   a") is "\ta"
-	RoundTrip.Indented(" a") is "\ta"
+Indent(line Text) Text
+	RoundTrip.Indent("    a") is "\ta"
+	RoundTrip.Indent("\t      b") is "\t\t\tb"
+	RoundTrip.Indent("a  b") is "a  b"
+	RoundTrip.Indent("   a") is "\ta"
+	RoundTrip.Indent(" a") is "\ta"
 	if line.StartsWith("\t")
-		return "\t" + Indented(line.Substring(1, line.Length - 1))
+		return "\t" + Indent(line.Substring(1, line.Length - 1))
 	if line.StartsWith(" ") is false
 		return line
 	wide = line.StartsWith("    ") then 4 else (line.StartsWith("   ") then 3 else 2)
 	spaces = line.StartsWith("  ") then wide else 1
-	"\t" + Indented(line.Substring(spaces, line.Length - spaces))
+	"\t" + Indent(line.Substring(spaces, line.Length - spaces))

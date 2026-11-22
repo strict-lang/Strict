@@ -29,7 +29,7 @@ LetIssues(at Number) ValidationIssues
 	Inlines(("Run", "\tmutable quoted = false", "\tquoted = true", "\tquoted")).LetIssues(2).Length is 0
 	if IsInlinable(at) is false
 		return List(ValidationIssue)
-	detail = Declared(lines(at)) + ", use " + Value(lines(at)) + " in the next line"
+	detail = Declare(lines(at)) + ", use " + Value(lines(at)) + " in the next line"
 	List(ValidationIssue) + ValidationIssue("SingleUseLetMustBeInlined", detail, at + 1)
 IsInlinable(at Number) Boolean
 	Evicted.IsInlinable(1) and Ordered.IsInlinable(1) is false
@@ -41,7 +41,7 @@ IsInlinable(at Number) Boolean
 	inlined = Value(lines(at))
 	if inlined is "" or BodyParser.Indent(Line(at + 1)) is not BodyParser.Indent(lines(at))
 		return false
-	name = Declared(lines(at))
+	name = Declare(lines(at))
 	if name is "" or IsKnown(name, at)
 		return false
 	next = Tokenizer(Line(at + 1).Trim).Tokens
@@ -49,11 +49,11 @@ IsInlinable(at Number) Boolean
 	fits = length + (inlined.Count(" ") > 0 then 2 else 0) <= Limits.MaxCharacters
 	isOnce = Uses(next, name) is 1 and IsUsedLater(name, at + 2) is false
 	fits and isOnce and IsReordered(inlined, next, name) is false and IsRebound(inlined, next, name) is false
-Declared(line Text) Text
-	Inlines(("Run", "\tlet total = 1")).Declared("\tlet total = 1") is "total"
-	Inlines(("Run", "\ttotal = 1")).Declared("\ttotal = 1") is "total"
-	Inlines(("Run", "\tmutable quoted = false")).Declared("\tmutable quoted = false") is "quoted"
-	Inlines(("Run", "\tquoted = true")).Declared("\tx.y = 2") is ""
+Declare(line Text) Text
+	Inlines(("Run", "\tlet total = 1")).Declare("\tlet total = 1") is "total"
+	Inlines(("Run", "\ttotal = 1")).Declare("\ttotal = 1") is "total"
+	Inlines(("Run", "\tmutable quoted = false")).Declare("\tmutable quoted = false") is "quoted"
+	Inlines(("Run", "\tquoted = true")).Declare("\tx.y = 2") is ""
 	tokens = Tokenizer(line.Trim).Tokens
 	if tokens.Length < 2
 		return ""
@@ -66,7 +66,7 @@ IsKnown(name Text, at Number) Boolean
 	for Range(0, at).Reverse
 		if lines(value).StartsWith("\t") is false
 			return name is in HeaderTokens(Tokenizer(lines(value)).Tokens).ParameterNames or IsMember(name)
-		if Declared(lines(value)) is name
+		if Declare(lines(value)) is name
 			return true
 	IsMember(name)
 IsMember(name Text) Boolean
@@ -74,7 +74,7 @@ IsMember(name Text) Boolean
 	Inlines(("mutable reached = 1", "Followed", "\treached")).IsMember("reached")
 	Inlines(("Run", "\ttotal = 1")).IsMember("total") is false
 	for lines
-		if value.StartsWith("\t") is false and Declared(value) is name
+		if value.StartsWith("\t") is false and Declare(value) is name
 			return true
 	false
 IsRebound(inlined Text, next Texts, name Text) Boolean
@@ -135,7 +135,7 @@ ReturnIssues(at Number) ValidationIssues
 	Inlines(("R Number", "\tif done", "\t\treturn 1", "Other")).ReturnIssues(1).Length is 0
 	Inlines(("R Number", "\tif done", "\t\treturn 1", "\tlet x = 2")).ReturnIssues(1).Length is 0
 	Inlines(("R Number", "\tif done", "\t\treturn 1")).ReturnIssues(1).Length is 0
-	merged = Merged(at)
+	merged = Merge(at)
 	if merged is "" or merged.Length + (Line(at + 1).IndexOf(" then ") is -1 then 1 else 3) > Limits.MaxCharacters
 		return List(ValidationIssue)
 	if HasOneResult(at) is false
@@ -156,11 +156,11 @@ Header(at Number) Text
 		if lines(value).StartsWith("\t") is false
 			return lines(value)
 	""
-Merged(at Number) Text
-	Returned.Merged(1) is "GpuMemory.Evicted is Error then \"\" else answer"
-	Inlines(("R Number", "\tif done", "\t\treturn 1", "\t1", "\t2")).Merged(1) is ""
-	Inlines(("Run", "\tfor done", "\t\treturn 1", "\t1")).Merged(1) is ""
-	Inlines(("R Number", "\tif done", "\t\tLog(1)", "\t1")).Merged(1) is ""
+Merge(at Number) Text
+	Returned.Merge(1) is "GpuMemory.Evicted is Error then \"\" else answer"
+	Inlines(("R Number", "\tif done", "\t\treturn 1", "\t1", "\t2")).Merge(1) is ""
+	Inlines(("Run", "\tfor done", "\t\treturn 1", "\t1")).Merge(1) is ""
+	Inlines(("R Number", "\tif done", "\t\tLog(1)", "\t1")).Merge(1) is ""
 	returned = Line(at + 1).Trim
 	last = Line(at + 2)
 	isValue = BodyParser.Indent(last) is 1 and Tokenizer(last.Trim).Tokens.First is not in Keywords

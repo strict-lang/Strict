@@ -8,15 +8,15 @@ constant Joining = ("Joined(texts Texts) Texts", "	Joined((\"a\")) is (\"a\")", 
 constant Joined = AccumulatedLoops(Joining)
 constant Summed = AccumulatedLoops(("Running(numbers Numbers) Numbers", "	Running((1, 2)) is (1, 3)", "	mutable sums = List(Number)", "	for numbers", "		sums = sums + (sums.Last + value)", "	sums"))
 Issues List(ValidationIssue)
-	Mapped.Issues.First to Text is "AccumulatingLoopMustBeForExpression: " + Mapped.Looped(2)
+	Mapped.Issues.First to Text is "AccumulatingLoopMustBeForExpression: " + Mapped.Loop(2)
 	Mapped.Issues.First.Line is 3 and Filtered.Issues.First.Line is 3 and Summed.Issues.Length is 0
 	Unique.Issues.Length is 0 and Joined.Issues.Length is 0
 	for lines
-		found = value.StartsWith("	mutable ") and value.IndexOf(" = List(") > 0 then Looped(index) else ""
+		found = value.StartsWith("	mutable ") and value.IndexOf(" = List(") > 0 then Loop(index) else ""
 		if found is not ""
 			ValidationIssue("AccumulatingLoopMustBeForExpression", found, index + 1)
-Looped(at Number) Text
-	Mapped.Looped(2) is "doubled, write for numbers with value * 2 as its body" and Summed.Looped(2) is ""
+Loop(at Number) Text
+	Mapped.Loop(2) is "doubled, write for numbers with value * 2 as its body" and Summed.Loop(2) is ""
 	name = Tokenizer(lines(at).Trim).Tokens(1)
 	isFiltered = at + 4 < lines.Length then lines(at + 2).StartsWith("		if ") else false
 	body = isFiltered then 3 else 2

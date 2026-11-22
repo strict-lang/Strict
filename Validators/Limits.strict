@@ -143,9 +143,9 @@ CountIssues ValidationIssues
 	mutable methods = 0
 	for lines
 		methods = methods + (shape.IsMethodHeader(value) then 1 else 0)
-	methodIssues = Counted("MethodCountMustNotExceedLimit", isBase then 0 else methods, MaxMethods * scale)
-	memberIssues = Counted("MemberCountShouldNotExceedLimit", Count("has "), MaxMembers * scale)
-	methodIssues + memberIssues + Counted("ConstantCountShouldNotExceedLimit", Count("constant "), MaxConstants * scale)
+	methodIssues = CheckCount("MethodCountMustNotExceedLimit", isBase then 0 else methods, MaxMethods * scale)
+	memberIssues = CheckCount("MemberCountShouldNotExceedLimit", Count("has "), MaxMembers * scale)
+	methodIssues + memberIssues + CheckCount("ConstantCountShouldNotExceedLimit", Count("constant "), MaxConstants * scale)
 Count(start Text) Number
 	OnlyConstants.Count("constant ") is 16
 	Sample.Count("has ") is 1
@@ -159,9 +159,9 @@ Count(start Text) Number
 	for lines
 		count = count + (value.StartsWith(start) then 1 else 0)
 	count
-Counted(rule Text, count Number, limit Number) ValidationIssues
-	Sample.Counted("A", 16, 15).First to Text is "A: 16 > 15"
-	Sample.Counted("A", 15, 15).Length is 0
+CheckCount(rule Text, count Number, limit Number) ValidationIssues
+	Sample.CheckCount("A", 16, 15).First to Text is "A: 16 > 15"
+	Sample.CheckCount("A", 15, 15).Length is 0
 	if count <= limit
 		return List(ValidationIssue)
 	List(ValidationIssue) + ValidationIssue(rule, count to Text + " > " + limit, 1)

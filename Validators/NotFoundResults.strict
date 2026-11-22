@@ -9,11 +9,11 @@ Issues List(ValidationIssue)
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if codes.IsNumbered(index)
-			issues = issues + Found(codes, index)
+			issues = issues + Find(codes, index)
 	issues
-Found(codes StatusCodes, header Number) List(ValidationIssue)
-	Searching.Found(StatusCodes(Searching.lines), 0).Length is 1
-	Signing.Found(StatusCodes(Signing.lines), 0).Length is 0
+Find(codes StatusCodes, header Number) List(ValidationIssue)
+	Searching.Find(StatusCodes(Searching.lines), 0).Length is 1
+	Signing.Find(StatusCodes(Signing.lines), 0).Length is 0
 	name = Tokenizer(lines(header)).Tokens.First
 	for codes.Results(header)
 		literals = codes.Literals(value)

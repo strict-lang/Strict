@@ -17,7 +17,7 @@ Issues ValidationIssues
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if IsNumbered(index)
-			issues = issues + (IsWriting(index) then Returned(index) else List(ValidationIssue)) + Booleans(index)
+			issues = issues + (IsWriting(index) then CheckReturns(index) else List(ValidationIssue)) + Booleans(index)
 	issues
 IsNumbered(at Number) Boolean
 	Flagged.IsNumbered(0) and StatusCodes(("Run Number", "	0")).IsNumbered(0) is false and Flagged.IsNumbered(1) is false
@@ -90,15 +90,15 @@ IsYielded(at Number) Boolean
 				return true
 			indent = BodyParser.Indent(lines(value))
 	false
-Returned(at Number) ValidationIssues
-	Stopping.Returned(0).Length is 1 and Counting.Returned(0).First.Line is 3
-	Freeing.Returned(0).Length is 2 and Freeing.Returned(0).First.Line is 4
-	StatusCodes(("A Number", "\tfor 2", "\t\t0")).Returned(0).Length is 0
-	StatusCodes(("A Number", "\t0", "\tLog(1)", "\t2")).Returned(0).Length is 1
+CheckReturns(at Number) ValidationIssues
+	Stopping.CheckReturns(0).Length is 1 and Counting.CheckReturns(0).First.Line is 3
+	Freeing.CheckReturns(0).Length is 2 and Freeing.CheckReturns(0).First.Line is 4
+	StatusCodes(("A Number", "\tfor 2", "\t\t0")).CheckReturns(0).Length is 0
+	StatusCodes(("A Number", "\t0", "\tLog(1)", "\t2")).CheckReturns(0).Length is 1
 	mutable issues = List(Mutable(ValidationIssue))
 	name = Tokenizer(lines(at)).Tokens.First
 	for Results(at)
-		issues = issues + Issued(name, Literals(value), at + index + 2)
+		issues = issues + Issue(name, Literals(value), at + index + 2)
 	issues
 Results(at Number) Texts
 	Stopping.Results(0) is ("", "", "0") and Freeing.Results(0).Last is "told is Error then 2 else -1"
@@ -106,9 +106,9 @@ Results(at Number) Texts
 		trimmed = lines(value).Trim
 		isLast = value is End(at) - 1 and BodyParser.Indent(lines(value)) is 1
 		isLast then trimmed else trimmed.StartsWith("return ") then trimmed.Substring(7) else ""
-Issued(name Text, literals Texts, line Number) ValidationIssues
-	Stopping.Issued("A", ("0", "1"), 2).Last to Text is "StatusNumberMustNotBeReturned: A returns 1" + Hint
-	Stopping.Issued("A", List(Text), 2).Length is 0
+Issue(name Text, literals Texts, line Number) ValidationIssues
+	Stopping.Issue("A", ("0", "1"), 2).Last to Text is "StatusNumberMustNotBeReturned: A returns 1" + Hint
+	Stopping.Issue("A", List(Text), 2).Length is 0
 	for literals
 		ValidationIssue("StatusNumberMustNotBeReturned", name + " returns " + value + Hint, line)
 Literals(result Text) Texts

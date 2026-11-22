@@ -21,7 +21,7 @@ Body(header Number) List(ValidationIssue)
 	for code
 		next = index + 1 < code.Length then code(index + 1) else ""
 		line = start + index
-		issues = issues + Dropped(Tokenizer(value).Tokens, line, code - value) + Returned(value, next, line + 1)
+		issues = issues + Drop(Tokenizer(value).Tokens, line, code - value) + CheckReturn(value, next, line + 1)
 	issues
 Code(header Number) Texts
 	Zeroed.Code(0) is ("let found = Find(1)", "found is Error then 0 else found")
@@ -31,12 +31,12 @@ Code(header Number) Texts
 		isTest = isTest and value < last and Duplicates.IsTest(lines(value).Trim)
 		if isTest is false
 			lines(value).Trim
-Dropped(tokens Texts, line Number, others Texts) List(ValidationIssue)
-	Zeroed.Dropped(("x", "is", "Error", "then", "-", "1", "else", "x"), 3, List(Text)).First.Line is 3
-	Zeroed.Dropped(("x", "is", "not", "Error", "then", "x", "else", "\"\""), 3, List(Text)).Length is 1
-	Zeroed.Dropped(("x", "is", "Error", "then", "x", "else", "0"), 3, List(Text)).Length is 0
-	Zeroed.Dropped(("x", "is", "Error", "then", "Other", "(", ")", "else", "0"), 3, List(Text)).Length is 0
-	Zeroed.Dropped(("x", "is", "Error", "then", "1", "else", "0"), 3, List(Text) + "Log(x)").Length is 0
+Drop(tokens Texts, line Number, others Texts) List(ValidationIssue)
+	Zeroed.Drop(("x", "is", "Error", "then", "-", "1", "else", "x"), 3, List(Text)).First.Line is 3
+	Zeroed.Drop(("x", "is", "not", "Error", "then", "x", "else", "\"\""), 3, List(Text)).Length is 1
+	Zeroed.Drop(("x", "is", "Error", "then", "x", "else", "0"), 3, List(Text)).Length is 0
+	Zeroed.Drop(("x", "is", "Error", "then", "Other", "(", ")", "else", "0"), 3, List(Text)).Length is 0
+	Zeroed.Drop(("x", "is", "Error", "then", "1", "else", "0"), 3, List(Text) + "Log(x)").Length is 0
 	for tokens
 		isChecked = index + 3 < tokens.Length then tokens.Slice(index, 2) is ("is", "Error") else false
 		isNot = index + 4 < tokens.Length then tokens.Slice(index, 3) is ("is", "not", "Error") else false
@@ -63,10 +63,10 @@ Else(tokens Texts, start Number) Number
 		if depth is 0 and tokens(value) is "else"
 			return value
 	tokens.Length
-Returned(code Text, next Text, line Number) List(ValidationIssue)
-	Zeroed.Returned("if found is Error", "return 0", 4).First.Line is 4
-	Zeroed.Returned("if found is Error", "return found", 4).Length is 0
-	Zeroed.Returned("if found is 2", "return 0", 4).Length is 0
+CheckReturn(code Text, next Text, line Number) List(ValidationIssue)
+	Zeroed.CheckReturn("if found is Error", "return 0", 4).First.Line is 4
+	Zeroed.CheckReturn("if found is Error", "return found", 4).Length is 0
+	Zeroed.CheckReturn("if found is 2", "return 0", 4).Length is 0
 	returned = next.StartsWith("return ") then next.Substring(7) else ""
 	if code.StartsWith("if ") is false or code.EndsWith(" is Error") is false or IsLiteral(returned) is false
 		return List(ValidationIssue)

@@ -21,13 +21,13 @@ Issues List(ValidationIssue)
 		if value.StartsWith("constant ") and Touches(value)
 			issues.Add(ValidationIssue("TestMustNotTouchFiles", value + Hint, index + 1))
 		if shape.IsMethodHeader(value) and IsUnit(value)
-			issues = issues + Tested(index)
+			issues = issues + FindTouches(index)
 	issues
 IsUnit(header Text) Boolean
 	Saving.IsUnit("Count Number") and Saving.IsUnit("Saved Number slow") is false and Saving.IsUnit("Go native") is false
 	Tokenizer(header).Tokens.Last is not in ("slow", "native")
-Tested(header Number) List(ValidationIssue)
-	Saving.Tested(0).Length is 1 and Listing.Tested(1).Length is 0
+FindTouches(header Number) List(ValidationIssue)
+	Saving.FindTouches(0).Length is 1 and Listing.FindTouches(1).Length is 0
 	for TestChecks(lines).Tests(header)
 		if Touches(value)
 			ValidationIssue("TestMustNotTouchFiles", value + Hint, header + index + 2)

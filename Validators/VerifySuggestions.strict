@@ -15,10 +15,10 @@ constant ToolSeconds = 30
 Run(arguments Texts) Number
 	root = arguments.Length > 0 then arguments.First else "."
 	folder = "Examples/SuggestCheck" + 1000000.Random.Floor
-	result = Verified(folder, root)
+	result = Verify(folder, root)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Verified(folder Text, root Text) slow
+Verify(folder Text, root Text) slow
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	File(folder + "/Bogus.strict").Write(Bogus)
