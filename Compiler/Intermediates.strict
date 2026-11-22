@@ -50,7 +50,7 @@ Replaced(executable Text, target Text) Text
 Unrunnable(executable Text, target Text) Text
 	Intermediates.Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
 	Intermediates.Unrunnable("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
-	Intermediates.Unrunnable("Compiler/output/strict.exe", Process.Current.executable) is ""
+	Intermediates.Unrunnable("Compiler/output/strict.exe", Process.Find("strict").executable) is ""
 	if Path(executable).FileName.RemoveExtension.text is not "strict"
 		return ""
 	ran = Process.RunTool(target, "version")
