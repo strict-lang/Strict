@@ -19,10 +19,10 @@ constant ClientCheckB = ("	logger.Log(\"MarkovText reports the download failure 
 constant ClientHelper = ("Waited(portFile Text)", "	for 200", "		if File(portFile).Exists", "			return 0", "		Process.Wait(0.05)")
 Run(arguments Texts) Number
 	folder = "Examples/DownloadCheck" + 1000000.Random.Floor
-	result = Checked(folder, "native" is in arguments)
+	result = Check(folder, "native" is in arguments)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Checked(folder Text, isNative Boolean) slow
+Check(folder Text, isNative Boolean) slow
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	File(folder + "/Server.strict").Write(ServerLines)

@@ -96,9 +96,9 @@ Kinds(rows List(Numbers)) Numbers
 	Empty.Kinds(Rows) is (0, 0, 0, 1, 1)
 	for rows
 		value.Last
-Classified(sample Numbers) Number
-	Stump.Classified((5, 4)) is 1 and Stump.Classified((5, 0)) is 1
-	Stump.Classified((0.5, 0)) is 0 and Stump.Classified((1, 0)) is 0
+Classify(sample Numbers) Number
+	Stump.Classify((5, 4)) is 1 and Stump.Classify((5, 0)) is 1
+	Stump.Classify((0.5, 0)) is 0 and Stump.Classify((1, 0)) is 0
 	mutable position = 0
 	for features.Length
 		if labels(position) >= 0

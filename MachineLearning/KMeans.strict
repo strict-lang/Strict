@@ -3,9 +3,9 @@ constant Corners = KMeans(((0, 0), (1, 1)))
 constant Square = ((0, 0), (0.2, 0), (1, 1), (0.8, 1))
 Started(samples List(Numbers), count Number) KMeans
 	KMeans.Started(Square, 2).centers is ((0, 0), (1, 1))
-	KMeans(Picked(samples, count))
-Picked(samples List(Numbers), count Number) List(Numbers)
-	Corners.Picked(Square, 2) is ((0, 0), (1, 1))
+	KMeans(Pick(samples, count))
+Pick(samples List(Numbers), count Number) List(Numbers)
+	Corners.Pick(Square, 2) is ((0, 0), (1, 1))
 	for count
 		samples((index * samples.Length / count).Floor)
 Nearest(sample Numbers) Number
@@ -22,13 +22,13 @@ Distance(first Numbers with value.Bits is 32, second Numbers with value.Bits is 
 	for first
 		sum = sum + (value - second(index)) * (value - second(index))
 	sum
-Assigned(samples List(Numbers)) Numbers
-	Corners.Assigned(Square) is (0, 0, 1, 1)
+Assign(samples List(Numbers)) Numbers
+	Corners.Assign(Square) is (0, 0, 1, 1)
 	for samples
 		Nearest(value)
 Updated(samples List(Numbers)) KMeans
 	Corners.Updated(Square).centers.First is (0.1, 0)
-	assigned = Assigned(samples)
+	assigned = Assign(samples)
 	mutable moved = List(Mutable(Numbers))
 	for centers
 		moved.Add(Mean(samples, assigned, index))
@@ -40,11 +40,11 @@ Mean(samples List(Numbers), assigned Numbers, cluster Number) Numbers
 	mutable count = 0
 	for samples
 		if assigned(index) is cluster
-			sum = Summed(sum, value)
+			sum = AddElements(sum, value)
 			count = count + 1
 	count is 0 then centers(cluster) else sum / count
-Summed(first Numbers, second Numbers) Numbers
-	Corners.Summed((1, 2), (3, 4)) is (4, 6)
+AddElements(first Numbers, second Numbers) Numbers
+	Corners.AddElements((1, 2), (3, 4)) is (4, 6)
 	for first
 		value + second(index)
 Trained(samples List(Numbers), iterations Number) KMeans
@@ -56,7 +56,7 @@ Trained(samples List(Numbers), iterations Number) KMeans
 Purity(samples List(Numbers), labels Numbers) Number
 	Corners.Purity(Square, (0, 0, 1, 1)) is 1
 	Corners.Purity(Square, (0, 1, 1, 1)) is 0.75
-	assigned = Assigned(samples)
+	assigned = Assign(samples)
 	mutable matching = 0
 	for centers
 		matching = matching + Majority(assigned, labels, index)

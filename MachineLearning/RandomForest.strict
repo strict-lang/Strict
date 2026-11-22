@@ -11,13 +11,13 @@ Bootstrap(rows List(Numbers)) List(Numbers)
 	Single.Bootstrap(DecisionTree.Rows).Length is 5
 	for rows
 		rows(rows.Length.Random.Floor)
-Classified(sample Numbers) Number
-	Single.Classified((5, 4)) is 1
+Classify(sample Numbers) Number
+	Single.Classify((5, 4)) is 1
 	mutable votes = List(Mutable(Number))
 	for trees
-		votes.Add(value.Classified(sample))
+		votes.Add(value.Classify(sample))
 	DecisionTree.Majority(votes)
-Predicted(tests List(Numbers)) Numbers
-	Single.Predicted(((0, 0), (5, 5))) is (0, 1)
+Predict(tests List(Numbers)) Numbers
+	Single.Predict(((0, 0), (5, 5))) is (0, 1)
 	for tests
-		Classified(value)
+		Classify(value)

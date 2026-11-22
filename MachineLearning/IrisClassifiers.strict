@@ -4,13 +4,13 @@ Run
 	training = data.Training
 	testing = data.Testing
 	neighbors = NearestNeighbors(training.inputs, training.Labels)
-	logger.Log("Nearest neighbors " + Percent(testing.Agreement(neighbors.Predicted(testing.inputs, 5))))
+	logger.Log("Nearest neighbors " + Percent(testing.Agreement(neighbors.Predict(testing.inputs, 5))))
 	bayes = NaiveBayes.Trained(training.inputs, training.Labels)
-	logger.Log("Naive Bayes " + Percent(testing.Agreement(bayes.Predicted(testing.inputs))))
+	logger.Log("Naive Bayes " + Percent(testing.Agreement(bayes.Predict(testing.inputs))))
 	tree = RandomForest(List(DecisionTree) + DecisionTree.Trained(training.Labeled, 4))
-	logger.Log("Decision tree " + Percent(testing.Agreement(tree.Predicted(testing.inputs))))
+	logger.Log("Decision tree " + Percent(testing.Agreement(tree.Predict(testing.inputs))))
 	forest = RandomForest.Trained(training.Labeled, Trees, 4)
-	logger.Log("Random forest of " + Trees + " trees " + Percent(testing.Agreement(forest.Predicted(testing.inputs))))
+	logger.Log("Random forest of " + Trees + " trees " + Percent(testing.Agreement(forest.Predict(testing.inputs))))
 Percent(ratio Number) Text
 	IrisClassifiers.Percent(0.5) is "50% test accuracy"
 	(ratio * 100).Round(1) + "% test accuracy"

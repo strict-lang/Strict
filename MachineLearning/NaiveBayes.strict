@@ -28,14 +28,14 @@ Mean(members List(Numbers)) Numbers
 Variance(members List(Numbers), mean Numbers) Numbers
 	NaiveBayes.Variance(((1, 2), (3, 4)), (2, 3)).First.Round(6) is 1
 	for mean
-		Squared(Csv.Sample.Column(members, index), value).Sum / members.Length + Tiny
-Squared(values Numbers, center Number) Numbers
-	NaiveBayes.Squared((1, 3), 2) is (1, 1)
+		Square(Csv.Sample.Column(members, index), value).Sum / members.Length + Tiny
+Square(values Numbers, center Number) Numbers
+	NaiveBayes.Square((1, 3), 2) is (1, 1)
 	for values
 		(value - center) * (value - center)
-Classified(sample Numbers) Number
-	NaiveBayes.Trained(Points, Kinds).Classified((0.5, 0.5)) is 0
-	NaiveBayes.Trained(Points, Kinds).Classified((5, 5)) is 1
+Classify(sample Numbers) Number
+	NaiveBayes.Trained(Points, Kinds).Classify((0.5, 0.5)) is 0
+	NaiveBayes.Trained(Points, Kinds).Classify((5, 5)) is 1
 	scores = Scores(sample)
 	scores.Index(scores.Maximum)
 Scores(sample Numbers) Numbers
@@ -50,7 +50,7 @@ LogLikelihood(sample Numbers, mean Numbers, variance Numbers) Number
 		difference = value - mean(index)
 		sum = sum - 0.5 * (2 * Number.Pi * variance(index)).Logarithm - difference * difference / (2 * variance(index))
 	sum
-Predicted(tests List(Numbers)) Numbers
-	NaiveBayes.Trained(Points, Kinds).Predicted(((0, 0), (5, 5))) is (0, 1)
+Predict(tests List(Numbers)) Numbers
+	NaiveBayes.Trained(Points, Kinds).Predict(((0, 0), (5, 5))) is (0, 1)
 	for tests
-		Classified(value)
+		Classify(value)
