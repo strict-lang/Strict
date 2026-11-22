@@ -18884,6 +18884,50 @@
   llvm.mlir.global internal constant @strict_gpu_cpu_format("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00%s, GPU loops run on the CPU\0A\00") : !llvm.array<46 x i8>
   // web pages set it to 0 (NativeBuild.Released): their loops run through WGSL, no native driver is ever opened
   llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_unloaded_format("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00Error: %s\0A\00") : !llvm.array<27 x i8>
+  // kernels a CUDA sm_75 or newer GPU did not load end the program at once with an Error (also from the warm thread)
+  // instead of running its GPU loops on the CPU unnoticed, an older or an AMD GPU keeps one line and the CPU
+  func.func private @strict_gpu_unloaded(%message: !llvm.ptr) {
+    %isAmd = func.call @strict_gpu_is_amd() : () -> i1
+    cf.cond_br %isAmd, ^usual, ^query
+  ^query:
+    %one = arith.constant 1 : i64
+    %zero32 = arith.constant 0 : i32
+    %deviceSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %majorSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    %minorSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    llvm.store %zero32, %majorSlot : i32, !llvm.ptr
+    llvm.store %zero32, %minorSlot : i32, !llvm.ptr
+    %deviceGetIndex = arith.constant 1 : i64
+    %deviceGet = func.call @strict_gpu_call(%deviceGetIndex) : (i64) -> !llvm.ptr
+    %found = llvm.call %deviceGet(%deviceSlot, %zero32) : !llvm.ptr, (!llvm.ptr, i32) -> i32
+    %device = llvm.load %deviceSlot : !llvm.ptr -> i32
+    %attributeIndex = arith.constant 32 : i64
+    %getAttribute = func.call @strict_gpu_call(%attributeIndex) : (i64) -> !llvm.ptr
+    %majorAttribute = arith.constant 75 : i32
+    %minorAttribute = arith.constant 76 : i32
+    %majorQueried = llvm.call %getAttribute(%majorSlot, %majorAttribute, %device) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    %minorQueried = llvm.call %getAttribute(%minorSlot, %minorAttribute, %device) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
+    %major = llvm.load %majorSlot : !llvm.ptr -> i32
+    %minor = llvm.load %minorSlot : !llvm.ptr -> i32
+    %ten = arith.constant 10 : i32
+    %tens = arith.muli %major, %ten : i32
+    %capability = arith.addi %tens, %minor : i32
+    %turing = arith.constant 75 : i32
+    %isCompatible = arith.cmpi sge, %capability, %turing : i32
+    cf.cond_br %isCompatible, ^fatal, ^usual
+  ^fatal:
+    %formatLengths = llvm.mlir.addressof @strict_gpu_unloaded_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %printed = llvm.call @printf(%format, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    %all = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%all) : (!llvm.ptr) -> i32
+    func.call @strict_test_quit() : () -> ()
+    cf.br ^usual
+  ^usual:
+    func.call @strict_gpu_required(%message) : (!llvm.ptr) -> ()
+    return
+  }
   func.func private @strict_gpu_required(%message: !llvm.ptr) {
     %one = arith.constant 1 : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
@@ -19134,7 +19178,7 @@
   ^failed:
     %unloadedLengths = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
     %unloaded = llvm.getelementptr %unloadedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_unloaded(%unloaded) : (!llvm.ptr) -> ()
     return %zero : i64
   }
   // the module of code with the driver compiling PTX on all cores (CU_JIT_SPLIT_COMPILE 0: the 11 MB of a MossImage
@@ -19217,7 +19261,7 @@
     llvm.store %zero, %moduleSlot : i64, !llvm.ptr
     %unloadedLengths = llvm.mlir.addressof @strict_gpu_unloaded_text : !llvm.ptr
     %unloaded = llvm.getelementptr %unloadedLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    func.call @strict_gpu_required(%unloaded) : (!llvm.ptr) -> ()
+    func.call @strict_gpu_unloaded(%unloaded) : (!llvm.ptr) -> ()
     cf.br ^done
   ^done:
     return

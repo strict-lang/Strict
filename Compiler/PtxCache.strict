@@ -79,8 +79,9 @@ Kept(tools Toolchain, kept Text) Text
 	ran.Failed then "mlir-opt failed: " + ran.error else ""
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf("sm_120") > 0
+	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf(PtxLibraries.Layout) > 0
 	tools = builder.tools
-	architectures = Text.Combine(CubinBuild.Architectures, " ")
+	architectures = Text.Combine(CubinBuild.Architectures, " ") + " " + PtxLibraries.Layout
 	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept + " " + architectures
 	for ("clang", "mlir-opt", "mlir-translate")
 		path = Process.Find(tools.Located(value)).executable

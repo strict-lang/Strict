@@ -4,6 +4,7 @@ constant Marker = "// strict definitions"
 constant Sample = PtxLibraries("Compiler/output/Libraries", "ptx/")
 constant Both = (PtxFunction.Kernel, PtxFunction.Helper)
 constant Endings = (".ptx", ".older.ptx")
+constant Layout = "ptx/<target>/<library>"
 Of(base Text) PtxLibraries
 	PtxLibraries.Of("a/obj/B").folder is "a/obj" and PtxLibraries.Of("a/obj/B").prefix is "ptx/"
 	PtxLibraries.Of("a/obj/B.test").prefix is "ptx/test/"
@@ -12,22 +13,29 @@ Indexed(texts Texts) Texts slow
 	Sample.Indexed(List(Text) + "clang failed: x") is List(Text) + "clang failed: x"
 	for texts
 		value.StartsWith("//") then Index(value, Endings(index)) else value
+Targeted(header Text) PtxLibraries
+	Sample.Targeted("//\n.version 8.7\n.target sm_80\n.address_size 64\n").prefix is "ptx/sm_80/"
+	Sample.Targeted("//\n.version 8.7\n").prefix is "ptx/"
+	at = header.IndexOf(".target ")
+	at < 0 then PtxLibraries(folder, prefix) else PtxLibraries(folder, prefix + header.Substring(at + 8).Lines.First + "/")
 Index(text Text, ending Text) Text slow
 	module = PtxModule(text.Split("\n"))
-	functions = module.Functions
-	names = Names(functions)
+	targeted = Targeted(module.Header)
 	Directory.Create(folder + "/ptx")
 	Directory.Create(folder + "/" + prefix.Substring(0, prefix.Length - 1))
+	Directory.Create(folder + "/" + targeted.prefix.Substring(0, targeted.prefix.Length - 1))
+	targeted.Listed(text, ending, module)
+Listed(text Text, ending Text, module PtxModule) Text slow
+	functions = module.Functions
+	names = Libraries(functions).Unique
 	for names
 		Written(value, ending, functions)
 	PtxGlobals(folder + "/" + prefix + "Globals" + ending, prefix).Written(module.Globals)
 	needs = " needs " + prefix + "Globals," + Text.Combine(Stems(names), "")
 	"// strict program " + HashCode(text).number + needs + "\n" + module.Header
-Names(functions List(PtxFunction)) Texts
-	Sample.Names(Both) is ("H3Block", "Strict")
-	Libraries(functions).Unique
 Libraries(functions List(PtxFunction)) Texts
 	Sample.Libraries(Both) is ("H3Block", "Strict")
+	Sample.Libraries(Both + Both).Unique is ("H3Block", "Strict")
 	for functions
 		value.Library
 Stems(names Texts) Texts
@@ -70,6 +78,7 @@ Placed(base Text, ending Text, release Text) slow
 Copied(stems Texts, ending Text, release Text) slow
 	Directory.Create(release + "/ptx")
 	for stems
+		Directory.Create(release + "/" + Path(value).PathOnly.text)
 		source = File(folder + "/" + value + ending)
 		target = File(release + "/" + value + ending)
 		if target.Exists is false or target.ReadBytes is not source.ReadBytes
