@@ -8,6 +8,7 @@ constant Doubles = Text.Combine(MlirGpu.Exported(DeviceBuild.Doubling), ",")
 constant Combining = DeviceBuild.Local.Combined(DeviceBuild.Doubling, DeviceBuild.Without)
 constant Empty = "  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n}"
 constant Quoted = "module {\n  \"" + MlirGpu.Marker + "\"\n"
+constant Pruning = " --symbol-dce --mlir-disable-threading -o "
 Unlaunched(program Text) Text
 	Sample.Unlaunched("module {\n}") is "module {\n" + Empty
 	Sample.Unlaunched("module {\n}\n" + DeviceBuild.Doubling) is "module {\n" + Empty
@@ -75,7 +76,7 @@ Kept(tools Toolchain, kept Text) Text
 	input = tools.Quoted(base + ".gpu.mlir")
 	output = tools.Quoted(base + ".gpu.kept.mlir")
 	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	ran = ToolRunner(tools.Located("mlir-opt")).Execute(input + privatized + " --symbol-dce -o " + output)
+	ran = ToolRunner(tools.Located("mlir-opt")).Execute(input + privatized + Pruning + output)
 	ran.HasFailed then "mlir-opt failed: " + ran.error else ""
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf("sm_120") > 0
