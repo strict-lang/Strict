@@ -1,7 +1,7 @@
 has lines Texts
 has typeName Text = ""
-constant Hint = ", a Boolean method reads as an assertion: start its name with Is, Has, Can or Should"
-constant Starts = ("Is", "Has", "Can", "Should")
+constant Hint = ", a Boolean method reads as an assertion: start its name with Is, Are, Has, Can or Should"
+constant Starts = ("Is", "Are", "Has", "Can", "Should")
 constant Plain = ("Number", "Boolean", "Text")
 constant Completing = Assertions(("Completed Boolean", "\tCompleting.Completed", "\ttrue"))
 Issues List(ValidationIssue)
@@ -27,6 +27,7 @@ IsUnasserted(header Text) Boolean
 	isBoolean and head.Lower is not head and IsAsserted(name) is false
 IsAsserted(name Text) Boolean
 	Completing.IsAsserted("HasMask") and Completing.IsAsserted("Island") is false
+	Completing.IsAsserted("AreNames") and Completing.IsAsserted("Area") is false
 	Completing.IsAsserted("Matches") and Completing.IsAsserted("ContainsAll") and Completing.IsAsserted("Pass") is false
 	for Starts
 		if name.StartsWith(value) and name.Length > value.Length
