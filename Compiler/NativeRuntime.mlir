@@ -23337,6 +23337,8 @@
   llvm.mlir.global internal @strict_gpu_graphs(dense<0> : tensor<1024xi64>) : !llvm.array<1024 x i64>
   llvm.mlir.global internal constant @strict_gpu_graph_switch("\0D\00\00\00\00\00\00\00\0D\00\00\00\00\00\00\00STRICT_GRAPHS\00") : !llvm.array<30 x i8>
   llvm.mlir.global internal constant @strict_gpu_graph_failed("\2A\00\00\00\00\00\00\00\2A\00\00\00\00\00\00\00Error: the GPU launches of a graph failed\0A\00") : !llvm.array<59 x i8>
+  // the step that failed and the driver result, the steps are 1 end capture, 2 instantiate, 3 launch
+  llvm.mlir.global internal constant @strict_gpu_graph_failed_at("\67\00\00\00\00\00\00\00\67\00\00\00\00\00\00\00Error: the GPU launches of a graph failed (step %d of end capture, instantiate, launch: CUDA error %d)\0A\00") : !llvm.array<120 x i8>
   func.func private @strict_gpu_stream() -> !llvm.ptr {
     %handles = llvm.mlir.addressof @strict_gpu_handles : !llvm.ptr
     %streamSlot = llvm.getelementptr %handles[2] : (!llvm.ptr) -> !llvm.ptr, i64
@@ -23480,7 +23482,8 @@
     %endCapture = func.call @strict_gpu_call(%endIndex) : (i64) -> !llvm.ptr
     %ended = llvm.call %endCapture(%stream, %graphSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
     %endFailed = arith.cmpi ne, %ended, %zero32 : i32
-    cf.cond_br %endFailed, ^fail, ^find
+    %endStep = arith.constant 1 : i32
+    cf.cond_br %endFailed, ^fail(%endStep, %ended : i32, i32), ^find
   ^find:
     %graphBits = llvm.load %graphSlot : !llvm.ptr -> i64
     %captured = llvm.inttoptr %graphBits : i64 to !llvm.ptr
@@ -23514,7 +23517,8 @@
     %instantiate = func.call @strict_gpu_call(%instantiateIndex) : (i64) -> !llvm.ptr
     %instantiated = llvm.call %instantiate(%newSlot, %captured, %none) : !llvm.ptr, (!llvm.ptr, !llvm.ptr, i64) -> i32
     %instantiateFailed = arith.cmpi ne, %instantiated, %zero32 : i32
-    cf.cond_br %instantiateFailed, ^fail, ^keep
+    %instantiateStep = arith.constant 2 : i32
+    cf.cond_br %instantiateFailed, ^fail(%instantiateStep, %instantiated : i32, i32), ^keep
   ^keep:
     %newBits = llvm.load %newSlot : !llvm.ptr -> i64
     llvm.store %print, %entry : i64, !llvm.ptr
@@ -23539,11 +23543,12 @@
     %destroyed = llvm.call %destroy(%captured) : !llvm.ptr, (!llvm.ptr) -> i32
     cf.br ^checked(%launchFailed : i1)
   ^checked(%failedLaunch: i1):
-    cf.cond_br %failedLaunch, ^fail, ^done
-  ^fail:
-    %messageLengths = llvm.mlir.addressof @strict_gpu_graph_failed : !llvm.ptr
+    %launchStep = arith.constant 3 : i32
+    cf.cond_br %failedLaunch, ^fail(%launchStep, %launched : i32, i32), ^done
+  ^fail(%failedStep: i32, %failedResult: i32):
+    %messageLengths = llvm.mlir.addressof @strict_gpu_graph_failed_at : !llvm.ptr
     %message = llvm.getelementptr %messageLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
-    %printed = llvm.call @printf(%message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %printed = llvm.call @printf(%message, %failedStep, %failedResult) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i32, i32) -> i32
     %code = arith.constant 1 : i32
     llvm.call @exit(%code) : (i32) -> ()
     return
