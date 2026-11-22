@@ -1,8 +1,10 @@
+constant EmptyPart = "Compiler/output/EmptyPart"
 Run(folder Text, root Text) Number
 	started = Process.Elapsed
+	mutations = Mutations(ResolveCheck.AllFiles(root))
 	mutable issues = 0
 	for Parts(folder)
-		issues = issues + Checked(value, root)
+		issues = issues + Validated(value, root, mutations)
 	BuildProfile.Reported("Check validation", started)
 	before = Process.Elapsed
 	issues = issues + ProjectRules(root).Checked(folder)
@@ -12,14 +14,41 @@ Run(folder Text, root Text) Number
 	failed = issues is 0 then Folders.Tested(folder, root) else 0
 	BuildProfile.Reported("Check tests", tested)
 	issues + failed
+Validated(folder Text, root Text, mutations Texts) Number slow
+	Directory.Create(EmptyPart) is not Error and ValidateCheck.Validated(EmptyPart, ".", List(Text)) is 0
+	File(EmptyPart + "/obj/Validated.stamp").Exists
+	if folder.EndsWith(".strict")
+		return Checked(folder, root, mutations)
+	key = Key(folder, root, mutations)
+	stamp = File(folder + "/obj/Validated.stamp")
+	stamp.Exists and stamp.ReadText is key then 0 else Fresh(folder, root, mutations, key)
+Fresh(folder Text, root Text, mutations Texts, key Text) Number slow
+	Directory.Create(EmptyPart) is not Error and ValidateCheck.Fresh(EmptyPart, ".", List(Text), "key") is 0
+	issues = Checked(folder, root, mutations)
+	if issues is 0
+		Directory.Create(folder + "/obj")
+		File(folder + "/obj/Validated.stamp").Write(key)
+	issues
+Key(folder Text, root Text, mutations Texts) Text slow
+	ValidateCheck.Key("Examples/LinkChain", ".", List(Text)).IndexOf("LinkChain.strict|") > 0
+	files = Files(folder)
+	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
+	Stamped(reached + Directory.Files(root, "*.strict"), mutations)
+Stamped(paths Texts, mutations Texts) Text slow
+	ValidateCheck.Stamped(List(Text) + "Missing.strict", List(Text) + "Next").EndsWith("\nMissing.strict|0\nNext")
+	Text.Combine((List(Text) + (File(Process.Current.executable).Modified to Text)) + Stamps(paths) + mutations, "\n")
+Stamps(paths Texts) Texts slow
+	ValidateCheck.Stamps(List(Text) + "Missing.strict") is ("Missing.strict|0")
+	for paths
+		value + "|" + File(value).Modified
 Parts(path Text) Texts slow
 	ValidateCheck.Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck.Parts("./Math") is ResolveCheck.Tree("./Math")
 	path.EndsWith(".strict") then List(Text) + path else ResolveCheck.Tree(path)
-Checked(folder Text, root Text) Number slow
+Checked(folder Text, root Text, known Texts) Number slow
 	problems = FileCompiler.Problems(Files(folder))
 	files = Parsed(Files(folder), problems)
-	mutations = Mutations(files + ResolveCheck.AllFiles(root))
+	mutations = known + Mutations(files)
 	isBase = folder.Replace("\\", "/").Replace("/.", "") is root
 	duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
