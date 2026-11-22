@@ -36,14 +36,14 @@ Find(text Text) Text
 	Regex("").Find("x") is ""
 	Regex("colou?r").Find("no match") is ""
 	found = Next(Machine(text), 0)
-	found.Length is 0 then "" else Captured(text, found, 0)
+	found.Length is 0 then "" else Capture(text, found, 0)
 FindAll(text Text) Texts
 	Decimal.FindAll("1, 22 and 3.5") is ("1", "22", "3.5")
 	Regex("x*").FindAll("ab").Length is 3
 	Regex("a").FindAll("aa") is ("a", "a")
 	Regex("a*").FindAll("baaa") is ("", "aaa")
 	for Spans(text)
-		Captured(text, value, 0)
+		Capture(text, value, 0)
 Groups(text Text) Texts
 	Pair.Groups("set name=Strict") is ("name", "Strict")
 	Regex("(a)|(b)").Groups("b") is ("", "b")
@@ -52,7 +52,7 @@ Groups(text Text) Texts
 	if found.Length is 0
 		return List(Text)
 	for Range(1, found.Length / 2)
-		Captured(text, found, value)
+		Capture(text, found, value)
 Replace(text Text, replacement Text) Text
 	Decimal.Replace("a1b22", "#") is "a#b#"
 	Pair.Replace("a=1, b=2", "$2=$1") is "1=a, 2=b"
@@ -60,7 +60,7 @@ Replace(text Text, replacement Text) Text
 	mutable replaced = ""
 	mutable last = 0
 	for Spans(text)
-		replaced = replaced + text.Substring(last, value(0) - last) + Expanded(replacement, text, value)
+		replaced = replaced + text.Substring(last, value(0) - last) + Expand(replacement, text, value)
 		last = value(1)
 	replaced + text.Substring(last)
 Split(text Text) Texts
@@ -91,15 +91,15 @@ Next(machine RegexMachine, start Number) Numbers
 	Regex("bc").Next(RegexMachine(Regex("bc").steps, "abcbc"), 2) is (3, 5)
 	Regex("bc").Next(RegexMachine(Regex("bc").steps, "abc"), 2).Length is 0
 	at = machine.text.IndexOf(prefix, start)
-	at >= 0 then machine.Found(at) else List(Number)
-Captured(text Text, found Numbers, group Number) Text
-	Pair.Captured("a=b", (0, 3, 0, 1, 2, 3), 2) is "b"
-	Pair.Captured("a=b", (0, 3, -1, -1), 1) is ""
+	at >= 0 then machine.Find(at) else List(Number)
+Capture(text Text, found Numbers, group Number) Text
+	Pair.Capture("a=b", (0, 3, 0, 1, 2, 3), 2) is "b"
+	Pair.Capture("a=b", (0, 3, -1, -1), 1) is ""
 	text.Substring(found(group * 2), found(group * 2 + 1) - found(group * 2))
-Expanded(replacement Text, text Text, found Numbers) Text
-	Pair.Expanded("[$1]", "a=b", (0, 3, 0, 1, 2, 3)) is "[a]"
-	Pair.Expanded("$0", "a=b", (0, 3, 0, 1, 2, 3)) is "a=b"
+Expand(replacement Text, text Text, found Numbers) Text
+	Pair.Expand("[$1]", "a=b", (0, 3, 0, 1, 2, 3)) is "[a]"
+	Pair.Expand("$0", "a=b", (0, 3, 0, 1, 2, 3)) is "a=b"
 	mutable expanded = replacement
 	for Range(0, found.Length / 2).Reverse
-		expanded = expanded.Replace("$" + value, Captured(text, found, value))
+		expanded = expanded.Replace("$" + value, Capture(text, found, value))
 	expanded

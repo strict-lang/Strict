@@ -19,7 +19,7 @@ Parsed List(RegexStep)
 	RegexParser("\\da").Parsed(1).Accepts(55)
 	RegexParser("^").Parsed(1).Kind is RegexStep.Begin
 	part = Alternation(0, 0)
-	part.next < pattern.Length then InvalidPattern(pattern) else part.Captured(0) + RegexStep(RegexStep.Match)
+	part.next < pattern.Length then InvalidPattern(pattern) else part.Capture(0) + RegexStep(RegexStep.Match)
 Alternation(start Number, groups Number) RegexPart
 	RegexParser("a|b").Alternation(0, 0).steps.Length is 4
 	RegexParser("a|b|c").Alternation(0, 0).steps.Length is 7
@@ -32,38 +32,38 @@ Sequence(start Number, groups Number) RegexPart
 	RegexParser("|a").Sequence(0, 0).next is 0
 	mutable part = RegexPart(List(RegexStep), start, groups)
 	for as long as At(part.next) is not in ("", "|", ")")
-		piece = Repeated(part.next, part.groups)
+		piece = Repeat(part.next, part.groups)
 		part = RegexPart(part.steps + piece.steps, piece.next, piece.groups)
 	part
-Repeated(start Number, groups Number) RegexPart
-	RegexParser("a*").Repeated(0, 0).steps.Length is 3
-	RegexParser("a+?").Repeated(0, 0).next is 3
-	RegexParser("ab").Repeated(0, 0).next is 1
-	RegexParser("a{2}").Repeated(0, 0).next is 4
+Repeat(start Number, groups Number) RegexPart
+	RegexParser("a*").Repeat(0, 0).steps.Length is 3
+	RegexParser("a+?").Repeat(0, 0).next is 3
+	RegexParser("ab").Repeat(0, 0).next is 1
+	RegexParser("a{2}").Repeat(0, 0).next is 4
 	atom = Atom(start, groups)
 	quantifier = At(atom.next)
-	quantifier is "{" then Counted(atom) else quantifier is in Quantifiers then Quantified(atom, quantifier) else atom
-Quantified(atom RegexPart, quantifier Text) RegexPart
-	RegexParser("a?").Quantified(RegexPart.Letter, "?").steps.Length is 2
-	RegexParser("a??").Quantified(RegexPart.Letter, "?").steps(0).First is 2
-	RegexParser("a?").Quantified(RegexPart.Letter, "?").next is 2
-	RegexParser("a+").Quantified(RegexPart.Letter, "+").steps.Length is 2
+	quantifier is "{" then ApplyCount(atom) else quantifier is in Quantifiers then Quantify(atom, quantifier) else atom
+Quantify(atom RegexPart, quantifier Text) RegexPart
+	RegexParser("a?").Quantify(RegexPart.Letter, "?").steps.Length is 2
+	RegexParser("a??").Quantify(RegexPart.Letter, "?").steps(0).First is 2
+	RegexParser("a?").Quantify(RegexPart.Letter, "?").next is 2
+	RegexParser("a+").Quantify(RegexPart.Letter, "+").steps.Length is 2
 	isLazy = At(atom.next + 1) is "?"
 	repeated = quantifier is "*" then atom.Star(isLazy) else atom.Plus(isLazy)
 	RegexPart(quantifier is "?" then atom.Optional(isLazy) else repeated, atom.next + (isLazy then 2 else 1), atom.groups)
-Counted(atom RegexPart) RegexPart
-	RegexParser("a{2}").Counted(RegexPart.Letter).steps.Length is 2
-	RegexParser("a{2,3}").Counted(RegexPart.Letter).steps.Length is 4
-	RegexParser("a{2,}").Counted(RegexPart.Letter).steps.Length is 5
-	RegexParser("a{2").Counted(RegexPart.Letter) is InvalidPattern
+ApplyCount(atom RegexPart) RegexPart
+	RegexParser("a{2}").ApplyCount(RegexPart.Letter).steps.Length is 2
+	RegexParser("a{2,3}").ApplyCount(RegexPart.Letter).steps.Length is 4
+	RegexParser("a{2,}").ApplyCount(RegexPart.Letter).steps.Length is 5
+	RegexParser("a{2").ApplyCount(RegexPart.Letter) is InvalidPattern
 	close = pattern.IndexOf("}", atom.next)
 	if close < 0
 		return InvalidPattern
 	bounds = pattern.Substring(atom.next + 1, close - atom.next - 1).Split(",")
 	least = bounds(0) to Number
 	most = bounds.Length is 1 then least else bounds(1) is "" then -1 else bounds(1) to Number
-	extra = most < 0 then atom.Star(false) else RegexPart(atom.Optional(false), 0, 0).Repeated(most - least)
-	RegexPart(atom.Repeated(least) + extra, close + 1, atom.groups)
+	extra = most < 0 then atom.Star(false) else RegexPart(atom.Optional(false), 0, 0).Repeat(most - least)
+	RegexPart(atom.Repeat(least) + extra, close + 1, atom.groups)
 Atom(start Number, groups Number) RegexPart
 	RegexParser("*").Atom(0, 0) is InvalidPattern
 	RegexParser("\\d").Atom(0, 0).next is 2
@@ -75,7 +75,7 @@ Atom(start Number, groups Number) RegexPart
 	if character is "["
 		return Class(start + 1, groups)
 	isEscape = character is "\\"
-	step = isEscape then Escaped(At(start + 1)) else Plain(start)
+	step = isEscape then Escape(At(start + 1)) else Plain(start)
 	RegexPart(List(RegexStep) + step, start + (isEscape then 2 else 1), groups)
 Group(start Number, groups Number) RegexPart
 	RegexParser("(a)").Group(0, 0).groups is 1
@@ -89,7 +89,7 @@ Group(start Number, groups Number) RegexPart
 	inner = Alternation(start + (isCapture then 1 else 3), index)
 	if At(inner.next) is not ")"
 		return InvalidPattern
-	RegexPart(isCapture then inner.Captured(index) else inner.steps, inner.next + 1, inner.groups)
+	RegexPart(isCapture then inner.Capture(index) else inner.steps, inner.next + 1, inner.groups)
 Class(start Number, groups Number) RegexPart
 	RegexParser("[a-c_]").Class(1, 0).steps(0).Accepts(98) and RegexParser("[a_]").Class(1, 0).steps(0).Accepts(95)
 	RegexParser("[a]").Class(1, 0).steps(0).Accepts(98) is false
@@ -109,20 +109,20 @@ Item(start Number) RegexPart
 	RegexParser("\\D").Item(0) is InvalidPattern
 	RegexParser("abc").Item(0).next is 1
 	isEscape = At(start) is "\\"
-	low = isEscape then Escaped(At(start + 1)) else RegexStep.Literal(Code(start))
+	low = isEscape then Escape(At(start + 1)) else RegexStep.Literal(Code(start))
 	after = start + (isEscape then 2 else 1)
 	if low.isNegated
 		return InvalidPattern
 	if At(after) is not "-" or At(after + 1) is in ("]", "")
 		return RegexPart(List(RegexStep) + low, after, 0)
 	RegexPart(List(RegexStep) + RegexStep(RegexStep.Consume, (low.ranges(0), Code(after + 1))), after + 2, 0)
-Escaped(character Text) RegexStep
-	RegexParser("").Escaped("d").Accepts(55)
-	RegexParser("").Escaped("D").Accepts(55) is false
-	RegexParser("").Escaped("w").Accepts(95) and RegexParser("").Escaped("s").Accepts(9)
-	RegexParser("").Escaped("n").Accepts(10)
-	RegexParser("").Escaped(".").Accepts(46)
-	RegexParser("").Escaped("") is Error
+Escape(character Text) RegexStep
+	RegexParser("").Escape("d").Accepts(55)
+	RegexParser("").Escape("D").Accepts(55) is false
+	RegexParser("").Escape("w").Accepts(95) and RegexParser("").Escape("s").Accepts(9)
+	RegexParser("").Escape("n").Accepts(10)
+	RegexParser("").Escape(".").Accepts(46)
+	RegexParser("").Escape("") is Error
 	lower = character.Lower
 	if lower is in Escapes
 		return RegexStep(RegexStep.Consume, EscapeRanges(Escapes.Index(lower)), character is not lower)

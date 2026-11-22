@@ -2,45 +2,45 @@ has steps List(RegexStep)
 has next Number
 has groups Number
 constant Letter = RegexPart(List(RegexStep) + RegexStep.Literal(97), 1, 0)
-Branched(preferred Number, other Number, isLazy Boolean) RegexStep
-	Letter.Branched(1, 3, false).Second is 3
-	Letter.Branched(1, 3, true).First is 3
-	Letter.Branched(1, 3, true).Second is 1
+Branch(preferred Number, other Number, isLazy Boolean) RegexStep
+	Letter.Branch(1, 3, false).Second is 3
+	Letter.Branch(1, 3, true).First is 3
+	Letter.Branch(1, 3, true).Second is 1
 	RegexStep(RegexStep.Split, List(Number), false, isLazy then other else preferred, isLazy then preferred else other)
-Saved(slot Number) RegexStep
-	Letter.Saved(2).First is 2
-	Letter.Saved(2).Kind is RegexStep.Save
+Save(slot Number) RegexStep
+	Letter.Save(2).First is 2
+	Letter.Save(2).Kind is RegexStep.Save
 	RegexStep(RegexStep.Save, List(Number), false, slot)
 Star(isLazy Boolean) List(RegexStep)
 	Letter.Star(false)(0).Second is 3
 	Letter.Star(false)(2).First is -2
 	Letter.Star(true)(0).First is 3
 	back = RegexStep(RegexStep.Jump, List(Number), false, -steps.Length - 1)
-	((List(RegexStep) + Branched(1, steps.Length + 2, isLazy)) + steps) + back
+	((List(RegexStep) + Branch(1, steps.Length + 2, isLazy)) + steps) + back
 Plus(isLazy Boolean) List(RegexStep)
 	Letter.Plus(false)(1).First is -1
 	Letter.Plus(true)(1).First is 1
-	steps + Branched(-steps.Length, 1, isLazy)
+	steps + Branch(-steps.Length, 1, isLazy)
 Optional(isLazy Boolean) List(RegexStep)
 	Letter.Optional(false)(0).Second is 2
 	Letter.Optional(true)(0).First is 2
 	Letter.Optional(false).Length is 2
-	(List(RegexStep) + Branched(1, steps.Length + 1, isLazy)) + steps
-Repeated(count Number) List(RegexStep)
-	Letter.Repeated(3).Length is 3
-	Letter.Repeated(0).Length is 0
+	(List(RegexStep) + Branch(1, steps.Length + 1, isLazy)) + steps
+Repeat(count Number) List(RegexStep)
+	Letter.Repeat(3).Length is 3
+	Letter.Repeat(0).Length is 0
 	mutable repeated = List(Mutable(RegexStep))
 	for count
 		repeated = repeated + steps
 	repeated
-Captured(index Number) List(RegexStep)
-	Letter.Captured(1)(0).First is 2
-	Letter.Captured(1)(2).First is 3
-	((List(RegexStep) + Saved(index * 2)) + steps) + Saved(index * 2 + 1)
+Capture(index Number) List(RegexStep)
+	Letter.Capture(1)(0).First is 2
+	Letter.Capture(1)(2).First is 3
+	((List(RegexStep) + Save(index * 2)) + steps) + Save(index * 2 + 1)
 Or(right RegexPart) RegexPart
 	Letter.Or(Letter).steps(0).Second is 3
 	Letter.Or(Letter).steps(2).First is 2
 	Letter.Or(RegexPart(Letter, groups = 2)).groups is 2
 	skip = RegexStep(RegexStep.Jump, List(Number), false, right.steps.Length + 1)
-	left = (List(RegexStep) + Branched(1, steps.Length + 2, false)) + steps
+	left = (List(RegexStep) + Branch(1, steps.Length + 2, false)) + steps
 	RegexPart((left + skip) + right.steps, right.next, right.groups)
