@@ -8,6 +8,7 @@ constant Single = LinkFresh(LinkRound.Single, Unplaced)
 constant Twice = LinkFresh(LinkRound.Twice, Earliest)
 constant Logged = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log"), Earliest)
 constant Running = LinkFresh(LinkRound(LinkRound.Twice, signatures = List(Text) + "Strict/Logger:Log;Run"), Earliest)
+constant Covered = LinkFresh(LinkRound(LinkRound.Single, linker = Linker(Linker.Hello, Known = Dictionary(("Strict/B:Add;Go", Linker.Go)))), Unplaced)
 constant Homing = LinkFresh(LinkRound(LinkRound.Single, linker = Linker.Housed), Unplaced)
 Entry(signature Text, positions Dictionary(Text, Number), compiled Dictionary(Text, TypeEntry)) TypeEntry slow
 	Twice.Entry("Strict/Logger:", ResolveCheck.Positions(LinkRound.Twice.signatures), Nothing) is Linker.Go
@@ -15,8 +16,9 @@ Entry(signature Text, positions Dictionary(Text, Number), compiled Dictionary(Te
 	Single.Entry("Strict/Logger:", Unplaced, Single.Precompiled(Logging, Unplaced)).Name is "Strict/Logger"
 	if signature is in positions
 		return round.entries(positions(signature) + 1)
-	if signature is in round.linker.Known
-		return TypeEntry(round.linker.Known(signature), Name = round.linker.main.Local(Signature(signature).Type))
+	known = Covering(signature)
+	if known is not ""
+		return TypeEntry(round.linker.Known(known), Name = round.linker.main.Local(Signature(signature).Type))
 	Fresh(signature, compiled(signature))
 Precompiled(signed Texts, positions Dictionary(Text, Number)) Dictionary(Text, TypeEntry) slow
 	Single.Precompiled(Logging, Unplaced)("Strict/Logger:").Name is "Strict/Logger"
@@ -30,7 +32,7 @@ Probed(signed Texts, positions Dictionary(Text, Number)) Texts
 	Twice.Probed(("Strict/Logger:", "Strict/B:Go"), ResolveCheck.Positions(LinkRound.Twice.signatures)) is ("Strict/B:Go")
 	LinkFresh(LinkRound.Cached, Unplaced).Probed(Logging, Unplaced).Length is 0
 	for signed
-		if value is not in positions and value is not in round.linker.Known
+		if value is not in positions and Covering(value) is ""
 			value
 Read(fresh Texts) List(Texts) slow
 	Single.Read(Logging).First.Length > 0
@@ -84,3 +86,14 @@ Fresh(signature Text, compiled TypeEntry) TypeEntry slow
 		return linked
 	entry = round.entries(Earlier(signature) + 1)
 	TypeEntry(entry.Name, entry.members, entry.methods + linked.methods)
+Covering(signature Text) Text
+	Covered.Covering("Strict/B:Go") is "Strict/B:Add;Go" and Covered.Covering("Strict/B:Add;Go") is "Strict/B:Add;Go"
+	Covered.Covering("Strict/B:Run") is "" and Covered.Covering("Strict/C:Go") is ""
+	if signature is in round.linker.Known
+		return signature
+	prefix = Signature(signature).Type + ":"
+	wanted = Signature(signature).Names
+	for round.linker.Known.keysAndValues
+		if value.Key.StartsWith(prefix) and (wanted - Signature(value.Key).Names).Length is 0
+			return value.Key
+	""

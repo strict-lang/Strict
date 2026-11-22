@@ -1,5 +1,6 @@
 has trial Trial
-constant Warm = TrialRun(Trial.Adding).Warmed
+constant Sample = Trial("has numbers Numbers\nWarmed Number\n\tWarmUp((1, 2, 3)).Warmed is 20\n\tnumbers.Sum + numbers.Length + numbers.Reverse.First + numbers.Maximum + (numbers.First - 5).Absolute + (numbers.First < 2 then 1 else 0)")
+constant Warm = TrialRun(Sample).Warmed
 Tested Text slow
 	"Test passed: AddTwoNumbers(2, 3) is 5" is in TrialRun(Trial.Adding).Tested
 	if trial.Name is ""
