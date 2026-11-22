@@ -68,10 +68,16 @@ Unchecked(executable Text, target Text) Text slow
 	isStrict = Path(executable).FileName.RemoveExtension.text is "strict"
 	if (isStrict then IsCompilerChanged(executable) else false) is false
 		return ""
-	for Process.RunTools(target, ("check " + Guarded(0), "check " + Guarded(1)))
+	for Process.RunTools(IsWindows then "cmd" else "sh", (Locally(target, Guarded(0)), Locally(target, Guarded(1))))
 		if value.exitCode is not 0
 			return target + " fails strict check " + Guarded(index) + " (exit " + value.exitCode + "), " + executable + " stays"
 	""
+Locally(target Text, folder Text) Text
+	Intermediates.Locally("a.exe", "Compiler").IndexOf("STRICT_SERVER=0") >= 0
+	Intermediates.Locally("a.exe", "Compiler").IndexOf("a.exe") > 0
+	Intermediates.Locally("a.exe", "Compiler").IndexOf(" check Compiler") > 0
+	quoted = "\"" + target + "\" check " + folder
+	IsWindows then "/c set STRICT_SERVER=0&& " + quoted else "-c \"STRICT_SERVER=0 " + quoted.Replace("\"", "'") + "\""
 IsCompilerChanged(executable Text) Boolean slow
 	Intermediates.IsCompilerChanged("Compiler/output/Missing/strict.exe") is false
 	Intermediates.IsCompilerChanged("./missing.exe")
