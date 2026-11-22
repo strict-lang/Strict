@@ -44,6 +44,10 @@ Direct VmValue
 	call.MethodName is in ("At", "Store") then ConstantCache.Host(call) else HostedBudget(call).Result
 Captured VmValue
 	HostedProcess(Uncaptured).Captured.text is ""
+	logger.Capture(true) is ""
+	logger.Capture(true) is ""
+	logger.Capture(false).StartsWith("Test passed: logger.Capture(true)")
+	logger.Capture(false).StartsWith("Test passed: logger.Capture(true)")
 	isLogger = TypeEntry.ShortName(call.TypeName) is "Logger"
 	given = call.Arguments.First
 	VmValue.OfText(isLogger then logger.Capture(given.IsTrue) else TrialRun(Trial(given.text)).Tested)

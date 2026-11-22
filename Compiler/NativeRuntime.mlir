@@ -67,38 +67,78 @@
   llvm.mlir.global internal @strict_captured_length(0 : i64) : i64
   llvm.mlir.global internal @strict_captured_lock(0 : i64) : i64
   llvm.mlir.global internal thread_local @strict_captured_before(0 : i64) : i64
+  // a capture started inside a running one of the same thread (Logger.Capture(true) twice) keeps the outer text: where
+  // each nested capture starts in the buffer, its take gives back only that part, the outermost one restores the output
+  llvm.mlir.global internal thread_local @strict_captured_depth(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_captured_starts(dense<0> : tensor<16xi64>) : !llvm.array<16 x i64>
   func.func private @strict_capture_start() {
     %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %lengthSlot = llvm.mlir.addressof @strict_captured_length : !llvm.ptr
+    %depthSlot = llvm.mlir.addressof @strict_captured_depth : !llvm.ptr
+    %depth = llvm.load %depthSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %deepest = arith.constant 15 : i64
+    %isOutermost = arith.cmpi eq, %depth, %none : i64
+    cf.cond_br %isOutermost, ^outermost, ^nested
+  ^outermost:
     %before = llvm.load %outputSlot : !llvm.ptr -> i64
     %beforeSlot = llvm.mlir.addressof @strict_captured_before : !llvm.ptr
     llvm.store %before, %beforeSlot : i64, !llvm.ptr
-    %lengthSlot = llvm.mlir.addressof @strict_captured_length : !llvm.ptr
-    %empty = arith.constant 0 : i64
-    llvm.store %empty, %lengthSlot : i64, !llvm.ptr
+    llvm.store %none, %lengthSlot : i64, !llvm.ptr
+    cf.br ^started(%none : i64)
+  ^nested:
+    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    cf.br ^started(%length : i64)
+  ^started(%start: i64):
+    %startsSlot = llvm.mlir.addressof @strict_captured_starts : !llvm.ptr
+    %level = arith.minsi %depth, %deepest : i64
+    %startSlot = llvm.getelementptr %startsSlot[%level] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %start, %startSlot : i64, !llvm.ptr
+    %deeper = arith.addi %depth, %one : i64
+    llvm.store %deeper, %depthSlot : i64, !llvm.ptr
     %capture = arith.constant -1 : i64
     llvm.store %capture, %outputSlot : i64, !llvm.ptr
     return
   }
-  // the text collected since strict_capture_start, the output of this thread goes back to where it went before (only
-  // when it is capturing: a take without a start keeps the console or the socket of a served request)
+  // the text collected since the strict_capture_start it belongs to, the output of this thread goes back to where it went
+  // before when the outermost capture ends (only when it is capturing: a take without a start keeps the console or the
+  // socket of a served request)
   func.func private @strict_capture_taken() -> f64 {
     %dataSlot = llvm.mlir.addressof @strict_captured : !llvm.ptr
     %lengthSlot = llvm.mlir.addressof @strict_captured_length : !llvm.ptr
+    %depthSlot = llvm.mlir.addressof @strict_captured_depth : !llvm.ptr
+    %depth = llvm.load %depthSlot : !llvm.ptr -> i64
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %deepest = arith.constant 15 : i64
+    %isStarted = arith.cmpi sgt, %depth, %none : i64
+    %lower = arith.subi %depth, %one : i64
+    %left = arith.select %isStarted, %lower, %none : i64
+    llvm.store %left, %depthSlot : i64, !llvm.ptr
+    %level = arith.minsi %left, %deepest : i64
+    %startsSlot = llvm.mlir.addressof @strict_captured_starts : !llvm.ptr
+    %startSlot = llvm.getelementptr %startsSlot[%level] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %savedStart = llvm.load %startSlot : !llvm.ptr -> i64
+    %start = arith.select %isStarted, %savedStart, %none : i64
     %address = llvm.load %dataSlot : !llvm.ptr -> i64
-    %data = llvm.inttoptr %address : i64 to !llvm.ptr
-    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %buffer = llvm.inttoptr %address : i64 to !llvm.ptr
+    %data = llvm.getelementptr %buffer[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %end = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %length = arith.subi %end, %start : i64
     %room = func.call @strict_text_room(%length) : (i64) -> !llvm.ptr
     %copied = llvm.call @memcpy(%room, %data, %length) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %text = func.call @strict_text_made(%room, %length) : (!llvm.ptr, i64) -> f64
-    %empty = arith.constant 0 : i64
-    llvm.store %empty, %lengthSlot : i64, !llvm.ptr
+    llvm.store %start, %lengthSlot : i64, !llvm.ptr
     %beforeSlot = llvm.mlir.addressof @strict_captured_before : !llvm.ptr
     %before = llvm.load %beforeSlot : !llvm.ptr -> i64
     %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
     %current = llvm.load %outputSlot : !llvm.ptr -> i64
     %capture = arith.constant -1 : i64
     %isCapturing = arith.cmpi eq, %current, %capture : i64
-    %restored = arith.select %isCapturing, %before, %current : i64
+    %isOutermost = arith.cmpi eq, %left, %none : i64
+    %isEnding = arith.andi %isCapturing, %isOutermost : i1
+    %restored = arith.select %isEnding, %before, %current : i64
     llvm.store %restored, %outputSlot : i64, !llvm.ptr
     return %text : f64
   }
