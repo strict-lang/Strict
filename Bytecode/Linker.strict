@@ -78,11 +78,12 @@ Signatures(types Texts, targets Texts) Texts
 	Sample.Signatures("Strict/B", "Strict/B.Go") is ("Strict/B:Go")
 	Sample.Signatures("Strict/B", ("Strict/B.Go", "Strict/B.Add")) is ("Strict/B:Add;Go")
 	Sample.Signatures("Strict/B", ("Strict/B.Go", "Strict/B.F(A, B)")) is ("Strict/B:F(A, B);Go")
+	used = UsedMethods(targets)
 	for types
-		value + ":" + Text.Combine(UsedMethods(targets, value).Sorted, ";")
+		value + ":" + Text.Combine((value is in used then used(value) else List(Text)).Sorted, ";")
 BaseTypes(used Texts, targets Texts) Texts
 	Sample.BaseTypes(List(Text), "Strict/Bytecode/FileCompiler.Go") is List(Text)
-	Sample.UsedMethods("Strict/C.Go", "Strict/B") is List(Text)
+	"Strict/B" is not in Sample.UsedMethods(List(Text) + "Strict/C.Go")
 	Sample.BaseTypes(List(Text), "Strict/B.Go") is ("Strict/B")
 	Sample.BaseTypes(List(Text) + "Strict/C", "Strict/B.Go") is ("Strict/B", "Strict/C")
 	mutable types = List(Mutable(Text))
@@ -91,18 +92,21 @@ BaseTypes(used Texts, targets Texts) Texts
 	for (types + used).Unique
 		if value is not main.fullName
 			value
-UsedMethods(targets Texts, type Text) Texts
-	Sample.UsedMethods("Strict/B.Go", "Strict/B") is ("Go")
-	Sample.UsedMethods("Strict/Range.Count", "Strict/Range") is ("Count")
-	Sample.UsedMethods(("Strict/B.Go", "Strict/C.Go", "Strict/B.to Text"), "Strict/B") is ("Go", "to Text")
-	Sample.UsedMethods(("Strict/Number.to Text", "Strict/Number.Floor"), "Strict/Number") is ("Floor")
-	Sample.UsedMethods(("Strict/B.Go", "Strict/B.Go"), "Strict/B") is ("Go")
-	prefix = type + "."
-	mutable used = List(Mutable(Text))
+UsedMethods(targets Texts) Dictionary(Text, Texts)
+	Sample.UsedMethods(List(Text) + "Strict/B.Go")("Strict/B") is ("Go")
+	Sample.UsedMethods(List(Text) + "Strict/Range.Count")("Strict/Range") is ("Count")
+	Sample.UsedMethods(("Strict/B.Go", "Strict/C.Go", "Strict/B.to Text"))("Strict/B") is ("Go", "to Text")
+	Sample.UsedMethods(("Strict/Number.to Text", "Strict/Number.Floor"))("Strict/Number") is ("Floor")
+	Sample.UsedMethods(("Strict/B.Go", "Strict/B.Go"))("Strict/B") is ("Go")
+	mutable used = Dictionary(Text, Texts)
 	for targets
-		method = value.StartsWith(prefix) then value.Substring(prefix.Length, value.Length - prefix.Length) else ""
-		if method is not "" and method is not in used and IsNative(type, value.Split(".").Last) is false
-			used.Add(method)
+		dot = value.LastIndexOf(".")
+		type = value.Substring(0, dot)
+		method = value.Substring(dot + 1, value.Length - dot - 1)
+		if IsNative(type, method) is false
+			methods = type is in used then used(type) else List(Text)
+			if method is not in methods
+				used(type) = methods + method
 	used
 IsNative(type Text, method Text) Boolean
 	Sample.IsNative("Strict/Compiler/BuildProfile", "Detailed")
