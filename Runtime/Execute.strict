@@ -91,6 +91,7 @@ Served(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Answer
 		logger.Log(Summary(0, path))
 	Answer(answer, inferred = joined)
 Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInference, isOwn = false, isTested = true) Answer
+	begun = Process.Elapsed
 	cache = BinaryFile(FileCompiler.Normalized(path))
 	linked = FileCompiler(isQuiet, selection).Built(path, root, true, files, inference, known)
 	if linked is Error
@@ -104,6 +105,7 @@ Verified(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInfer
 	if tested.code is 0 and selection is "" and IsEdited(path) is false
 		Stored(cache, root, files, linked.linker.Sourced, isOwn, linked)
 	survived = tested.code is 0 and isTested then Mutated(types, path, root, files, inference, started) else 0
+	BuildProfile.Reported("Verified " + path, begun)
 	Answer(tested.code + survived, linked.Known(known), files = files, Types = types, constants = tested.constants)
 Stored(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound)
 	Execute.Stored(BinaryFile.Probe, ".", List(Text), Unstamped, true, LinkRound.Greeting) is not Error

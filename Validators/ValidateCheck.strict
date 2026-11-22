@@ -24,11 +24,19 @@ Validated(folder Text, root Text, mutations Texts) Number slow
 	stamp.Exists and stamp.ReadText is key then 0 else Fresh(folder, root, mutations, key)
 Fresh(folder Text, root Text, mutations Texts, key Text) Number slow
 	Directory.Create(EmptyPart) is not Error and ValidateCheck.Fresh(EmptyPart, ".", List(Text), "key") is 0
+	Changed(folder, key)
 	issues = Checked(folder, root, mutations)
 	if issues is 0
 		Directory.Create(folder + "/obj")
 		File(folder + "/obj/Validated.stamp").Write(key)
 	issues
+Changed(folder Text, key Text) slow
+	ValidateCheck.Changed(EmptyPart, "key") is not Error
+	stamp = File(folder + "/obj/Validated.stamp")
+	if BuildProfile.IsDetailed and stamp.Exists
+		differing = key.Split("\n") - stamp.ReadLines
+		first = differing.Length > 0 then differing.First else "a removed line"
+		logger.Log("Validation of " + folder + " is stale, first changed: " + first)
 Key(folder Text, root Text, mutations Texts) Text slow
 	ValidateCheck.Key("Examples/LinkChain", ".", List(Text)).IndexOf("LinkChain.strict|") > 0
 	files = Files(folder)
