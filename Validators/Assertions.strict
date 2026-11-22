@@ -1,5 +1,6 @@
 has lines Texts
 has typeName Text = ""
+constant Rule = "BooleanMethodMustBeAnAssertion"
 constant Hint = ", a Boolean method reads as an assertion: start its name with Is, Are, Has, Can or Should"
 constant Starts = ("Is", "Are", "Has", "Can", "Should")
 constant Plain = ("Number", "Boolean", "Text")
@@ -16,7 +17,7 @@ Issues List(ValidationIssue)
 	shape = TypeShape(lines)
 	for lines
 		if shape.IsMethodHeader(value) and IsUnasserted(value)
-			ValidationIssue("BooleanMethodMustBeAnAssertion", Tokenizer(value).Tokens.First + Hint, index + 1)
+			ValidationIssue(Rule, Tokenizer(value).Tokens.First + Hint, index + 1)
 IsUnasserted(header Text) Boolean
 	Completing.IsUnasserted("Completed Boolean")
 	Completing.IsUnasserted("IsDone(count Number) Boolean slow") is false
