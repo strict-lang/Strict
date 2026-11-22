@@ -23451,6 +23451,9 @@
     %isCapturing = arith.cmpi ne, %capturing, %none : i64
     cf.cond_br %isCapturing, ^end, ^done
   ^end:
+    // any thread can end the capture (strict_gpu_call ends it for a free or a module load of another thread, the warm
+    // thread loads the PTX), instantiating a graph needs the context current on this thread (else CUDA error 201)
+    %isCurrent = func.call @strict_gpu_current() : () -> i1
     %deferState = arith.constant 3 : i64
     %isDeferred = arith.cmpi eq, %capturing, %deferState : i64
     cf.cond_br %isDeferred, ^deferredEnd, ^captureEnd
