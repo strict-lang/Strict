@@ -1,6 +1,7 @@
 has folders Texts
 constant Adding = NativeSources(List(Text) + "Examples/NativeAdd/native")
 constant Paralleled = NativeSources(("Examples/NativeAdd/native", "NeuralNetworks/native"))
+constant Fresh = "Compiler/output/Fresh.1.exe"
 constant Iconed = "Examples/NativeAdd/NativeAdd"
 constant Resourced = " \"Examples/NativeAdd/NativeAdd.res\""
 constant Summed = " \"Examples/Sum.res\""
@@ -86,7 +87,14 @@ Inputs(platform Number, root Text) Texts
 	inputs
 Placed(building Text, library Text) Text
 	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
+	Intermediates.IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Intermediates.Holding) is 0
+	File(Fresh).Write("fresh") is not Error
+	Intermediates.IsWindows is false or Adding.Placed(Fresh, Intermediates.Kept) is Intermediates.Kept
 	File(building).Rename(library)
+	if File(building).Exists and File(library).Exists
+		aside = Path(library).RemoveExtension.text + ".old" + NativeLibrary.RandomSuffixRange.Random.Floor
+		File(library).Rename(aside + library.Substring(library.LastIndexOf(".")))
+		File(building).Rename(library)
 	unique = Path(building).RemoveExtension.text
 	for (".lib", ".exp")
 		if File(unique + value).Exists
