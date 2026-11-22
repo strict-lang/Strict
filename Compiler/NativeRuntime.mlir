@@ -21252,6 +21252,14 @@
     return %result : f64
   }
   // `GpuMemory.Yielded`: evict every device copy, then give the GPU lock back even when this process still holds more than 1 GB
+  func.func private @strict_gpu_yield(%self: f64) -> f64 {
+    %forwarded = func.call @strict_gpu_yielded(%self) : (f64) -> f64
+    return %forwarded : f64
+  }
+  func.func private @strict_gpu_finish(%self: f64) -> f64 {
+    %forwarded = func.call @strict_gpu_finished(%self) : (f64) -> f64
+    return %forwarded : f64
+  }
   func.func private @strict_gpu_yielded(%self: f64) -> f64 {
     %released = func.call @strict_gpu_evict_all(%self) : (f64) -> f64
     %none = arith.constant 0 : i64

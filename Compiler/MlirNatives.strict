@@ -145,7 +145,8 @@ GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Gpu", "Require") is "strict_gpu_require"
 	if name.StartsWith(TestCodegen.Runner)
 		return ""
-	"strict_gpu_" + (name is "Released" then "trim_unused" else (name is "Evicted" then "evict_all" else name.Lower))
+	trimmed = name is in ("Released", "Trim") then "trim_unused" else name.Lower
+	"strict_gpu_" + (name is in ("Evicted", "Evict") then "evict_all" else trimmed)
 Validated(name Text) Text
 	MlirNatives(MlirValidated.Kept.function, 2).Validated("Validated") is "strict_validated"
 	MlirNatives(MlirValidated.Changed.function, 2).Validated("Validated") is ""
