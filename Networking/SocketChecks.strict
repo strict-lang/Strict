@@ -8,9 +8,9 @@ Failures Number slow
 	Socket.Local(-1) is Error("InvalidPort")
 	Loopback(Socket.Listen(0)) is not Error
 	Loopback(Socket.Local(0)) is not Error
-	Reopened(Socket.Listen(0)) is not Error
+	Reopen(Socket.Listen(0)) is not Error
 	0
-Reopened(server Number) slow
+Reopen(server Number) slow
 	if server is Error
 		return Error("ServerNotOpened")
 	port = Socket.Port(server)
@@ -26,11 +26,11 @@ Reopened(server Number) slow
 Loopback(server Number) slow
 	if server is Error
 		return Error("ServerNotOpened")
-	connected = Connected(server)
+	connected = Connect(server)
 	Socket.Close(server)
 	if connected is Error
 		return connected
-Connected(server Number) slow
+Connect(server Number) slow
 	client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	if client is Error
 		return Error("ClientNotConnected")
@@ -38,12 +38,12 @@ Connected(server Number) slow
 	if accepted is Error
 		Socket.Close(client)
 		return Error("ClientNotAccepted")
-	exchanged = Exchanged(client, accepted)
+	exchanged = Exchange(client, accepted)
 	Socket.Close(accepted)
 	Socket.Close(client)
 	if exchanged is Error
 		return exchanged
-Exchanged(client Number, accepted Number) slow
+Exchange(client Number, accepted Number) slow
 	if Socket.Send(client, (1, 2, 3)) is Error
 		return Error("BytesNotSent")
 	received = Socket.Receive(accepted, 3)

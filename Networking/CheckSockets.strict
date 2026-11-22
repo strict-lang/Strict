@@ -18,10 +18,10 @@ Run Number
 	folder = "Examples/SocketCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	result = Check(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Checked(folder Text) slow
+Check(folder Text) slow
 	parallel = CheckedThreads(folder)
 	if parallel is Error
 		return parallel
@@ -53,6 +53,5 @@ CheckedThreads(folder Text) slow
 	if ran.exitCode is not 0
 		return Error("ThreadCheckFailed: " + ran.Output + ran.error)
 ThreadCode(dll Text) Texts
-	body = ("int main(void) {", "  void* lib = DLL_OPEN(\"" + dll + "\");") + CLookup
-	middle = body + CWinRun + CWinWait + CNixRun
+	middle = ("int main(void) {", "  void* lib = DLL_OPEN(\"" + dll + "\");") + CLookup + CWinRun + CWinWait + CNixRun
 	CIncludes + CWinHead + CPosix + CState + CWin + CWinTail + CNix + CNixTail + middle + CCheck
