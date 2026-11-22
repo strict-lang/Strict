@@ -90,10 +90,11 @@ Report(issues Texts) Number
 	issues.Length
 CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean) List(ValidationIssue)
 	(CheckFile("A.strict", Assertions.Completing.lines, "A", List(Text), false) to Text).IndexOf(Assertions.Rule) >= 0
+	(CheckFile("A.strict", ResultNames.Hosting.lines, "A", List(Text), false) to Text).IndexOf(ResultNames.Rule) >= 0
 	limits = Limits(lines, isBase, Limits.Scale(path), typeName).Issues + SubstringLengths(lines).Issues
 	rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	named = Names(lines).Issues + Recursions(lines, typeName).Issues + Assertions(lines, typeName).Issues
-	names = named + Inlines(lines).Issues
+	names = named + Inlines(lines).Issues + ResultNames(lines, typeName).Issues
 	based = (isBase then List(ValidationIssue) else BaseCalls(lines).Issues) + NotFoundResults(lines).Issues
 	shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based + SingleLists(lines).Issues
 	extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues

@@ -2,7 +2,7 @@ has lines Texts
 has typeName Text = ""
 constant Rule = "MethodNameMustFitItsResult"
 constant Strong = ("Ran", "Run", "Built", "Build", "Sent", "Send", "Made", "Make", "Found", "Find", "Kept", "Keep", "Written", "Write", "Shown", "Show", "Taken", "Take", "Held", "Hold", "Got", "Get")
-constant Irregular = Strong + ("Cached", "Cache", "Routed", "Route", "Completed", "Complete")
+constant Irregular = Strong + ("Cached", "Cache", "Routed", "Route", "Completed", "Complete", "Embed", "")
 constant Hosting = ResultNames(("Hosted(command Text)", "\tlogger.Log(command)"), "Strict")
 Issues List(ValidationIssue)
 	Hosting.Issues.First to Text is Rule + ": Hosted returns nothing, an action is named with its verb: Host"
@@ -22,9 +22,10 @@ Diagnose(header Text) Text
 	Hosting.Diagnose("Elapsed Number") is "" and Hosting.Diagnose("Speed(value Number) Number") is ""
 	Hosting.Diagnose("Cached(a Text)").EndsWith(": Cache") and Hosting.Diagnose("Routed(a Text)").EndsWith(": Route")
 	Hosting.Diagnose("Completed(a Text)").EndsWith(": Complete") and Hosting.Diagnose("Typed(a Text)").EndsWith(": Type")
+	Hosting.Diagnose("Embed(a Text) Numbers") is "" and Hosting.Diagnose("ReadModified(a Text) Number") is ""
 	tokens = HeaderTokens(Tokenizer(header).Tokens)
 	name = Tokenizer(header).Tokens.First
-	verb = Verb(name)
+	verb = IsVerbFirst(name) then "" else Verb(name)
 	returned = tokens.ReturnType
 	if verb is "" or returned is "Boolean" or TypeEntry.ShortName(returned) is TypeEntry.ShortName(typeName)
 		return ""
@@ -62,6 +63,14 @@ Stem(stem Text, last Text) Text
 	isRange = lower.EndsWith("chang") or lower.EndsWith("rang")
 	isSoft = lower.EndsWith("rg") or lower.EndsWith("eng") or lower.EndsWith("ung") or isRange
 	"vczu".IndexOf(last) >= 0 or isSibilant or isClosed or isSoft or IsSingleVowel(stem) then stem + "e" else stem
+IsVerbFirst(name Text) Boolean
+	Hosting.IsVerbFirst("ReadModified") and Hosting.IsVerbFirst("Hosted") is false
+	Hosting.IsVerbFirst("LoadedNames") is false
+	for name
+		letter = value to Text
+		if index > 0 and letter.Upper is letter and letter.Lower is not letter
+			return name.Substring(0, index).EndsWith("ed") is false
+	false
 IsSingleVowel(stem Text) Boolean
 	Hosting.IsSingleVowel("Stor") and Hosting.IsSingleVowel("Examin")
 	Hosting.IsSingleVowel("Join") is false and Hosting.IsSingleVowel("Edit") is false

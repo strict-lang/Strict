@@ -42,7 +42,7 @@ Prepared(input Numbers, sequences = 1) Hybrid
 CacheAll(block DeltaBlock, combined Numbers, sequences Number) DeltaBlock
 	Tiny.CacheAll(Block, Block.Combine(Drafter.Pair), 2).memory.Length is 2 * Block.memory.Length
 	isStep = combined.Length is sequences * block.Width
-	isStep then DeltaBatch(block, sequences).Cached(combined) else CacheEach(block, combined, sequences)
+	isStep then DeltaBatch(block, sequences).Step(combined) else CacheEach(block, combined, sequences)
 CacheEach(block DeltaBlock, combined Numbers, sequences Number) DeltaBlock slow
 	Tiny.CacheEach(Block, Block.Combine(Drafter.Pair), 2).memory.Length is 2 * Block.memory.Length
 	rows = combined.Length / sequences

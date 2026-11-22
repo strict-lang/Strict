@@ -4,10 +4,10 @@ constant Started = Hybrid.Single.Copies(2).layers.First
 constant Paired = DeltaBlock.Tiny.Combine(Drafter.Pair)
 constant Reference = Hybrid.Tiny.CacheEach(Started, Paired, 2)
 constant Batch = DeltaBatch(Started, 2)
-Cached(combined Numbers) DeltaBlock
-	Batch.Cached(Paired).memory is Reference.memory
-	Batch.Cached(Paired).window is Reference.window
-	Batch.Cached(Paired).merged is Reference.merged
+Step(combined Numbers) DeltaBlock
+	Batch.Step(Paired).memory is Reference.memory
+	Batch.Step(Paired).window is Reference.window
+	Batch.Step(Paired).merged is Reference.merged
 	keyed = block.Key(Convolve(combined))
 	memory = Update(keyed, block.Decay(combined, sequences), Read(keyed, block.memory, 1))
 	DeltaBlock(block, memory = memory, window = Shift(combined), merged = block.Gate(Read(keyed, memory, 0), combined))
