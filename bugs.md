@@ -8,6 +8,7 @@
 - `strict test Compiler native` fails `NativeBuild(false).Mlir("module {
 " + CpuNotice + "
 }", ".", Platform.Linux).Split(CpuNotice).Length is 2` (Compiler/NativeBuild.strict line 154) with `Error: Failed`; it was hidden behind a test that relaunched Tests.test.exe until the deadline (2026-11-22).
+- Inside `for texts` a constant of the own type (`Stepped(Key, index)`, Key is Numbers) is typed by inference as `value.Key` (Text characters, List.Key, so Character), while codegen loads the constant: `TypeInference.ImplicitValueType` resolves loop members through holders where `CallTarget.ImplicitOwner` does not (2026-11-22, found through the one-element wrap of 2225055e).
 
 `strict check` lets a second way of writing the same thing through (from the review of all DeltaEngine files, 2026-11-11, counts are DeltaEngine sites then):
 - `ErrorCheckCannotFail` misses callees of other types that turn every Error into a literal themselves (same-type callees are covered since 2026-11-21: a Boolean method of only `let` lines and `x is Error then <Boolean> else <Boolean>`, without `Error(`); other types need the records `SureMethods` only builds for base types.
