@@ -6,15 +6,13 @@ Tested Text slow
 	if trial.Name is ""
 		return ""
 	warm = Warm
-	trial.Written
-	File(trial.Located).InMemory(trial.source)
+	Placed
 	started = logger.Captured(true)
 	answer = Ran(warm)
 	output = started + logger.Captured(false)
 	answer is Error then output + answer to Text else output
 Warmed Answer slow
-	trial.Written
-	File(trial.Located).InMemory(trial.source)
+	Placed
 	started = logger.Captured(true)
 	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)))
 	output = started + logger.Captured(false)
@@ -24,3 +22,7 @@ Warmed Answer slow
 Ran(last Answer) Answer slow
 	request = TestRequest((trial.Located, TypeSource.Root, "unit"))
 	request.Executing(last.known, last.inferred).Served(trial.Located, TypeSource.Root)
+Placed slow
+	TrialRun(Trial.Adding).Placed is not Error and Execute.IsEdited(Trial.Adding.Located)
+	trial.Written
+	File(FileCompiler.Normalized(trial.Located)).InMemory(trial.source)

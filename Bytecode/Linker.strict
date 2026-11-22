@@ -17,6 +17,7 @@ constant Hello = Linker(".", TypeCodegen.Hello)
 constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/List(Byte)", List(InstructionEntry), false), List(MethodEntry))
 constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
 constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
+constant Knowing = Linker(Sample, Known = Dictionary(("Strict/Bytecode/HelloLogger:", TypeEntry.HelloLogger)))
 constant Housed = Linker(Sample, Homes = Dictionary(("Strict/Logger", TypeEntry.HelloLogger), ("Strict/Bytecode/Logged", TypeEntry.HelloLogger)))
 constant IsChecking = Process.Variable("STRICT_LINK_CHECK") is "1"
 constant Placed = BinarySources(List(Text) + "/elsewhere/Tripling.strict")
@@ -175,3 +176,8 @@ Targets(entries List(TypeEntry)) Texts
 	for entries
 		targets = targets + value.Invoked
 	targets
+KnownNames Texts
+	Knowing.KnownNames is ("HelloLogger")
+	Sample.KnownNames.Length is 0
+	for Known.keysAndValues
+		main.Local(Signature(value.Key).Type)
