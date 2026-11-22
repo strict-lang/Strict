@@ -1,10 +1,17 @@
 Run(folder Text, root Text) Number
+	started = Process.Elapsed
 	mutable issues = 0
 	for Parts(folder)
 		issues = issues + Checked(value, root)
+	BuildProfile.Reported("Check validation", started)
+	before = Process.Elapsed
 	issues = issues + ProjectRules(root).Checked(folder)
+	BuildProfile.Reported("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
-	issues + (issues is 0 then Folders.Tested(folder, root) else 0)
+	tested = Process.Elapsed
+	failed = issues is 0 then Folders.Tested(folder, root) else 0
+	BuildProfile.Reported("Check tests", tested)
+	issues + failed
 Parts(path Text) Texts slow
 	ValidateCheck.Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck.Parts("./Math") is ResolveCheck.Tree("./Math")
