@@ -22,10 +22,11 @@ IsUnasserted(header Text) Boolean
 	Completing.IsUnasserted("Completed Boolean")
 	Completing.IsUnasserted("IsDone(count Number) Boolean slow") is false
 	Completing.IsUnasserted("Island Number") is false
+	Completing.IsUnasserted("Result Boolean") is false
 	name = Tokenizer(header).Tokens.First
 	head = name(0)
 	isBoolean = header.EndsWith(" Boolean") or header.EndsWith(" Boolean slow")
-	isBoolean and head.Lower is not head and IsAsserted(name) is false
+	isBoolean and head.Lower is not head and name is not "Result" and IsAsserted(name) is false
 IsAsserted(name Text) Boolean
 	Completing.IsAsserted("HasMask") and Completing.IsAsserted("Island") is false
 	Completing.IsAsserted("AreNames") and Completing.IsAsserted("Area") is false
