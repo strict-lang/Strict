@@ -3,8 +3,8 @@ constant Sizing = TextJoins(ArgumentTypes.Sizing.inference)
 constant Named = Scope(("name", "names"), ("Text", "Texts"))
 constant Listed = SyntaxParser(Tokenizer("\"a\" + names").Tokens).Parse
 constant Joins = ("\"a\" + (1, 2)", "\"a\" + (1, name)", "\"a\" + name", "names + \"a\"", "name + name", "name is names", "names + names")
-constant Issues = (Sizing.Issue(Parsed(0), Named, Named), Sizing.Issue(Parsed(1), Named, Named))
-constant Passes = (Sizing.Issue(Parsed(2), Named, Named), Sizing.Issue(Parsed(3), Named, Named), Sizing.Issue(Parsed(4), Named, Named), Sizing.Issue(Parsed(5), Named, Named), Sizing.Issue(Parsed(6), Named, Named))
+constant Issues = (Sizing.Issue(Parse(0), Named, Named), Sizing.Issue(Parse(1), Named, Named))
+constant Passes = (Sizing.Issue(Parse(2), Named, Named), Sizing.Issue(Parse(3), Named, Named), Sizing.Issue(Parse(4), Named, Named), Sizing.Issue(Parse(5), Named, Named), Sizing.Issue(Parse(6), Named, Named))
 Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(Listed, Named, Named).EndsWith(": \"a\" + names converts the list names implicitly, write names to Text")
 	Issues(0).StartsWith("ListToTextMustBeExplicit") and Issues(1).StartsWith("ListToTextMustBeExplicit")
@@ -17,6 +17,6 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	right = node.children.Last
 	advice = " implicitly, write " + right + " to Text"
 	isList then "ListToTextMustBeExplicit: " + node + " converts the list " + right + advice else ""
-Parsed(at Number) SyntaxNode
-	Parsed(4) to Text is "name + name"
+Parse(at Number) SyntaxNode
+	Parse(4) to Text is "name + name"
 	SyntaxParser(Tokenizer(Joins(at)).Tokens).Parse

@@ -17,7 +17,7 @@ Rewritten Texts
 		FusedLine(value)
 FusedLine(line Text) Text
 	Averaging.FusedLine("\tOnes(2).Average") is "\tOnesAveraged(2)"
-	if Averaged(line) is ""
+	if Average(line) is ""
 		return line
 	at = line.IndexOf(").Average")
 	start = Opening(line, at)
@@ -27,13 +27,13 @@ Called Texts
 	Averaging.Called is ("Ones")
 	mutable names = List(Mutable(Text))
 	for lines
-		name = Averaged(value)
+		name = Average(value)
 		if name is not "" and name is not in names
 			names.Add(name)
 	names
-Averaged(line Text) Text
-	Averaging.Averaged("\tOnes(2).Average") is "Ones"
-	Averaging.Averaged("\tx.Ones(2).Average") is ""
+Average(line Text) Text
+	Averaging.Average("\tOnes(2).Average") is "Ones"
+	Averaging.Average("\tx.Ones(2).Average") is ""
 	at = line.IndexOf(").Average")
 	start = at < 0 then -1 else Opening(line, at)
 	if start < 1

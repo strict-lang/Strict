@@ -115,5 +115,5 @@ Checks(header HeaderTokens, line Number) SyntaxNodes
 	for header.ParameterNames
 		constraint = Constraint.Checking(Constraint.Parameter(header, value))
 		if constraint is not ""
-			checks.Add(Constraint(value, parameterTypes(index), values.inference.types).Checked(constraint, line))
+			checks.Add(Constraint(value, parameterTypes(index), values.inference.types).Check(constraint, line))
 	checks

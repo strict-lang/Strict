@@ -120,7 +120,7 @@ ShapeScope(typeName Text) Scope
 	Nested.DeclaredType("G", "Length", 1) is ""
 	Measured.DeclaredType("F", "Length", 0) is ""
 	Sample.ShapeScope("Count").TypeOf("Increment") is "Count"
-	Composition(value).Scoped(typeName)
+	Composition(value).Compose(typeName)
 ElementType(typeName Text) Text
 	Sample.ElementType("Texts") is "Text" and Sample.ElementType("Range") is "Number"
 	Sample.ElementType("Iterator(Text)") is "Text" and Sample.ElementType("Text") is "Character"
@@ -158,7 +158,7 @@ ResolvedType(instanceType Text, name Text, depth Number) Text
 	if type is "Generic"
 		return Instantiation(value).Argument(instanceType, name)
 	if type.IndexOf("(") > 0 and BaseName(type) is BaseName(instanceType)
-		return Instantiation(value).Substituted(instanceType, type)
+		return Instantiation(value).Substitute(instanceType, type)
 	isInherited = MembersOf(instanceType).TypeOf(name) is "" and MethodsOf(instanceType).TypeOf(name) is ""
 	isOwn = type is in ("List", BaseName(instanceType)) or isInherited and MethodsOf("Any").TypeOf(name) is "Any"
 	isOwn or isInherited and type is ValueOf(instanceType) then instanceType else type
@@ -179,11 +179,11 @@ DeclaredType(typeName Text, name Text, depth Number) Text
 	if MethodsOf(typeName).TypeOf(name) is not "" or depth is 0
 		return MethodsOf(typeName).TypeOf(name)
 	holder = Holder(typeName, name, depth)
-	holder is "" then Inherited(typeName, name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)
-Inherited(typeName Text, name Text) Text
-	Options.Inherited("Settings", "Usage") is "Text"
-	Options.Inherited("Text", "Usage") is ""
-	Options.Inherited("Text", "to") is "Text"
+	holder is "" then Inherit(typeName, name) else MemberMethodType(typeMembers.TypeOf(holder), name, depth - 1)
+Inherit(typeName Text, name Text) Text
+	Options.Inherit("Settings", "Usage") is "Text"
+	Options.Inherit("Text", "Usage") is ""
+	Options.Inherit("Text", "to") is "Text"
 	if name is not in ("Parsed", "Usage")
 		return MethodsOf("Any").TypeOf(name)
 	for MembersOf(typeName).names

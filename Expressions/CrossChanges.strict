@@ -7,15 +7,15 @@ constant Counted = CrossChanges(("A", "B"), (Calling, Counting))
 constant Sample = CrossChanges(("A", "B"), (Calling, Reading))
 constant Marked = (Scope(List(Text) + "Go changes", List(Text) + "changes"), KnownTypes.NoMembers)
 constant Suffix = " changes"
-Settled(parameters List(Scope)) List(Scope)
-	Sample.Settled(Marked).First.TypeOf("Go changes") is ""
-	Counted.Settled((Marked.First, Marked.First)).First.TypeOf("Go changes") is "changes"
+Settle(parameters List(Scope)) List(Scope)
+	Sample.Settle(Marked).First.TypeOf("Go changes") is ""
+	Counted.Settle((Marked.First, Marked.First)).First.TypeOf("Go changes") is "changes"
 	mutable settled = parameters
 	mutable marks = Marks(settled)
 	mutable previous = -1
 	for as long as marks.names.Length is not previous
 		previous = marks.names.Length
-		settled = Refreshed(settled, marks)
+		settled = RefreshAll(settled, marks)
 		marks = Marks(settled)
 	settled
 Marks(parameters List(Scope)) Scope
@@ -36,8 +36,8 @@ Kinds(keys Texts) Texts
 	Sample.Kinds(("A.", "A.Go")) is ("known", "changes")
 	for keys
 		value.EndsWith(".") then "known" else "changes"
-Refreshed(parameters List(Scope), marks Scope) List(Scope)
-	Sample.Refreshed(Marked, Sample.Marks(Marked)).Last is KnownTypes.NoMembers
+RefreshAll(parameters List(Scope), marks Scope) List(Scope)
+	Sample.RefreshAll(Marked, Sample.Marks(Marked)).Last is KnownTypes.NoMembers
 	for parameters
 		Refresh(shapes(index).lines, value, marks)
 Refresh(lines Texts, scope Scope, marks Scope) Scope

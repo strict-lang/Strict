@@ -17,7 +17,7 @@ Completed(main TypeCodegen, entry TypeEntry, targets Texts) TypeEntry
 	Memberless.Completed(TypeCodegen.Hello, TypeEntry.HelloLogger, HelloParsed) is TypeEntry.HelloLogger
 	prefix = main.fullName + "."
 	wanted = (prefix + "Parsed") is in targets or prefix + "Usage" is in targets
-	if wanted is false or automatic.instantiation.types.Inherited(automatic.instance, "Parsed") is ""
+	if wanted is false or automatic.instantiation.types.Inherit(automatic.instance, "Parsed") is ""
 		return entry
 	names = entry.Chosen("Parsed", -1, "Parsed", List(Text)) < 0 then List(Text) + "Parsed" else List(Text)
 	missing = names + (entry.Chosen("Usage", -1, "Usage", List(Text)) < 0 then List(Text) + "Usage" else List(Text))

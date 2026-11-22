@@ -11,12 +11,12 @@ Condition(body Texts) Texts
 	for body.Length
 		line = body(body.Length - 1 - index)
 		if line.StartsWith("\tlet ")
-			tokens = Substituted(tokens, Tokenizer(line.Substring(5, line.Length - 5)).Tokens)
+			tokens = Substitute(tokens, Tokenizer(line.Substring(5, line.Length - 5)).Tokens)
 		else if Tokenizer(line.TrimStart).Tokens.First is in ("for", "mutable", "if", "return")
 			return List(Text)
 	tokens
-Substituted(tokens Texts, definition Texts) Texts
-	InX.Substituted(("a", "+", "b"), ("b", "=", "c", "*", "2")) is ("a", "+", "(", "c", "*", "2", ")")
+Substitute(tokens Texts, definition Texts) Texts
+	InX.Substitute(("a", "+", "b"), ("b", "=", "c", "*", "2")) is ("a", "+", "(", "c", "*", "2", ")")
 	mutable result = List(Mutable(Text))
 	for tokens
 		if value is definition.First

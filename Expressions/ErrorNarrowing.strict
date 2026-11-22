@@ -7,13 +7,13 @@ constant Called = SyntaxNode("Call", "is", Checked.children)
 constant NumberA = Scope(List(Text) + "a", List(Text) + "Number")
 constant MixedA = Scope(List(Text) + "a", List(Text) + "Number or Text")
 constant IsNumber = SyntaxParser(Tokenizer("a is Number").Tokens).Parse
-Narrowed(condition SyntaxNode, scope Scope, methods Scope) Scope
-	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Checked, NumberA, NumberA).TypeOf("a") is "Error"
-	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Compared, NumberA, NumberA).TypeOf("a") is "Number"
-	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Negated, NumberA, NumberA).TypeOf("a") is "Number"
-	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Literal, NumberA, NumberA) is NumberA
-	ErrorNarrowing(MethodBodies.NoInference).Narrowed(Called, NumberA, NumberA) is NumberA
-	ErrorNarrowing(MethodBodies.NoInference).Narrowed(IsNumber, MixedA, MixedA).TypeOf("a") is "Number"
+Narrow(condition SyntaxNode, scope Scope, methods Scope) Scope
+	ErrorNarrowing(MethodBodies.NoInference).Narrow(Checked, NumberA, NumberA).TypeOf("a") is "Error"
+	ErrorNarrowing(MethodBodies.NoInference).Narrow(Compared, NumberA, NumberA).TypeOf("a") is "Number"
+	ErrorNarrowing(MethodBodies.NoInference).Narrow(Negated, NumberA, NumberA).TypeOf("a") is "Number"
+	ErrorNarrowing(MethodBodies.NoInference).Narrow(Literal, NumberA, NumberA) is NumberA
+	ErrorNarrowing(MethodBodies.NoInference).Narrow(Called, NumberA, NumberA) is NumberA
+	ErrorNarrowing(MethodBodies.NoInference).Narrow(IsNumber, MixedA, MixedA).TypeOf("a") is "Number"
 	isChecked = condition.Kind is "Binary" and condition.text is "is" and condition.children(0).Kind is "Identifier"
 	isError = isChecked and inference.TypeOf(condition.children(1), scope, methods) is "Error"
 	tested = isChecked then condition.children(1).text else ""

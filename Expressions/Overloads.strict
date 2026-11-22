@@ -78,13 +78,13 @@ Ordinal(owner Text, method Text, arguments Texts, isExact Boolean) Number
 	for scope.names
 		if value is method + " types"
 			ordinal = ordinal + 1
-			if Fits(types.ParameterNames(scope.types(index)), arguments, owner, isExact, Required(owner, method, ordinal).Length)
+			if Fits(types.ParameterNames(scope.types(index)), arguments, owner, isExact, Require(owner, method, ordinal).Length)
 				return ordinal
 	Number.NotFound
-Required(owner Text, method Text, ordinal Number) Texts
-	Defaulted.Required("D", "from", 1) is ("a") and Defaulted.Required("D", "from", 0) is ("text")
-	Labeling.Required("Labeler", "Labels", 0).Length is 0
-	Defaulted.Required("D", "Get", 1).Length is 0 and Defaulted.Required("D", "Get", 0) is ("x", "b")
+Require(owner Text, method Text, ordinal Number) Texts
+	Defaulted.Require("D", "from", 1) is ("a") and Defaulted.Require("D", "from", 0) is ("text")
+	Labeling.Require("Labeler", "Labels", 0).Length is 0
+	Defaulted.Require("D", "Get", 1).Length is 0 and Defaulted.Require("D", "Get", 0) is ("x", "b")
 	Defaulted.Chosen("D", "Get", List(Text) + "Number") is 1 and Defaulted.Chosen("D", "Get", List(Text)) is 1
 	scope = types.ParameterScope(owner)
 	for scope.TypeAt(method, ordinal).Split(",")
@@ -124,25 +124,26 @@ Converts(argument Text, declared Text) Boolean
 		return true
 	converter = TypeInference(types, List(Scope)).Converter(argument, declared)
 	converter is "from" or converter is "to" and ListFits(types).Elements(argument).Length is 0
-Returned(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
-	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
-	Labeling.Returned(SyntaxNode("Call", "Labels"), LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
-	Scaling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
-	Labeling.Returned(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
-	Scaling.Returned(SyntaxNode("Call", "Scaled"), LabelInference, KnownTypes.NoMembers, Scaler.methods(0)) is ""
-	Labeling.Returned(LabelsCall, LabelInference, KnownTypes.NoMembers, Relabeled) is ""
-	Presetting.Returned(PresetRead, LabelInference, KnownTypes.NoMembers, Presets.methods(0)) is "Number"
+CheckReturn(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Text
+	Labeling.CheckReturn(LabelsCall, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "List(Numbers)"
+	Labeling.CheckReturn(TypeInference.Labels, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
+	Scaling.CheckReturn(LabelsCall, LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is ""
+	Labeling.CheckReturn(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)) is "Numbers"
+	Scaling.CheckReturn(SyntaxNode("Call", "Scaled"), LabelInference, KnownTypes.NoMembers, Scaler.methods(0)) is ""
+	Labeling.CheckReturn(LabelsCall, LabelInference, KnownTypes.NoMembers, Relabeled) is ""
+	Presetting.CheckReturn(PresetRead, LabelInference, KnownTypes.NoMembers, Presets.methods(0)) is "Number"
 	position = types.Index(current.owner)
 	if position < 0 or current.Count(node.text) < 2
-		return Indexed(node, current)
+		return CheckIndex(node, current)
 	current.TypeAt(node.text, Chosen(types.names(position), node.text, Arguments(node, inference, scope, current)))
-Indexed(node SyntaxNode, current Scope) Text
-	Presetting.Indexed(PresetRead, Presets.methods(0)) is "Number"
-	Presetting.Indexed(SyntaxNode("Call", "Preset"), Presets.methods(0)) is ""
-	Presetting.Indexed(SyntaxParser(Tokenizer("Other(0)").Tokens).Parse, Presets.methods(0)) is ""
-	Presetting.Indexed(PresetRead, KnownTypes.NoMembers) is ""
-	Labeling.Indexed(LabelsCall, Labeler.methods(0)) is "" and Labeling.Indexed(LabelsMember, Labeler.methods(0)) is ""
-	Scaling.Indexed(ScaledRead, Scaler.methods(0)) is ""
+CheckIndex(node SyntaxNode, current Scope) Text
+	Presetting.CheckIndex(PresetRead, Presets.methods(0)) is "Number"
+	Presetting.CheckIndex(SyntaxNode("Call", "Preset"), Presets.methods(0)) is ""
+	Presetting.CheckIndex(SyntaxParser(Tokenizer("Other(0)").Tokens).Parse, Presets.methods(0)) is ""
+	Presetting.CheckIndex(PresetRead, KnownTypes.NoMembers) is ""
+	Labeling.CheckIndex(LabelsCall, Labeler.methods(0)) is ""
+	Labeling.CheckIndex(LabelsMember, Labeler.methods(0)) is ""
+	Scaling.CheckIndex(ScaledRead, Scaler.methods(0)) is ""
 	position = types.Index(current.owner)
 	if position < 0 or node.Kind is not "Call" or node.children.Length is not 1
 		return ""
@@ -168,16 +169,16 @@ Unfit(call SyntaxNode, instance Text, method Text, inference TypeInference, scop
 	"NoOverloadFits: " + target + " got " + Text.Combine(arguments, ", ")
 Arguments(node SyntaxNode, inference TypeInference, scope Scope, current Scope) Texts
 	Labeling.Arguments(LabelsMember, LabelInference, KnownTypes.NoMembers, Labeler.methods(0)).Length is 0
-	Picking.Typed(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"
-	Picking.Typed(Mixing, "A", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Unknown"
+	Picking.Infer(SyntaxNode("Identifier", "value"), "A", LabelInference, KnownTypes.NoMembers, Relabeled) is "A"
+	Picking.Infer(Mixing, "A", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Unknown"
 	Scaling.Unfit(SyntaxNode("Call", "Scaled"), "Scaler", "Scaled", ScalerInference, Scalers, Scalers).StartsWith("No")
-	Picking.Typed(SecondCall, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Text"
+	Picking.Infer(SecondCall, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Text"
 	for Range(node.Kind is in ("Member", "MethodCall") then 1 else 0, node.children.Length)
 		inference.TypeOf(node.children(value), scope, current)
-Typed(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, current Scope) Text
-	Picking.Typed(Mixing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Numbers"
-	Picking.Typed(Choosing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Text"
-	Labeling.Typed(LabelerLabels, "Labeler", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "List(Numbers)"
+Infer(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, current Scope) Text
+	Picking.Infer(Mixing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Numbers"
+	Picking.Infer(Choosing, "Picker", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "Text"
+	Labeling.Infer(LabelerLabels, "Labeler", LabelInference, KnownTypes.NoMembers, KnownTypes.NoMembers) is "List(Numbers)"
 	if node.text is "value"
 		return instanceType
 	position = types.Index(instanceType)
@@ -185,15 +186,15 @@ Typed(node SyntaxNode, instanceType Text, inference TypeInference, scope Scope, 
 	if declared is not in ("Generic", "Generics")
 		return types.MemberType(instanceType, node.text)
 	parameters = types.ParameterNames(types.parameters(position).TypeOf(node.text + " types"))
-	specialized = Specialized(declared, parameters, Arguments(node, inference, scope, current))
+	specialized = Specialize(declared, parameters, Arguments(node, inference, scope, current))
 	specialized is declared then types.MemberType(instanceType, node.text) else specialized
-Specialized(type Text, declared Texts, arguments Texts) Text
-	Picking.Specialized("Generics", "Generics", "Numbers") is "Numbers"
-	Picking.Specialized("Generic", ("Number", "Generics"), ("Number", "Texts")) is "Text"
-	Picking.Specialized("Generic", "Number", "Number") is "Generic"
-	Picking.Specialized("Generic", ("Number", "Generic"), ("Number", "Texts")) is "Texts"
-	Picking.Specialized("Generic", List(Text) + "Generic", List(Text)) is "Generic"
-	Picking.Specialized("Generic", ("Number", "Generic"), List(Text)) is "Generic"
+Specialize(type Text, declared Texts, arguments Texts) Text
+	Picking.Specialize("Generics", "Generics", "Numbers") is "Numbers"
+	Picking.Specialize("Generic", ("Number", "Generics"), ("Number", "Texts")) is "Text"
+	Picking.Specialize("Generic", "Number", "Number") is "Generic"
+	Picking.Specialize("Generic", ("Number", "Generic"), ("Number", "Texts")) is "Texts"
+	Picking.Specialize("Generic", List(Text) + "Generic", List(Text)) is "Generic"
+	Picking.Specialize("Generic", ("Number", "Generic"), List(Text)) is "Generic"
 	at = declared.Index("Generics") >= 0 then declared.Index("Generics") else declared.Index("Generic")
 	if at < 0 or at >= arguments.Length
 		return type
@@ -209,10 +210,10 @@ Ambiguities(path Text, lines Texts) Texts
 		if value is not "" and signatures.Index(value) < index
 			first = signatures.Index(value) + 1
 			rule = value.EndsWith(")") then "OverloadsNeedDifferentParameterNames: " else "NameAlreadyDeclared: "
-			ResolveCheck.Located(path, index + 1, rule + value + " like line " + first)
+			ResolveCheck.Locate(path, index + 1, rule + value + " like line " + first)
 Signatures(lines Texts) Texts
 	Scaling.Signatures(Valued) is ("Value(name, default)", "", "Value(name, default)", "")
-	Picking.Typed(SyntaxNode("Call", "Chosen"), "Picker", LabelInference, Relabeled, Relabeled) is "Unknown"
+	Picking.Infer(SyntaxNode("Call", "Chosen"), "Picker", LabelInference, Relabeled, Relabeled) is "Unknown"
 	shape = TypeShape(lines)
 	for lines
 		tokens = Tokenizer(value).Tokens

@@ -83,7 +83,7 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
 		Log(value, found + reached + tested + TestFiles(value, lines, known(1)).Issues) + Resolve(value, inference)
 Resolve(path Text, inference Expressions/TypeInference) Number slow
-	Report(ResolveCheck.Unresolved(path, inference))
+	Report(ResolveCheck.Resolve(path, inference))
 Report(issues Texts) Number
 	for issues
 		logger.Log(value)
@@ -100,7 +100,7 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
 Log(path Text, found List(ValidationIssue)) Number
 	for found
-		logger.Log(ResolveCheck.Located(path, value.Line, value to Text))
+		logger.Log(ResolveCheck.Locate(path, value.Line, value to Text))
 	found.Length
 Mutations(files Texts) Texts slow
 	mutable mutations = List(Mutable(Text))

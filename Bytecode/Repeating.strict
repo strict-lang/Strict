@@ -24,7 +24,7 @@ Enumerated(loop SyntaxNode) SyntaxNode
 	Plain.Enumerated(Counting) is Counting
 	Shading.Enumerated(ShadeLoop).Kind is "For" and Shading.values.inference.types.members.Length is 1
 	Shading.Enumerated(SyntaxNode("For", "", (SyntaxNode("Body", "Shade"), SyntaxNode("Body", "")))).HasValue is false
-	named = loop.HasValue then values.inference.Enumerated(loop.children(0).text) else List(Text)
+	named = loop.HasValue then values.inference.Enumerate(loop.children(0).text) else List(Text)
 	if named.Length is 0
 		return loop
 	type = loop.children(0).text

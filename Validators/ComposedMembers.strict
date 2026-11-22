@@ -21,7 +21,7 @@ Issues List(ValidationIssue)
 		issues = issues + NodeIssues(value.statement, value.scope, value.line + 1, target)
 	issues
 NodeIssues(node SyntaxNode, scope Scope, line Number, target Bytecode/CallTarget) List(ValidationIssue)
-	Sample.NodeIssues(FileCheck.Parsed("(Size.Width)"), Scoped, 4, Boxing).First.Line is 4
+	Sample.NodeIssues(FileCheck.Parse("(Size.Width)"), Scoped, 4, Boxing).First.Line is 4
 	ComposedMembers(("has Size", "Run", "\tif Size.Width > 1", "\t\tSize.Height"), "Box", Sized).Issues.Length is 2
 	mutable issues = List(Mutable(ValidationIssue))
 	composed = Compose(node, scope, target)
@@ -32,19 +32,19 @@ NodeIssues(node SyntaxNode, scope Scope, line Number, target Bytecode/CallTarget
 			issues = issues + NodeIssues(value, scope, line, target)
 	issues
 Compose(node SyntaxNode, scope Scope, target Bytecode/CallTarget) Text
-	Sample.Compose(FileCheck.Parsed("area.Size"), Scoped, Boxing) is ""
-	Sample.Compose(FileCheck.Parsed("Size(1, 2).Width"), Scoped, Boxing) is ""
-	Sample.Compose(FileCheck.Parsed("Width"), Scoped, Boxing) is ""
-	Other.Compose(FileCheck.Parsed("area.Size.Width"), Scoped, Boxing) is "area.Size.Width, write area.Width"
+	Sample.Compose(FileCheck.Parse("area.Size"), Scoped, Boxing) is ""
+	Sample.Compose(FileCheck.Parse("Size(1, 2).Width"), Scoped, Boxing) is ""
+	Sample.Compose(FileCheck.Parse("Width"), Scoped, Boxing) is ""
+	Other.Compose(FileCheck.Parse("area.Size.Width"), Scoped, Boxing) is "area.Size.Width, write area.Width"
 	if node.Kind is not in ("Member", "MethodCall") or node.children(0).Kind is not in ("Member", "Identifier")
 		return ""
 	held = node.children(0)
 	owner = held.Kind is "Member" then inference.TypeOf(held.children(0), scope, scope) else typeName
 	Write(held, node.text, owner, target)
 Write(held SyntaxNode, name Text, owner Text, target Bytecode/CallTarget) Text
-	Sample.Write(FileCheck.Parsed("area.Size"), "Height", "Box", Boxing) is "area.Size.Height, write area.Height"
-	Sample.Write(FileCheck.Parsed("Size"), "Area", "Box", Boxing) is "Size.Area, write Area"
-	Areas.Write(FileCheck.Parsed("Area"), "Width", "Box", Area) is ""
+	Sample.Write(FileCheck.Parse("area.Size"), "Height", "Box", Boxing) is "area.Size.Height, write area.Height"
+	Sample.Write(FileCheck.Parse("Size"), "Area", "Box", Boxing) is "Size.Area, write Area"
+	Areas.Write(FileCheck.Parse("Area"), "Width", "Box", Area) is ""
 	if inference.types.MembersOf(owner).TypeOf(held.text) is not held.text
 		return ""
 	direct = held.Kind is "Member" then held.children(0) to Text + "." + name else name

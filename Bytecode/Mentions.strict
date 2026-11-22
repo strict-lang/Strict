@@ -120,5 +120,5 @@ Hidden(path Text, type Text) Text
 	shape = TypeShape(lines)
 	for lines
 		if shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is type
-			return ResolveCheck.Located(path, index + 1, HiddenType + type + ", the method " + type + " hides the type")
+			return ResolveCheck.Locate(path, index + 1, HiddenType + type + ", the method " + type + " hides the type")
 	""

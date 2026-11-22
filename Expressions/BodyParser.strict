@@ -15,13 +15,13 @@ Method(start Number) SyntaxNode
 	BodyParser("Run", "\tfor y, x in height, width", "\t\ty + x").Method(1).Lines("\t").Last is "\t\t\touter + value"
 	BodyParser("a", "B = 1").Method(0).children.Length is 0
 	if start > 0 and TypeShape(lines).IsComputed(lines(start - 1))
-		return Computed(start - 1)
-	NamedIterators.Unrolled(Definitions(lines).Inlined(Block(start, 1), start))
-Computed(header Number) SyntaxNode
-	BodyParser("Next(add = 1) = add + 1").Computed(0).children.First to Text is "add + 1"
-	BodyParser("Next(add = 1) = add + 1").Computed(0).Kind is "Body"
-	BodyParser("Next(add = 1) = add + 1").Computed(0).children.Length is 1
-	BodyParser("Next(add = 1) = add + 1").Computed(0).children.First.line is 1
+		return Compute(start - 1)
+	NamedIterators.Unroll(Definitions(lines).Inline(Block(start, 1), start))
+Compute(header Number) SyntaxNode
+	BodyParser("Next(add = 1) = add + 1").Compute(0).children.First to Text is "add + 1"
+	BodyParser("Next(add = 1) = add + 1").Compute(0).Kind is "Body"
+	BodyParser("Next(add = 1) = add + 1").Compute(0).children.Length is 1
+	BodyParser("Next(add = 1) = add + 1").Compute(0).children.First.line is 1
 	tokens = Tokenizer(lines(header)).Tokens
 	assigned = SyntaxParser(tokens).ParseRange(HeaderTokens(tokens).ParametersEnd + 2, tokens.Length)
 	SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode(assigned.Kind, assigned.text, assigned.children, header + 1))

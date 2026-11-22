@@ -12,48 +12,48 @@ constant Unused = SyntaxNode("Body", "", (CallsNext, Next, SyntaxNode("Number", 
 constant Member = SyntaxNode("Reassignment", "", (SyntaxNode("Member", "b"), Body))
 constant LetNext = SyntaxNode("Declaration", "let next", List(SyntaxNode) + SyntaxNode("Number", "5"))
 constant Redeclared = BodyParser(("Run", "\tlet next = 1", "\tnext = 2")).Block(1, 1)
-Inlined(body SyntaxNode, start Number) SyntaxNode
-	Positions.Inlined(Body, 1).children.Length is 4
-	Positions.Inlined(Body, 1).children.Last to Text is "position + 2"
-	Positions.Defined(Next, List(Text), List(SyntaxNode)).Kind is "Computed"
-	Positions.Defined(Member, List(Text), List(SyntaxNode)).Kind is "Reassignment"
-	Positions.Defined(Member, List(Text), List(SyntaxNode) + SyntaxNode("Computed", "b")).Kind is "Reassignment"
-	Positions.Expanded(Redeclared, List(Text), List(SyntaxNode)).children.Last.Kind is "Reassignment"
-	Positions.Defined(SyntaxNode("Reassignment", "", (NextTwo, Body)), List(Text), List(SyntaxNode)).Kind is "Reassignment"
-	Expanded(body, Known(start), List(SyntaxNode))
+Inline(body SyntaxNode, start Number) SyntaxNode
+	Positions.Inline(Body, 1).children.Length is 4
+	Positions.Inline(Body, 1).children.Last to Text is "position + 2"
+	Positions.Define(Next, List(Text), List(SyntaxNode)).Kind is "Computed"
+	Positions.Define(Member, List(Text), List(SyntaxNode)).Kind is "Reassignment"
+	Positions.Define(Member, List(Text), List(SyntaxNode) + SyntaxNode("Computed", "b")).Kind is "Reassignment"
+	Positions.Expand(Redeclared, List(Text), List(SyntaxNode)).children.Last.Kind is "Reassignment"
+	Positions.Define(SyntaxNode("Reassignment", "", (NextTwo, Body)), List(Text), List(SyntaxNode)).Kind is "Reassignment"
+	Expand(body, Known(start), List(SyntaxNode))
 Known(start Number) Texts
 	Definitions(("has count Number", "Add(other Number) Number", "\tother")).Known(2) is ("count", "other", "value")
 	Definitions(("has count Number", "Add(other Number) Number")).Known(0) is ("count", "value")
 	header = start > 0 then HeaderTokens(Tokenizer(lines(start - 1)).Tokens).ParameterNames else List(Text)
 	TypeShape(lines).MemberScope.names + header + "value"
-Expanded(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
-	Positions.Expanded(Body, ("value", "position"), List(SyntaxNode)).children(1) to Text is "position + 1"
+Expand(body SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Expand(Body, ("value", "position"), List(SyntaxNode)).children(1) to Text is "position + 1"
 	mutable names = known
 	mutable computed = definitions
 	mutable statements = List(Mutable(SyntaxNode))
 	for body.children
-		statement = Used(Substituted(Defined(value, names, computed), computed), body, index)
+		statement = Used(Substitute(Define(value, names, computed), computed), body, index)
 		computed = statement.Kind is "Computed" then computed + statement else computed
 		if statement.Kind is not "Computed"
-			statements.Add(Nested(statement, names, computed))
-		names = names + Declared(statement)
+			statements.Add(Nest(statement, names, computed))
+		names = names + Declare(statement)
 	SyntaxNode(body.Kind, body.text, statements, body.line)
-Nested(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
-	Positions.Nested(Branch, List(Text), List(SyntaxNode)).children.Last.children.Length is 4
-	Positions.Nested(SyntaxNode("If", "", (CallsNext, Body)), List(Text), List(SyntaxNode) + Next).children(0) is CallsNext
+Nest(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Nest(Branch, List(Text), List(SyntaxNode)).children.Last.children.Length is 4
+	Positions.Nest(SyntaxNode("If", "", (CallsNext, Body)), List(Text), List(SyntaxNode) + Next).children(0) is CallsNext
 	mutable children = List(Mutable(SyntaxNode))
 	for statement.children
-		children.Add(value.Kind is "Body" then Expanded(value, known, definitions) else value)
+		children.Add(value.Kind is "Body" then Expand(value, known, definitions) else value)
 	SyntaxNode(statement.Kind, statement.text, children, statement.line)
-Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
-	Positions.Defined(Assigned, List(Text), List(SyntaxNode)).Kind is "Declaration"
-	Positions.Defined(Assigned, List(Text), List(SyntaxNode)).text is "let next"
-	Positions.Defined(Assigned, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
-	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
-	Positions.Defined(Assigned, List(Text), List(SyntaxNode) + Next).text.StartsWith("ComputedNameMustNotBeAssigned")
-	Positions.Defined(SyntaxNode("Reassignment", "", Next.children), List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
+Define(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Define(Assigned, List(Text), List(SyntaxNode)).Kind is "Declaration"
+	Positions.Define(Assigned, List(Text), List(SyntaxNode)).text is "let next"
+	Positions.Define(Assigned, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
+	Positions.Define(Assigned, List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
+	Positions.Define(Assigned, List(Text), List(SyntaxNode) + Next).text.StartsWith("ComputedNameMustNotBeAssigned")
+	Positions.Define(SyntaxNode("Reassignment", "", Next.children), List(Text), List(SyntaxNode) + Next).Kind is "Invalid"
 	if statement.Kind is "Declaration" and statement.text.StartsWith("let ")
-		return Redefined(statement, known, definitions)
+		return Redefine(statement, known, definitions)
 	if statement.Kind is not "Reassignment"
 		return statement
 	target = statement.children(0)
@@ -63,9 +63,9 @@ Defined(statement SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
 		return SyntaxNode("Declaration", "let " + target.text, List(SyntaxNode) + statement.children(1), statement.line)
 	isNew = target.Kind is "Call" and target.text is not in known and AreNames(target.children)
 	isNew then SyntaxNode("Computed", target.text, statement.children, statement.line) else statement
-Redefined(declaration SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
-	Positions.Redefined(LetNext, List(Text), List(SyntaxNode)).Kind is "Declaration"
-	Positions.Redefined(LetNext, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
+Redefine(declaration SyntaxNode, known Texts, definitions SyntaxNodes) SyntaxNode
+	Positions.Redefine(LetNext, List(Text), List(SyntaxNode)).Kind is "Declaration"
+	Positions.Redefine(LetNext, List(Text) + "next", List(SyntaxNode)).Kind is "Reassignment"
 	name = Tokenizer(declaration.text).Tokens.Last
 	if name is in Names(definitions)
 		return SyntaxNode("Invalid", "ComputedNameMustNotBeAssigned: " + name, List(SyntaxNode), declaration.line)
@@ -90,37 +90,37 @@ IsUsed(name Text, nodes SyntaxNodes) Boolean
 		if value.Kind is in ("Identifier", "Call") and value.text is name or IsUsed(name, value.children)
 			return true
 	false
-Substituted(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
-	Positions.Substituted(NextTwo, List(SyntaxNode) + Next) to Text is "position + 2"
-	Positions.Substituted(SyntaxNode("Identifier", "other"), List(SyntaxNode) + Next) to Text is "other"
+Substitute(node SyntaxNode, definitions SyntaxNodes) SyntaxNode
+	Positions.Substitute(NextTwo, List(SyntaxNode) + Next) to Text is "position + 2"
+	Positions.Substitute(SyntaxNode("Identifier", "other"), List(SyntaxNode) + Next) to Text is "other"
 	if node.Kind is in ("Reassignment", "Computed")
-		return SyntaxNode(node.Kind, node.text, (node.children(0), Substituted(node.children(1), definitions)), node.line)
+		return SyntaxNode(node.Kind, node.text, (node.children(0), Substitute(node.children(1), definitions)), node.line)
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
-		children.Add(value.Kind is "Body" then value else Substituted(value, definitions))
+		children.Add(value.Kind is "Body" then value else Substitute(value, definitions))
 	for definitions
 		if node.Kind is in ("Identifier", "Call") and node.text is value.text
-			applied = Applied(value, children)
+			applied = Apply(value, children)
 			return SyntaxNode(applied.Kind, applied.text, applied.children, node.line)
 	SyntaxNode(node.Kind, node.text, children, node.line)
-Applied(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
-	Positions.Applied(Next, List(SyntaxNode)) to Text is "position + 1"
-	Positions.Applied(Next, List(SyntaxNode) + SyntaxNode("Identifier", "step")) to Text is "position + step"
-	Positions.Applied(Double, List(SyntaxNode) + SyntaxNode("Number", "3")) to Text is "3 * 2"
-	Positions.Applied(Double, List(SyntaxNode)) to Text is "x * 2"
+Apply(definition SyntaxNode, arguments SyntaxNodes) SyntaxNode
+	Positions.Apply(Next, List(SyntaxNode)) to Text is "position + 1"
+	Positions.Apply(Next, List(SyntaxNode) + SyntaxNode("Identifier", "step")) to Text is "position + step"
+	Positions.Apply(Double, List(SyntaxNode) + SyntaxNode("Number", "3")) to Text is "3 * 2"
+	Positions.Apply(Double, List(SyntaxNode)) to Text is "x * 2"
 	mutable bound = List(Mutable(SyntaxNode))
 	for definition.children(0).children
 		isDefault = value.Kind is "Reassignment"
 		name = isDefault then value.children(0) else value
 		argument = index < arguments.Length then arguments(index) else isDefault then value.children(1) else value
 		bound.Add(SyntaxNode("", name.text, (name, argument)))
-	Substituted(definition.children(1), bound)
-Declared(statement SyntaxNode) Texts
-	Positions.Declared(Body.children(0)) is ("position")
-	Positions.Declared(Next).Length is 0
-	Positions.Substituted(Assigned, List(SyntaxNode) + Next) is Assigned
-	Positions.Substituted(Branch, List(SyntaxNode) + Next) is Branch
-	Positions.Substituted(SyntaxNode("Text", "next"), List(SyntaxNode) + Next).Kind is "Text"
+	Substitute(definition.children(1), bound)
+Declare(statement SyntaxNode) Texts
+	Positions.Declare(Body.children(0)) is ("position")
+	Positions.Declare(Next).Length is 0
+	Positions.Substitute(Assigned, List(SyntaxNode) + Next) is Assigned
+	Positions.Substitute(Branch, List(SyntaxNode) + Next) is Branch
+	Positions.Substitute(SyntaxNode("Text", "next"), List(SyntaxNode) + Next).Kind is "Text"
 	statement.Kind is "Declaration" then List(Text) + Tokenizer(statement.text).Tokens.Last else List(Text)
 Names(definitions SyntaxNodes) Texts
 	Positions.Names(List(SyntaxNode) + Next) is ("next")

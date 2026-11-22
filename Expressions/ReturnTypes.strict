@@ -36,7 +36,7 @@ Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	node = scoped.statement
 	if IsTail(scoped, lines) is false or node.HasBody or node.Kind is in ("Declaration", "Reassignment", "Return")
 		return Split(scoped, current, lines)
-	declared = Declared(lines, scoped.line)
+	declared = Declare(lines, scoped.line)
 	type = inference.TypeOf(node, scoped.scope, current)
 	isSingle = inference.types.IsPlural(declared) and inference.types.ElementType(declared) is type
 	isOpen = node.text is in ("then", "else") or "or" is in Header(lines, scoped.line).tokens
@@ -68,9 +68,9 @@ Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	final = current.TypeAt(name, TypeShape(lines).Overload(name, scoped.line))
 	message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + type + " or a " + final
 	BranchTypes(inference).IsSplit(type, final) then message else ""
-Declared(lines Texts, line Number) Text
-	Naming.Declared(Lines, 1) is "Texts"
-	Naming.Declared(Looped, 2) is "Texts"
+Declare(lines Texts, line Number) Text
+	Naming.Declare(Lines, 1) is "Texts"
+	Naming.Declare(Looped, 2) is "Texts"
 	Naming.Issue(ScopedStatement(Joined.statement, Dropped, 1), Named, Lines) is ""
 	Naming.Issue(Returned, Named, ("Names Unknowns", "\tvalue")) is "" and Naming.Issue(Bodied, Named, Lines) is ""
 	Naming.Issue(Counted, Named, ("Count Number", "\tvalue")) is ""
@@ -83,16 +83,16 @@ Header(lines Texts, line Number) HeaderTokens
 		if lines(value).StartsWith("\t") is false
 			return HeaderTokens(Tokenizer(lines(value)).Tokens)
 	HeaderTokens(List(Text))
-Unresulted(scoped ScopedStatement, current Scope, lines Texts) Text
-	Naming.Unresulted(Tail, Drawers, Counting) is Unvalued
-	Naming.Unresulted(Unreturning, Drawers, Counting) is Unvalued
-	Naming.Unresulted(Branched, Drawers, Counting) is Unvalued
-	Naming.Unresulted(Assigned, Drawers, Running) is ""
-	Naming.Unresulted(Argued, Drawers, Running) is Unvalued
-	(Naming.Unresulted(Tail, Drawers, Running) + Naming.Unresulted(Compared, Drawers, Counting)) is ""
-	Naming.Unresulted(Unreturning, Drawers, Running) is ""
-	Naming.Unresulted(ScopedStatement(Tail.statement, Dropped, 1), Drawers, Counting) is ""
-	isValue = Declared(lines, scoped.line) is not "None" and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
+CheckResult(scoped ScopedStatement, current Scope, lines Texts) Text
+	Naming.CheckResult(Tail, Drawers, Counting) is Unvalued
+	Naming.CheckResult(Unreturning, Drawers, Counting) is Unvalued
+	Naming.CheckResult(Branched, Drawers, Counting) is Unvalued
+	Naming.CheckResult(Assigned, Drawers, Running) is ""
+	Naming.CheckResult(Argued, Drawers, Running) is Unvalued
+	(Naming.CheckResult(Tail, Drawers, Running) + Naming.CheckResult(Compared, Drawers, Counting)) is ""
+	Naming.CheckResult(Unreturning, Drawers, Running) is ""
+	Naming.CheckResult(ScopedStatement(Tail.statement, Dropped, 1), Drawers, Counting) is ""
+	isValue = Declare(lines, scoped.line) is not "None" and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
 	names = Resultless(scoped.statement, isValue, scoped.scope, current)
 	names.Length is 0 then "" else "ReturnTypeMismatch: " + names.First + " has no return type, its call gives no value"
 Resultless(node SyntaxNode, isValue Boolean, scope Scope, current Scope) Texts

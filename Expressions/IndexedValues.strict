@@ -5,19 +5,19 @@ constant Typed = IndexedValues(TypeInference(KnownTypes("Number", KnownTypes.NoM
 constant Named = Scope(("other", "others", "name", "done", "thing", "self type"), ("Number", "Numbers", "Text", "Boolean", "Xyz", "Number"))
 constant Indexes = ("other(0)", "other.Floor(1)", "done(0)", "Floor(1)", "others(0)", "name(0)", "other.digits(1)", "thing(0)", "Rounded(1)", "count(0)", "other.Floor", "other.Rounded(32)")
 Issue(node SyntaxNode, scope Scope, current Scope) Text
-	Typed.Issue(Parsed(0), Named, NumberMethods) is "IndexedValueMustHaveElements: other(0) indexes a Number"
-	Typed.Issue(Parsed(1), Named, NumberMethods) is "IndexedValueMustHaveElements: other.Floor(1) indexes a Number"
-	Typed.Issue(Parsed(2), Named, NumberMethods).EndsWith("indexes a Boolean")
-	Typed.Issue(Parsed(3), Named, NumberMethods).EndsWith("Floor(1) indexes a Number")
-	(Typed.Issue(Parsed(4), Named, NumberMethods) + Typed.Issue(Parsed(5), Named, NumberMethods)) is ""
-	(Typed.Issue(Parsed(6), Named, NumberMethods) + Typed.Issue(Parsed(7), Named, NumberMethods)) is ""
-	(Typed.Issue(Parsed(8), Named, NumberMethods) + Typed.Issue(Parsed(10), Named, NumberMethods)) is ""
-	Typed.Issue(Parsed(11), Named, NumberMethods) is ""
+	Typed.Issue(Parse(0), Named, NumberMethods) is "IndexedValueMustHaveElements: other(0) indexes a Number"
+	Typed.Issue(Parse(1), Named, NumberMethods) is "IndexedValueMustHaveElements: other.Floor(1) indexes a Number"
+	Typed.Issue(Parse(2), Named, NumberMethods).EndsWith("indexes a Boolean")
+	Typed.Issue(Parse(3), Named, NumberMethods).EndsWith("Floor(1) indexes a Number")
+	(Typed.Issue(Parse(4), Named, NumberMethods) + Typed.Issue(Parse(5), Named, NumberMethods)) is ""
+	(Typed.Issue(Parse(6), Named, NumberMethods) + Typed.Issue(Parse(7), Named, NumberMethods)) is ""
+	(Typed.Issue(Parse(8), Named, NumberMethods) + Typed.Issue(Parse(10), Named, NumberMethods)) is ""
+	Typed.Issue(Parse(11), Named, NumberMethods) is ""
 	type = IndexedType(node, scope, current)
 	type is in ("Number", "Boolean") then "IndexedValueMustHaveElements: " + node + " indexes a " + type else ""
 IndexedType(node SyntaxNode, scope Scope, current Scope) Text
-	Typed.IndexedType(Parsed(0), Named, NumberMethods) is "Number"
-	Typed.IndexedType(Parsed(9), Named, Scope(List(Text) + "count", List(Text) + "Number")) is "Number"
+	Typed.IndexedType(Parse(0), Named, NumberMethods) is "Number"
+	Typed.IndexedType(Parse(9), Named, Scope(List(Text) + "count", List(Text) + "Number")) is "Number"
 	Typed.IndexedType(SyntaxNode("Call", "other"), Named, NumberMethods) is ""
 	Typed.IndexedType(SyntaxNode("Identifier", "other", List(SyntaxNode) + SyntaxNode("Number", "0")), Named, Named) is ""
 	isCall = node.Kind is "Call" and node.children.Length > 0
@@ -34,6 +34,6 @@ HasNoParameters(type Text, method Text) Boolean
 	Typed.HasNoParameters("Number", "Shift") is false
 	parameters = inference.types.ParameterScope(type)
 	parameters.Count(method) <= 1 and parameters.TypeOf(method) is ""
-Parsed(at Number) SyntaxNode
-	Parsed(1) to Text is "other.Floor(1)"
+Parse(at Number) SyntaxNode
+	Parse(1) to Text is "other.Floor(1)"
 	SyntaxParser(Tokenizer(Indexes(at)).Tokens).Parse

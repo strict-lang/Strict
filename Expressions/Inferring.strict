@@ -17,19 +17,19 @@ Raw TypeInference
 		parameters.Add(Defaults(value.lines).Of(methods.Last, members.Last, value.ConstructorNames(members.Last, templates)))
 		constants.Add(value.ConstantScope)
 	names = ResolveCheck.TypeNames(files)
-	TypeInference(KnownTypes(names, members, methods, CrossChanges(names, shapes).Settled(parameters)), constants)
-Refined(inference TypeInference) TypeInference
-	None.Refined(ResolveCheck.Counting).types.methods.Length is 0
-	Writing.Refined(Writing.Raw).types.ParameterScope("File").Count("Write") is 3
+	TypeInference(KnownTypes(names, members, methods, CrossChanges(names, shapes).Settle(parameters)), constants)
+Refine(inference TypeInference) TypeInference
+	None.Refine(ResolveCheck.Counting).types.methods.Length is 0
+	Writing.Refine(Writing.Raw).types.ParameterScope("File").Count("Write") is 3
 	types = KnownTypes(inference.types, positions = ResolveCheck.Positions(inference.types.names))
 	indexed = TypeInference(types, inference.constants)
 	mutable methods = List(Mutable(Scope))
 	mutable parameters = List(Mutable(Scope))
 	for shapes
-		methods.Add(Typed(indexed, index))
+		methods.Add(InferScope(indexed, index))
 		parameters.Add(ResolveCheck.OverloadedMembers(types, shapes, types.members(index).types, types.parameters(index)))
 	TypeInference(KnownTypes(types, methods = methods, parameters = parameters), inference.constants)
-Typed(indexed TypeInference, index Number) Scope
-	Writing.Typed(Writing.Raw, 0).owner is "File"
+InferScope(indexed TypeInference, index Number) Scope
+	Writing.InferScope(Writing.Raw, 0).owner is "File"
 	name = indexed.types.names(index)
-	ShapeTyping(indexed).Typed(shapes(index), indexed.types.methods(index), name).Indexed.Owned(name)
+	ShapeTyping(indexed).InferTypes(shapes(index), indexed.types.methods(index), name).Indexed.Owned(name)

@@ -30,11 +30,11 @@ Failure(constraint Text) Text
 	Counting.Failure("\"") is "return Error(\"ConstraintNotMet: count with \\\" is false for \" + count)"
 	escaped = constraint.Replace("\"", "\\\"")
 	"return Error(\"ConstraintNotMet: " + name + " with " + escaped + " is false for \" + " + name + ")"
-Checked(constraint Text, line Number) SyntaxNode
-	Counting.Checked("value > 0", 3).line is 3
-	Counting.Checked("value > 0", 3) to Text is "if count > 0 is false"
-	Counting.Checked("value > 0", 3).children.Last.Kind is "Body"
-	Counting.Checked("value > 0", 3).children.Last.children.Length is 1
+Check(constraint Text, line Number) SyntaxNode
+	Counting.Check("value > 0", 3).line is 3
+	Counting.Check("value > 0", 3) to Text is "if count > 0 is false"
+	Counting.Check("value > 0", 3).children.Last.Kind is "Body"
+	Counting.Check("value > 0", 3).children.Last.children.Length is 1
 	check = StatementParser(Tokenizer("if (" + Condition(constraint) + ") is false").Tokens).ParseStatement
 	failed = StatementParser(Tokenizer(Failure(constraint)).Tokens).ParseStatement
 	body = SyntaxNode("Body", "", List(SyntaxNode) + SyntaxNode(failed.Kind, failed.text, failed.children, line))
@@ -134,4 +134,4 @@ Where(path Text, lines Texts) Texts
 	Constraint.Where("A.strict", List(Text) + "	has a Number where value > 0").Length is 0
 	for lines
 		if value.StartsWith("	") is false and "where" is in Tokenizer(value).Tokens
-			ResolveCheck.Located(path, index + 1, "ConstraintNeedsWith: where, write " + value.Replace(" where ", " with "))
+			ResolveCheck.Locate(path, index + 1, "ConstraintNeedsWith: where, write " + value.Replace(" where ", " with "))

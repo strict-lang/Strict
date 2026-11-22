@@ -39,13 +39,13 @@ Members(lines Texts) Scope
 				names.Add(HeaderTokens(Tokenizer(value).Tokens).MemberName + " step")
 				types.Add(step)
 	Scope(names, types)
-Unnumbered(path Text, lines Texts) Texts
-	Steps(List(Text)).Unnumbered("A", Rounded).Length is 0
-	Steps(List(Text)).Unnumbered("A", List(Text) + "has a Numbers with Step 1") is (NotNumber)
+CheckNumbering(path Text, lines Texts) Texts
+	Steps(List(Text)).CheckNumbering("A", Rounded).Length is 0
+	Steps(List(Text)).CheckNumbering("A", List(Text) + "has a Numbers with Step 1") is (NotNumber)
 	for lines
 		type = value.StartsWith("	") then "" else Steps(Tokenizer(value).Tokens).Unrounded
 		if type is not ""
-			ResolveCheck.Located(path, index + 1, "StepMustBeOnNumber: " + type + ", only a Number is rounded to its step")
+			ResolveCheck.Locate(path, index + 1, "StepMustBeOnNumber: " + type + ", only a Number is rounded to its step")
 Unrounded Text
 	Mixed.Unrounded is ")"
 	Steps(Tokenizer("has a Numbers Step 1").Tokens).Unrounded is ""

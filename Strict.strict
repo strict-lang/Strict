@@ -284,7 +284,7 @@ Format(path Text) Text slow
 	lines = RoundTrip.Tab(File(path).ReadLines)
 	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
-		return Error(ResolveCheck.Located(FileCompiler.Normalized(path), broken + 1, FileCheck.Problem(lines, broken)))
+		return Error(ResolveCheck.Locate(FileCompiler.Normalized(path), broken + 1, FileCheck.Problem(lines, broken)))
 	Text.Combine(RoundTrip.Format(lines), "\n")
 Suggest(rest Texts) Number slow
 	source = FileCompiler.Normalized(rest(0))

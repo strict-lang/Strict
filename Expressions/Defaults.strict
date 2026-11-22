@@ -2,7 +2,7 @@ has lines Texts
 constant Paired = Scope(("a", "b"), ("N", "M"))
 constant Custom = Scope(List(Text) + "from", List(Text) + "c")
 constant Pairs = Scope(List(Text) + "from", List(Text) + "x,y")
-constant Kept = (Defaults(List(Text)).Constructors(Pairs, ("a", "b"), Paired), Defaults(List(Text)).Constructors(Custom, List(Text), Paired), Defaults(List(Text) + "has b Number = 0").Added(KnownTypes.NoMembers))
+constant Kept = (Defaults(List(Text)).Constructors(Pairs, ("a", "b"), Paired), Defaults(List(Text)).Constructors(Custom, List(Text), Paired), Defaults(List(Text) + "has b Number = 0").Add(KnownTypes.NoMembers))
 constant Joint = Defaults(List(Text)).Constructors(Custom, ("a", "b"), Paired).TypeAt("from", 0)
 constant Zero = Scope("b default", "0")
 constant Sampled = Defaults(("has x Number", "Add(a Number) Number", "\ta"))
@@ -11,10 +11,10 @@ constant Adding = Defaults(("A(x Number) N", "\tx"))
 constant Named = Scope("A", "N")
 constant Widths = Defaults(List(Text) + "has width Number with value > 0")
 constant Empty = Defaults(List(Text))
-Added(scope Scope) Scope
-	Defaults(("has a Number", "has b Number = 0", "constant C = 3")).Added(KnownTypes.NoMembers).names is ("b default")
-	Defaults(List(Text) + "mutable count = 2 with value > 0").Added(KnownTypes.NoMembers).TypeOf("count default") is "2"
-	Defaults(List(Text) + "has label = \"a with b\"").Added(KnownTypes.NoMembers).TypeOf("label default") is "\"a with b\""
+Add(scope Scope) Scope
+	Defaults(("has a Number", "has b Number = 0", "constant C = 3")).Add(KnownTypes.NoMembers).names is ("b default")
+	Defaults(List(Text) + "mutable count = 2 with value > 0").Add(KnownTypes.NoMembers).TypeOf("count default") is "2"
+	Defaults(List(Text) + "has label = \"a with b\"").Add(KnownTypes.NoMembers).TypeOf("label default") is "\"a with b\""
 	mutable names = List(Mutable(Text))
 	mutable values = List(Mutable(Text))
 	for lines
@@ -45,7 +45,7 @@ Parameters(methods Scope, isContract Boolean) Scope
 		if shape.IsMethodHeader(value)
 			entries = HeaderEntries(HeaderTokens(Tokenizer(value).Tokens), methods).Parameters
 			scope = scope.WithAll(entries.names, entries.types)
-	added = Changes(lines).Added(Changes(lines, true).Added(Steps(List(Text)).Members(lines)))
+	added = Changes(lines).Add(Changes(lines, true).Add(Steps(List(Text)).Members(lines)))
 	scope.WithAll(added.names, added.types)
 Of(methods Scope, members Scope, names Texts) Scope
 	Sampled.Of(Scope("Add", "Number"), Scope("x", "Number"), "x").TypeOf("from") is "x"
@@ -53,7 +53,7 @@ Of(methods Scope, members Scope, names Texts) Scope
 	Widths.Of(KnownTypes.NoMembers, KnownTypes.NoMembers, List(Text)).TypeOf(" constrained") is "true"
 	Adding.Parameters(Named, true).TypeOf(" trait") is "true" and Adding.Parameters(Named, false).TypeOf(" trait") is ""
 	Defaults(("A(x Number) N", "\tA(1) is 1", "\tx")).Parameters(Named, false).TypeOf("A types") is "Number"
-	parameters = Added(Parameters(methods, TypeShape(lines).IsContract))
+	parameters = Add(Parameters(methods, TypeShape(lines).IsContract))
 	kind = Constraint.Kind(lines)
 	Constructors(kind is "" then parameters else parameters.With(TypeShape.Constrained, kind), names, members)
 ConstantScope(end Number) Scope

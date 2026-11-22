@@ -26,10 +26,10 @@ Methods Texts
 	Changes(("has count Number = 1", "Sum(items Numbers) Number", "\tfor items", "\t\tvalue"), true).Methods.Length is 0
 	members = isReading then (IsDefaulted then Members else List(Text)) else Members
 	mutable changing = List(Text)
-	mutable found = members.Length is 0 then List(Text) else Found(members, changing)
+	mutable found = members.Length is 0 then List(Text) else Find(members, changing)
 	for as long as found.Length > changing.Length
 		changing = found
-		found = Found(members, changing)
+		found = Find(members, changing)
 	changing
 IsDefaulted Boolean
 	Reading.IsDefaulted
@@ -39,8 +39,8 @@ IsDefaulted Boolean
 			if TypeShape(lines).IsMemberLine(value) and value.StartsWith("constant ") is false
 				return true
 	false
-Found(members Texts, changing Texts) Texts
-	Ticking.Found("count", List(Text)) is ("Next") and Ticking.Found("count", "Next") is ("Next", "Twice")
+Find(members Texts, changing Texts) Texts
+	Ticking.Find("count", List(Text)) is ("Next") and Ticking.Find("count", "Next") is ("Next", "Twice")
 	shape = TypeShape(lines)
 	mutable method = ""
 	mutable result = List(Mutable(Text))
@@ -58,7 +58,7 @@ Tokens(at Number) Texts
 	Changes(("Sum Number", "\tvalue + 1"), true).Tokens(1) is ("value", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\t1 + 1"), true).Tokens(2) is ("1", "+", "1")
 	Changes(("Sum Number", "\tfor 3", "\t\tvalue + 1"), true).Tokens(2) is ("+", "1")
-	Changes(("Next Number", "\tcount = 1", "has count Number", "\tcount = 2")).Found("count", List(Text)) is ("Next")
+	Changes(("Next Number", "\tcount = 1", "has count Number", "\tcount = 2")).Find("count", List(Text)) is ("Next")
 	tokens = Tokenizer(lines(at).TrimStart).Tokens
 	isReading and IsLooped(at) then tokens - "value" else tokens
 IsLooped(at Number) Boolean
@@ -107,18 +107,18 @@ IsChangingCall(member Text, method Text) Boolean
 	Changes(Summing, false, Known).IsChangingCall("wide", "Effort") is false
 	type = TypeShape(lines).MemberScope.TypeOf(member)
 	others.TypeOf(type + ".") is "" or others.TypeOf(type + "." + method) is "changes"
-Added(scope Scope) Scope
-	Ticking.Added(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
-	Reading.Added(KnownTypes.NoMembers).TypeOf("Size reads") is "reads"
+Add(scope Scope) Scope
+	Ticking.Add(KnownTypes.NoMembers).TypeOf("Twice changes") is "changes"
+	Reading.Add(KnownTypes.NoMembers).TypeOf("Size reads") is "reads"
 	suffix = isReading then " reads" else " changes"
 	mutable added = scope
 	for Methods
 		added = added.With(value + suffix, suffix.Trim)
 	added
 HasChanges(scope Scope) Boolean
-	Ticking.HasChanges(Ticking.Added(KnownTypes.NoMembers))
+	Ticking.HasChanges(Ticking.Add(KnownTypes.NoMembers))
 	Ticking.HasChanges(KnownTypes.NoMembers) is false
-	Ticking.HasChanges(Reading.Added(KnownTypes.NoMembers)) is false
+	Ticking.HasChanges(Reading.Add(KnownTypes.NoMembers)) is false
 	Ticking.IsChanging(("other", "=", "count"), "count", List(Text)) is false
 	Ticking.IsChanging(("step", "=", "1"), ("count", "step"), List(Text))
 	Ticking.IsChanging(List(Text), "count", List(Text)) is false

@@ -76,15 +76,15 @@ Members(typeName Text, members Scope) Scope
 IsGeneric(type Text) Boolean
 	Pairing.IsGeneric("Generic") and Pairing.IsGeneric("Couple") is false
 	Instantiation(KnownTypes("S", Couples.members, Couples.methods, Scope(" trait", "true"))).IsGeneric("S")
-	Pairing.Filled("Strict/List(Number)", "Dictionary(Text, Generic)") is "Dictionary(Text, Number)"
-	Pairing.Filled("Strict/List(Number)", "Couple(Text, Generic, Number)") is "Couple(Text, Number, Number)"
-	Pairing.Filled("Strict/Number", "List(Generic)") is "List(Generic)"
+	Pairing.Fill("Strict/List(Number)", "Dictionary(Text, Generic)") is "Dictionary(Text, Number)"
+	Pairing.Fill("Strict/List(Number)", "Couple(Text, Generic, Number)") is "Couple(Text, Number, Number)"
+	Pairing.Fill("Strict/Number", "List(Generic)") is "List(Generic)"
 	type is in ("Generic", "Generics") or types.ParameterScope(type).TypeOf(" trait") is "true"
 Plural(element Text) Text
 	Instantiation(Boxed).Position("Box(Text, Number)", "second") is 1
 	Instantiation(Boxed).Position("Box(Text, Number)", "size") is -1
 	Instantiation(Boxed).Members("Box(Text, Number)", Boxed.members(0)).TypeOf("size") is "Number"
-	Instantiation(Boxed).Substituted("Box(Text, Number)", "Box(second, size, first)") is "Box(Number, Text)"
+	Instantiation(Boxed).Substitute("Box(Text, Number)", "Box(second, size, first)") is "Box(Number, Text)"
 	Pairing.Argument("Texts", "first") is "Text"
 	Instantiation(Boxed).Argument("Meter", "x") is "Text"
 	Pairing.Argument("Couple(Text)", "second") is "Unknown"
@@ -100,7 +100,7 @@ Own(fullName Text, type Text) Text
 	typeName = fullName.Substring(fullName.LastIndexOf("/") + 1, fullName.Length - fullName.LastIndexOf("/") - 1)
 	if type is in ("List", "Dictionary") or types.BaseName(type) is not types.BaseName(typeName)
 		return type
-	type is types.BaseName(typeName) then typeName else Substituted(typeName, type)
+	type is types.BaseName(typeName) then typeName else Substitute(typeName, type)
 Template(shape TypeShape, position Number, typeName Text) Text
 	Pairing.Template(TypeShape("has first Generic", "Swapped Pair", "	Couple(first)"), 1, "Couple") is ""
 	Pairing.Template(TypeShape("has first Generic", "Swapped Couple", "	Pair(first)"), 1, "Couple") is ""
@@ -114,10 +114,10 @@ Template(shape TypeShape, position Number, typeName Text) Text
 		return ""
 	result = BodyParser(shape.lines).Method(position + 1).children.Last
 	result.Kind is "Call" and result.text is typeName then result to Text else ""
-Substituted(instanceType Text, template Text) Text
-	Pairing.Substituted("Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
-	Pairing.Substituted("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
-	Pairing.Substituted("Couple(Text, Number)", "Couple(first, second, first)") is "Couple(Text, Number)"
+Substitute(instanceType Text, template Text) Text
+	Pairing.Substitute("Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
+	Pairing.Substitute("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
+	Pairing.Substitute("Couple(Text, Number)", "Couple(first, second, first)") is "Couple(Text, Number)"
 	members = types.MembersOf(instanceType)
 	mutable arguments = List(Mutable(Text))
 	for Arguments(template)
@@ -127,11 +127,11 @@ Substituted(instanceType Text, template Text) Text
 				return instanceType
 			arguments.Add(argument)
 	types.BaseName(instanceType) + "(" + Text.Combine(arguments, ", ") + ")"
-Filled(owner Text, type Text) Text
-	Pairing.Filled("Strict/List(Number)", "Dictionary(Generic, Boolean)") is "Dictionary(Number, Boolean)"
-	Pairing.Filled("Strict/List(Number)", "List(Generic)") is "List(Number)"
-	Pairing.Filled("Strict/Dictionary(Text, Number)", "List(Generic)") is "List(Generic)"
-	Pairing.Filled("Strict/List(Number)", "Number") is "Number"
+Fill(owner Text, type Text) Text
+	Pairing.Fill("Strict/List(Number)", "Dictionary(Generic, Boolean)") is "Dictionary(Number, Boolean)"
+	Pairing.Fill("Strict/List(Number)", "List(Generic)") is "List(Number)"
+	Pairing.Fill("Strict/Dictionary(Text, Number)", "List(Generic)") is "List(Generic)"
+	Pairing.Fill("Strict/List(Number)", "Number") is "Number"
 	open = owner.IndexOf("(")
 	if open < 0 or owner.IndexOf(",") > 0
 		return type

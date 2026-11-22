@@ -15,9 +15,9 @@ constant Local = TypeShape("has logger", "Made(name Text) Couple", "\tlet other 
 constant Lost = TypeShape("Made Couple", "\tCouple(missing, 2)")
 constant Twofold = TypeShape("Made(number Number) Couple", "\tCouple(number, 2)", "Made(name Text) Couple", "\tCouple(name, 2)")
 constant Declared = Scope(("Made", "Made"), ("Couple", "Couple"))
-Typed(shape TypeShape, scope Scope, typeName Text) Scope
-	Counting.Typed(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
-	Counting.Typed(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
+InferTypes(shape TypeShape, scope Scope, typeName Text) Scope
+	Counting.InferTypes(TypeShape("constant a = 1"), KnownTypes.NoMembers, "Count").names.Length is 0
+	Counting.InferTypes(Twice, KnownTypes.NoMembers, "Count").TypeOf("Twice") is "Number"
 	mutable result = scope
 	for shape.lines
 		result = TypedLine(shape, result, index, typeName)
@@ -27,23 +27,23 @@ TypedLine(shape TypeShape, scope Scope, position Number, typeName Text) Scope
 	line = shape.lines(position)
 	if line.StartsWith("constant ")
 		tokens = Tokenizer(line).Tokens
-		return Refined(scope, tokens(1), 0, ChainType(tokens, typeName, scope))
+		return Refine(scope, tokens(1), 0, ChainType(tokens, typeName, scope))
 	if shape.IsComputed(line)
 		tokens = Tokenizer(line).Tokens
 		return scope.With(tokens(0), ComputedType(tokens, typeName, scope))
 	shape.IsMethodHeader(line) then RefinedMethod(shape, scope, position, typeName) else scope
 RefinedMethod(shape TypeShape, scope Scope, position Number, typeName Text) Scope
 	Swapped.RefinedMethod(Making, KnownTypes.NoMembers, 1, "User").TypeOf("Made") is "Couple(Text, Number)"
-	refined = Returned(shape, position, typeName)
+	refined = Derive(shape, position, typeName)
 	if refined is ""
 		return scope
 	name = Tokenizer(shape.lines(position)).Tokens.First
-	Refined(scope, name, shape.Overload(name, position), refined)
-Returned(shape TypeShape, position Number, typeName Text) Text
-	Swapped.Returned(Making, 1, "User") is "Couple(Text, Number)"
-	Swapped.Returned(Local, 1, "User") is "Couple(Text, Number)"
-	Swapped.Returned(Instantiation.Swapping, 2, "Couple") + Swapped.Returned(Plain, 0, "User") is "Couple(second, first)"
-	(Swapped.Returned(TypeShape("Made Couple", "\t\"a\""), 0, "User") + Swapped.Returned(Lost, 0, "User")) is ""
+	Refine(scope, name, shape.Overload(name, position), refined)
+Derive(shape TypeShape, position Number, typeName Text) Text
+	Swapped.Derive(Making, 1, "User") is "Couple(Text, Number)"
+	Swapped.Derive(Local, 1, "User") is "Couple(Text, Number)"
+	Swapped.Derive(Instantiation.Swapping, 2, "Couple") + Swapped.Derive(Plain, 0, "User") is "Couple(second, first)"
+	(Swapped.Derive(TypeShape("Made Couple", "\t\"a\""), 0, "User") + Swapped.Derive(Lost, 0, "User")) is ""
 	returned = HeaderTokens(Tokenizer(shape.lines(position)).Tokens).ReturnType
 	if returned is typeName
 		return shape.UsesGenerics then Instantiation(inference.types).Template(shape, position, typeName) else ""
@@ -60,10 +60,10 @@ Result(shape TypeShape, position Number, typeName Text) Text
 	for body.children
 		scope = bodies.Declare(value, scope)
 	bodies.StatementType(ScopedStatement(body.children.Last, scope, position))
-Refined(scope Scope, name Text, ordinal Number, type Text) Scope
-	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").names.Length is 1
-	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").TypeOf("a") is "Item"
-	Counting.Refined(KnownTypes.NoMembers, "a", 0, "Item").TypeOf("a") is "Item"
+Refine(scope Scope, name Text, ordinal Number, type Text) Scope
+	Counting.Refine(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").names.Length is 1
+	Counting.Refine(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "Item").TypeOf("a") is "Item"
+	Counting.Refine(KnownTypes.NoMembers, "a", 0, "Item").TypeOf("a") is "Item"
 	position = scope.Position(name, ordinal)
 	if type is "" or position < 0
 		return Known(scope, name, type)
@@ -71,11 +71,11 @@ Refined(scope Scope, name Text, ordinal Number, type Text) Scope
 	types(position) = type
 	Scope(scope.names, types)
 Known(scope Scope, name Text, type Text) Scope
-	Swapped.Typed(Instantiation.Swapping, KnownTypes.NoMembers, "Couple").TypeOf("Swapped") is "Couple(second, first)"
-	Counting.Typed(TypeShape("constant a = List(Number) + 3"), KnownTypes.NoMembers, "Count").TypeOf("a") is "Numbers"
-	Counting.Refined(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "").TypeOf("a") is "Box"
-	Counting.Refined(Scope(("a", "b"), ("Box", "Box")), "a", 0, "Item").TypeOf("b") is "Box"
-	Swapped.Typed(Twofold, Declared, "User").types is ("Couple(Number, Number)", "Couple(Text, Number)")
+	Swapped.InferTypes(Instantiation.Swapping, KnownTypes.NoMembers, "Couple").TypeOf("Swapped") is "Couple(second, first)"
+	Counting.InferTypes(TypeShape("constant a = List(Number) + 3"), KnownTypes.NoMembers, "Count").TypeOf("a") is "Numbers"
+	Counting.Refine(Scope(List(Text) + "a", List(Text) + "Box"), "a", 0, "").TypeOf("a") is "Box"
+	Counting.Refine(Scope(("a", "b"), ("Box", "Box")), "a", 0, "Item").TypeOf("b") is "Box"
+	Swapped.InferTypes(Twofold, Declared, "User").types is ("Couple(Number, Number)", "Couple(Text, Number)")
 	Counting.Known(KnownTypes.NoMembers, "a", "").names.Length is 0
 	Counting.Known(KnownTypes.NoMembers, "a", "Number").TypeOf("a") is "Number"
 	type is "" then scope else scope.With(name, type)
@@ -90,18 +90,18 @@ ChainType(tokens Texts, typeName Text, known Scope) Text
 		return ""
 	node = SyntaxParser(tokens).ParseRange(3, tokens.Length)
 	own = node.Kind is in ("Call", "Identifier") then inference.types.MethodsOf(typeName).TypeOf(node.text) else ""
-	node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call") then Inferred(node, typeName, known) else own
-Inferred(node SyntaxNode, typeName Text, known Scope) Text
-	Chained.Inferred(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
-	Chained.Expanded(SyntaxNode("Identifier", "x")) is SyntaxNode("Identifier", "x")
-	Boxed.Inferred(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
-	Chained.Inferred(SyntaxParser(Tokenizer("Box.Sample.Weight").Tokens).Parse, "User", KnownTypes.NoMembers) is "Number"
+	node.Kind is in ("MethodCall", "Member", "Binary", "List", "Call") then Infer(node, typeName, known) else own
+Infer(node SyntaxNode, typeName Text, known Scope) Text
+	Chained.Infer(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
+	Chained.Expand(SyntaxNode("Identifier", "x")) is SyntaxNode("Identifier", "x")
+	Boxed.Infer(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse, "User", KnownTypes.NoMembers) is "Item"
+	Chained.Infer(SyntaxParser(Tokenizer("Box.Sample.Weight").Tokens).Parse, "User", KnownTypes.NoMembers) is "Number"
 	alias = node.Kind is "Member" then inference.ConstantOf(node.children(0).text, node.text) else ""
 	chained = alias is "" then "" else ChainType(Tokenizer(Aliasing + alias).Tokens, node.children(0).text, NoScope)
 	current = inference.types.ShapeScope(typeName).WithAll(known.names, known.types)
-	chained is "" then inference.TypeOf(Expanded(node), NoScope, current) else chained
-Expanded(node SyntaxNode) SyntaxNode
-	Chained.Expanded(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse) is SyntaxNode("Type", "Item")
+	chained is "" then inference.TypeOf(Expand(node), NoScope, current) else chained
+Expand(node SyntaxNode) SyntaxNode
+	Chained.Expand(SyntaxParser(Tokenizer("Box.Sample").Tokens).Parse) is SyntaxNode("Type", "Item")
 	owner = node.Kind is "Member" and node.children(0).Kind is "Identifier" then node.children(0).text else ""
 	definition = inference.types.IsKnown(owner) then inference.ConstantOf(owner, node.text) else ""
 	typed = definition is "" then "" else ChainType(Tokenizer("constant a = " + definition).Tokens, owner, NoScope)
@@ -109,13 +109,13 @@ Expanded(node SyntaxNode) SyntaxNode
 		return SyntaxNode("Type", typed)
 	mutable children = List(Mutable(SyntaxNode))
 	for node.children
-		children.Add(Expanded(value))
+		children.Add(Expand(value))
 	SyntaxNode(node.Kind, node.text, children, node.line)
 ComputedType(tokens Texts, typeName Text, methods Scope) Text
 	Counting.ChainType(Tokenizer("constant a + Twice(2)").Tokens, "Count", KnownTypes.NoMembers) is ""
 	Counting.ChainType(("constant", "a", "="), "Count", KnownTypes.NoMembers) is ""
 	Counting.ComputedType(Next, "Count", KnownTypes.NoMembers) is "Number"
-	Chained.Expanded(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse).Kind is "Member"
+	Chained.Expand(SyntaxParser(Tokenizer("Box(3).Sample").Tokens).Parse).Kind is "Member"
 	Counting.ChainType(Tokenizer("constant a = Twice").Tokens, "Count", KnownTypes.NoMembers) is "Count"
 	Counting.ChainType(Tokenizer("constant b = a.Twice(2)").Tokens, "Count", NoScope.With("a", "Text")) is not "Count"
 	header = HeaderTokens(tokens)

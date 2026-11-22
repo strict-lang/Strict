@@ -2,7 +2,7 @@ has lines Texts
 has folder = ""
 constant Blurring = Unswitching(Callees.Sums, "ImageProcessing")
 constant Blurred = Blurring.Lines
-constant Hoisting = Blurring.Hoisted(2)
+constant Hoisting = Blurring.Hoist(2)
 constant Nested = Callees.Sums.Slice(0, 3)
 constant Checked = "\t\t\tif bitmap.IsInside(pixel, x, y)"
 constant LoopVariables = ("value", "outer", "index")
@@ -19,19 +19,19 @@ Lines Texts
 	Rewritten(0)
 Rewritten(start Number) Texts
 	Blurring.Rewritten(3) is Callees.Sums.Slice(3, 3)
-	at = Found(start)
+	at = Find(start)
 	if at < 0
 		return lines.Slice(start, lines.Length - start)
-	lines.Slice(start, at - start) + Hoisted(at) + Rewritten(Callees(lines, folder).BlockEnd(at))
-Found(start Number) Number
-	Blurring.Found(0) is 2
-	Blurring.Found(3) is -1
+	lines.Slice(start, at - start) + Hoist(at) + Rewritten(Callees(lines, folder).BlockEnd(at))
+Find(start Number) Number
+	Blurring.Find(0) is 2
+	Blurring.Find(3) is -1
 	for Range(start, lines.Length)
 		if IsHoistable(value)
 			return value
 	Number.NotFound
-Hoisted(at Number) Texts
-	Blurring.Hoisted(2).Length is 7
+Hoist(at Number) Texts
+	Blurring.Hoist(2).Length is 7
 	Hoisting(0).StartsWith("\tif bitmap.IsInside(pixel, -1, -1) and ") and Hoisting(3) is "\telse"
 	Hoisting(2).StartsWith("\t\t\tsum = sum + ")
 	Hoisting(1) is "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
@@ -39,9 +39,9 @@ Hoisted(at Number) Texts
 	end = Callees(lines, folder).BlockEnd(at)
 	corners = Text.Combine(Corners(Unswitching(lines, folder), at).Calls, " and ")
 	unchecked = (List(Text) + (tabs + "if " + corners) + ("\t" + lines(at))) + lines.Slice(at + 2, end - at - 2)
-	unchecked + (tabs + "else") + Indented(at, end)
-Indented(start Number, end Number) Texts
-	Blurring.Indented(2, 3) is List(Text) + "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
+	unchecked + (tabs + "else") + Indent(at, end)
+Indent(start Number, end Number) Texts
+	Blurring.Indent(2, 3) is List(Text) + "\t\tfor y, x in Range(-1, 2), Range(-1, 2)"
 	for Range(start, end)
 		"\t" + lines(value)
 IsHoistable(at Number) Boolean

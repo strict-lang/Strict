@@ -18,7 +18,7 @@ Peeled(loop SyntaxNode, aggregation Text) SyntaxNode
 	Steps.Peeled(Summing, "any").Kind is "For"
 	Unpeeled.Kind is "For"
 	edges = LoopEdge(loop)
-	edge = edges.Found(loop.children.Last)
+	edge = edges.Find(loop.children.Last)
 	kind = Kind(loop)
 	if edge.Kind is "Missing" or kind is "" or aggregation is "any"
 		return loop

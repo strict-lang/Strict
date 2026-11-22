@@ -59,7 +59,7 @@ Mentioned(files Texts, at Number) KeptInference
 	shapes = BuildProfile.Shapes(files)
 	inferring = Inferring(files, shapes, ResolveCheck.Generics(files, shapes))
 	inferred = inferring.Raw
-	typed = inferring.Refined(inferred)
+	typed = inferring.Refine(inferred)
 	stamped = Stamps(Rest(files, files(at)))
 	signed = Signature(shapes(at).lines)
 	KeptInference(Directory.Current, inferring, stamped, inferred, typed, mentioned, typed, files(at), signed)
@@ -68,7 +68,7 @@ Replaced(files Texts, at Number) KeptInference
 	shape = ResolveCheck.Shapes(List(Text) + files(at)).First
 	shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at + 1, base.shapes.Length - at - 1)
 	indexed = TypeInference(KnownTypes(raw.types, positions = ResolveCheck.Positions(raw.types.names)), raw.constants)
-	typed = Inferring(files, shapes, base.templates).Typed(indexed, at)
+	typed = Inferring(files, shapes, base.templates).InferScope(indexed, at)
 	methods = refined.types.methods.Slice(0, at) + typed + refined.types.methods.Slice(at + 1, files.Length - at - 1)
 	KeptInference(value, joined = TypeInference(KnownTypes(refined.types, methods = methods), refined.constants))
 IsKept(rest Texts) Boolean
@@ -101,7 +101,7 @@ Fresh(rest Texts, names Texts) KeptInference
 	shapes = BuildProfile.Shapes(rest)
 	inferring = Inferring(rest, shapes, ResolveCheck.Generics(rest, shapes))
 	inferred = inferring.Raw
-	KeptInference(Directory.Current, inferring, current, inferred, inferring.Refined(inferred), names, inferred)
+	KeptInference(Directory.Current, inferring, current, inferred, inferring.Refine(inferred), names, inferred)
 Joined(files Texts, at Number) KeptInference
 	Loggers.Joined(Swapped, 1).joined.types.names is ("TextWriter", "Logger")
 	shape = ResolveCheck.Shapes(List(Text) + files(at)).First
@@ -110,7 +110,7 @@ Joined(files Texts, at Number) KeptInference
 	leaf = Inferring(List(Text) + files(at), List(TypeShape) + shape, templates).Raw
 	shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at, base.shapes.Length - at)
 	indexed = Whole(raw, leaf, at, files)
-	typed = Inferring(files, shapes, templates).Typed(indexed, at)
+	typed = Inferring(files, shapes, templates).InferScope(indexed, at)
 	own = leaf.types
 	overloaded = ResolveCheck.OverloadedMembers(indexed.types, shapes, own.members.First.types, own.parameters.First)
 	renewed = KnownTypes(own, methods = List(Scope) + typed, parameters = List(Scope) + overloaded)

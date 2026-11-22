@@ -52,7 +52,7 @@ Checked(linker Linker, linked List(TypeEntry), source Text, inference TypeInfere
 Issues(sources Texts, inference TypeInference) List(Texts)
 	FileCompiler.Issues(List(Text), ResolveCheck.Counting).Length is 0
 	for sources
-		ResolveCheck.Unresolved(value, inference)
+		ResolveCheck.Resolve(value, inference)
 Sources(linker Linker, linked List(TypeEntry), source Text) Texts
 	FileCompiler.Sources(Linker.Sample, Logged, "./Examples/A.strict") is List(Text) + "./Examples/HelloLogger.strict"
 	FileCompiler.Sources(Linker.Knowing, Logged, "./Examples/A.strict").Length is 0
@@ -75,15 +75,15 @@ Located(path Text, root Text, withTests Boolean, type Text) List(TypeEntry)
 	if normalized.StartsWith("./") and normalized.IndexOf("/../") < 0
 		if Repositories(".").Downloaded(type) is not ""
 			return Compiled(path, root, withTests)
-	logger.Log(ResolveCheck.Located(path, LineOf(File(path).ReadLines, type), "TypeNotFound: " + type + Tips))
+	logger.Log(ResolveCheck.Locate(path, LineOf(File(path).ReadLines, type), "TypeNotFound: " + type + Tips))
 	List(TypeEntry)
 Problems(files Texts) Texts slow
 	FileCompiler.Problems(("./Any.strict", "./Boolean.strict")) is ("", "")
 	for files
 		lines = File(value).ReadLines
 		broken = Unparsable(lines)
-		issue = broken < 0 then "" else ResolveCheck.Located(value, broken + 1, FileCheck.Problem(lines, broken))
-		IsMarked(File(value).ReadBytes) then ResolveCheck.Located(value, 1, Marked) else issue
+		issue = broken < 0 then "" else ResolveCheck.Locate(value, broken + 1, FileCheck.Problem(lines, broken))
+		IsMarked(File(value).ReadBytes) then ResolveCheck.Locate(value, 1, Marked) else issue
 IsMarked(bytes Bytes) Boolean
 	FileCompiler.IsMarked((239, 187, 191, 104))
 	FileCompiler.IsMarked((239, 187)) is false and FileCompiler.IsMarked((239, 187, 104)) is false
@@ -146,7 +146,7 @@ IsOperand(node SyntaxNode, position Number) Boolean
 	node.Kind is in ("Not", "Negate", "List") or isBinary
 IsResolved(source Text, inference TypeInference, files Texts = List(Text)) Boolean slow
 	FileCompiler.IsResolved("./Logger.strict", ResolveCheck.Inference(("./Logger.strict", "./TextWriter.strict")))
-	mutable unresolved = ResolveCheck.Unresolved(source, inference)
+	mutable unresolved = ResolveCheck.Resolve(source, inference)
 	for files
 		if value is not source and DefaultCheck(inference).HasCheckedMembers(ResolveCheck.TypeName(value))
 			unresolved = unresolved + DefaultCheck(inference).Members(value, File(value).ReadLines)

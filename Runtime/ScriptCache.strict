@@ -76,7 +76,7 @@ BaseLoaded(lines Texts, currentRoot Text, logger Logger, skip = "") ScriptCache
 	discovered = SourceFiles(currentRoot).Of(Scripted.Path)
 	missing = Mentions(lines).Missing(discovered)
 	if missing.Length > 0
-		logger.Log(ResolveCheck.Located(Scripted.Path, FileCompiler.LineOf(lines, missing.First), missing.First))
+		logger.Log(ResolveCheck.Locate(Scripted.Path, FileCompiler.LineOf(lines, missing.First), missing.First))
 	File(Scripted.Path).InMemory("")
 	clean = BaseOnly(discovered, skip)
 	missing.Length > 0 then ScriptCache(value, code = 1) else WithBase(clean, currentRoot, currentFolder)
@@ -87,7 +87,7 @@ MergedInference(lines Texts) TypeInference
 	mutable positions = types.positions
 	positions("Scratch") = types.names.Length
 	members = types.members + shape.MemberScope.Indexed.Owned("Scratch")
-	typedMethods = ShapeTyping(inference).Typed(shape, shape.MethodScope, "Scratch").Indexed.Owned("Scratch")
+	typedMethods = ShapeTyping(inference).InferTypes(shape, shape.MethodScope, "Scratch").Indexed.Owned("Scratch")
 	params = types.parameters + shape.CallScope(generics)
 	merged = KnownTypes(types.names + "Scratch", members, types.methods + typedMethods, params, positions)
 	TypeInference(merged, inference.constants + shape.ConstantScope)
@@ -141,11 +141,11 @@ IsValidated(lines Texts, merged TypeInference, logger Logger) Boolean
 	Sample.IsValidated(("Run", "\tmissing"), Sample.MergedInference(("Run", "\tmissing")), Logger) is false
 	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
-		logger.Log(ResolveCheck.Located(Scripted.Path, broken + 1, FileCheck.Problem(lines, broken)))
+		logger.Log(ResolveCheck.Locate(Scripted.Path, broken + 1, FileCheck.Problem(lines, broken)))
 		return false
 	knownNames = merged.types.names + ("value", "index", "outer") + merged.types.ShapeScope("Scratch").names
 	bodies = MethodBodies("Scratch", TypeShape(lines), merged)
-	issues = ResolveCheck.Found(FileCheck(merged, knownNames), bodies, lines, Scripted.Path)
+	issues = ResolveCheck.Find(FileCheck(merged, knownNames), bodies, lines, Scripted.Path)
 	for issues
 		logger.Log(value)
 	issues.Length is 0

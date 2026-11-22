@@ -69,7 +69,7 @@ ParameterTypes(name Text, type Text, argumentTypes Texts) Texts
 	OwnOptions.ParameterTypes("Parsed", "Settings", List(Text) + "Text") is ("Texts")
 	declared = Declared(type, name is type then "from" else name, argumentTypes, " types")
 	isUndeclared = type is TypeName then Header(name).tokens.Length is 0 else declared.Length is 0
-	if name is not type and isUndeclared and types.Inherited(type, name) is not ""
+	if name is not type and isUndeclared and types.Inherit(type, name) is not ""
 		return Declared("Any", name, argumentTypes, " types")
 	if type is TypeName and (name is not type or Header(name).tokens.Length > 0)
 		return HeaderEntries(Chosen(name, argumentTypes), types.MethodsOf(type)).ParameterTypes
@@ -197,7 +197,7 @@ FullName(type Text) Text
 	CallTarget(NoTypes, Greeter, "Strict/List(Number)", List(Text)).FullName("List(Generic)") is "Strict/List(Number)"
 	if type is in ("None", "Other", TypeName)
 		return type is "None" then type else fullName
-	filled = Instantiation(types).Filled(fullName, type)
+	filled = Instantiation(types).Fill(fullName, type)
 	plural = types.IsPlural(filled) then "Strict/List(" + types.ElementType(filled) + ")" else ""
 	plural is "" then (PackageType(filled) is "" then "Strict/" + filled else PackageType(filled)) else plural
 PackageType(type Text) Text

@@ -74,14 +74,14 @@ IsIterable(type Text) Boolean
 	Counting.NotIterable(CountLoop, Counted) is "NotIterable: count is a Count"
 	element = inference.types.ElementType(type)
 	iterated = inference.types.ElementType(inference.types.MethodsOf(type).TypeOf("for"))
-	element is not "Unknown" or iterated is not "Unknown" or inference.Enumerated(type).Length > 0
+	element is not "Unknown" or iterated is not "Unknown" or inference.Enumerate(type).Length > 0
 UnknownMethods(node SyntaxNode, scope Scope, current Scope) Texts
 	Counting.UnknownMethods(MissingCall.statement, Counted, KnownTypes.NoMembers) is ("MethodNotFound: Count.Missing")
 	mutable unknown = UnknownMembers(node)
 	issue = MethodIssue(node, scope, current)
 	if issue is not ""
 		unknown = unknown + issue
-	narrowed = node.text is "then" then ErrorNarrowing(inference).Narrowed(node.children(0), scope, current) else scope
+	narrowed = node.text is "then" then ErrorNarrowing(inference).Narrow(node.children(0), scope, current) else scope
 	for node.children
 		if value.Kind is not "Body"
 			unknown = unknown + UnknownMethods(value, narrowed, current)
@@ -93,18 +93,18 @@ MethodIssue(node SyntaxNode, scope Scope, current Scope) Text
 	Counting.Unknown(Increment, Counted) is not ""
 	Counting.UnknownMethods(HiddenBody, Counted, Counted).Length is 0
 	Counting.CallIssue(HiddenCall, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
-	Counting.MethodIssue(Counting.Parsed("1 > 0 and (count)"), Counted, Counted).StartsWith("LogicalOperandIsAList")
-	Counting.MethodIssue(Counting.Parsed("Count.Twice"), SelfCounted, Owning).StartsWith("AmbiguousName")
-	Held.MethodIssue(Held.Parsed("Twice(1, 2, 3)"), Counted.With("self type", "Box"), Counted).StartsWith("NoOverloadFits")
+	Counting.MethodIssue(Counting.Parse("1 > 0 and (count)"), Counted, Counted).StartsWith("LogicalOperandIsAList")
+	Counting.MethodIssue(Counting.Parse("Count.Twice"), SelfCounted, Owning).StartsWith("AmbiguousName")
+	Held.MethodIssue(Held.Parse("Twice(1, 2, 3)"), Counted.With("self type", "Box"), Counted).StartsWith("NoOverloadFits")
 	hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
 	called = IsCall(node) then CallIssue(node, scope, current) else ""
-	typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called
+	typed = called is "" then ArgumentTypes(inference).Check(node, scope, current) else called
 	hidden is "" then typed else hidden
 CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Requiring.CallIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is "ArgumentMissing: Count.Twice got 0 of 1"
 	Counting.CallIssue(HiddenCall, Counted, Scope(List(Text) + "Count", List(Text) + "Text")).EndsWith("use outer.Count")
-	Limiting.CallIssue(Counting.Parsed("count.Limit(1)"), Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Limit"
+	Limiting.CallIssue(Counting.Parse("count.Limit(1)"), Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Limit"
 	instance = inference.TypeOf(call.children(0), scope, current)
 	hidden = call.children(0).text
 	isHidden = call.children(0).Kind is "Identifier" and inference.types.IsKnown(hidden) and instance is not hidden
@@ -189,19 +189,19 @@ IsKnown(name Text, names Texts) Boolean
 	if name is "logger" or name is in names
 		return true
 	name.EndsWith("s") is false then false else name.Substring(0, name.Length - 1) is in names
-Unimplemented(path Text, lines Texts) Texts
-	Counting.Unimplemented("A.strict", Untested + "\tTwice(3) is 6").Length is 1
-	Counting.Unimplemented("A.strict", Untested) is ("A.strict:line 1: ImplementationNotFound: Twice")
-	Counting.Unimplemented("A.strict", Untested + "\tnumber * 2").Length is 0
-	Counting.Unimplemented("A.strict", ("from(number)", "\tA(2) is A(2)")).Length is 1
-	Counting.Unimplemented("A.strict", List(Text) + "constant Ones = A(1) is A(1)").Length is 0
-	Counting.Unimplemented("A.strict", ("from", "\tA(2) is A(2)")).Length is 0
-	Counting.Unimplemented("A.strict", ("Twice(number Number) Number", "\tA(3).Twice(2) is 6")).Length is 1
-	Counting.Unimplemented("A.strict", ("Run", "\t1", "", "\t2")).Length is 0
+CheckImplementation(path Text, lines Texts) Texts
+	Counting.CheckImplementation("A.strict", Untested + "\tTwice(3) is 6").Length is 1
+	Counting.CheckImplementation("A.strict", Untested) is ("A.strict:line 1: ImplementationNotFound: Twice")
+	Counting.CheckImplementation("A.strict", Untested + "\tnumber * 2").Length is 0
+	Counting.CheckImplementation("A.strict", ("from(number)", "\tA(2) is A(2)")).Length is 1
+	Counting.CheckImplementation("A.strict", List(Text) + "constant Ones = A(1) is A(1)").Length is 0
+	Counting.CheckImplementation("A.strict", ("from", "\tA(2) is A(2)")).Length is 0
+	Counting.CheckImplementation("A.strict", ("Twice(number Number) Number", "\tA(3).Twice(2) is 6")).Length is 1
+	Counting.CheckImplementation("A.strict", ("Run", "\t1", "", "\t2")).Length is 0
 	typeName = Path(path).FileName.RemoveExtension.text
 	for lines
 		if value.StartsWith("\t") is false and IsUnimplemented(lines, index, typeName)
-			ResolveCheck.Located(path, index + 1, "ImplementationNotFound: " + Tokenizer(value).Tokens.First)
+			ResolveCheck.Locate(path, index + 1, "ImplementationNotFound: " + Tokenizer(value).Tokens.First)
 IsUnimplemented(lines Texts, header Number, typeName Text) Boolean
 	Counting.IsUnimplemented(("Add(other) Number", "\tAdd(1) > 0 is true"), 0, "A")
 	Counting.IsUnimplemented(("Add(other) Number", "\tA.Add(1) is 1"), 0, "A")
@@ -233,12 +233,12 @@ Problem(lines Texts, broken Number) Text
 	Counting.Problem(("Run", "	let a = for 3"), 1).StartsWith("ForWithBodyOnlyAsMethodResult: let a = for 3, ")
 	Counting.Problem(("has number", "Run", "	1", "", "	2"), 3) is "EmptyLineIsNotAllowed: remove it"
 	Counting.Problem(("", "Run"), 0) is "EmptyLineIsNotAllowed: remove it"
-	Counting.Unimplemented("A.strict", ("Run", "\tA.\t", "\tA.\t is 1")).Length is 0
+	Counting.CheckImplementation("A.strict", ("Run", "\tA.\t", "\tA.\t is 1")).Length is 0
 	Counting.IsUnimplemented(("has number", "\thas 1 is 1"), 0, "A") is false
 	lines(broken).Trim is "" then "EmptyLineIsNotAllowed: remove it" else StatementParser.Problem(lines(broken).Trim)
-Parsed(code Text) SyntaxNode
-	Counting.UnknownMethods(Parsed("count is Error then count.Missing else 1"), Counted, KnownTypes.NoMembers).Length is 0
-	Counting.UnknownMethods(Parsed("count is Error then 1 else count.Missing"), Counted, KnownTypes.NoMembers).Length is 1
-	Counting.UnknownMethods(Parsed("count is Error or count.Missing"), Counted, KnownTypes.NoMembers).Length is 1
-	Counting.Parsed("1").Kind is "Number"
+Parse(code Text) SyntaxNode
+	Counting.UnknownMethods(Parse("count is Error then count.Missing else 1"), Counted, KnownTypes.NoMembers).Length is 0
+	Counting.UnknownMethods(Parse("count is Error then 1 else count.Missing"), Counted, KnownTypes.NoMembers).Length is 1
+	Counting.UnknownMethods(Parse("count is Error or count.Missing"), Counted, KnownTypes.NoMembers).Length is 1
+	Counting.Parse("1").Kind is "Number"
 	SyntaxParser(Tokenizer(code).Tokens).Parse

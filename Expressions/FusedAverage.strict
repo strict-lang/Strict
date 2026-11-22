@@ -11,8 +11,7 @@ Lines Texts
 	last = lines(ending - 1)
 	tabs = last.Substring(0, BodyParser.Indent(last))
 	start = Statements(ending)
-	body = lines.Slice(start, ending - start - 1) + (tabs + "fused = " + last.TrimStart)
-	Signature + body + Accumulated(tabs) + Result
+	Signature + lines.Slice(start, ending - start - 1) + (tabs + "fused = " + last.TrimStart) + Accumulate(tabs) + Result
 Element Text
 	Grays.Element is "Color"
 	fusion.Element(fusion.lines(fusion.Header(name)))
@@ -28,9 +27,9 @@ Signature Texts
 	for List(Text) + "Count" + Members
 		result = result + ("\tmutable fused" + value + " = 0")
 	result
-Accumulated(tabs Text) Texts
-	Ones.Accumulated("\t") is ("\tfusedSum = fusedSum + fused", "\tfusedCount = fusedCount + 1")
-	Grays.Accumulated("\t").First is "\tfusedRed = fusedRed + fused.Red"
+Accumulate(tabs Text) Texts
+	Ones.Accumulate("\t") is ("\tfusedSum = fusedSum + fused", "\tfusedCount = fusedCount + 1")
+	Grays.Accumulate("\t").First is "\tfusedRed = fusedRed + fused.Red"
 	mutable result = List(Mutable(Text))
 	for Members
 		result.Add(tabs + "fused" + value + " = fused" + value + " + fused" + (value is "Sum" then "" else "." + value))

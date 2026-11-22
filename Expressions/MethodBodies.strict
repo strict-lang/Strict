@@ -38,7 +38,7 @@ HeaderScope(header HeaderTokens, members Scope) Scope
 		types.Add(value is "Other" then typeName else (value is "Generic" then argument else value))
 	concrete = Instantiation(inference.types).Members(typeName, members)
 	mutable scope = concrete.With("value", InstanceType).With("self type", typeName).WithAll(header.ParameterNames, types)
-	for header.MutableParameters + Changes(shape.lines).Members + RefParameters(header) + Initialized(header)
+	for header.MutableParameters + Changes(shape.lines).Members + RefParameters(header) + Initialize(header)
 		scope = scope.With(value + " mutable", "mutable")
 	scope
 InstanceType Text
@@ -88,7 +88,7 @@ LoopScope(statement SyntaxNode, scope Scope) Scope
 	MethodBodies("Range", Sample, NoInference).LoopScope(CheckedA, ErrorNarrowing.NumberA).TypeOf("a") is "Error"
 	MethodBodies("Range", Sample, NoInference).LoopScope(SyntaxNode("Else", "else"), NoScope).TypeOf("index") is ""
 	if statement.Kind is "If"
-		return ErrorNarrowing(inference).Narrowed(statement.children(0), scope, Methods)
+		return ErrorNarrowing(inference).Narrow(statement.children(0), scope, Methods)
 	if statement.Kind is not "For"
 		return scope
 	iterated = statement.HasValue then inference.TypeOf(statement.children(0), scope, Methods) else IteratedType
@@ -97,7 +97,7 @@ Element(iterated Text) Text
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Number)") is "List(Text, Number)"
 	MethodBodies("Demo", Sample, NoInference).Element("Dictionary(Text, Text)") is "Texts"
 	MethodBodies("Demo", Sample, TypeInference(KnownTypes.Sample, TypeInference.Limits)).Element("Text") is "Text"
-	if inference.Enumerated(iterated).Length > 0
+	if inference.Enumerate(iterated).Length > 0
 		return iterated
 	constant prefix = "Dictionary("
 	if iterated.StartsWith(prefix)
@@ -140,17 +140,17 @@ StatementType(scoped ScopedStatement) Text
 	if statement.Kind is in ("ElseIf", "Else", "ElseValue") or statement.Kind is "Return" and not statement.HasValue
 		return ""
 	if statement.Kind is "Reassignment"
-		return Reassigned(statement, scoped.scope)
+		return Reassign(statement, scoped.scope)
 	result = statement.Kind is in ("Declaration", "Return") then statement.children(0) else statement
 	inference.TypeOf(result, scoped.scope, Methods)
-Reassigned(statement SyntaxNode, scope Scope) Text
+Reassign(statement SyntaxNode, scope Scope) Text
 	Adding.TypeOf("value") is "Demo"
 	Adding.names.Length is 5
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Generic"
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(Picking, NoScope).TypeOf("count") is "Number"
 	MethodBodies("Demo", Sample, Ticking).HeaderScope(Picking, NoScope).TypeOf("random mutable") is "mutable"
 	target = inference.TypeOf(statement.children(0), scope, Methods)
-	inference.Assigned(target, inference.TypeOf(statement.children(1), scope, Methods))
+	inference.Assign(target, inference.TypeOf(statement.children(1), scope, Methods))
 BlockType(statement SyntaxNode, scope Scope) Text
 	BlockType(SyntaxNode("For", "for"), NoScope) is ""
 	if statement.Kind is "For"
@@ -176,9 +176,9 @@ RefParameters(header HeaderTokens) Texts
 	for header.ParameterNames
 		if Changes.HasChanges(inference.types.ParameterScope(types(index)))
 			value
-Initialized(header HeaderTokens) Texts
+Initialize(header HeaderTokens) Texts
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("a mutable") is "mutable"
-	MethodBodies("Demo", Sample, NoInference).Initialized(AddOther).Length is 0
+	MethodBodies("Demo", Sample, NoInference).Initialize(AddOther).Length is 0
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(FromGeneric, NoScope).TypeOf("generic") is "Generic"
 	MethodBodies("Demo", Sample, NoInference).HeaderScope(NumberHeader, NoScope).TypeOf("number") is "Number"
 	MethodBodies("Demo", Sample, NoInference).Flatten(Unlined, NoScope, 5).Last.line is 6

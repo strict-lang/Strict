@@ -13,7 +13,7 @@ Chosen(files Texts, source Text) Texts
 	for names
 		counts(value) = (value is in counts then counts(value) else 0) + 1
 	for files
-		best = counts(names(index)) > 1 then Best(SameNamed(files, names, names(index)), source) else value
+		best = counts(names(index)) > 1 then Best(FindSameName(files, names, names(index)), source) else value
 		if best is "" or best is value
 			value
 Names(files Texts) Texts
@@ -24,9 +24,9 @@ Names(files Texts) Texts
 		slashed = value.IndexOf("\\") < 0 then value else value.Replace("\\", "/")
 		slash = slashed.LastIndexOf("/")
 		slash < 0 then slashed else slashed.Substring(slash + 1, slashed.Length - slash - 1)
-SameNamed(files Texts, names Texts, name Text) Texts
+FindSameName(files Texts, names Texts, name Text) Texts
 	Plain.Best(("x\\Scene.strict", "y\\Scene.strict"), "y\\Game.strict") is "y\\Scene.strict"
-	Plain.SameNamed(Project, Plain.Names(Project), "Scene.strict").Length is 2
+	Plain.FindSameName(Project, Plain.Names(Project), "Scene.strict").Length is 2
 	for files
 		if names(index) is name
 			value
@@ -64,7 +64,7 @@ Ambiguous(names Texts, path Text) Texts
 		if names.Index(value) is index and names.Count(value) > 1 and UsedLine(value) > 0
 			issue = Issue(value)
 			if issue is not ""
-				ResolveCheck.Located(path, UsedLine(value), issue)
+				ResolveCheck.Locate(path, UsedLine(value), issue)
 Issue(name Text) Text
 	Plain.Issue("Scene").StartsWith("AmbiguousType: Scene") and Qualified.Issue("Scene") is ""
 	Both.Issue("Scene").StartsWith("SameNamedTypes: Scene")

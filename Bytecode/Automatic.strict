@@ -56,7 +56,7 @@ Validations SyntaxNodes
 		constraint = Constraint.Of(value)
 		if constraint is not ""
 			checked = Constraint(Header(value).MemberName, MemberType(value), instantiation.types)
-			result.Add(checked.Checked(constraint, lines.Index(value) + 1))
+			result.Add(checked.Check(constraint, lines.Index(value) + 1))
 	result
 IsWanted(name Text, names Texts) Boolean
 	Point.IsWanted("Members", Names)

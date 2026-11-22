@@ -5,16 +5,16 @@ constant Counts = KnownTypes(List(Text) + "Count", List(Scope) + KnownTypes.NoMe
 constant Limited = SureCalls(TypeInference(Counts, List(Scope) + Scope(List(Text) + "Limit", List(Text) + "3")))
 constant Fielded = SureCalls(TypeInference(KnownTypes(List(Text) + "Count", List(Scope) + Scope("low", "Number"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers), List(Scope) + KnownTypes.NoMembers))
 constant Ranged = SyntaxParser(Tokenizer("Range(0, 1)").Tokens).Parse
-constant Remainder = FileCheck.Parsed("low % Limit")
+constant Remainder = FileCheck.Parse("low % Limit")
 Calls(type Text, node SyntaxNode, scope Scope) Texts
-	SureCalls.Calls("Demo", FileCheck.Parsed("low * (low + 1)"), Numbered) is ("Number.*", "Number.+")
-	SureCalls.Calls("Demo", FileCheck.Parsed("elements(0).Floor"), Numbered) is ("Number.Floor", "Index")
+	SureCalls.Calls("Demo", FileCheck.Parse("low * (low + 1)"), Numbered) is ("Number.*", "Number.+")
+	SureCalls.Calls("Demo", FileCheck.Parse("elements(0).Floor"), Numbered) is ("Number.Floor", "Index")
 	mutable keys = Direct(type, node, scope)
 	for node.children
 		keys = keys + Calls(type, value, scope)
 	keys
 Direct(type Text, node SyntaxNode, scope Scope) Texts
-	SureCalls.Direct("Demo", FileCheck.Parsed("low is 1"), Numbered).Length is 0
+	SureCalls.Direct("Demo", FileCheck.Parse("low is 1"), Numbered).Length is 0
 	SureCalls.Direct("Demo", SyntaxNode("Text", "+"), Numbered).Length is 0
 	SureCalls.Direct("Demo", Ranged, Numbered).Length is 0
 	Limited.Direct("Count", SyntaxNode("Identifier", "Increment"), Numbered) is ("Count.Increment")
@@ -27,12 +27,12 @@ Direct(type Text, node SyntaxNode, scope Scope) Texts
 		return List(Text) + "Index"
 	IsOwn(type, node, scope) then List(Text) + (type + "." + node.text) else List(Text)
 IsSafeDivision(type Text, node SyntaxNode) Boolean
-	Limited.IsSafeDivision("Count", Remainder) and Limited.IsSafeDivision("Count", FileCheck.Parsed("low / 2"))
-	Limited.IsSafeDivision("Other", FileCheck.Parsed("low % Count.Limit"))
-	Limited.IsSafeDivision("Count", FileCheck.Parsed("low / 0")) is false
-	Limited.IsSafeDivision("Count", FileCheck.Parsed("low % high")) is false
-	Limited.IsSafeDivision("Count", FileCheck.Parsed("low % Increment")) is false
-	Limited.IsSafeDivision("A", FileCheck.Parsed("low + 2")) is false
+	Limited.IsSafeDivision("Count", Remainder) and Limited.IsSafeDivision("Count", FileCheck.Parse("low / 2"))
+	Limited.IsSafeDivision("Other", FileCheck.Parse("low % Count.Limit"))
+	Limited.IsSafeDivision("Count", FileCheck.Parse("low / 0")) is false
+	Limited.IsSafeDivision("Count", FileCheck.Parse("low % high")) is false
+	Limited.IsSafeDivision("Count", FileCheck.Parse("low % Increment")) is false
+	Limited.IsSafeDivision("A", FileCheck.Parse("low + 2")) is false
 	Limited.IsSafeDivision("A", SyntaxNode("Text", "/")) is false
 	if node.Kind is not "Binary" or node.text is not in ("/", "%")
 		return false

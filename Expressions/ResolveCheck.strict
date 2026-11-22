@@ -11,36 +11,36 @@ constant Writers = KnownTypes(("W", "V"), (KnownTypes.NoMembers, KnownTypes.NoMe
 constant OverloadShapes = (TypeShape("Write(lines Texts)"), TypeShape("Go Number", "\t1"))
 constant Writing = TypeShape("has W", "has V")
 constant DataNames = ("Content", "Tools")
-Unresolved(path Text, inference TypeInference) Texts
-	ResolveCheck.Unresolved("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
+Resolve(path Text, inference TypeInference) Texts
+	ResolveCheck.Resolve("Logger.strict", Inference(("Logger.strict", "TextWriter.strict"))).Length is 0
 	lines = File(path).ReadLines
 	bodies = MethodBodies(TypeName(path), TypeShape(lines), inference)
 	known = inference.types.names + ("value", "index", "outer") + inference.types.ShapeScope(TypeName(path)).names
 	check = FileCheck(inference, known)
-	issues = check.Unimplemented(path, lines) + DefaultCheck(inference).Unsupported(path, lines)
+	issues = check.CheckImplementation(path, lines) + DefaultCheck(inference).CheckSupport(path, lines)
 	ambiguous = TypeChoice(lines).Ambiguous(inference.types.names, path)
 	overloaded = Overloads(inference.types).Ambiguities(path, lines)
-	placed = issues + Misplaced(path, lines) + Constraint.Where(path, lines)
-	placed + ambiguous + overloaded + Found(check, bodies, lines, path)
-Misplaced(path Text, lines Texts) Texts
-	ResolveCheck.Misplaced("A.strict", ("Run", "\t1", "constant B = 1")) is (Stray)
-	ResolveCheck.Misplaced("A.strict", ("constant B = 1", "Run", "\t1")).Length is 0
+	placed = issues + Misplace(path, lines) + Constraint.Where(path, lines)
+	placed + ambiguous + overloaded + Find(check, bodies, lines, path)
+Misplace(path Text, lines Texts) Texts
+	ResolveCheck.Misplace("A.strict", ("Run", "\t1", "constant B = 1")) is (Stray)
+	ResolveCheck.Misplace("A.strict", ("constant B = 1", "Run", "\t1")).Length is 0
 	for Limits(lines, false).OrderIssues
-		Located(path, value.Line, value to Text)
-Found(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
-	ResolveCheck.Found(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.StartsWith("A.strict:line 2: ")
-	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").First is "A:line 2: NameNotFound: missing"
-	ResolveCheck.Found(FileCheck(Counting, List(Text)), Missed, Missing, "A").Length is 1
-	ResolveCheck.Found(FileCheck(Counting, "Drawn"), Drawing, Drawn, "A").First is "A:line 3: " + ReturnTypes.Unvalued
+		Locate(path, value.Line, value to Text)
+Find(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
+	ResolveCheck.Find(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.StartsWith("A.strict:line 2: ")
+	ResolveCheck.Find(FileCheck(Counting, List(Text)), Missed, Missing, "A").First is "A:line 2: NameNotFound: missing"
+	ResolveCheck.Find(FileCheck(Counting, List(Text)), Missed, Missing, "A").Length is 1
+	ResolveCheck.Find(FileCheck(Counting, "Drawn"), Drawing, Drawn, "A").First is "A:line 3: " + ReturnTypes.Unvalued
 	for bodies.Statements
 		found = check.Unknown(value, bodies.Methods)
 		returns = ReturnTypes(check.inference)
 		returned = found is "" then returns.Issue(value, bodies.Methods, lines) else found
-		unknown = returned is "" then returns.Unresulted(value, bodies.Methods, lines) else returned
+		unknown = returned is "" then returns.CheckResult(value, bodies.Methods, lines) else returned
 		if unknown is not ""
-			Located(path, value.line + 1, unknown)
-Located(path Text, line Number, issue Text) Text
-	ResolveCheck.Located("A.strict", 2, "NameNotFound: b") is "A.strict:line 2: NameNotFound: b"
+			Locate(path, value.line + 1, unknown)
+Locate(path Text, line Number, issue Text) Text
+	ResolveCheck.Locate("A.strict", 2, "NameNotFound: b") is "A.strict:line 2: NameNotFound: b"
 	path + ":line " + line + ": " + issue
 Tree(folder Text) Texts
 	ResolveCheck.Tree("./Math") is List(Text) + "./Math"
@@ -66,8 +66,8 @@ AllFiles(root Text) Texts
 	for Directory.Directories(root)
 		files = files + Directory.Files(value, "*.strict")
 	files
-Overloaded(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
-	ResolveCheck.Overloaded(Counting.types, List(TypeShape), TypeShape("has a"), KnownTypes.NoMembers).names.Length is 0
+Overload(types KnownTypes, shapes List(TypeShape), shape TypeShape, scope Scope) Scope
+	ResolveCheck.Overload(Counting.types, List(TypeShape), TypeShape("has a"), KnownTypes.NoMembers).names.Length is 0
 	OverloadedMembers(types, shapes, shape.MemberScope.types, scope)
 OverloadedMembers(types KnownTypes, shapes List(TypeShape), memberTypes Texts, scope Scope) Scope
 	OverloadedMembers(Counting.types, List(TypeShape), List(Text) + "N", KnownTypes.NoMembers).names.Length is 0
@@ -96,7 +96,7 @@ TypeNames(files Texts) Texts
 Inference(files Texts) TypeInference
 	shapes = BuildProfile.Shapes(files)
 	inferring = Inferring(files, shapes, Generics(files, shapes))
-	inferring.Refined(inferring.Raw)
+	inferring.Refine(inferring.Raw)
 Shapes(files Texts) List(TypeShape)
 	for files
 		TypeShape(Fusion(File(value).ReadLines, Path(value).PathOnly.text).Fused)
@@ -106,5 +106,5 @@ Generics(files Texts, shapes List(TypeShape)) Texts
 			TypeName(files(index))
 TypeName(path Text) Text
 	TypeName("Examples/Sum.strict") is "Sum"
-	ResolveCheck.Overloaded(Writers, OverloadShapes, Writing, Scope("Seek", "x")).names is ("Seek", "Write", "Write")
+	ResolveCheck.Overload(Writers, OverloadShapes, Writing, Scope("Seek", "x")).names is ("Seek", "Write", "Write")
 	Path(path).FileName.RemoveExtension.text
