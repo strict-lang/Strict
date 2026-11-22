@@ -64,7 +64,7 @@ Argument Text
 	Kind.Argument.StartsWith("line.Chosen(\"kind\", (\"set\", \"add\", ")
 	at = ("Number", "Text", "Boolean", "Texts").Index(Type)
 	if at >= 0
-		return "line." + ("Numeric", "Option", "Flag", "Repeated")(at) + "(\"" + Name + "\", " + Default + ")"
+		return "line." + ("Numeric", "Option", "HasFlag", "Repeated")(at) + "(\"" + Name + "\", " + Default + ")"
 	source = Source
 	if source.Length is 0
 		return Default

@@ -26,7 +26,7 @@ Parsed Texts
 	Settings.Parsed.First is "Parsed(arguments Texts) Settings"
 	SettingsParsed(1).EndsWith("\"loras\", \"jsonOutput\")).Checked")
 	SettingsParsed.Last.StartsWith("\tSettings(line.Option(\"prompt\", \"prompt.txt\"), line.Chosen(\"kind\", ")
-	SettingsParsed.Last.EndsWith("line.Repeated(\"loras\", List(Text)), line.Flag(\"jsonOutput\", false))")
+	SettingsParsed.Last.EndsWith("line.Repeated(\"loras\", List(Text)), line.HasFlag(\"jsonOutput\", false))")
 	Single.Parsed(1) is "\tlet line = CommandLine(arguments, List(Text) + \"count\").Checked"
 	Rendering.Parsed.Last.StartsWith("\tRendering(Resolution(line.Numeric(\"width\", 720), ")
 	members = Members
