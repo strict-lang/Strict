@@ -3,14 +3,14 @@ Reverse Numbers
 	ReverseList(1, 2, 3, 4).Reverse is (4, 3, 2, 1)
 	for Range(0, numbers.Length).Reverse
 		numbers(index)
-Added(other Numbers) Numbers
-	ReverseList(1, 2).Added((10, 20)) is (11, 22)
-	ReverseList(1, 2, 3).Added((10, 20)) is Error
-	ReverseList(1, 2).Added((10, 20))(1) is 22
+Add(other Numbers) Numbers
+	ReverseList(1, 2).Add((10, 20)) is (11, 22)
+	ReverseList(1, 2, 3).Add((10, 20)) is Error
+	ReverseList(1, 2).Add((10, 20))(1) is 22
 	for numbers
 		value + other(index)
-Reported(other Numbers) Text
-	ReverseList(1, 2, 3).Reported((10, 20)).Split("\n").Length is 3
-	ReverseList(1, 2).Reported((10, 20)) is ""
-	added = Added(other)
+Report(other Numbers) Text
+	ReverseList(1, 2, 3).Report((10, 20)).Split("\n").Length is 3
+	ReverseList(1, 2).Report((10, 20)) is ""
+	added = Add(other)
 	added is Error then added to Text else ""

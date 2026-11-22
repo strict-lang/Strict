@@ -2,8 +2,8 @@ Add(left Number, right Number) Number
 Sum(first Number, second Number, third Number, fourth Number, fifth Number, sixth Number) Number
 Greeting(name Text) Text
 Total(numbers Numbers) Number
-Doubled(numbers Numbers) Numbers
-Halved(numbers Numbers) Numbers
+Double(numbers Numbers) Numbers
+Halve(numbers Numbers) Numbers
 Split(numbers Numbers, columns Number) List(Numbers)
 Failing Number
 Undefined Number

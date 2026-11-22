@@ -1,10 +1,10 @@
 Run
-	logger.Log(Appended(List(Numbers) + (1, 2), Float32s + Float32(3) + Float32(4)) to Text)
-	logger.Log(Converted((5, 6)) to Text)
-Appended(rows List(Numbers), floats Float32s) List(Numbers)
-	NumbersPlusFloats.Appended(List(Numbers) + (1, 2), Float32s + Float32(3)).Length is 2
-	NumbersPlusFloats.Appended(List(Numbers) + (1, 2), Float32s + Float32(3)).Last is (3)
+	logger.Log(Append(List(Numbers) + (1, 2), Float32s + Float32(3) + Float32(4)) to Text)
+	logger.Log(Convert((5, 6)) to Text)
+Append(rows List(Numbers), floats Float32s) List(Numbers)
+	NumbersPlusFloats.Append(List(Numbers) + (1, 2), Float32s + Float32(3)).Length is 2
+	NumbersPlusFloats.Append(List(Numbers) + (1, 2), Float32s + Float32(3)).Last is (3)
 	rows + floats
-Converted(numbers Numbers) Numbers
-	NumbersPlusFloats.Converted((5, 6)) is (5, 6)
+Convert(numbers Numbers) Numbers
+	NumbersPlusFloats.Convert((5, 6)) is (5, 6)
 	numbers to Numbers

@@ -1,3 +1,3 @@
-Rounded(boxed Boxed) Number
-	BoxUser.Rounded(Boxed(2.5)) is 2
+Round(boxed Boxed) Number
+	BoxUser.Round(Boxed(2.5)) is 2
 	boxed.Rounded

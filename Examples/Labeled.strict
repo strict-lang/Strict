@@ -5,11 +5,11 @@ Described Text
 	Labeled.Described is "Names a b"
 	Labeled("Letters").Described is "Letters a b"
 	label + " " + names.First + " " + names.Last
-Prefixed(separator = ": ") Text
-	Labeled.Prefixed is "Names: a"
-	Labeled.Prefixed(" - ") is "Names - a"
+Prefix(separator = ": ") Text
+	Labeled.Prefix is "Names: a"
+	Labeled.Prefix(" - ") is "Names - a"
 	label + separator + names.First
-Combined(other = Short) Text
-	Labeled.Combined is "Names Short"
-	Labeled.Combined(Labeled("Long")) is "Names Long"
+Combine(other = Short) Text
+	Labeled.Combine is "Names Short"
+	Labeled.Combine(Labeled("Long")) is "Names Long"
 	label + " " + other.label

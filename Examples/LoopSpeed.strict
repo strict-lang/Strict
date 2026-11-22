@@ -7,23 +7,23 @@ constant Nanoseconds = 1000000000
 constant Seed = 42
 constant Repeats = 3
 constant Kinds = ("offsets", "locals", "remainders", "gathered", "summed", "twisted")
-Counted(count Number) Numbers
-	LoopSpeed.Counted(3) is (0, 1, 2)
+Enumerate(count Number) Numbers
+	LoopSpeed.Enumerate(3) is (0, 1, 2)
 	for count
 		index
 Offsets(raw Numbers, count Number) Numbers
-	LoopSpeed.Offsets(LoopSpeed.Counted(400), 2) is (397, 400)
-	LoopSpeed.Offsets(LoopSpeed.Counted(400), 3).Last is 405
-	LoopSpeed.Offsets(LoopSpeed.Counted(400), 4) is Error("IndexOutOfRange")
-	LoopSpeed.Offsets(LoopSpeed.Counted(400), 0).Length is 0
+	LoopSpeed.Offsets(LoopSpeed.Enumerate(400), 2) is (397, 400)
+	LoopSpeed.Offsets(LoopSpeed.Enumerate(400), 3).Last is 405
+	LoopSpeed.Offsets(LoopSpeed.Enumerate(400), 4) is Error("IndexOutOfRange")
+	LoopSpeed.Offsets(LoopSpeed.Enumerate(400), 0).Length is 0
 	LoopSpeed.Offsets(List(Number), 0).Length is 0
 	for count
 		raw(index + Shift) + raw(index) * raw(index + 1)
 Locals(lists List(Numbers), count Number) Numbers
-	LoopSpeed.Locals(List(Numbers) + LoopSpeed.Counted(400), 2) is (397, 400)
+	LoopSpeed.Locals(List(Numbers) + LoopSpeed.Enumerate(400), 2) is (397, 400)
 	LoopSpeed.Locals(List(Numbers), 2) is Error
 	LoopSpeed.Locals(List(Numbers), 0).Length is 0
-	LoopSpeed.Locals(List(Numbers) + LoopSpeed.Counted(400), 4) is Error("IndexOutOfRange")
+	LoopSpeed.Locals(List(Numbers) + LoopSpeed.Enumerate(400), 4) is Error("IndexOutOfRange")
 	raw = lists.First
 	for count
 		raw(index + Shift) + raw(index) * raw(index + 1)
@@ -32,12 +32,12 @@ Remainders(numbers Numbers) Numbers
 	LoopSpeed.Remainders((15.5, -8, 13.999999999999998, 9007199254740996)) is (1.5, -1, 6.999999999999998, 1)
 	for numbers
 		value % Divisor
-Gathered(table Numbers, picks Numbers) Numbers
-	LoopSpeed.Gathered((5, 6, 7), (2, 0)) is (7, 5)
+Gather(table Numbers, picks Numbers) Numbers
+	LoopSpeed.Gather((5, 6, 7), (2, 0)) is (7, 5)
 	for picks
 		table(value)
-Summed(count Number) Number
-	LoopSpeed.Summed(4) is 6
+SumUp(count Number) Number
+	LoopSpeed.SumUp(4) is 6
 	mutable sum = 0
 	for Range(0, count)
 		sum = sum + value
@@ -45,11 +45,11 @@ Summed(count Number) Number
 Kernels(count Number) Number native
 	LoopSpeed.Kernels(2000000) is 0
 	before = Process.Executed(3)
-	Remainders(Counted(count)).Length is count then Process.Executed(3) - before else Number.NotFound
+	Remainders(Enumerate(count)).Length is count then Process.Executed(3) - before else Number.NotFound
 Once(kind Text, exact Numbers, padded Numbers) Number
-	Once("offsets", Counted(2), Counted(400)) is 400 and Once("locals", Counted(2), Counted(400)) is 400
-	Once("remainders", Counted(9), Counted(9)) is 1 and Once("gathered", Counted(9), Counted(9)) is 8
-	Once("summed", Counted(4), Counted(4)) is 6 and Once("twisted", Counted(1), Counted(1)) is 1608637542
+	Once("offsets", Enumerate(2), Enumerate(400)) is 400 and Once("locals", Enumerate(2), Enumerate(400)) is 400
+	Once("remainders", Enumerate(9), Enumerate(9)) is 1 and Once("gathered", Enumerate(9), Enumerate(9)) is 8
+	Once("summed", Enumerate(4), Enumerate(4)) is 6 and Once("twisted", Enumerate(1), Enumerate(1)) is 1608637542
 	if kind is "offsets"
 		return Offsets(padded, exact.Length).Last
 	if kind is "locals"
@@ -57,13 +57,13 @@ Once(kind Text, exact Numbers, padded Numbers) Number
 	if kind is "remainders"
 		return Remainders(exact).Last
 	if kind is "gathered"
-		return Gathered(exact, exact).Last
-	kind is "summed" then Summed(exact.Length) else MersenneTwister.Seeded(Seed).Uints(exact.Length).Last
+		return Gather(exact, exact).Last
+	kind is "summed" then SumUp(exact.Length) else MersenneTwister.Seeded(Seed).Uints(exact.Length).Last
 Spent(started Number, elements Number) Number
 	LoopSpeed.Spent(Process.Elapsed, 1) >= 0
 	((Process.Elapsed - started) * Nanoseconds / elements).Round(1)
-Measured(kind Text, exact Numbers, padded Numbers, rounds Number) Number
-	LoopSpeed.Measured("summed", LoopSpeed.Counted(4), LoopSpeed.Counted(4), 0) is 6
+Measure(kind Text, exact Numbers, padded Numbers, rounds Number) Number
+	LoopSpeed.Measure("summed", LoopSpeed.Enumerate(4), LoopSpeed.Enumerate(4), 0) is 6
 	mutable total = Once(kind, exact, padded)
 	started = Process.Elapsed
 	for rounds
@@ -74,6 +74,6 @@ Measured(kind Text, exact Numbers, padded Numbers, rounds Number) Number
 Run
 	mutable total = 0
 	for Kinds
-		total = total + Measured(value, Counted(Small), Counted(Small + Shift + 1), Rounds)
-		total = total + Measured(value, Counted(Large), Counted(Large + Shift + 1), Repeats)
+		total = total + Measure(value, Enumerate(Small), Enumerate(Small + Shift + 1), Rounds)
+		total = total + Measure(value, Enumerate(Large), Enumerate(Large + Shift + 1), Repeats)
 	logger.Log("checksum " + total)

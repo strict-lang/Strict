@@ -7,7 +7,7 @@ Total Number with Step 0.01
 	Prices(0.1, 3).Total > 0.3 is false
 	Prices(0.1, 3).Total to Text is "0.3"
 	price * count
-Discounted(amount Number with Step 0.01 Floor) Number with Step 0.01
-	Prices(0.1, 1).Discounted(0.015) is 0.09
-	Prices(1, 1).Discounted(0.019) is 0.99
+Discount(amount Number with Step 0.01 Floor) Number with Step 0.01
+	Prices(0.1, 1).Discount(0.015) is 0.09
+	Prices(1, 1).Discount(0.019) is 0.99
 	price - amount

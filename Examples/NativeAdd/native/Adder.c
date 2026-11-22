@@ -26,7 +26,7 @@ STRICT_EXPORT double Adder_Total(double self, double numbers)
 	return total;
 }
 
-STRICT_EXPORT double Adder_Doubled(double self, double numbers)
+STRICT_EXPORT double Adder_Double(double self, double numbers)
 {
 	static double storage[1 + 64];
 	strict_numbers* doubled = (strict_numbers*)storage;
@@ -36,7 +36,7 @@ STRICT_EXPORT double Adder_Doubled(double self, double numbers)
 	return strict_numbers_result(doubled);
 }
 
-STRICT_EXPORT double Adder_Halved(double self, double numbers)
+STRICT_EXPORT double Adder_Halve(double self, double numbers)
 {
 	static unsigned char storage[sizeof(strict_packed) + 64 * 2];
 	strict_packed* halves = (strict_packed*)storage;

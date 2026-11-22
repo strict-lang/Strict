@@ -1,15 +1,15 @@
-Counted(count Number) Numbers
-	Squares.Counted(3) is (0, 1, 2)
+Enumerate(count Number) Numbers
+	Squares.Enumerate(3) is (0, 1, 2)
 	for count
 		value
-Squared(numbers Numbers) Numbers slow
-	Squares.Squared((1, 2, 3)) is (1, 4, 9)
-	Squares.Squared(Squares.Counted(70000)).Last is 4899860001
+SquareAll(numbers Numbers) Numbers slow
+	Squares.SquareAll((1, 2, 3)) is (1, 4, 9)
+	Squares.SquareAll(Squares.Enumerate(70000)).Last is 4899860001
 	for numbers
 		Square(value)
 Square(number Number) Number
 	Squares.Square(3) is 9
 	number * number
 Run
-	squared = Squared(Counted(1000000))
+	squared = SquareAll(Enumerate(1000000))
 	logger.Log("Sum of squares " + squared.Sum + ", the last is " + squared.Last)

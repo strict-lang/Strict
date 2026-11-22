@@ -5,9 +5,9 @@ Run
 	started = Process.Elapsed
 	built = Matches(lines, "")
 	parsed = Process.Elapsed
-	kept = Kept(lines, reused)
+	kept = Keep(lines, reused)
 	matched = Process.Elapsed
-	found = Found(lines)
+	found = Find(lines)
 	ended = Process.Elapsed
 	perLine = Milliseconds(parsed - started) + " ms, one Regex " + Milliseconds(matched - parsed)
 	logger.Log(lines.Length + " lines, a Regex per line " + perLine + " ms, IndexOf " + Milliseconds(ended - matched))
@@ -22,13 +22,13 @@ Matches(lines Texts, prefix Text) Number
 	for lines
 		if Regex(prefix + Pattern).IsMatch(value)
 			1
-Kept(lines Texts, regex Regex) Number
-	RegexSpeed.Kept(("constant Wait = 1", "x"), Regex(Pattern)) is 1
+Keep(lines Texts, regex Regex) Number
+	RegexSpeed.Keep(("constant Wait = 1", "x"), Regex(Pattern)) is 1
 	for lines
 		if regex.IsMatch(value)
 			1
-Found(lines Texts) Number
-	RegexSpeed.Found(("constant Wait = 1", "x")) is 1
+Find(lines Texts) Number
+	RegexSpeed.Find(("constant Wait = 1", "x")) is 1
 	for lines
 		if value.IndexOf("constant ") >= 0
 			1

@@ -9,8 +9,8 @@ Steps(count Number) Vector3
 	for count
 		walker = Walker(walker, position = walker.position + walker.velocity)
 	walker.position
-Kept(count Number) Vector3
-	Walker(Vector3(1, 1, 1), Vector3(1, 2, 3)).Kept(2) is Vector3(4, 6, 8)
+Keep(count Number) Vector3
+	Walker(Vector3(1, 1, 1), Vector3(1, 2, 3)).Keep(2) is Vector3(4, 6, 8)
 	mutable walker = Walker(position, velocity)
 	start = walker.position
 	for count

@@ -1,17 +1,17 @@
-Copied(times Number) Number slow
-	LargeCollections.Copied(2) is 2 * 67108865
+Copy(times Number) Number slow
+	LargeCollections.Copy(2) is 2 * 67108865
 	constant Doublings = 25
-	large = Doubled("ab", Doublings)
+	large = Double("ab", Doublings)
 	mutable length = 0
 	for times
 		length = length + (large + "!").Length
 	length
-Doubled(text Text, times Number) Text
-	LargeCollections.Doubled("ab", 2) is "abababab"
+Double(text Text, times Number) Text
+	LargeCollections.Double("ab", 2) is "abababab"
 	mutable doubled = text
 	for times
 		doubled = doubled + doubled
 	doubled
 Run
 	constant Copies = 1100
-	logger.Log(Copied(Copies) to Text)
+	logger.Log(Copy(Copies) to Text)

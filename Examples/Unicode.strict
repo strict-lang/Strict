@@ -13,8 +13,8 @@ Middle(text Text) Text
 	Unicode.Middle(Unicode.Mixed).Bytes is (195, 164, 226, 130, 172)
 	Unicode.Middle(Unicode.Mixed).Length is 2
 	text.Substring(1, text.Length - 2)
-Found(text Text) Numbers
-	Unicode.Found(Unicode.Mixed) is (2, 3, 3, 228)
+Find(text Text) Numbers
+	Unicode.Find(Unicode.Mixed) is (2, 3, 3, 228)
 	(text.IndexOf(Euro), text.IndexOf("b"), text.LastIndexOf("b"), text(1).number)
 HasStarted(text Text) Boolean
 	Unicode.HasStarted(Unicode.Mixed)

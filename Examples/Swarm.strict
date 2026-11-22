@@ -2,25 +2,25 @@ Line(count Number) List(Vector3)
 	Swarm.Line(2) is (Vector3(0, 0, 0), Vector3(1, 0, 0))
 	for count
 		Vector3(index, 0, 0)
-Moved(positions List(Vector3), velocity Vector3) List(Vector3)
-	Swarm.Moved(Swarm.Line(2), Vector3(1, 2, 3)) is (Vector3(1, 2, 3), Vector3(2, 2, 3))
+Move(positions List(Vector3), velocity Vector3) List(Vector3)
+	Swarm.Move(Swarm.Line(2), Vector3(1, 2, 3)) is (Vector3(1, 2, 3), Vector3(2, 2, 3))
 	for positions
 		value + velocity
-Stepped(steps Number) Vector3
-	Swarm.Stepped(2) is Vector3(4, 0, 0)
+Step(steps Number) Vector3
+	Swarm.Step(2) is Vector3(4, 0, 0)
 	mutable positions = Line(3)
 	for steps
-		positions = Moved(positions, Vector3(1, 0, 0))
+		positions = Move(positions, Vector3(1, 0, 0))
 	positions(2)
-Kept(steps Number) Vector3
-	Swarm.Kept(2) is Vector3(0, 0, 0)
+Keep(steps Number) Vector3
+	Swarm.Keep(2) is Vector3(0, 0, 0)
 	mutable positions = Line(3)
 	first = positions(0)
 	for steps
-		positions = Moved(positions, Vector3(1, 0, 0))
+		positions = Move(positions, Vector3(1, 0, 0))
 	first + positions(0) - positions(0)
-Thinned(count Number) List(Vector3)
-	Swarm.Thinned(2) is (Vector3(2, 0, 0), Vector3(1, 0, 0))
+Thin(count Number) List(Vector3)
+	Swarm.Thin(2) is (Vector3(2, 0, 0), Vector3(1, 0, 0))
 	mutable positions = Line(4)
 	for count
 		positions = positions.SwapRemoved(0)
@@ -29,14 +29,14 @@ Untouched Number
 	Swarm.Untouched is 3
 	before = Line(3)
 	before.Length + before.SwapRemoved(0).Length - 2
-Nudged(count Number) Vector3
-	Swarm.Nudged(2) is Vector3(2, 0, 0)
+Nudge(count Number) Vector3
+	Swarm.Nudge(2) is Vector3(2, 0, 0)
 	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
 	for count
 		positions(0) = positions(0) + Vector3(1, 0, 0)
 	positions(0)
-Remembered(count Number) Vector3
-	Swarm.Remembered(2) is Vector3(1, 0, 0)
+Remember(count Number) Vector3
+	Swarm.Remember(2) is Vector3(1, 0, 0)
 	mutable positions = (Vector3(0, 0, 0), Vector3(1, 0, 0))
 	first = positions(1)
 	for count

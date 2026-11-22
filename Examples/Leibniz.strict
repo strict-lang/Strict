@@ -14,9 +14,9 @@ Run(times = 1) Number
 		logger.Log(Pi(rounds).Fixed(Digits))
 		0
 	else
-		Timed(rounds, times)
-Timed(rounds Number, times Number) Number
-	Leibniz.Timed(0, 0) is 0
+		TimeRounds(rounds, times)
+TimeRounds(rounds Number, times Number) Number
+	Leibniz.TimeRounds(0, 0) is 0
 	warmup = Pi(rounds)
 	for times
 		started = Process.Elapsed

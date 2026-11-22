@@ -12,19 +12,19 @@ Summed Number
 	Adder.Total((1, 2, 3))
 HalvesTotal Number
 	NativeAdd.HalvesTotal is 6
-	Adder.Total(Adder.Halved((1, 2, 3)))
+	Adder.Total(Adder.Halve((1, 2, 3)))
 Doubles Numbers
 	NativeAdd.Doubles is (2, 4, 6)
-	Adder.Doubled((1, 2, 3))
+	Adder.Double((1, 2, 3))
 Halves Numbers
 	NativeAdd.Halves is (1, 0.0999755859375, -2)
-	Adder.Halved((1, 0.1, -2))
+	Adder.Halve((1, 0.1, -2))
 Rows List(Numbers)
 	NativeAdd.Rows is ((1, 2), (3, 4))
 	Adder.Split((1, 2, 3, 4), 2)
 Dot(left Numbers with value.Bits is 32, right Numbers with value.Bits is 32) Number
-	NativeAdd.Dot(Adder.Halved((1, 2, 3)), (1, 1, 1)) is 6
-	NativeAdd.Dot((1, 1, 1), Adder.Halved((1, 2, 3))) is 6
+	NativeAdd.Dot(Adder.Halve((1, 2, 3)), (1, 1, 1)) is 6
+	NativeAdd.Dot((1, 1, 1), Adder.Halve((1, 2, 3))) is 6
 	mutable sum = 0
 	for left
 		sum = sum + value * right(index)
@@ -43,5 +43,5 @@ Run
 	logger.Log("1 + 2 = " + Added)
 	logger.Log(Greeted + ", the sum of 1, 2, 3 is " + Summed + " and doubled they are " + (Doubles to Text))
 	logger.Log("A counter from 10 by 5 counts " + Counted)
-	dot = Dot(Adder.Halved((1, 2, 3)), (1, 1, 1))
+	dot = Dot(Adder.Halve((1, 2, 3)), (1, 1, 1))
 	logger.Log("Halves " + (Halves to Text) + ", rows " + (Rows to Text) + ", dot " + dot)
