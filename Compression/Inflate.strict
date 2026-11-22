@@ -28,48 +28,48 @@ Inflated Numbers
 Block(state Inflation, kind Number) Inflation
 	StoredSample.Block(Inflation(List(Number), 3), 0).output is (104, 105)
 	if kind is 0
-		return Stored(state)
-	kind is 1 then Coded(state, FixedLiteralCodes, FixedDistanceCodes) else Dynamic(state)
-Stored(state Inflation) Inflation
-	StoredSample.Stored(Inflation(List(Number), 3)).position is 56
-	StoredSample.Stored(Inflation((1, 2), 3)).output is (1, 2, 104, 105)
-	StoredSample.Stored(Inflation((1, 2), 3)).position is 56
+		return Store(state)
+	kind is 1 then DecodeBlock(state, FixedLiteralCodes, FixedDistanceCodes) else Dynamic(state)
+Store(state Inflation) Inflation
+	StoredSample.Store(Inflation(List(Number), 3)).position is 56
+	StoredSample.Store(Inflation((1, 2), 3)).output is (1, 2, 104, 105)
+	StoredSample.Store(Inflation((1, 2), 3)).position is 56
 	start = ((state.position + 7) / 8).Floor
 	mutable output = state.output
 	for bytes(start) + bytes(start + 1) * Byte.Values
 		output = output + bytes(start + 4 + index)
 	Inflation(output, (start + 4 + output.Length - state.output.Length) * 8)
-Coded(state Inflation, literals Huffman, distances Huffman) Inflation
-	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
-	FixedSample.Coded(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
+DecodeBlock(state Inflation, literals Huffman, distances Huffman) Inflation
+	FixedSample.DecodeBlock(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).output.Length is 9
+	FixedSample.DecodeBlock(Inflation(List(Number), 3), FixedLiteralCodes, FixedDistanceCodes).position is 54
 	stream = value
 	mutable output = state.output
 	mutable position = state.position
 	for bytes.Length * 8
-		symbol = literals.Decoded(stream, position)
+		symbol = literals.Decode(stream, position)
 		position = position + symbol.bits
 		if symbol.number is Symbol.EndOfBlock
 			return Inflation(output, position)
-		output = Matched(output, symbol.number, position, distances)
+		output = Match(output, symbol.number, position, distances)
 		position = symbol.number < Symbol.FirstLength then position else After(symbol.number, position, distances)
 	Inflation(output, position)
-Matched(output Numbers, symbol Number, position Number, distances Huffman) Numbers
-	Inflate((0, 73)).Matched((1, 2, 3, 4, 5, 6, 7), 265, 8, FixedDistanceCodes).Sum is 82
-	Inflate((0, 73)).Matched((1, 2), 97, 8, FixedDistanceCodes) is (1, 2, 97)
+Match(output Numbers, symbol Number, position Number, distances Huffman) Numbers
+	Inflate((0, 73)).Match((1, 2, 3, 4, 5, 6, 7), 265, 8, FixedDistanceCodes).Sum is 82
+	Inflate((0, 73)).Match((1, 2), 97, 8, FixedDistanceCodes) is (1, 2, 97)
 	if symbol < Symbol.EndOfBlock
 		return output + symbol
 	length = LengthBases(symbol - Symbol.FirstLength) + Bits(position, LengthBits(symbol - Symbol.FirstLength))
 	afterLength = position + LengthBits(symbol - Symbol.FirstLength)
-	code = distances.Decoded(value, afterLength)
-	Copied(output, length, DistanceBases(code.number) + Bits(afterLength + code.bits, DistanceBits(code.number)))
+	code = distances.Decode(value, afterLength)
+	Copy(output, length, DistanceBases(code.number) + Bits(afterLength + code.bits, DistanceBits(code.number)))
 After(symbol Number, position Number, distances Huffman) Number
 	Inflate((0, 73)).After(265, 8, FixedDistanceCodes) is 15
 	Inflate((0, 73)).After(269, 8, FixedDistanceCodes) is 18
 	afterLength = position + LengthBits(symbol - Symbol.FirstLength)
-	code = distances.Decoded(value, afterLength)
+	code = distances.Decode(value, afterLength)
 	afterLength + code.bits + DistanceBits(code.number)
-Copied(output Numbers, length Number, distance Number) Numbers
-	StoredSample.Copied((1, 2), 3, 2) is (1, 2, 1, 2, 1)
+Copy(output Numbers, length Number, distance Number) Numbers
+	StoredSample.Copy((1, 2), 3, 2) is (1, 2, 1, 2, 1)
 	start = output.Length - distance
 	mutable result = output
 	for length
@@ -86,7 +86,7 @@ Dynamic(state Inflation) Inflation
 	lengths = Lengths(Inflation(List(Number), start), codes, literalCount + distanceCount)
 	literals = Huffman.From(Part(lengths.output, 0, literalCount))
 	distances = Huffman.From(Part(lengths.output, literalCount, distanceCount))
-	Coded(Inflation(state.output, lengths.position), literals, distances)
+	DecodeBlock(Inflation(state.output, lengths.position), literals, distances)
 CodeLengths(position Number, count Number) Numbers
 	DynamicSample.CodeLengths(17, 4).Length is 19
 	DynamicSample.CodeLengths(17, 4) is (3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4, 3)
@@ -102,24 +102,24 @@ Lengths(state Inflation, codes Huffman, count Number) Inflation
 	for count
 		if current.output.Length >= count
 			return current
-		symbol = codes.Decoded(Inflate(bytes), current.position)
-		current = Repeated(Inflation(current.output, current.position + symbol.bits), symbol.number)
+		symbol = codes.Decode(Inflate(bytes), current.position)
+		current = Repeat(Inflation(current.output, current.position + symbol.bits), symbol.number)
 	current
-Repeated(state Inflation, symbol Number) Inflation
-	StoredSample.Repeated(Inflation((1, 2), 0), 16).output is (1, 2, 2, 2, 2, 2)
-	StoredSample.Repeated(Inflation((1, 2), 0), 16).position is 2
-	StoredSample.Repeated(Inflation((1, 2), 8), 17).position is 11
-	StoredSample.Repeated(Inflation((1, 2), 8), 18).position is 15
-	StoredSample.Repeated(Inflation((1, 2), 8), 18).output is (1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+Repeat(state Inflation, symbol Number) Inflation
+	StoredSample.Repeat(Inflation((1, 2), 0), 16).output is (1, 2, 2, 2, 2, 2)
+	StoredSample.Repeat(Inflation((1, 2), 0), 16).position is 2
+	StoredSample.Repeat(Inflation((1, 2), 8), 17).position is 11
+	StoredSample.Repeat(Inflation((1, 2), 8), 18).position is 15
+	StoredSample.Repeat(Inflation((1, 2), 8), 18).output is (1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
 	constant LongZerosMinimum = 11
 	if symbol < Symbol.RepeatPrevious
 		return Inflation(state.output + symbol, state.position)
 	extra = symbol is Symbol.RepeatPrevious then 2 else symbol is Symbol.RepeatZeros then 3 else 7
 	times = Bits(state.position, extra) + (symbol is Symbol.RepeatLongZeros then LongZerosMinimum else 3)
 	previous = symbol is Symbol.RepeatPrevious then state.output.Last else 0
-	Inflation(Filled(state.output, previous, times), state.position + extra)
-Filled(output Numbers, number Number, times Number) Numbers
-	StoredSample.Filled((1, 2), 7, 3) is (1, 2, 7, 7, 7)
+	Inflation(Fill(state.output, previous, times), state.position + extra)
+Fill(output Numbers, number Number, times Number) Numbers
+	StoredSample.Fill((1, 2), 7, 3) is (1, 2, 7, 7, 7)
 	mutable result = output
 	for times
 		result = result + number
