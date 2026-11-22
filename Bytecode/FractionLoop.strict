@@ -1,5 +1,5 @@
-constant Sample = BodyParser("Run", "\tfor Range(1, rounds + 1)", "\t\tpi = pi + (1 - 2 * (value % 2)) / (2 * value + 1)").Block(1, 1).children(0)
-constant PlainSum = BodyParser("Run", "\tfor Range(0, rounds)", "\t\tsum = sum + value").Block(1, 1).children(0)
+constant Sample = BodyParser("Run", "\tmutable pi = 0", "\tfor Range(1, rounds + 1)", "\t\tpi = pi + (1 - 2 * (value % 2)) / (2 * value + 1)").Method(1).children(1)
+constant PlainSum = BodyParser("Run", "\tmutable sum = 0", "\tfor Range(0, rounds)", "\t\tsum = sum + value").Method(1).children(1)
 Merged(loop SyntaxNode) SyntaxNode
 	FractionLoop.Merged(PlainSum).Kind is "For"
 	Text.Combine(FractionLoop.Merged(Sample).Lines(""), " ").IndexOf("2500") > 0
