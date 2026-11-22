@@ -2,7 +2,7 @@ has call Invocation
 Result VmValue
 	TestBudget.Finished(TestBudget.Started("a", false) + TestBudget.Finished(0) * 0) < 9 + TestBudget.Started("", true) * 0
 	arguments = call.Arguments
-	if call.MethodName is in ("Started", "Watched")
+	if call.MethodName is in ("Started", "Watched", "Start", "Watch")
 		return VmValue.OfNumber(TestBudget.Watched(arguments(0).text, arguments(1).IsTrue))
 	if call.MethodName is "Entered"
 		return VmValue.OfNumber(TestBudget.Entered)

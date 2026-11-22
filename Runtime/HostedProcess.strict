@@ -41,7 +41,7 @@ Direct VmValue
 		return VmValue.OfBoolean(Sampler.IsTaken(call.Arguments.First.number))
 	if TypeEntry.ShortName(call.TypeName) is in ("Logger", "Strict")
 		return Captured
-	call.MethodName is in ("At", "Stored") then ConstantCache.Host(call) else HostedBudget(call).Result
+	call.MethodName is in ("At", "Stored", "Store") then ConstantCache.Host(call) else HostedBudget(call).Result
 Captured VmValue
 	HostedProcess(Uncaptured).Captured.text is ""
 	isLogger = TypeEntry.ShortName(call.TypeName) is "Logger"
