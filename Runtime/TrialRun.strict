@@ -1,0 +1,11 @@
+has trial Trial
+Tested Text slow
+	"Test passed: AddTwoNumbers(2, 3) is 5" is in TrialRun(Trial.Adding).Tested
+	if trial.Name is ""
+		return ""
+	trial.Written
+	started = logger.Captured(true)
+	request = TestRequest((trial.Located, TypeSource.Root, "unit"))
+	answer = request.Executing(Dictionary(Text, TypeEntry), InferenceCache.None).Served(trial.Located, TypeSource.Root)
+	output = started + logger.Captured(false)
+	answer is Error then output + answer to Text else output

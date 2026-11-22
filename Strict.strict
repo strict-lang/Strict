@@ -160,7 +160,7 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 	execute = request.Executing(known, inferred)
 	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
 Test(text Text) Text slow
-	Trial(text).Tested
+	Trial(text).Ran
 Traced(request TestRequest, rest Texts) Number slow
 	trace = ValueTrace(request.Selection)
 	profile = Profile(request.Selection)

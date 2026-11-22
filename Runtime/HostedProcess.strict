@@ -45,7 +45,8 @@ Direct VmValue
 Captured VmValue
 	HostedProcess(Uncaptured).Captured.text is ""
 	isLogger = TypeEntry.ShortName(call.TypeName) is "Logger"
-	VmValue.OfText(isLogger then logger.Captured(call.Arguments.First.IsTrue) else Trial(call.Arguments.First.text).Tested)
+	given = call.Arguments.First
+	VmValue.OfText(isLogger then logger.Captured(given.IsTrue) else TrialRun(Trial(given.text)).Tested)
 Memoized VmValue
 	HostedProcess(Collecting).Memoized.kind is "Strict/Error"
 	if call.Arguments.Length < 2

@@ -13,15 +13,13 @@ Name Text
 Located Text
 	Adding.Located is "obj/Trials/AddTwoNumbers/AddTwoNumbers.strict"
 	"obj/Trials/" + Name + "/" + Name + ".strict"
-Tested Text slow
-	"Test passed: AddTwoNumbers(2, 3) is 5" is in Adding.Tested
-	if Name is ""
-		return ""
+Written slow
 	for ("obj", "obj/Trials", "obj/Trials/" + Name)
 		Directory.Create(value)
 	File(Located).Write(source)
-	started = logger.Captured(true)
-	request = TestRequest((Located, TypeSource.Root, "unit"))
-	answer = request.Executing(Dictionary(Text, TypeEntry), InferenceCache.None).Served(Located, TypeSource.Root)
-	output = started + logger.Captured(false)
-	answer is Error then output + answer to Text else output
+Ran Text slow
+	"Test passed: AddTwoNumbers(2, 3) is 5" is in Adding.Ran
+	if Name is ""
+		return ""
+	Written
+	Process.RunTool(Process.Find("strict").executable, "test " + Located + " unit").Output
