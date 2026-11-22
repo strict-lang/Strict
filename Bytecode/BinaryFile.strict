@@ -1,6 +1,7 @@
 has source Text
 constant Probe = BinaryFile("./Bytecode/Probe.strict")
 constant Greeting = Probe.Packed(BinarySources(List(Text)).Header, List(TypeEntry) + TypeEntry.HelloLogger, List(Text))
+constant Recorded = ("./Any.strict", "./Bytecode/Probe.strict")
 constant Packing = Probe.Unpacked(Greeting)
 constant Outdated = Probe.Unpacked(Probe.Packed(BinaryNames(List(Text) + "./Any.strict").Integers + TypeEntry.FormatVersion + BinarySources.CompilerStamp + 5,List(TypeEntry) + TypeEntry.HelloLogger, List(Text)))
 Path Text
@@ -111,9 +112,18 @@ IsCurrent(entries List(ZipEntry), known = Dictionary(Text, Number)) Boolean
 	header = EntryDecoder.Of(entries.First.content)
 	start = 1 + header.stream(0)
 	complete = header.stream.Length is start + 2 + header.names.Length
-	stamped = BinarySources(header.names).Stamped(known)
+	stamped = BinarySources(Rooted(header.names)).Stamped(known)
 	isSameCompiler = complete and header.stream(start + 1) is BinarySources.CompilerStamp
 	isSameCompiler and header.stream(start) is TypeEntry.FormatVersion and stamped.Matches(header.stream, start + 2)
+Rooted(names Texts) Texts
+	Probe.Rooted(("./Bytecode/Probe.strict", "./Any.strict")) is ("./Bytecode/Probe.strict", "./Any.strict")
+	BinaryFile("C:/s/Bytecode/Probe.strict").Rooted(Recorded) is ("C:/s/Any.strict", "C:/s/Bytecode/Probe.strict")
+	mutable base = ""
+	for names
+		if value.StartsWith("./") and source.EndsWith(value.Substring(1))
+			base = source.Substring(0, source.Length - value.Length + 1)
+	for names
+		base is "" or value.StartsWith("./") is false then value else base + value.Substring(1)
 Types(entries List(ZipEntry)) List(TypeEntry)
 	Probe.Types(Packing) is List(TypeEntry) + TypeEntry.HelloLogger
 	Probe.Types(List(ZipEntry)).Length is 0
