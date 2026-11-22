@@ -74,12 +74,12 @@ CheckReplace(folder Text) Boolean
 	File(folder + "/app.new.exe").Write("new".Bytes)
 	VerifyReplace(folder)
 VerifyReplace(folder Text) Boolean
-	cmd = "\"" + Process.Current.executable + "\" \"" + folder + "/ReplaceCheck.strict\""
+	cmd = "\"" + Process.Find("strict").executable + "\" \"" + folder + "/ReplaceCheck.strict\""
 	held = Process.RunTool(folder + "/hold.exe", "\"" + folder + "/app.new.exe\" \"" + cmd + "\"", ToolSeconds)
 	keptOld = File(folder + "/app.exe").Exists and File(folder + "/app.exe").ReadBytes is "old".Bytes
 	if held.exitCode is not 0 or not keptOld or File(folder + "/app.new.exe").ReadBytes is not "new".Bytes
 		return Error("FailedInstallCorruptedFiles: " + held.Output + held.error)
-	open = Process.RunTool(Process.Current.executable, folder + "/ReplaceCheck.strict", ToolSeconds)
+	open = Process.RunTool(Process.Find("strict").executable, folder + "/ReplaceCheck.strict", ToolSeconds)
 	ok = open.exitCode is 0 and File(folder + "/app.exe").ReadBytes is "new".Bytes
 	if not ok or File(folder + "/app.new.exe").Exists or File(folder + "/app.old.exe").Exists
 		return Error("CleanReplaceFailed: " + open.Output + open.error)
@@ -99,7 +99,7 @@ CheckDiscovery(folder Text) Boolean
 	sfArg = "SourceFiles(\".\").Of(\"./" + folder + "/Hop0.strict\")"
 	sfLine = "\tlogger.Log((\"./" + folder + "/Hop69.strict\" is in " + sfArg + ") to Text)"
 	File(folder + "/DiscoveryCheck.strict").Write(("has logger", "Run", sfLine))
-	res = Process.RunTool(Process.Current.executable, folder + "/DiscoveryCheck.strict", ToolSeconds)
+	res = Process.RunTool(Process.Find("strict").executable, folder + "/DiscoveryCheck.strict", ToolSeconds)
 	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("DiscoveryFailed: " + res.Output + res.error)
 	logger.Log("Source discovery reaches all 70 dependency edges")
@@ -111,7 +111,7 @@ CheckLinking(folder Text) Boolean
 	cmpCall = "FileCompiler(Logger).Compiled(\"./" + folder + "/Chain0.strict\", \".\", false).Length >= 70"
 	line = "\tlogger.Log((" + cmpCall + ") to Text)"
 	File(folder + "/LinkCheck.strict").Write(("has logger", "Run", line))
-	res = Process.RunTool(Process.Current.executable, folder + "/LinkCheck.strict", ToolSeconds)
+	res = Process.RunTool(Process.Find("strict").executable, folder + "/LinkCheck.strict", ToolSeconds)
 	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("LinkingFailed: " + res.Output + res.error)
 	logger.Log("Linking closes a chain longer than 50 rounds")
@@ -120,7 +120,7 @@ CheckValues(folder Text) Boolean
 	File(folder + "/CachePair.strict").Write(("has Left Number", "has Right Number"))
 	src = folder + "/ValueCheck.strict"
 	File(src).Write(ValueHead + ValueMid + ValueTailA + ValueTailB + ValueExtra)
-	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildValuesFailed: " + built.Output + built.error)
 	mlir = Text.Combine(File(folder + "/obj/ValueCheck.mlir").ReadLines, "\n")

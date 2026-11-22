@@ -151,7 +151,7 @@ CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
 CheckedPoolFailure(folder Text) Boolean
 	src = folder + "/PoolFailure.strict"
 	File(src).Write((PfA + PfB + PfC).Split("\n"))
-	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("PoolFailureBuildFailed: " + built.Output + built.error)
 	for FailAttempts

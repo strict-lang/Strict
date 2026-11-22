@@ -33,7 +33,7 @@ Run Number
 Checked(folder Text) Boolean
 	src = folder + "/KeptTokens.strict"
 	File(src).Write(ProgramA + ProgramB + ProgramC)
-	built = Process.RunTool(Process.Current.executable, "build " + src, BuildSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + src, BuildSeconds)
 	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else RanCases(folder)
 RanCases(folder Text) Boolean
 	win = Process.OperatingSystem is "Windows"

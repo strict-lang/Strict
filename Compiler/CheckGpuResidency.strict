@@ -86,7 +86,7 @@ CheckSimpleAndOrbit(folder Text) Boolean
 CheckViewingAndPending(folder Text) Boolean
 	File(folder + "/Pair.strict").Write(UpdatedPair.Split("\n"))
 	File(folder + "/Viewing.strict").Write((ViewA + ViewB).Split("\n"))
-	built = Process.RunTool(Process.Current.executable, "build " + folder + "/Viewing.strict", ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/Viewing.strict", ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildViewingFailed: " + built.Output + built.error)
 	ext = Process.OperatingSystem is "Windows" then ".exe" else ""
@@ -100,7 +100,7 @@ UpdatedPair Text
 	(PairA + "\n" + PairB).Replace("has imaginary Number\n", "has imaginary Number\nconstant Zero = Pair(0, 0)\n")
 BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean) Text
 	File(folder + "/" + name + ".strict").Write(code.Split("\n"))
-	built = Process.RunTool(Process.Current.executable, "build " + folder + "/" + name + ".strict", ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/" + name + ".strict", ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed " + name + ": " + built.Output + built.error)
 	win = Process.OperatingSystem is "Windows"

@@ -176,7 +176,7 @@ Built(folder Text, name Text, code Text, platform Text) Text
 	src = folder + "/" + name + ".strict"
 	File(src).Write(code.Split("\n"))
 	arg = "build " + src + (platform is "" then "" else " " + platform)
-	built = Process.RunTool(Process.Current.executable, arg, ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, arg, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed " + name + ": " + built.Output + built.error)
 	platform is "" then folder + "/" + name + ".exe" else folder + "/Release/Web/" + name + ".js"

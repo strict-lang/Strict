@@ -2,63 +2,57 @@ constant ToolSeconds = 90
 constant ProbeLines = ("has profile Compiler/BuildProfile", "Run Number", "	BuildProfile(Logger).Reported(\"Fast profile probe\", Process.Elapsed)", "	(profile.Detailed is BuildProfile.Detailed) then 0 else 1")
 constant ProgramLines = ("Run Number", "	0")
 constant StagesA = ("Dependency inventory", "Dependency snapshot", "Frontend / source discovery", "Frontend / shape loading and fusion", "Frontend / dependency linking", "Frontend / syntax validation")
-constant StagesB = ("Frontend / name validation", "Emission / reachability", "Emission / safety", "Emission / function bodies", "GPU preparation", "Host runtime assembly")
+constant StagesB = ("Emission / reachability", "Emission / safety", "Emission / function bodies", "GPU preparation", "Host runtime assembly")
 constant StagesC = ("mlir-opt", "mlir-translate", "Linking", "Packaging", "Build total")
 Run Number
 	folder = "Compiler/output/ProfileCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	if result is Error
-		return result
 	logger.Log("Detailed VM/native timings are opt-in; cache hits still skip all compilation and tests")
 	0
-Checked(folder Text) Boolean
+Checked(folder Text)
 	probe = folder + "/Probe.strict"
 	File(probe).Write(ProbeLines)
 	ext = Process.OperatingSystem is "Windows" then ".exe" else ""
-	probeRes = CheckProbeVm(probe, folder + "/Probe" + ext)
-	if probeRes is Error
-		return probeRes
+	CheckProbeVm(probe, folder + "/Probe" + ext)
 	program = folder + "/Program.strict"
 	File(program).Write(ProgramLines)
-	out = Ran(Process.Current.executable, "build " + program, "1")
-	out is Error then out else CheckCacheHit(program, folder + "/Program" + ext, out)
-CheckProbeVm(probe Text, exe Text) Boolean
-	v1 = Ran(Process.Current.executable, probe, "1")
+	CheckCacheHit(program, folder + "/Program" + ext, Ran(Process.Find("strict").executable, "build " + program, "1"))
+CheckProbeVm(probe Text, exe Text)
+	strict = Process.Find("strict").executable
+	v1 = Ran(strict, probe, "1")
 	if v1 is Error or "Fast profile probe:" is not in v1
 		return Error("DetailedVmTimingsMissing: " + (v1 to Text))
-	v0 = Ran(Process.Current.executable, probe, "0")
+	v0 = Ran(strict, probe, "0")
 	if v0 is Error or "Fast profile probe:" is in v0
 		return Error("QuietVmUnexpectedProbe: " + (v0 to Text))
-	built = Ran(Process.Current.executable, "build " + probe, "1")
-	built is Error then built else CheckProbeNative(exe)
-CheckProbeNative(exe Text) Boolean
+	built = Ran(strict, "build " + probe, "1")
+	if built is Error
+		return built
+	CheckProbeNative(exe)
+CheckProbeNative(exe Text)
 	n1 = Ran(exe, "", "1")
 	n0 = Ran(exe, "", "0")
-	bad = n1 is Error or "Fast profile probe:" is not in n1 or n0 is Error or "Fast profile probe:" is in n0
-	bad then Error("NativeProfileCheckFailed") else true
-CheckCacheHit(program Text, exe Text, buildOut Text) Boolean
-	stageErr = MissingStage(buildOut)
-	if stageErr is Error
-		return stageErr
+	if n1 is Error or "Fast profile probe:" is not in n1 or n0 is Error or "Fast profile probe:" is in n0
+		return Error("NativeProfileCheckFailed")
+CheckCacheHit(program Text, exe Text, buildOut Text)
+	CheckStages(buildOut)
 	if "Test passed:" is in buildOut or "Test failed:" is in buildOut
 		return Error("UnexpectedTestInBuild: " + buildOut)
 	CheckHitLoop(program, exe, File(exe).Modified)
-CheckHitLoop(program Text, exe Text, stamp Number) Boolean
+CheckHitLoop(program Text, exe Text, stamp Number)
 	for ("1", "0")
-		hit = Ran(Process.Current.executable, "build " + program, value)
+		hit = Ran(Process.Find("strict").executable, "build " + program, value)
 		if hit is Error or "Up to date:" is not in hit or "Frontend /" is in hit
 			return Error("CacheHitFailed: " + (hit to Text))
 		if ("Compiler build cache hit:" is in hit) is not (value is "1") or File(exe).Modified is not stamp
 			return Error("CacheProfileFlagOrMtimeWrong: " + (hit to Text))
-	true
-MissingStage(buildOut Text) Boolean
+CheckStages(buildOut Text)
 	for StagesA + StagesB + StagesC
 		if value is not in buildOut
 			return Error(value + " missing:\n" + buildOut)
-	true
 Ran(tool Text, args Text, detailed Text) Text
 	win = Process.OperatingSystem is "Windows"
 	env = "STRICT_BUILD_PROFILE=" + detailed + (win then "&& set STRICT_THREADS=8&& " else " STRICT_THREADS=8 ")

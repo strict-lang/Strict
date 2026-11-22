@@ -35,7 +35,7 @@ Checked(folder Text) Boolean
 	if comp.exitCode is not 0
 		return Error("CompileFailed: " + comp.Output + comp.error)
 	started = Process.Elapsed
-	cmd = "\"" + Process.Current.executable + "\" test Math/Matrix.strict . native"
+	cmd = "\"" + Process.Find("strict").executable + "\" test Math/Matrix.strict . native"
 	Reported(Process.RunTool(exe, isWin then "\"" + cmd + "\"" else cmd, ToolSeconds), Process.Elapsed - started)
 Reported(res ProcessResult, elapsed Number) Boolean
 	if res.exitCode is not 0

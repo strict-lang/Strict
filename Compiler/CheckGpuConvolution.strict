@@ -22,7 +22,7 @@ Run Number
 Checked(folder Text) Boolean
 	src = folder + "/GpuConvolution.strict"
 	File(src).Write(ConvA + ConvB + ConvC + ConvD + ConvE + ConvF + ConvG + ConvH)
-	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed: " + built.Output + built.error)
 	win = Process.OperatingSystem is "Windows"

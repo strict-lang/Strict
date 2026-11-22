@@ -75,7 +75,7 @@ CheckCleanup(folder Text, helper Text) Boolean
 	locked = folder + "/Locked"
 	call = "Intermediates(Logger).Removed(\"" + locked + "\") is Error then 1 else 0"
 	File(src).Write(("has build Compiler/NativeBuild", "Run Number", "\t" + call))
-	cmd = "\\\"" + Process.Current.executable + "\\\" \\\"" + src + "\\\""
+	cmd = "\\\"" + Process.Find("strict").executable + "\\\" \\\"" + src + "\\\""
 	ran = Process.RunTool(helper, "lock \"" + locked + ".ll\" \"" + cmd + "\"", ShortSeconds)
 	if "Could not remove build intermediate: " + locked + ".ll" is not in ran.Output
 		return Error("CleanupLockMessageMissing: " + ran.Output)
@@ -102,7 +102,7 @@ CheckProfileAndBuildCache(folder Text, helper Text) Boolean
 	File(folder + "/BuildValue.strict").Write(("Result Number", "\t0"))
 	src = folder + "/BuildCheck.strict"
 	File(src).Write(("Run Number", "\t1 is 2", "\tBuildValue.Result"))
-	fail = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	fail = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	if fail.exitCode is 0 or File(folder + "/BuildCheck.exe").Exists
 		return Error("FailedUnitBuiltProgram")
 	File(src).Write(("Run Number", "\t1 is 1", "\tBuildValue.Result"))
@@ -113,11 +113,11 @@ CheckInc(folder Text, helper Text, src Text) Boolean
 		return Error("CleanBuildFailed")
 	stamp = File(exe).Modified
 	File(folder + "/obj/BuildCheck.mlir").Delete
-	h = Process.RunTool(Process.Current.executable, "build " + src, ShortSeconds)
+	h = Process.RunTool(Process.Find("strict").executable, "build " + src, ShortSeconds)
 	if "Up to date:" is not in h.Output or File(exe).Modified is not stamp
 		return Error("CacheHitFailed: " + h.Output)
 	File(folder + "/BuildValue.strict").Write(("Result Number", "\t1"))
-	dep = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	dep = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	bad = dep.exitCode is not 0 or Process.RunTool(exe, "", ShortSeconds).exitCode is not 1
 	bad then Error("Dep") else CheckReleaseAndFiles(folder, helper)
 CheckReleaseAndFiles(folder Text, helper Text) Boolean
@@ -127,7 +127,7 @@ CheckReleaseAndFiles(folder Text, helper Text) Boolean
 	m = " is true\n\t0\nRetained Boolean\n\tFile(\"" + b + ".exe\").Write(\"built\")\n\t"
 	m2 = "release.Refreshed(\"" + r + "\", \"\", \"" + b + "\", (\".exe\"))\n\tFile(\"" + b + ".exe\").Exists"
 	File(folder + "/ReleaseCheck.strict").Write((h + m + m2).Split("\n"))
-	rt = Process.RunTool(Process.Current.executable, "test " + folder + "/ReleaseCheck.strict native", ToolSeconds)
+	rt = Process.RunTool(Process.Find("strict").executable, "test " + folder + "/ReleaseCheck.strict native", ToolSeconds)
 	if rt.exitCode is not 0 or Text.Combine(File(r + "/Built.exe").ReadLines, "") is not "built"
 		return Error("ReleaseCheckFailed")
 	CheckNativeTestCache(folder, helper)
@@ -136,12 +136,12 @@ CheckNativeTestCache(folder Text, helper Text) Boolean
 	mrk = folder + "/Ran.exe"
 	l = ("Run Number", "\tTouched is true", "\t0", "Touched Boolean", "\tFile(\"" + mrk + "\").Write(\"t\")", "\ttrue")
 	File(src).Write(l)
-	t1 = Process.RunTool(Process.Current.executable, "test " + src + " native unit", ToolSeconds)
+	t1 = Process.RunTool(Process.Find("strict").executable, "test " + src + " native unit", ToolSeconds)
 	if t1.exitCode is not 0 or not File(mrk).Exists
 		return Error("InitialNativeTestFailed")
 	File(mrk).Delete
 	File(folder + "/obj/CachedTests.test.mlir").Delete
-	t2 = Process.RunTool(Process.Current.executable, "test " + src + " native unit", ShortSeconds)
+	t2 = Process.RunTool(Process.Find("strict").executable, "test " + src + " native unit", ShortSeconds)
 	miss = t2.exitCode is not 0 or File(mrk).Exists or File(folder + "/obj/CachedTests.test.mlir").Exists
 	miss then Error("NativeTestCacheMiss") else CheckGpuCacheEntry(folder, helper)
 CheckGpuCacheEntry(folder Text, helper Text) Boolean
@@ -150,7 +150,7 @@ CheckGpuCacheEntry(folder Text, helper Text) Boolean
 	l1 = "has cache Compiler/PtxCache\nRun Number\n\tGpuCacheCheck(PtxCache(\"" + folder + "/OldGpu\")).Previous is 1"
 	c = (l1, "\t0", "Previous Number", "\tcache.Previous(\"module {\\n}\", false)")
 	File(folder + "/GpuCacheCheck.strict").Write(c)
-	g = Process.RunTool(Process.Current.executable, "test " + folder + "/GpuCacheCheck.strict", ShortSeconds)
+	g = Process.RunTool(Process.Find("strict").executable, "test " + folder + "/GpuCacheCheck.strict", ShortSeconds)
 	if g.exitCode is not 0
 		return Error("GpuCacheCheckFailed: " + g.Output)
 	File(folder + "/GpuCacheCheck.strict").Delete
@@ -160,16 +160,16 @@ CheckReadTextAndLinks(folder Text, helper Text) Boolean
 	rtSrc = folder + "/ReadTextCheck.strict"
 	fnLine = "\tJoined(\"" + folder + "/sample.txt\") is \"one\\ntwo\""
 	File(rtSrc).Write(("Joined(path Text) Text", fnLine, "\tText.Combine(File(path).ReadLines, \"\\n\")"))
-	rt = Process.RunTool(Process.Current.executable, "test " + rtSrc + " native", ToolSeconds)
+	rt = Process.RunTool(Process.Find("strict").executable, "test " + rtSrc + " native", ToolSeconds)
 	mlir = Text.Combine(File(folder + "/obj/ReadTextCheck.test.mlir").ReadLines, "\n")
 	if rt.exitCode is not 0 or "@strict_file_joined(" is not in mlir
 		return Error("ReadTextFusionFailed: " + rt.Output)
-	cmd = "/c set STRICT_THREADS=1&& \"" + Process.Current.executable + "\" test " + LinkChainSrc + " native"
+	cmd = "/c set STRICT_THREADS=1&& \"" + Process.Find("strict").executable + "\" test " + LinkChainSrc + " native"
 	l1 = Process.RunTool("cmd", cmd, ToolSeconds)
 	File(folder + "/NamedCheck.strict").Write(NamedCode.Split("\n"))
 	l1.exitCode is not 0 then Error("LinkChainFailed: " + l1.Output) else CheckNamedAndMoved(folder, helper)
 CheckNamedAndMoved(folder Text, helper Text) Boolean
-	nr = Process.RunTool(Process.Current.executable, "build " + folder + "/NamedCheck.strict", ToolSeconds)
+	nr = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/NamedCheck.strict", ToolSeconds)
 	if nr.exitCode is 1 or "ResultMustBeUsed: Next(3)" is not in nr.Output
 		return Error("NamedFailureWrong: " + nr.Output)
 	moved = Built(folder, "MovedCheck", MovedA + MovedB)
@@ -182,29 +182,29 @@ CheckNamedAndMoved(folder Text, helper Text) Boolean
 	bad = mr.exitCode is not 1 or "is missing or empty" is not in mr.Output
 	bad then Error("MovedPtx") else CheckNativeFolder(folder, helper)
 CheckNativeFolder(folder Text, helper Text) Boolean
-	cmd = "/c cd /d Examples && \"" + Process.Current.executable + "\" test Fibonacci.strict"
-	s1 = Process.RunTool(Process.Current.executable, "stop", ShortSeconds)
+	cmd = "/c cd /d Examples && \"" + Process.Find("strict").executable + "\" test Fibonacci.strict"
+	s1 = Process.RunTool(Process.Find("strict").executable, "stop", ShortSeconds)
 	if s1.exitCode < 0 or Process.RunTool("cmd", cmd, ToolSeconds).exitCode is not 0
 		return Error("FibonacciFailed")
 	File("NeuralNetworks/obj/Layer.strictbinary").Delete
-	r2 = Process.RunTool(Process.Current.executable, "test NeuralNetworks/Layer.strict", ToolSeconds)
+	r2 = Process.RunTool(Process.Find("strict").executable, "test NeuralNetworks/Layer.strict", ToolSeconds)
 	if r2.exitCode is not 0 or "GgufFileNotReadable" is in r2.Output
 		return Error("LayerRelativePathFailed: " + r2.Output)
 	File(folder + "/MovingCheck.strict").Write(("Moved Number", "\tDirectory.Change(\"Math\") is not Error", "\t1"))
-	mv = Process.RunTool(Process.Current.executable, "build " + folder + "/MovingCheck.strict", ToolSeconds)
-	ok = Process.RunTool(Process.Current.executable, "stop", ShortSeconds).exitCode >= 0 and mv.exitCode is 0
+	mv = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/MovingCheck.strict", ToolSeconds)
+	ok = Process.RunTool(Process.Find("strict").executable, "stop", ShortSeconds).exitCode >= 0 and mv.exitCode is 0
 	ok then CheckEnvAndConcurrency(folder, helper) else Error("MovingCheckFailed: " + mv.Output)
 CheckEnvAndConcurrency(folder Text, helper Text) Boolean
 	src = folder + "/ConcurrentCheck.strict"
 	File(src).Write(("Run Number", "\t1 is 1", "\t3"))
 	lk = folder + "/obj/ConcurrentCheck.strict.lock"
-	aC = "conc \"" + Process.Current.executable + "\" \"" + src + "\" \"" + lk + "\" \""
+	aC = "conc \"" + Process.Find("strict").executable + "\" \"" + src + "\" \"" + lk + "\" \""
 	if Process.RunTool(helper, aC + folder + "/ConcurrentCheck.exe\"", ToolSeconds).exitCode is not 0
 		return Error("ConcurrentBuildFailed: " + helper)
-	aH = "held \"" + Process.Current.executable + "\" \"" + folder + "/HeldCheck.strict\" \""
+	aH = "held \"" + Process.Find("strict").executable + "\" \"" + folder + "/HeldCheck.strict\" \""
 	if Process.RunTool(helper, aH + folder + "/HeldCheck.exe\"", ToolSeconds).exitCode is not 0
 		return Error("HeldCopyFailed: " + helper)
-	aR = "res \"" + Process.Current.executable + "\" \"" + folder + "/ResidentCheck.strict\" \""
+	aR = "res \"" + Process.Find("strict").executable + "\" \"" + folder + "/ResidentCheck.strict\" \""
 	res = Process.RunTool(helper, aR + folder + "/ResidentCheck.exe\"", ToolSeconds)
 	res.exitCode is not 0 then Error("ResidentFail: " + res.Output) else CheckCompilerChange(folder, helper)
 CheckCompilerChange(folder Text, helper Text) Boolean
@@ -212,18 +212,18 @@ CheckCompilerChange(folder Text, helper Text) Boolean
 	src = folder + "/CompilerChange.strict"
 	File(src).Write(("Tripled(number Number) Number", "\tTripled(2) is 6", "\tCompilerUsed.Doubled(number) + number"))
 	usedBin = folder + "/obj/CompilerUsed.strictbinary"
-	if Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds).exitCode is not 0
+	if Process.RunTool(Process.Find("strict").executable, "test " + src + " native", ToolSeconds).exitCode is not 0
 		return Error("CompilerChangeInitFailed")
 	stored = File(usedBin).Modified
 	tc = Process.RunTool(helper, "touch \"" + src + "\" 0", ShortSeconds)
-	t1 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
+	t1 = Process.RunTool(Process.Find("strict").executable, "test " + src + " native", ToolSeconds)
 	if tc.exitCode is not 0 or t1.exitCode is not 0 or File(usedBin).Modified is not stored
 		return Error("UnchangedCompiler")
 	CheckCompilerTouch(folder, helper, src, usedBin, stored)
 CheckCompilerTouch(folder Text, helper Text, src Text, usedBin Text, stored Number) Boolean
-	tA = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" 1000000000", ShortSeconds)
-	t2 = Process.RunTool(Process.Current.executable, "test " + src + " native", ToolSeconds)
-	tB = Process.RunTool(helper, "touch \"" + Process.Current.executable + "\" -1000000000", ShortSeconds)
+	tA = Process.RunTool(helper, "touch \"" + Process.Find("strict").executable + "\" 1000000000", ShortSeconds)
+	t2 = Process.RunTool(Process.Find("strict").executable, "test " + src + " native", ToolSeconds)
+	tB = Process.RunTool(helper, "touch \"" + Process.Find("strict").executable + "\" -1000000000", ShortSeconds)
 	if tA.exitCode is not 0 or tB.exitCode is not 0 or t2.exitCode is not 0 or File(usedBin).Modified is stored
 		return Error("ChangedCompilerReusedOldBytecode: " + usedBin)
 	if Built(folder, "NativeChange", "") is Error
@@ -237,7 +237,7 @@ Built(folder Text, name Text, code Text) Text
 	src = folder + "/" + name + ".strict"
 	if code is not ""
 		File(src).Write(code.Split("\n"))
-	res = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	res = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	res.exitCode is not 0 then Error("BuildFail " + name + ": " + res.Output) else folder + "/" + name + ".exe"
 HelperCMain Text
 	mutable out = List(Text)

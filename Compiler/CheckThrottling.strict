@@ -28,7 +28,7 @@ Run Number
 Checked(folder Text) Boolean
 	src = folder + "/ThrottlingCheck.strict"
 	File(src).Write(ProbeLines)
-	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else CompiledAndRan(folder)
 CompiledAndRan(folder Text) Boolean
 	cFile = folder + "/check.c"

@@ -15,7 +15,7 @@ Run Number
 Checked(folder Text) Boolean
 	src = folder + "/GpuJit.strict"
 	File(src).Write(JitHead + JitMid + JitRun)
-	built = Process.RunTool(Process.Current.executable, "build " + src, ToolSeconds)
+	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed: " + built.Output + built.error)
 	obj = folder + "/obj/GpuJit"
