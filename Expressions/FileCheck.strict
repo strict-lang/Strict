@@ -4,6 +4,8 @@ constant NoScope = Scope(("x", "z"), ("y", "w"))
 constant NoScopes = (NoScope, NoScope)
 constant NoInference = TypeInference(KnownTypes(("A", "B"), NoScopes, NoScopes, NoScopes), NoScopes)
 constant Counting = FileCheck(TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers)), ("Count", "Text"))
+constant LimitTypes = KnownTypes(List(Text) + "Count", List(Scope) + Scope(("number", "Limit"), ("Number", "Number")), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers)
+constant Limiting = FileCheck(TypeInference(LimitTypes, List(Scope) + Scope("Limit", "3")), List(Text) + "Count")
 constant Counted = Scope(List(Text) + "count", List(Text) + "Count")
 constant TwiceCall = ScopedStatement(SyntaxParser(Tokenizer("count.Twice").Tokens).Parse, Counted, 0)
 constant MissingCall = ScopedStatement(SyntaxParser(Tokenizer("count.Missing").Tokens).Parse, Counted, 0)
@@ -99,11 +101,13 @@ CallIssue(call SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(MissingCall.statement, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Requiring.CallIssue(TwiceCall.statement, Counted, KnownTypes.NoMembers) is "ArgumentMissing: Count.Twice got 0 of 1"
 	Counting.CallIssue(HiddenCall, Counted, Scope(List(Text) + "Count", List(Text) + "Text")).EndsWith("use outer.Count")
+	Limiting.CallIssue(Counting.Parsed("count.Limit(1)"), Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Limit"
 	instance = inference.TypeOf(call.children(0), scope, current)
 	hidden = call.children(0).text
 	isHidden = call.children(0).Kind is "Identifier" and inference.types.IsKnown(hidden) and instance is not hidden
 	hint = isHidden then HiddenType.Hint(inference.Origin(hidden, scope), hidden) else ""
-	if IsMissing(instance, call.text)
+	isScalar = call.children.Length > 1 then ConstantCalls(inference).IsScalar(instance, call.text) else false
+	if IsMissing(instance, call.text) or isScalar
 		return "MethodNotFound: " + instance + "." + call.text + hint
 	fewest = Fewest(instance, call.text)
 	issue = "ArgumentMissing: " + instance + "." + call.text + " got " + (call.children.Length - 1) + " of " + fewest

@@ -1,0 +1,7 @@
+has inference TypeInference
+IsScalar(instance Text, name Text) Boolean
+	ConstantCalls(FileCheck.Limiting.inference).IsScalar("Count", "Limit")
+	ConstantCalls(FileCheck.Limiting.inference).IsScalar("Count", "number") is false
+	owner = ArgumentTypes(inference).Owner(instance, name)
+	type = inference.types.DeclaredType(owner, name, 0)
+	inference.ConstantOf(owner, name) is not "" and type is in ("Number", "Boolean")
