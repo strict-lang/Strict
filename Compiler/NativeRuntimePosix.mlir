@@ -499,7 +499,7 @@
   }
   llvm.func @open(!llvm.ptr, i32, ...) -> i32
   llvm.func @flock(i32, i32) -> i32
-  // closes the descriptor of a file this process holds with File.Locked, entries keep descriptor + 1 as 0 means free
+  // closes the descriptor of a file this process holds with File.IsLocked, entries keep descriptor + 1 as 0 means free
   func.func private @strict_file_unlocked(%path: f64) {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -515,7 +515,7 @@
     return
   }
   // holds an exclusive lock on the file until File.Delete or the end of this process
-  func.func private @strict_file_locked(%path: f64) -> f64 {
+  func.func private @strict_file_islocked(%path: f64) -> f64 {
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %flags = arith.constant 524354 : i32
     %mode = arith.constant 420 : i32

@@ -575,7 +575,7 @@
   func.func private @strict_file_unlocked(%path: f64) {
     return
   }
-  func.func private @strict_file_locked(%path: f64) -> f64 {
+  func.func private @strict_file_islocked(%path: f64) -> f64 {
     %held = arith.constant 1.0 : f64
     return %held : f64
   }

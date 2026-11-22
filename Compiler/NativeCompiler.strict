@@ -33,13 +33,13 @@ Reported(code Number, started Number, problem Text) Number
 	code
 Locked(target Text) Boolean slow
 	lock = File(Lock(target))
-	if lock.Locked
+	if lock.IsLocked
 		return true
 	logger.Log("Waiting for the other build of " + target)
 	started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
 		Process.Wait(0.1)
-		if lock.Locked
+		if lock.IsLocked
 			return true
 	logger.Log("The other build of " + target + " did not finish within " + Strict.BuildWait + " seconds")
 	false

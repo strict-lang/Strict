@@ -4,7 +4,7 @@ Held Boolean slow
 	mutable held = 0
 	for count
 		lock = File("Examples/LockedCycles.lock")
-		if lock.Locked
+		if lock.IsLocked
 			held = held + 1
 		lock.Delete
 	held is count

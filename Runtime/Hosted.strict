@@ -13,7 +13,7 @@ constant Deleting = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Delet
 constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Change", "None", "path"), 0, -1), Current, VmValue.None)
 constant Releasing = Invocation(InstructionEntry.Invoke(0, ("Strict/GpuMemory", "Released", "None"), List(Number), -1), List(VmValue), VmValue.None)
 constant Unsent = VmValue.OfError("OutputNotChanged")
-constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.Locked", "File.InMemory")
+constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.IsLocked", "File.InMemory")
 constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
 constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLine", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Id", "Process.MemoryUsed", "Process.FilesRead")
 constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Launched", "Process.Executed", "Process.Wait", "Process.Collected")
@@ -116,11 +116,11 @@ Answered(path Text) VmValue
 	Hosted(Existing).Answered(".").IsTrue and Hosted(Probing).Answered(".").IsTrue is false
 	Hosted(Dating).Answered("Any.strict").number > 1.7e9
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
-	File("Runtime/Answered.lock").Locked and File("Runtime/Answered.lock").Locked is false
-	File("Runtime/Held.lock").Locked and File("Runtime/Held.lock").Exists
+	File("Runtime/Answered.lock").IsLocked and File("Runtime/Answered.lock").IsLocked is false
+	File("Runtime/Held.lock").IsLocked and File("Runtime/Held.lock").Exists
 	MutationCache.Released(("Runtime/Answered.lock", "Runtime/Held.lock"))
-	if call.MethodName is "Locked"
-		return VmValue.OfBoolean(File(path).Locked)
+	if call.MethodName is "IsLocked"
+		return VmValue.OfBoolean(File(path).IsLocked)
 	if call.MethodName is in ("Modified", "Length")
 		return VmValue.OfNumber(call.MethodName is "Length" then File(path).Length else Dated(path))
 	exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists

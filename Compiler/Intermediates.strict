@@ -71,7 +71,7 @@ Old(executable Text, number Number) Text
 	Intermediates.Old("a.exe", 3) is "a.old3.exe"
 	executable.Replace(".exe", number is 1 then ".old.exe" else ".old" + number + ".exe")
 Used(file Text, executable Text) Text slow
-	File("Compiler/output/Held.exe").Locked
+	File("Compiler/output/Held.exe").IsLocked
 	Held.Saved(List(Text) + ".new.exe", List(Text) + "built") is not Error
 	Intermediates.Replaced(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
 	File("Compiler/output/Held.exe").Delete

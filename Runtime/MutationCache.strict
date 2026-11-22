@@ -47,7 +47,7 @@ Claimed(locks Texts) Texts
 	started = Process.Elapsed
 	for as long as Directory.Exists(folder) and Process.Elapsed - started < RunWait
 		for locks
-			if File(value).Locked
+			if File(value).IsLocked
 				return List(Text) + value
 		Process.Wait(0.1)
 	List(Text)

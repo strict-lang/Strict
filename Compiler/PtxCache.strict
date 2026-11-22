@@ -121,7 +121,7 @@ Waited(key Text, isTiling Boolean) Texts slow
 	started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
 		previous = Previous(key, isTiling)
-		if previous.Length > 0 or lock.Locked
+		if previous.Length > 0 or lock.IsLocked
 			return previous.Length > 0 then previous else Previous(key, isTiling)
 		Process.Wait(0.1)
 	List(Text)

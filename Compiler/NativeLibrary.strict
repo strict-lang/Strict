@@ -54,12 +54,12 @@ Waited(target Text, inputs Texts, options Text) Text slow
 		recorded = Text.Combine(File(target + ".built.nativecache").ReadLines, "\n")
 		if recorded.StartsWith("clang failed") and sources.IsCurrent(target + ".built.nativecache", inputs)
 			return Located(target, recorded)
-		if File(target + ".lock").Locked
+		if File(target + ".lock").IsLocked
 			return ""
 		Process.Wait(0.1)
 	""
 Finished(result ProcessResult, output Text, target Text, options Text) Text
-	File("Compiler/output/Cut.o.lock").Locked
+	File("Compiler/output/Cut.o.lock").IsLocked
 	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
 	File("Compiler/output/Cut.o.lock").Exists is false
 	failure = "clang failed for " + target + ": " + result.error

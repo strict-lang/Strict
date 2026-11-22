@@ -49,12 +49,12 @@ Locked Boolean slow
 	if Directory.Exists(root + "/obj") is false
 		Directory.Create(root + "/obj")
 	lock = File(root + BuildLock)
-	if lock.Locked
+	if lock.IsLocked
 		return true
 	started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
 		Process.Wait(0.1)
-		if lock.Locked
+		if lock.IsLocked
 			return true
 	false
 Unlocked Boolean

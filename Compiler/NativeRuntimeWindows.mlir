@@ -94,7 +94,7 @@
   llvm.func @_localtime64(!llvm.ptr) -> !llvm.ptr
   llvm.mlir.global internal constant @strict_separator_path("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00/\00") : !llvm.array<18 x i8>
   llvm.mlir.global internal constant @strict_any_file("\01\00\00\00\00\00\00\00\01\00\00\00\00\00\00\00*\00") : !llvm.array<18 x i8>
-  // whether a file (no directory) is at name, without opening it (a file held by File.Locked opens for nobody else)
+  // whether a file (no directory) is at name, without opening it (a file held by File.IsLocked opens for nobody else)
   func.func private @strict_file_present(%name: !llvm.ptr) -> i1 {
     %invalid = arith.constant -1 : i32
     %directoryFlag = arith.constant 16 : i32
@@ -799,7 +799,7 @@
   }
   // holds the file exclusively until File.Delete or the end of this process, Windows deletes it then; a file just
   // deleted stays pending (access denied) while another process (a scanner) still has it open, that is retried
-  func.func private @strict_file_locked(%path: f64) -> f64 {
+  func.func private @strict_file_islocked(%path: f64) -> f64 {
     %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %access = arith.constant 1073807360 : i32
     %share = arith.constant 0 : i32
@@ -827,7 +827,7 @@
     %result = arith.uitofp %held : i1 to f64
     return %result : f64
   }
-  // closes the handle of a file this process holds with File.Locked, Windows deletes the file then
+  // closes the handle of a file this process holds with File.IsLocked, Windows deletes the file then
   func.func private @strict_file_unlocked(%path: f64) {
     %zero = arith.constant 0 : i64
     %held = func.call @strict_file_lock_taken(%path) : (f64) -> i64
