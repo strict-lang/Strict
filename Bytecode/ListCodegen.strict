@@ -7,7 +7,8 @@ constant Byting = ListCodegen(ValueCodegen(ValueCodegen.Plain, inference = TypeI
 constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
-constant Appending = BodyParser("Run", "\tvalues = values + 1").Block(1, 1).children(0)
+constant Taking = "Run(values Numbers)"
+constant Appending = BodyParser(Taking, "\tvalues = values + 1").Method(1).children(0)
 constant WritingLoop = BodyParser("Run", "\tfor 3", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant ReturningLoop = BodyParser("Run", "\tfor 3", "\t\tif index > 1", "\t\t\treturn Other.Keep(values)", "\t\tvalues(index) = index").Block(1, 1).children(0)
 constant SharingLoop = BodyParser("Run", "\tfor values", "\t\tvalues(index) = index").Block(1, 1).children(0)
@@ -114,7 +115,7 @@ ElementWritten(node SyntaxNode) Texts
 	names
 IsAppend(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsAppend(Appending, Owned)
-	Plain.IsAppend(BodyParser("Run", "\tvalues = values + values").Block(1, 1).children(0), Owned) is false
+	Plain.IsAppend(BodyParser(Taking, "\tvalues = values + values").Method(1).children(0), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "\tx = values + 1").Block(1, 1).children(0), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "\ttext = text + 1").Block(1, 1).children(0), Owned.Declare("text", "Texts")) is false
 	sum = node.children.Last
@@ -155,9 +156,9 @@ Children(node SyntaxNode, block CodeBlock, isUsed Boolean) CodeBlock
 		result = Disowned(value, result, used)
 	result
 IsShared(node SyntaxNode, block CodeBlock) Boolean
-	Plain.IsShared(BodyParser("Run", "\tvalues = other").Block(1, 1).children(0), Owned)
+	Plain.IsShared(BodyParser(Taking, "\tvalues = other").Method(1).children(0), Owned)
 	Plain.IsShared(Appending, Owned) is false
-	Plain.IsShared(BodyParser("Run", "\tvalues = List(Number)").Block(1, 1).children(0), Owned) is false
+	Plain.IsShared(BodyParser(Taking, "\tvalues = List(Number)").Method(1).children(0), Owned) is false
 	node.Kind is "Reassignment" and IsNew(node.children(1)) is false and IsAppend(node, block) is false
 IsUsed(parent SyntaxNode, position Number, isUsed Boolean) Boolean
 	Plain.IsUsed(ValueCodegen.Edits(0), 0, true)
@@ -204,10 +205,10 @@ Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
 	SyntaxNode(node.Kind, node.text, first is 1 then (node.children(0), grouped) else List(SyntaxNode) + grouped)
 Empty(type Text, block CodeBlock) CodeBlock
 	Plain.IsUsed(SyntaxNode("MethodCall", "B", ValueCodegen.Ones.children), 1, true)
-	Plain.Disowned(BodyParser("Run", "\tvalues = List(Number)").Block(1, 1), Owned, false).Owns("values")
+	Plain.Disowned(BodyParser(Taking, "\tvalues = List(Number)").Method(1), Owned, false).Owns("values")
 	Plain.Empty("Numbers", CodeBlock.Empty).instructions(0).texts is ("Strict/List(Number)")
 	Plain.IsAppend(SyntaxNode("Declaration", "", Appending.children), Owned) is false
 	Plain.IsAppend(BodyParser("Run", "	x = x + 1").Block(1, 1).children(0), Owned.Declare("x", "Number")) is false
-	Plain.Disowned(BodyParser("Run", "	values = values to Numbers").Block(1, 1), Owned, false).Owns("values") is false
+	Plain.Disowned(BodyParser(Taking, "\tvalues = values to Numbers").Method(1), Owned, false).Owns("values") is false
 	listType = values.target.FullName(type)
 	block.Load(InstructionEntry(InstructionType.LoadConstantToRegister, listType, (block.register, 6, -1, 0)))
