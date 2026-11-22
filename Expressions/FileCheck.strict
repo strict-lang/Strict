@@ -35,6 +35,8 @@ constant Listing = FileCheck(TypeInference(Lists, NoScopes), "A")
 constant Boxes = KnownTypes(List(Text) + "Box", List(Scope) + Scope(List(Text) + "first", List(Text) + "Generic"), List(Scope) + KnownTypes.NoMembers, List(Scope) + KnownTypes.NoMembers)
 constant Boxing = FileCheck(TypeInference(Boxes, NoScopes), "A")
 constant TextMissing = SyntaxNode("Member", "Missing", List(SyntaxNode) + SyntaxNode("Text", "Count"))
+constant HeldTypes = KnownTypes(("Box", "Count"), (Counted, KnownTypes.CountMembers), (KnownTypes.NoMembers, KnownTypes.CountMethods), (KnownTypes.NoMembers, KnownTypes.CountParameters))
+constant Held = FileCheck(TypeInference(HeldTypes, NoScopes), ("Box", "Count"))
 constant RequiredThrice = KnownTypes(RequiredTwice.names, RequiredTwice.members, RequiredTwice.methods, List(Scope) + Requirements)
 Unknown(scoped ScopedStatement, current Scope) Text
 	Counting.Unknown(TwiceCall, KnownTypes.NoMembers) is ""
@@ -93,6 +95,7 @@ MethodIssue(node SyntaxNode, scope Scope, current Scope) Text
 	Counting.CallIssue(HiddenCall, Counted, KnownTypes.NoMembers) is "MethodNotFound: Count.Missing"
 	Counting.MethodIssue(Counting.Parsed("1 > 0 and (count)"), Counted, Counted).StartsWith("LogicalOperandIsAList")
 	Counting.MethodIssue(Counting.Parsed("Count.Twice"), SelfCounted, Owning).StartsWith("AmbiguousName")
+	Held.MethodIssue(Held.Parsed("Twice(1, 2, 3)"), Counted.With("self type", "Box"), Counted).StartsWith("NoOverloadFits")
 	hidden = HiddenType(inference).Ambiguous(node, scope, current) + HiddenType(inference).Issue(node, scope, current)
 	called = IsCall(node) then CallIssue(node, scope, current) else ""
 	typed = called is "" then ArgumentTypes(inference).Checked(node, scope, current) else called

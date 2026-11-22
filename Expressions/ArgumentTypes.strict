@@ -101,8 +101,13 @@ OwnCall(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(SyntaxParser(Tokenizer("Count(count, size)").Tokens).Parse, Counted, Counted).StartsWith("ArgumentType")
 	Sizing.Issue(SyntaxParser(Tokenizer("count.Spread(area, size)").Tokens).Parse, Counted, Counted) is ""
 	Sizing.Issue(SyntaxParser(Tokenizer("count.Grow(area, area)").Tokens).Parse, Counted, Counted).StartsWith("TooMany")
+	self = scope.TypeOf("self type")
 	isOwn = call.Kind is "Call" and current.TypeOf(call.text) is not ""
-	isOwn then Compared(call, scope.TypeOf("self type"), call.text, scope, current) else ""
+	isHeld = call.Kind is "Call" and isOwn is false and inference.types.IsKnown(call.text) is false
+	holder = isHeld then inference.types.Holder(self, call.text, 3) else ""
+	if holder is not ""
+		return Compared(call, inference.types.MembersOf(self).TypeOf(holder), call.text, scope, current)
+	isOwn then Compared(call, self, call.text, scope, current) else ""
 Copied(call SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Copied(SyntaxParser(Tokenizer("Area(area)").Tokens).Parse, Counted, Counted).EndsWith("use area itself")
 	Sizing.Copied(Copies(0), Counted, Counted) is Mixed
