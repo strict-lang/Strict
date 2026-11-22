@@ -94,7 +94,16 @@ VariableKind(position Number, name Text) Text
 	store = function.method.instructions(found)
 	if store.kind is InstructionType.StoreConstantToVariable
 		return ConstantKind(PayloadDecoder(store).Value(0), store.texts)
-	KindOf(found, store.payload(0))
+	WrappedKind(KindOf(found, store.payload(0)), name)
+WrappedKind(kind Text, name Text) Text
+	Lettered.WrappedKind("Character", "inline3_number") is "Number"
+	Lettered.WrappedKind("Character", "number") is "Character"
+	Lettered.WrappedKind("Number", "inline3_number") is "Number"
+	changing = function.TypeOf(kind).Changing
+	if changing.Length is not 1 or changing.First.Name is in ("value", "outer", "characters", "elements")
+		return kind
+	isMember = name.StartsWith("inline") and name.EndsWith("_" + changing.First.Name)
+	isMember then TypeEntry.ShortName(changing.First.typeName) else kind
 Stored(position Number, name Text) Number
 	Graded.Stored(2, "letter") is 1
 	Graded.Stored(2, "width") is -1

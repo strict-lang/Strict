@@ -6,7 +6,6 @@
 - A default argument that is a constant list breaks the split native build: `Ran(arguments Text, variables = EightThreads)` in `Runtime/CheckTests.strict` gave `mlir-opt failed: llvm.mlir.addressof op must reference a global` (`@cCheckTests_CheckPolicyRun_1_1_0`, defined in another module part); passing the constant explicitly builds.
 - A default argument of another package's method is linked under `Strict/`: `Strict.Testing(rest)` called from `Runtime/Trial.strict` fails with `UnresolvedLink: Strict/InferenceCache.None` (the default `inferred = InferenceCache.None` lives in `Runtime/`).
 - A test run inside a test (`Trial.Tested` on the VM) leaves the outer test with a negative time (`-2.3e8 ms`): both runs share the test clock of `TestBudget`.
-- `strict test Expressions native` (and `strict test . native`) does not build: mlir-opt reports `reference to undefined function 'Return_to_0_Text'`, the tests of `Expressions/Return.strict` call its `to Text` but no function is emitted for it (2026-11-22).
 - `strict test Compiler native` fails `NativeBuild(false).Mlir("module {
 " + CpuNotice + "
 }", ".", Platform.Linux).Split(CpuNotice).Length is 2` (Compiler/NativeBuild.strict line 154) with `Error: Failed`; it was hidden behind a test that relaunched Tests.test.exe until the deadline (2026-11-22).
