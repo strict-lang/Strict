@@ -18,18 +18,18 @@ Normalize Quaternion
 Lerp(other, alpha Number) Quaternion
 	Identity.Lerp(Quaternion(0, 0, 0, -1), 0.5) is Identity
 	Identity.Lerp(HalfTurn, 1) is HalfTurn
-	blended = Blended(other, Dot(other) < 0 then -1 else 1, alpha)
+	blended = Blend(other, Dot(other) < 0 then -1 else 1, alpha)
 	Quaternion(blended(0), blended(1), blended(2), blended(3)).Normalize
-Blended(other Quaternion, sign Number, alpha Number) Numbers
-	Identity.Blended(HalfTurn, 1, 0.5) is (0, 0, 0.5, 0.5)
-	Quaternion(1, 2, 3, 4).Blended(Quaternion(5, 6, 7, 8), 2, 0.25) is (3.25, 4.5, 5.75, 7)
+Blend(other Quaternion, sign Number, alpha Number) Numbers
+	Identity.Blend(HalfTurn, 1, 0.5) is (0, 0, 0.5, 0.5)
+	Quaternion(1, 2, 3, 4).Blend(Quaternion(5, 6, 7, 8), 2, 0.25) is (3.25, 4.5, 5.75, 7)
 	mine = Numbers
 	theirs = other.Numbers
 	for 4
 		mine(index) + (theirs(index) * sign - mine(index)) * alpha
 Rotation Matrix
 	Identity.Rotation is Matrix.Identity
-	HalfTurn.Rotation.Transformed(Vector3.UnitX) is Vector3(-1, 0, 0)
+	HalfTurn.Rotation.Transform(Vector3.UnitX) is Vector3(-1, 0, 0)
 	Quaternion(2, 3, 4, 5).Rotation is Matrix((-49, 52, -14, 0, -28, -39, 44, 0, 46, 4, -25, 0, 0, 0, 0, 1))
 	first = (1 - 2 * (Y * Y + Z * Z), 2 * (X * Y + W * Z), 2 * (X * Z - W * Y), 0)
 	second = (2 * (X * Y - W * Z), 1 - 2 * (X * X + Z * Z), 2 * (Y * Z + W * X), 0)

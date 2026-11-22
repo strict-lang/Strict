@@ -12,7 +12,7 @@ Grown(position Number) Numbers
 	position < generated then words else words + MersenneTwister(words).Generation(words, generated)
 Number Number
 	Twister.Seeded(42).Skipped(624).Number is 108880612
-	MersenneTwister(List(Number)).Tempered(words(MersenneTwister.StateSize + at))
+	MersenneTwister(List(Number)).Temper(words(MersenneTwister.StateSize + at))
 Next Twister
 	Twister.Seeded(5489).Next.at is 1
 	Twister(Grown(at + 1), at + 1)

@@ -31,24 +31,24 @@ Uints(count Number) Numbers slow
 	for (count / Twists).Ceiling
 		raw = raw + Generation(raw, index * Twists)
 	for count
-		Tempered(raw(index + StateSize))
+		Temper(raw(index + StateSize))
 Generation(raw Numbers, start Number) Numbers slow
 	MersenneTwister.Seeded(42).Generation(MersenneTwister.Seeded(42).state, 0).Length is 227
 	MersenneTwister.Seeded(5489).Generation(MersenneTwister.Seeded(5489).state, 0).First is 2601187879
 	for Twists
-		raw(start + index + TwistOffset) xor Twisted(raw(start + index), raw(start + index + 1))
-Twisted(first Number, second Number) Number
-	MersenneTwister(List(Number)).Twisted(0, 1) is 2567483615
-	MersenneTwister(List(Number)).Twisted(2147483649, 6) is 1073741827
-	MersenneTwister(List(Number)).Twisted(3, 5) is 2567483613
-	MersenneTwister(List(Number)).Twisted(2147483648, 7) is 3641225436
+		raw(start + index + TwistOffset) xor Twist(raw(start + index), raw(start + index + 1))
+Twist(first Number, second Number) Number
+	MersenneTwister(List(Number)).Twist(0, 1) is 2567483615
+	MersenneTwister(List(Number)).Twist(2147483649, 6) is 1073741827
+	MersenneTwister(List(Number)).Twist(3, 5) is 2567483613
+	MersenneTwister(List(Number)).Twist(2147483648, 7) is 3641225436
 	constant UpperMask = 2147483648
 	constant LowerMask = 2147483647
 	constant TwistMatrix = 2567483615
 	joined = (first and UpperMask) + (second and LowerMask)
 	(joined / 2).Floor xor joined % 2 * TwistMatrix
-Tempered(number Number) Number
-	MersenneTwister(List(Number)).Tempered(1) is 4194449
+Temper(number Number) Number
+	MersenneTwister(List(Number)).Temper(1) is 4194449
 	constant FirstShift = 2048
 	constant SecondShift = 128
 	constant SecondMask = 2636928640
@@ -68,12 +68,12 @@ Normals(count Number) Numbers slow
 	if count < BatchSize
 		return Error("FewerThanSixteen: " + count)
 	tail = count % BatchSize is 0 then count else count - BatchSize
-	uniforms = Uniforms(Uints(Needed(count, tail)))
+	uniforms = Uniforms(Uints(NeedUints(count, tail)))
 	for count
 		offset = index % BatchSize
 		Normal(uniforms, index >= tail then count else index - offset, index >= tail then index - tail else offset)
-Needed(count Number, tail Number) Number
-	MersenneTwister(List(Number)).Needed(16, 16) is 16 and MersenneTwister(List(Number)).Needed(20, 4) is 36
+NeedUints(count Number, tail Number) Number
+	MersenneTwister(List(Number)).NeedUints(16, 16) is 16 and MersenneTwister(List(Number)).NeedUints(20, 4) is 36
 	count * 2 - tail
 Uniforms(uints Numbers) Numbers
 	MersenneTwister(List(Number)).Normals(8) is Error("FewerThanSixteen: 8")

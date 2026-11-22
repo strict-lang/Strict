@@ -5,25 +5,25 @@ constant Cells = 16
 constant LastColumn = 12
 constant Counting = Matrix((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16))
 Translation(offset Vector3) Matrix
-	Matrix.Translation(Vector3(1, 2, 3)).Transformed(Vector3.Zero) is Vector3(1, 2, 3)
+	Matrix.Translation(Vector3(1, 2, 3)).Transform(Vector3.Zero) is Vector3(1, 2, 3)
 	Matrix((1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, offset.X, offset.Y, offset.Z, 1))
 Scaling(scale Number) Matrix
-	Matrix.Scaling(2).Transformed(Vector3.One) is Vector3(2, 2, 2)
+	Matrix.Scaling(2).Transform(Vector3.One) is Vector3(2, 2, 2)
 	Matrix((scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, scale, 0, 0, 0, 0, 1))
 Turned(direction Vector2) Matrix
-	Matrix.Turned(Vector2(0, 2)).Transformed(Vector3.UnitX) is Vector3.UnitY
+	Matrix.Turned(Vector2(0, 2)).Transform(Vector3.UnitX) is Vector3.UnitY
 	Matrix.Turned(Vector2(0, 0)) is Identity
-	Matrix.Turned(Vector2(3, 4)).Transformed(Vector3(1, 2, 0)).DistanceTo(Vector3(-1, 2, 0)) < 0.000001
+	Matrix.Turned(Vector2(3, 4)).Transform(Vector3(1, 2, 0)).DistanceTo(Vector3(-1, 2, 0)) < 0.000001
 	length = direction.Length
 	cosine = length > 0 then direction.X / length else 1
 	sine = length > 0 then direction.Y / length else 0
 	Matrix((cosine, sine, 0, 0, -sine, cosine, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1))
 RotationZ(angle Degrees) Matrix
-	Matrix.RotationZ(Degrees(90)).Transformed(Vector3.UnitX).DistanceTo(Vector3.UnitY) < 0.000001
+	Matrix.RotationZ(Degrees(90)).Transform(Vector3.UnitX).DistanceTo(Vector3.UnitY) < 0.000001
 	Turned(Vector2(angle.Cos, angle.Sin))
 *(other) Matrix
 	Moved * Identity is Moved
-	(Moved * Matrix.Scaling(2)).Transformed(Vector3.One) is Vector3(3, 4, 5)
+	(Moved * Matrix.Scaling(2)).Transform(Vector3.One) is Vector3(3, 4, 5)
 	for Cells
 		Cell(index % 4, (index / 4).Floor, other)
 Cell(row Number, column Number, other Matrix) Number
@@ -34,19 +34,19 @@ Cell(row Number, column Number, other Matrix) Number
 Clip(point Vector3) Numbers
 	Moved.Clip(Vector3.One) is (2, 3, 4, 1)
 	for 4
-		Projected(index, point)
-Transformed(point Vector3) Vector3
-	Moved.Transformed(Vector3.One) is Vector3(2, 3, 4)
-	Vector3(Projected(0, point), Projected(1, point), Projected(2, point))
-Projected(row Number, point Vector3) Number
-	Moved.Projected(3, Vector3.One) is 1
+		Project(index, point)
+Transform(point Vector3) Vector3
+	Moved.Transform(Vector3.One) is Vector3(2, 3, 4)
+	Vector3(Project(0, point), Project(1, point), Project(2, point))
+Project(row Number, point Vector3) Number
+	Moved.Project(3, Vector3.One) is 1
 	values(row) * point.X + values(4 + row) * point.Y + values(8 + row) * point.Z + values(LastColumn + row)
 Axis(column Number) Vector3
 	Moved.Axis(3) is Vector3(1, 2, 3)
 	Vector3(values(column * 4), values(column * 4 + 1), values(column * 4 + 2))
 LookAt(eye Vector3, target Vector3, up Vector3) Matrix
-	Matrix.LookAt(Vector3(0, -10, 0), Vector3.Zero, Vector3.UnitZ).Transformed(Vector3.Zero) is Vector3(0, 0, -10)
-	Matrix.LookAt(Vector3.One, Vector3(3, 4, 7), Vector3.UnitZ).Transformed(Vector3.One).Length < 0.00001
+	Matrix.LookAt(Vector3(0, -10, 0), Vector3.Zero, Vector3.UnitZ).Transform(Vector3.Zero) is Vector3(0, 0, -10)
+	Matrix.LookAt(Vector3.One, Vector3(3, 4, 7), Vector3.UnitZ).Transform(Vector3.One).Length < 0.00001
 	forward = (target - eye).Normalize
 	side = forward.Cross(up).Normalize
 	top = side.Cross(forward)
@@ -67,8 +67,8 @@ Orthographic(width Number, height Number, near Number, far Number) Matrix
 	Matrix.Orthographic(4, 2, 1, 11).Clip(Vector3(2, 1, -1))(1) is 1
 	Matrix((2 / width, 0, 0, 0, 0, 2 / height, 0, 0, 0, 0, 2 / (near - far), 0, 0, 0, (far + near) / (near - far), 1))
 Inverse Matrix
-	(Moved * Matrix.Scaling(2)).Inverse.Transformed(Vector3(1, 2, 3)) is Vector3.Zero
-	(Moved * Matrix.RotationZ(Degrees(90))).Inverse.Transformed(Vector3(1, 3, 3)).DistanceTo(Vector3.UnitX) < 0.000001
+	(Moved * Matrix.Scaling(2)).Inverse.Transform(Vector3(1, 2, 3)) is Vector3.Zero
+	(Moved * Matrix.RotationZ(Degrees(90))).Inverse.Transform(Vector3(1, 3, 3)).DistanceTo(Vector3.UnitX) < 0.000001
 	x = Axis(0)
 	y = Axis(1)
 	z = Axis(2)

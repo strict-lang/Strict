@@ -16,7 +16,7 @@ constant Tiny = Perturbation(Inside, orbit = (Complex(1, 0), Complex(0, 1), Comp
 Strip(first Number, count Number, width Number) Float32s
 	Inside.Strip(0, 4, 2) is (34, 0, 33, 35)
 	Inside.Strip(0, 4, 2).Sum is 102
-	Inside.Rebased(Complex(1.75, -0.1)) is 3
+	Inside.Rebase(Complex(1.75, -0.1)) is 3
 	for count
 		position = first + index
 		Pixel(Complex(left + (position % width + 0.5) * step, top - ((position / width).Floor + 0.5) * step))
@@ -28,18 +28,18 @@ Pixel(offset Complex) Number
 	(Rabbit.Pixel(Complex(-0.3, 0.4)), Rabbit.Pixel(Complex(0.96, -0.58)), Rabbit.Pixel(Complex(0.5, 0.6))) is (40, 45, 3)
 	(Offset.Pixel(Complex(-0.6, 0.6)), Offset.Pixel(Complex(0.66, -0.38)), Offset.Pixel(Complex(0.2, 0.8))) is (40, 45, 3)
 	point = center + offset
-	julia < 0.5 and step > 0.00001 and Mandelbrot.IsInterior(point.real, point.imaginary) then 0 else Rebased(offset)
-Rebased(offset Complex) Number
-	Outside.Rebased(Complex(-1.75, 0.1)) is 33
+	julia < 0.5 and step > 0.00001 and Mandelbrot.IsInterior(point.real, point.imaginary) then 0 else Rebase(offset)
+Rebase(offset Complex) Number
+	Outside.Rebase(Complex(-1.75, 0.1)) is 33
 	mutable delta = offset * julia
 	mutable position = start
 	for limit
 		delta = Next(position, delta, offset * (1 - julia))
-		point = Reached(position + 1, delta)
+		point = Perturb(position + 1, delta)
 		if point.SquaredLength > 4
 			return index + 1
 		position = IsRebased(point, delta, position + 1) then 0 else position + 1
-		delta = Shifted(point, delta, position is 0)
+		delta = Shift(point, delta, position is 0)
 	0
 IsRebased(point Complex, delta Complex, next Number) Boolean
 	Inside.IsRebased(Inside.orbit(1), Complex.Zero, 1) is false
@@ -53,10 +53,10 @@ Next(position Number, delta Complex, added Complex) Complex
 	Tiny.Next(1, Complex(1, 0), Complex.Zero) is Complex(1, 2)
 	Tiny.Next(2, Complex(1, 0), Complex.Zero) is Complex(1, 4)
 	orbit(position) * delta * 2 + delta.Squared + added
-Shifted(point Complex, delta Complex, isRebased Boolean) Complex
-	Tiny.Shifted(Complex(3, 1), Complex(2, 2), true) is Complex(2, 1)
-	Tiny.Shifted(Complex(3, 1), Complex(2, 2), false) is Complex(2, 2)
+Shift(point Complex, delta Complex, isRebased Boolean) Complex
+	Tiny.Shift(Complex(3, 1), Complex(2, 2), true) is Complex(2, 1)
+	Tiny.Shift(Complex(3, 1), Complex(2, 2), false) is Complex(2, 2)
 	isRebased then point - orbit(0) else delta
-Reached(next Number, delta Complex) Complex
-	Tiny.Reached(1, Complex(1, 1)) is Complex(1, 2)
+Perturb(next Number, delta Complex) Complex
+	Tiny.Perturb(1, Complex(1, 1)) is Complex(1, 2)
 	orbit(next) + delta
