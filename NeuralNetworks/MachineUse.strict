@@ -26,6 +26,7 @@ constant Sample = MachineUse("H3Video", 25 * Gigabyte, 22 * Gigabyte)
 Models(name Text, model Number, encoder Number, growth Number, forced Boolean) MachineUse
 	MachineUse.Models("MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, false).ram is 16 * Gigabyte
 	MachineUse.Models("MossImage", 5 * Gigabyte, 10 * Gigabyte, 1.6, true).vram is 6 * Gigabyte
+	Gpu.Require(name)
 	MachineUse(name, (encoder * growth).Maximum(model), model + Gigabyte, forced)
 Weights(name Text, path Text) MachineUse slow
 	MachineUse.Weights("Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
@@ -50,6 +51,7 @@ Needed Text
 	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
 Admitted Boolean slow
 	MachineUse("H3Video", 0, 0, true, Nowhere).Admitted
+	Gpu.Require(program)
 	reply = Coordinator(coordinator).Resolved(Needed)
 	if reply.StartsWith("refused")
 		Explained(reply)

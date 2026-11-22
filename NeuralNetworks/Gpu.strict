@@ -1,0 +1,4 @@
+Require(purpose Text)
+	Gpu.Require("Tests") is not Error
+	if purpose is ""
+		logger.Log("Gpu.Require needs a purpose, the GpuRequired error names it")

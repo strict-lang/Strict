@@ -18352,7 +18352,10 @@
     %first = llvm.load %setting : !llvm.ptr -> i8
     %off = arith.constant 48 : i8
     %letterA = arith.constant 97 : i8
-    %disabled = arith.cmpi eq, %first, %off : i8
+    %letterC = arith.constant 99 : i8
+    %isZero = arith.cmpi eq, %first, %off : i8
+    %isCpu = arith.cmpi eq, %first, %letterC : i8
+    %disabled = arith.ori %isZero, %isCpu : i1
     %everything = arith.cmpi eq, %first, %letterA : i8
     %never = arith.constant 9223372036854775807 : i64
     %minimum = llvm.load %minimumSlot : !llvm.ptr -> i64
@@ -19057,6 +19060,11 @@
   llvm.mlir.global internal constant @strict_gpu_cpu_format("\1D\00\00\00\00\00\00\00\1D\00\00\00\00\00\00\00%s, GPU loops run on the CPU\0A\00") : !llvm.array<46 x i8>
   // web pages set it to 0 (NativeBuild.Released): their loops run through WGSL, no native driver is ever opened
   llvm.mlir.global internal @strict_gpu_cpu_notice(1 : i64) : i64
+  // Gpu.Require(purpose): the purpose (copied out of the collected heap) of a program that must not run its GPU
+  // loops on the CPU, any CPU fallback then ends it with GpuRequired, STRICT_GPU=cpu runs it on the CPU anyway
+  llvm.mlir.global internal @strict_gpu_purpose(0 : i64) : i64
+  llvm.mlir.global internal constant @strict_gpu_purpose_format("\C2\00\00\00\00\00\00\00\C2\00\00\00\00\00\00\00Error: GpuRequired: %s needs the GPU, but the GPU check failed because %s. This code should not run on the CPU (it would be hundreds of times slower). Set STRICT_GPU=cpu to run it there anyway.\0A\00") : !llvm.array<211 x i8>
+  llvm.mlir.global internal constant @strict_gpu_off_text("\1E\00\00\00\00\00\00\00\1E\00\00\00\00\00\00\00STRICT_GPU=0 turns the GPU off\00") : !llvm.array<47 x i8>
   llvm.mlir.global internal constant @strict_gpu_unloaded_format("\0A\00\00\00\00\00\00\00\0A\00\00\00\00\00\00\00Error: %s\0A\00") : !llvm.array<27 x i8>
   // kernels a CUDA sm_75 or newer GPU did not load end the program at once with an Error (also from the warm thread)
   // instead of running its GPU loops on the CPU unnoticed, an older or an AMD GPU keeps one line and the CPU
@@ -19101,7 +19109,59 @@
     func.call @strict_gpu_required(%message) : (!llvm.ptr) -> ()
     return
   }
+  func.func private @strict_gpu_require(%self: f64, %purpose: f64) -> f64 {
+    %done = arith.constant 0.0 : f64
+    %isWeb = func.call @strict_gpu_webgpu() : () -> i1
+    cf.cond_br %isWeb, ^done, ^setting
+  ^setting:
+    %nameLengths = llvm.mlir.addressof @strict_gpu_switch : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %isUnset = llvm.icmp "eq" %setting, %unset : !llvm.ptr
+    cf.cond_br %isUnset, ^keep, ^read
+  ^read:
+    %first = llvm.load %setting : !llvm.ptr -> i8
+    %letterC = arith.constant 99 : i8
+    %isCpu = arith.cmpi eq, %first, %letterC : i8
+    cf.cond_br %isCpu, ^done, ^keep
+  ^keep:
+    %one = arith.constant 1 : i64
+    %purposeText = func.call @strict_text_ptr(%purpose) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%purposeText) : (!llvm.ptr) -> i64
+    %size = arith.addi %length, %one : i64
+    %copy = func.call @strict_malloc(%size) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%copy, %purposeText, %size) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %copyBits = llvm.ptrtoint %copy : !llvm.ptr to i64
+    %purposeSlot = llvm.mlir.addressof @strict_gpu_purpose : !llvm.ptr
+    llvm.store %copyBits, %purposeSlot : i64, !llvm.ptr
+    %minimum = func.call @strict_gpu_threshold() : () -> i64
+    %never = arith.constant 9223372036854775807 : i64
+    %isOff = arith.cmpi eq, %minimum, %never : i64
+    cf.cond_br %isOff, ^off, ^done
+  ^off:
+    %offLengths = llvm.mlir.addressof @strict_gpu_off_text : !llvm.ptr
+    %offText = llvm.getelementptr %offLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    func.call @strict_gpu_required(%offText) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
+    return %done : f64
+  }
   func.func private @strict_gpu_required(%message: !llvm.ptr) {
+    %purposeSlot = llvm.mlir.addressof @strict_gpu_purpose : !llvm.ptr
+    %purposeBits = llvm.load %purposeSlot : !llvm.ptr -> i64
+    %unrequired = arith.constant 0 : i64
+    %isRequired = arith.cmpi ne, %purposeBits, %unrequired : i64
+    cf.cond_br %isRequired, ^gpuRequired, ^check
+  ^gpuRequired:
+    %purpose = llvm.inttoptr %purposeBits : i64 to !llvm.ptr
+    %purposeLengths = llvm.mlir.addressof @strict_gpu_purpose_format : !llvm.ptr
+    %purposeFormat = llvm.getelementptr %purposeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %told = llvm.call @printf(%purposeFormat, %purpose, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %stopCode = arith.constant 1 : i32
+    llvm.call @exit(%stopCode) : (i32) -> ()
+    cf.br ^check
+  ^check:
     %one = arith.constant 1 : i64
     %minimum = func.call @strict_gpu_threshold() : () -> i64
     %isAll = arith.cmpi eq, %minimum, %one : i64

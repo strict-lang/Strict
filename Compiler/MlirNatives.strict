@@ -131,7 +131,7 @@ TypeHelper(kind Text, name Text) Text
 		return name is "At" then "strict_list_get" else "strict_list_set"
 	isHosted = kind is in Hosted.Kinds and kind is not "Strict" then kind + "." + name is in Hosted.Methods else false
 	if isHosted is false and (kind is not "Memo" or name.StartsWith(TestCodegen.Runner))
-		return kind is "GpuMemory" then GpuHelper(name) else Validated(name)
+		return kind is "GpuMemory" or kind is "Gpu" and name is "Require" then GpuHelper(name) else Validated(name)
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
@@ -142,6 +142,7 @@ GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Memo", "$TestsTook") is ""
 	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "$TestsGot0") is ""
 	MlirNatives(Texts, 1).GpuHelper("Tuned") is "strict_gpu_tuned"
+	MlirNatives(Texts, 1).TypeHelper("Gpu", "Require") is "strict_gpu_require"
 	if name.StartsWith(TestCodegen.Runner)
 		return ""
 	"strict_gpu_" + (name is "Released" then "trim_unused" else (name is "Evicted" then "evict_all" else name.Lower))

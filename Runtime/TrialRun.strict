@@ -1,11 +1,22 @@
 has trial Trial
+constant Warm = TrialRun(Trial.Adding).Warmed
 Tested Text slow
 	"Test passed: AddTwoNumbers(2, 3) is 5" is in TrialRun(Trial.Adding).Tested
 	if trial.Name is ""
 		return ""
 	trial.Written
 	started = logger.Captured(true)
-	request = TestRequest((trial.Located, TypeSource.Root, "unit"))
-	answer = request.Executing(Dictionary(Text, TypeEntry), InferenceCache.None).Served(trial.Located, TypeSource.Root)
+	answer = Ran(Warm)
 	output = started + logger.Captured(false)
 	answer is Error then output + answer to Text else output
+Warmed Answer slow
+	trial.Written
+	started = logger.Captured(true)
+	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)))
+	output = started + logger.Captured(false)
+	if answer is Error or answer.code is not 0
+		logger.Log(output)
+	answer
+Ran(last Answer) Answer slow
+	request = TestRequest((trial.Located, TypeSource.Root, "unit"))
+	request.Executing(last.known, last.inferred).Served(trial.Located, TypeSource.Root)
