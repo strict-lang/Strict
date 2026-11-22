@@ -44,7 +44,8 @@ Key(folder Text, root Text, mutations Texts) Text slow
 	Stamped(reached + Directory.Files(root, "*.strict"), mutations)
 Stamped(paths Texts, mutations Texts) Text slow
 	ValidateCheck.Stamped(List(Text) + "Missing.strict", List(Text) + "Next").EndsWith("\nMissing.strict|0\nNext")
-	Text.Combine((List(Text) + (File(Process.Current.executable).Modified to Text)) + Stamps(paths) + mutations, "\n")
+	compiler = "strict.exe|" + File(Process.Current.executable).Modified
+	Text.Combine((List(Text) + compiler) + Stamps(paths) + mutations, "\n")
 Stamps(paths Texts) Texts slow
 	ValidateCheck.Stamps(List(Text) + "Missing.strict") is ("Missing.strict|0")
 	for paths
