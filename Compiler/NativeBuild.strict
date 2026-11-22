@@ -27,8 +27,7 @@ Compile(path Text, root Text, isTesting = false, isCounting = false, sources Tex
 	base = Output(path, isProgram)
 	beside = Path(base).PathOnly.text + "/obj/" + Path(base).FileName.text
 	objects = base.IndexOf("/obj/") >= 0 then base else beside
-	loaded = Folder.Module(path, root, isCounting, isProgram, Target, sources)
-	module = MlirModule(loaded, Cached = objects + ".emitted")
+	module = MlirModule(Folder.Module(path, root, isCounting, isProgram, Target, sources), Cached = objects + ".emitted")
 	if module.types.Length is 0
 		return Error("NoTypesCompiled")
 	program = BuildProfile.Program(module, base, root, value)

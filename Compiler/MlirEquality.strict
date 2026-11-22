@@ -186,8 +186,7 @@ Function(type TypeEntry) Texts
 	MlirEquality(Same, 0).Function(Same.type)(20) is "  ^m1:"
 	MlirEquality(Same, 0).Member(MlirFunction.Shape, MlirFunction.Shape.members.First, 0) is Checked
 	stored = MlirInstances(function, 0).Stored(type)
-	name = Symbol(TypeEntry.ShortName(type.Name))
-	header = "  func.func private @strict_equal_" + name + "(%a: f64, %b: f64) -> f64 {"
+	header = "  func.func private @strict_equal_" + Symbol(TypeEntry.ShortName(type.Name)) + "(%a: f64, %b: f64) -> f64 {"
 	mutable lines = List(Text) + header + Prologue
 	for stored
 		lines = lines + Member(type, value, index)

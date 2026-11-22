@@ -135,8 +135,7 @@ Lets List(ValidationIssue)
 			method = Tokenizer(value).Tokens.First
 		trimmed = value.Trim
 		tokens = Tokenizer(trimmed).Tokens
-		isLet = trimmed.StartsWith("let ") or tokens.Length > 1 and tokens(1) is "="
-		if isLet and IsThroughSample(value, method)
+		if (trimmed.StartsWith("let ") or tokens.Length > 1 and tokens(1) is "=") and IsThroughSample(value, method)
 			issues.Add(ValidationIssue("LetCallsItself", method + LetHint, index + 1))
 	issues
 IsThroughSample(line Text, method Text) Boolean

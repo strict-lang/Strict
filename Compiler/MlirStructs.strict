@@ -165,6 +165,5 @@ IsTarget(entry InstructionEntry, next InstructionEntry, returned Text) Boolean
 	if (isStored then next.texts(0).IndexOf("(") > 0 else false) is false
 		return false
 	kinds = MlirKinds(function)
-	list = PayloadDecoder(next).ElementParts(0)
-	element = function.TypeOf(kinds.ElementKind(kinds.VariableKind(position, list)), true)
+	element = function.TypeOf(kinds.ElementKind(kinds.VariableKind(position, PayloadDecoder(next).ElementParts(0))), true)
 	element.members.Length > 0 and element.Name is function.TypeOf(returned, true).Name

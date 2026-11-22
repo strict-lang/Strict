@@ -80,8 +80,7 @@ Started(name Text, parameter Text) Texts
 Read(name Text, list Text, position Text, nameBits Text, result Text) Text
 	Reading.Read("a", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_read(%h_a, %n_a, %i, %nb, %k_a, %l)") > 0
 	Bytes.Read("pixels", "%l", "%i", "%nb", "%x").IndexOf("@strict_hoisted_byte_read(%b_pixels, %h_pixels") > 0
-	hoisted = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits
-	operands = hoisted + ", %k_" + name + ", " + list + ")"
+	operands = "(%h_" + name + ", %n_" + name + ", " + position + ", " + nameBits + ", %k_" + name + ", " + list + ")"
 	if IsBytes(name)
 		call = "    " + result + " = func.call @strict_hoisted_byte_read(%b_" + name + ", "
 		return call + operands.Substring(1) + ByteReadTypes

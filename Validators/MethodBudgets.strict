@@ -47,9 +47,17 @@ Tests(header Number, last Number) Number
 	tests
 Lets(header Number, last Number) Numbers
 	Tested.Lets(0, 8) is (2, 4) and Busy.Lets(0, 11).Length is 0
+	MethodBudgets(("Run", "\tmutable count = 1", "\tcount = count + 1", "\tcount")).Lets(0, 3).Length is 0
 	for Range(header + 1, last + 1)
 		code = lines(value).Trim
 		tokens = Tokenizer(code).Tokens
-		isLet = tokens.Length > 1 and tokens(1) is "=" or code.StartsWith("let ")
+		isLet = tokens.Length > 1 and tokens(1) is "=" and IsMutable(header, tokens(0)) is false or code.StartsWith("let ")
 		if code.StartsWith("constant ") or lines(value).StartsWith("\t\t") is false and isLet
 			value
+IsMutable(header Number, name Text) Boolean
+	Tested.IsMutable(0, "a") is false
+	MethodBudgets(("Run", "\tmutable count = 1", "\tcount")).IsMutable(0, "count")
+	for Range(header + 1, FileCheck.LastLine(lines, header) + 1)
+		if lines(value).Trim.StartsWith("mutable " + name + " ")
+			return true
+	false

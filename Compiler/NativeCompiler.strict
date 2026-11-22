@@ -65,8 +65,7 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	isCounting = request.Option is "lines"
 	isRecursive = "--no-recursive" is not in request.Options
 	selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
-	build = NativeBuild(false, selection = selection, isRecursive = isRecursive)
-	build.Tested(rest(0), rest(1), isCounting, sources)
+	NativeBuild(false, selection = selection, isRecursive = isRecursive).Tested(rest(0), rest(1), isCounting, sources)
 Checked(rest Texts, sources Texts) Number
 	gate = Execute.Served(rest(0), rest(1), true, sources)
 	if gate.code is 0

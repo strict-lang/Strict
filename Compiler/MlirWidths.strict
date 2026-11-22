@@ -32,8 +32,7 @@ Loaded(result Text, address Text, items Text, source Text) Texts
 	Fours.Loaded("%x", "%p", "%h", "numbers").Last is "    %x = arith.extf %xn : f32 to f64"
 	MlirWidths(Fours.function, 2, "f32").Loaded("%x", "%p", "%h", "numbers").Last.EndsWith("-> f32")
 	type = Element(source)
-	slot = items + "[" + Temp(index) + "]" + MlirFastLoop.Pointer + type
-	pointer = "    " + address + " = llvm.getelementptr " + slot
+	pointer = "    " + address + " = llvm.getelementptr " + items + "[" + Temp(index) + "]" + MlirFastLoop.Pointer + type
 	target = result + (type is float then "" else "n")
 	loaded = "    " + target + " = llvm.load " + address + scope + " : !llvm.ptr -> " + type
 	(pointer, loaded) + Widened(result, items, source)
@@ -101,8 +100,7 @@ Decoder(source Text) Text
 	Fours.Decoder("numbers") is "strict_holder_floats"
 	Paired.Decoder("numbers") is "strict_holder_second_floats"
 	Quartering.Decoder("numbers") is "strict_holder_data"
-	isSecond = function.Packing.Split(" ").Index(source) > 0
-	floats = isSecond then "strict_holder_second_floats" else "strict_holder_floats"
+	floats = function.Packing.Split(" ").Index(source) > 0 then "strict_holder_second_floats" else "strict_holder_floats"
 	Width(source) is in ("6", "4") then floats else "strict_holder_data"
 Temp(suffix Text) Text
 	Doubling.Temp("ki") is "%t2ki"

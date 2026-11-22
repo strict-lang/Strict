@@ -129,8 +129,7 @@ Half(entry InstructionEntry) Texts
 	truncated = values.Line("h", "arith.trunci " + statements.Temp("v") + " : i64 to i32")
 	single = values.Line("f", "arith.bitcast " + statements.Temp("h") + " : i32 to f32")
 	whole = values.Line("m", "arith.fptosi " + statements.Temp("f") + " : f32 to i64")
-	shifted = values.Line("s", "arith.constant " + shift + " : i64")
-	moved = (shifted, statements.Operation("v", "arith.shrui", "a", "s"))
+	moved = (values.Line("s", "arith.constant " + shift + " : i64"), statements.Operation("v", "arith.shrui", "a", "s"))
 	stored = statements.Store("m", "i", entry.payload(0))
 	statements.Load("a", entry.payload(1), "c") + moved + (truncated, single, whole) + stored
 Member(entry InstructionEntry) Texts

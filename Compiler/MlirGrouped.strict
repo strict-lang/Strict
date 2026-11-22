@@ -71,8 +71,7 @@ Kept(called Texts, register Number) Texts
 	MlirGrouped(MlirGroups.Norming.function, 7).Kept(List(Text) + "    call", 5) is ("    call")
 	begin = function.method.LoopBeginOf(position)
 	counted = begin >= 0 then MlirLoops(function, begin).Collection is "" else false
-	adding = counted then MlirGroups(function, 0).Adding(position) else 0
-	call = adding < 1 then -1 else MlirGroups(function, begin).Call
+	call = (counted then MlirGroups(function, 0).Adding(position) else 0) < 1 then -1 else MlirGroups(function, begin).Call
 	call is not position then called else Keyed(MlirGroups(function, begin).Size(position)) + called + Rejoined(register)
 Keyed(size Text) Texts
 	Calling.Keyed("size") is Checking

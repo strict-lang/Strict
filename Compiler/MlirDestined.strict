@@ -93,8 +93,7 @@ Started(temp Text, name Text) Texts
 	isCollected = IsDestined then false else MlirListDestined(function, position).IsCollected(name)
 	loaded = function.Load(temp + "l", "%v_forResult")
 	slotted = (loaded, "    " + temp + "s = func.call @strict_flat_slot(" + temp + "l) : (f64) -> f64")
-	destination = IsDestined then "%flatDestination" else temp + "s"
-	into = "@strict_flat_into(" + destination + ", " + temp + "n) : (f64, f64)"
+	into = "@strict_flat_into(" + (IsDestined then "%flatDestination" else temp + "s") + ", " + temp + "n) : (f64, f64)"
 	call = IsDestined or isCollected then into else "@strict_flat_new(" + temp + "n) : (f64)"
 	(isCollected then slotted else List(Text)) + ("    " + temp + "f = func.call " + call + " -> f64")
 Destined(entry InstructionEntry, compiled Texts) Texts

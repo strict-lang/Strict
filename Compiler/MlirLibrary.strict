@@ -37,8 +37,7 @@ IsExported(method MethodEntry) Boolean
 	Policy.IsExported(MethodEntry.CountingLoop) is false
 	MlirLibrary(List(TypeEntry) + MlirForeign.Adder.type).IsExported(MlirForeign.Add) is false
 	first = method.Name(0)
-	isNamed = first.Upper is first and first.Lower is not first
-	isPublic = isNamed and method.Name is not in ("Run", TestCodegen.Runner)
+	isPublic = first.Upper is first and first.Lower is not first and method.Name is not in ("Run", TestCodegen.Runner)
 	mutable isSupported = Kind(method.returnType) is not ""
 	for method.parameters
 		isSupported = isSupported and Kind(value.typeName) is not ""

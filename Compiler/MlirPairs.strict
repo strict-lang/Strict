@@ -87,8 +87,7 @@ Appended(entry InstructionEntry, fallback MlirLists) Texts
 	slot = "%v_" + entry.texts(0)
 	temp = "%t" + position
 	isFirst = Written(entry.texts(0)) is 0
-	half = isFirst then "y" else "x"
-	kept = "    " + temp + "pk = func.call @strict_two_" + half + "(" + temp + "pl) : (f64) -> f64"
+	kept = "    " + temp + "pk = func.call @strict_two_" + (isFirst then "y" else "x") + "(" + temp + "pl) : (f64) -> f64"
 	parts = isFirst then temp + "pe, " + temp + "pk" else temp + "pk, " + temp + "pe"
 	packed = "    " + temp + "pp = func.call @strict_two_packed(" + parts + ") : (f64, f64) -> f64"
 	loads = (function.Load(temp + "pl", slot), function.Load(temp + "pe", "%r" + entry.payload(0)))

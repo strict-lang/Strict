@@ -85,8 +85,7 @@ Blamed(inspected MlirFunction, at Number, depth Number) Text
 	Weighing.Issue.IndexOf(" because of Strict/") > 0
 	entry = inspected.method.instructions(at)
 	named = entry.texts.Length > 1 then entry.texts(0) + "." + entry.texts(1) else "instruction " + entry.kind
-	isCall = entry.kind is InstructionType.Invoke
-	callees = isCall then MlirDeviceMembers(inspected).Passable(at) else List(MlirFunction)
+	callees = entry.kind is InstructionType.Invoke then MlirDeviceMembers(inspected).Passable(at) else List(MlirFunction)
 	if callees.Length is not 1
 		return named
 	inner = Blocker(callees.First, 0, callees.First.method.instructions.Length, depth + 1)

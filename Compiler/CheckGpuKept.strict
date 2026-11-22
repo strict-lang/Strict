@@ -41,8 +41,7 @@ RanCases(folder Text) Boolean
 	exe = folder + "/check" + (win then ".exe" else "")
 	head = CHead + CHelpA + CHelpB + CWriteA + (CWriteB + CWriteC + CWriteC2) + CWriteD + CReadA + CReadB + CReadC
 	File(cFile).Write(head + CError + CMainA + CMainB + CMainC + CMainD + CMainE + CMainF + CMainG + CMainH)
-	ccArgs = "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (win then "" else " -lm")
-	comp = Process.RunTool("clang", ccArgs, ToolSeconds)
+	comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (win then "" else " -lm"), ToolSeconds)
 	comp.exitCode is not 0 then Error("CompileFailed: " + comp.Output + comp.error) else RunTokenCounts(folder, exe, win)
 RunTokenCounts(folder Text, exe Text, win Boolean) Boolean
 	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "

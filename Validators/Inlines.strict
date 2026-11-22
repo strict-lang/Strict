@@ -5,6 +5,7 @@ constant Ordered = Inlines(("A Text", "\tlet answer = Run(1)", "\tGpuMemory.Evic
 constant Padding = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 constant Nested = "\t\treturn a then 1 else 2"
 constant Keywords = ("let", "mutable", "for", "if", "else", "return", "ignore")
+constant Totaled = Inlines(("Run", "\ttotal = 1", "\tLog(total)"))
 Issues ValidationIssues
 	Evicted.Issues.First to Text is "SingleUseLetMustBeInlined: evicted, use GpuMemory.Evicted in the next line"
 	Returned.Issues.First to Text is "IfReturnMustBeThenElse: GpuMemory.Evicted is Error then \"\" else answer"
@@ -24,7 +25,7 @@ LetIssues(at Number) ValidationIssues
 	Inlines(("Run", "\tlet x = 123456789012345", "\tLog(x)" + Padding)).LetIssues(1).Length is 0
 	Inlines(("Run", "\tlet x = 1 + 34567890", "\tLog(x)" + Padding)).LetIssues(1).Length is 1
 	Inlines(("Run", "\tlet x = 1 + 345678901", "\tLog(x)" + Padding)).LetIssues(1).Length is 0
-	Inlines(("Run", "\ttotal = 1", "\tLog(total)")).LetIssues(1).First to Text is "SingleUseLetMustBeInlined: total, use 1 in the next line"
+	Totaled.LetIssues(1).First to Text is "SingleUseLetMustBeInlined: total, use 1 in the next line"
 	Inlines(("Run", "\tmutable quoted = false", "\tquoted = true", "\tquoted")).LetIssues(2).Length is 0
 	if IsInlinable(at) is false
 		return List(ValidationIssue)
@@ -56,9 +57,7 @@ Declared(line Text) Text
 	tokens = Tokenizer(line.Trim).Tokens
 	if tokens.Length < 2
 		return ""
-	if tokens(0) is in ("let", "mutable", "constant", "has")
-		return tokens(1)
-	tokens(1) is "=" then tokens(0) else ""
+	tokens(0) is in ("let", "mutable", "constant", "has") then tokens(1) else (tokens(1) is "=" then tokens(0) else "")
 Known(name Text, at Number) Boolean
 	Inlines(("Run(count Number)", "\tcount = 1", "\tcount")).Known("count", 1)
 	Inlines(("has quoted", "Run", "\tquoted = true", "\tquoted")).Known("quoted", 2)
