@@ -32,7 +32,7 @@ Of(files Texts, path Text) KeptInference
 	names = isKept then mentioned else Mention(rest)
 	name = ResolveCheck.TypeName(path)
 	if at < 0 or name is in names or name + "s" is in names
-		return at < 0 then KeptInference(value, joined = ResolveCheck.Inference(files)) else Mention(files, at)
+		return at < 0 then KeptInference(value, joined = ResolveCheck.Inference(files)) else Mentioned(files, at)
 	(isKept then value else Fresh(rest, names)).Joined(files, at)
 Matches(files Texts, path Text) Boolean
 	Writing.Matches(Pair, "TextWriter.strict") and Writing.Matches(Pair, "Logger.strict") is false

@@ -7,7 +7,7 @@ constant Held = PtxCache("./Compiler/output/Held")
 constant Renewing = Held.base + ".new.exe"
 constant Rooted = "Compiler/output/Rooted"
 constant SourceFolders = ("Compiler", "Bytecode", "Expressions", "Runtime", "")
-constant Guarded = ("Expressions", "Compiler")
+constant Guarded = ("check Expressions", "check Compiler", "build Runtime/Hosted.strict")
 constant IsWindows = Process.OperatingSystem is "Windows"
 constant Kept = "Compiler\\output\\Held.old.exe"
 constant Holding = "/c copy /y %SystemRoot%\\System32\\PING.EXE " + Kept + " >nul & start \"\" /b " + Kept + " -n 3 127.0.0.1 >nul"
@@ -68,15 +68,16 @@ Unchecked(executable Text, target Text) Text slow
 	isStrict = Path(executable).FileName.RemoveExtension.text is "strict"
 	if (isStrict then IsCompilerChanged(executable) else false) is false
 		return ""
-	for Process.RunTools(IsWindows then "cmd" else "sh", (Locally(target, Guarded(0)), Locally(target, Guarded(1))))
+	commands = (Locally(target, Guarded(0)), Locally(target, Guarded(1)), Locally(target, Guarded(2)))
+	for Process.RunTools(IsWindows then "cmd" else "sh", commands)
 		if value.exitCode is not 0
-			return target + " fails strict check " + Guarded(index) + " (exit " + value.exitCode + "), " + executable + " stays"
+			return target + " fails strict " + Guarded(index) + " (exit " + value.exitCode + "), " + executable + " stays"
 	""
-Locally(target Text, folder Text) Text
-	Intermediates.Locally("a.exe", "Compiler").IndexOf("STRICT_SERVER=0") >= 0
-	Intermediates.Locally("a.exe", "Compiler").IndexOf("a.exe") > 0
-	Intermediates.Locally("a.exe", "Compiler").IndexOf(" check Compiler") > 0
-	quoted = "\"" + target + "\" check " + folder
+Locally(target Text, command Text) Text
+	Intermediates.Locally("a.exe", "check Compiler").IndexOf("STRICT_SERVER=0") >= 0
+	Intermediates.Locally("a.exe", "check Compiler").IndexOf("a.exe") > 0
+	Intermediates.Locally("a.exe", "build Runtime/Hosted.strict").IndexOf("check") < 0
+	quoted = "\"" + target + "\" " + command
 	IsWindows then "/c set STRICT_SERVER=0&& " + quoted else "-c \"STRICT_SERVER=0 " + quoted.Replace("\"", "'") + "\""
 IsCompilerChanged(executable Text) Boolean slow
 	Intermediates.IsCompilerChanged("Compiler/output/Missing/strict.exe") is false

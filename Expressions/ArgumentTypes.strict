@@ -133,7 +133,7 @@ Compare(call SyntaxNode, instance Text, method Text, scope Scope, current Scope)
 	fewest = method is "from" then 0 else FileCheck(inference, "").Fewest(Owner(instance, method), method)
 	if at < 0
 		return CountIssue(call, name, types, fewest) + RangeArguments.Issue(call, name, types)
-	"ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at)
+	"ArgumentTypeMismatch: " + name + " got a " + arguments(at) + " for a " + types(at.Minimum(types.Length - 1))
 CountIssue(call SyntaxNode, name Text, types Texts, fewest Number) Text
 	Logged.Compare(Made, "Wrong", "from", Counted, Counted) is "TooManyArguments: Wrong got 2 of 1"
 	Sizing.CountIssue(DepthCopies(1), "Area", List(Text) + "Size", 0) is ""
@@ -212,10 +212,15 @@ Mismatch(arguments Texts, types Texts) Number
 	Sizing.Mismatch(List(Text) + "Area", List(Text) + "Area") is -1
 	Sizing.Mismatch(("Text", "Text"), ("Sizes", "Text")) is 0
 	Sizing.Mismatch(("Text", "Text"), ("Texts", "Text")) is -1
+	Sizing.Mismatch(("Area", "Count"), List(Text) + "Areas") is 1
+	Sizing.Mismatch(("Area", "Area"), List(Text) + "Areas") is -1
 	Listing.IsMismatch("Count", "Counts") is false and Listing.IsBaseMismatch("Text", "Texts") is false
 	Scaling.Issue(SyntaxNode("MethodCall", "Scaled", Overloads.Rescaled.children(0)), Scalers, Scalers) is ""
+	isSpread = IsListed(types) and arguments.Length > 1
+	elements = isSpread then ListFits(inference.types).Elements(types.First) else List(Text)
 	for arguments
-		if index < types.Length and (IsMismatch(value, types(index)) or IsWrongElement(value, types(index)))
+		parameter = elements.Length is 1 then elements.First else index < types.Length then types(index) else ""
+		if parameter is not "" and (IsMismatch(value, parameter) or IsWrongElement(value, parameter))
 			return index
 	Number.NotFound
 IsWrongElement(argument Text, parameter Text) Boolean
