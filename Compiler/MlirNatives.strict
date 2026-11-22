@@ -125,7 +125,7 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "Rename") is "strict_file_rename"
 	MlirNatives(Texts, 1).TypeHelper("Process", "RunTool") is "strict_process_runtool"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
-	MlirNatives(Texts, 1).TypeHelper("Memo", "Kept") is "strict_memo_kept"
+	MlirNatives(Texts, 1).TypeHelper("Memo", "Keep") is "strict_memo_keep"
 	MlirNatives(Texts, 1).TypeHelper("Strict", "Test") is ""
 	if kind is "ConstantCache" and name is in ("At", "Stored")
 		return name is "At" then "strict_list_get" else "strict_list_set"

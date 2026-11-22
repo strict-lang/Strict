@@ -257,12 +257,8 @@
     return %result : f64
   }
   llvm.mlir.global internal constant @strict_memo_kindless("\16\00\00\00\00\00\00\00\16\00\00\00\00\00\00\00Memo needs a kind for \00") : !llvm.array<39 x i8>
-  // like Memo.Kept: an Error without a kind, otherwise the texts are kept while the file stays unchanged
+  // like Memo.Keep: an Error without a kind, otherwise the texts are kept while the file stays unchanged
   func.func private @strict_memo_keep(%self: f64, %file: f64, %kind: f64, %texts: f64) -> f64 {
-    %kept = func.call @strict_memo_kept(%self, %file, %kind, %texts) : (f64, f64, f64, f64) -> f64
-    return %kept : f64
-  }
-  func.func private @strict_memo_kept(%self: f64, %file: f64, %kind: f64, %texts: f64) -> f64 {
     %none = arith.constant 0 : i64
     %kindText = func.call @strict_text_ptr(%kind) : (f64) -> !llvm.ptr
     %kindLength = llvm.call @strlen(%kindText) : (!llvm.ptr) -> i64

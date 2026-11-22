@@ -93,7 +93,7 @@ Packages(file Text) Texts
 		cached = Memo.Texts(file, kind)
 		return cached.First is Nothing then List(Text) else cached
 	found = PackagesIn(File(file).ReadLines)
-	stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
+	stored = Memo.Keep(file, kind, found.Length is 0 then List(Text) + Nothing else found)
 	found.Length is 0 then List(Text) else stored
 Mentioned(file Text) Texts
 	"Number" is in SourceFiles(".").Mentioned("./Math/Vector2.strict")
@@ -102,7 +102,7 @@ Mentioned(file Text) Texts
 	if cached.Length > 0
 		return cached.First is Nothing then List(Text) else cached
 	found = Mentions(File(file).ReadLines).Types
-	stored = Memo.Kept(file, kind, found.Length is 0 then List(Text) + Nothing else found)
+	stored = Memo.Keep(file, kind, found.Length is 0 then List(Text) + Nothing else found)
 	found.Length is 0 then found else stored
 PackagesIn(lines Texts) Texts
 	SourceFiles(".").PackagesIn("has a Bytecode/X", "Run") is List(Text) + "./Bytecode"

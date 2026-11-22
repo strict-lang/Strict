@@ -59,7 +59,7 @@ Memoized VmValue
 		return Hosted(call).Values(Memo.Texts(file, kind))
 	if kind.Length is 0
 		return VmValue.OfError("Memo needs a kind for " + file)
-	Hosted(call).Values(Memo.Kept(file, kind, Hosted(call).TextsOf(call.Arguments(2))))
+	Hosted(call).Values(Memo.Keep(file, kind, Hosted(call).TextsOf(call.Arguments(2))))
 Paused VmValue
 	HostedProcess(Collecting).Paused.kind is "None"
 	if call.MethodName is "Wait"
