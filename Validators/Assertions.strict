@@ -27,7 +27,15 @@ IsUnasserted(header Text) Boolean
 	isBoolean and head.Lower is not head and IsAsserted(name) is false
 IsAsserted(name Text) Boolean
 	Completing.IsAsserted("HasMask") and Completing.IsAsserted("Island") is false
+	Completing.IsAsserted("Matches") and Completing.IsAsserted("ContainsAll") and Completing.IsAsserted("Pass") is false
 	for Starts
 		if name.StartsWith(value) and name.Length > value.Length
 			return name(value.Length).Lower is not name(value.Length)
-	false
+	word = Word(name)
+	word.Length > 2 and word.EndsWith("s") and word.EndsWith("ss") is false
+Word(name Text) Text
+	Completing.Word("ContainsAll") is "Contains" and Completing.Word("Fits") is "Fits"
+	for Range(1, name.Length)
+		if name(value).Lower is not name(value)
+			return name.Substring(0, value)
+	name
