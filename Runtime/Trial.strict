@@ -1,0 +1,27 @@
+has source Text
+constant Adding = Trial("has number\nfrom(first Number, second Number)\n\tAddTwoNumbers(2, 3) is 5\n\t5")
+Name Text
+	Adding.Name is "AddTwoNumbers"
+	Trial("has input Number\nResult Number\n\tSquareANumber(5).Result is 25\n\tinput * input").Name is "SquareANumber"
+	Trial("Run\n\t1").Name is ""
+	for source.Lines
+		if value.StartsWith("\t")
+			callee = value.Trim.Split("(").First
+			head = callee.Substring(0, callee.Length > 0 then 1 else 0)
+			return head.Lower is not head then callee else ""
+	""
+Located Text
+	Adding.Located is "obj/Trials/AddTwoNumbers/AddTwoNumbers.strict"
+	"obj/Trials/" + Name + "/" + Name + ".strict"
+Tested Text slow
+	"Test passed: AddTwoNumbers(2, 3) is 5" is in Adding.Tested
+	if Name is ""
+		return ""
+	for ("obj", "obj/Trials", "obj/Trials/" + Name)
+		Directory.Create(value)
+	File(Located).Write(source)
+	started = logger.Captured(true)
+	request = TestRequest((Located, TypeSource.Root, "unit"))
+	answer = request.Executing(logger, Dictionary(Text, TypeEntry), InferenceCache.None).Served(Located, TypeSource.Root)
+	output = started + logger.Captured(false)
+	answer is Error then output + answer to Text else output

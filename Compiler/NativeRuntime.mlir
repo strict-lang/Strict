@@ -61,6 +61,98 @@
     %output = arith.select %hasOwn, %own, %fromPool : i64
     return %output : i64
   }
+  // log output collected into one C buffer instead of printed while the output of a thread is -1 (strict_capture_start),
+  // one buffer for the whole process so pool workers and the test watcher add their lines too
+  llvm.mlir.global internal @strict_captured(0 : i64) : i64
+  llvm.mlir.global internal @strict_captured_length(0 : i64) : i64
+  llvm.mlir.global internal @strict_captured_lock(0 : i64) : i64
+  llvm.mlir.global internal thread_local @strict_captured_before(0 : i64) : i64
+  func.func private @strict_capture_start() {
+    %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %before = llvm.load %outputSlot : !llvm.ptr -> i64
+    %beforeSlot = llvm.mlir.addressof @strict_captured_before : !llvm.ptr
+    llvm.store %before, %beforeSlot : i64, !llvm.ptr
+    %lengthSlot = llvm.mlir.addressof @strict_captured_length : !llvm.ptr
+    %empty = arith.constant 0 : i64
+    llvm.store %empty, %lengthSlot : i64, !llvm.ptr
+    %capture = arith.constant -1 : i64
+    llvm.store %capture, %outputSlot : i64, !llvm.ptr
+    return
+  }
+  // the text collected since strict_capture_start, the output of this thread goes back to where it went before (only
+  // when it is capturing: a take without a start keeps the console or the socket of a served request)
+  func.func private @strict_capture_taken() -> f64 {
+    %dataSlot = llvm.mlir.addressof @strict_captured : !llvm.ptr
+    %lengthSlot = llvm.mlir.addressof @strict_captured_length : !llvm.ptr
+    %address = llvm.load %dataSlot : !llvm.ptr -> i64
+    %data = llvm.inttoptr %address : i64 to !llvm.ptr
+    %length = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %room = func.call @strict_text_room(%length) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%room, %data, %length) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %text = func.call @strict_text_made(%room, %length) : (!llvm.ptr, i64) -> f64
+    %empty = arith.constant 0 : i64
+    llvm.store %empty, %lengthSlot : i64, !llvm.ptr
+    %beforeSlot = llvm.mlir.addressof @strict_captured_before : !llvm.ptr
+    %before = llvm.load %beforeSlot : !llvm.ptr -> i64
+    %outputSlot = llvm.mlir.addressof @strict_output : !llvm.ptr
+    %current = llvm.load %outputSlot : !llvm.ptr -> i64
+    %capture = arith.constant -1 : i64
+    %isCapturing = arith.cmpi eq, %current, %capture : i64
+    %restored = arith.select %isCapturing, %before, %current : i64
+    llvm.store %restored, %outputSlot : i64, !llvm.ptr
+    return %text : f64
+  }
+  // adds a formatted log line to the capture when handle is -1, false for any other handle
+  func.func private @strict_capture_add(%handle: i64, %buffer: !llvm.ptr, %length: i64) -> i1 {
+    %capture = arith.constant -1 : i64
+    %isCapture = arith.cmpi eq, %handle, %capture : i64
+    cf.cond_br %isCapture, ^spin, ^other
+  ^spin:
+    %lockSlot = llvm.mlir.addressof @strict_captured_lock : !llvm.ptr
+    %free = arith.constant 0 : i64
+    %taken = arith.constant 1 : i64
+    %previous = llvm.atomicrmw xchg %lockSlot, %taken acquire : !llvm.ptr, i64
+    %isBusy = arith.cmpi ne, %previous, %free : i64
+    cf.cond_br %isBusy, ^spin, ^append
+  ^append:
+    %dataSlot = llvm.mlir.addressof @strict_captured : !llvm.ptr
+    %lengthSlot = llvm.mlir.addressof @strict_captured_length : !llvm.ptr
+    %address = llvm.load %dataSlot : !llvm.ptr -> i64
+    %old = llvm.inttoptr %address : i64 to !llvm.ptr
+    %oldLength = llvm.load %lengthSlot : !llvm.ptr -> i64
+    %newLength = arith.addi %oldLength, %length : i64
+    %one = arith.constant 1 : i64
+    %bytes = arith.addi %newLength, %one : i64
+    %grown = llvm.call @realloc(%old, %bytes) : (!llvm.ptr, i64) -> !llvm.ptr
+    %end = llvm.getelementptr %grown[%oldLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %copied = llvm.call @memcpy(%end, %buffer, %length) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %grownAddress = llvm.ptrtoint %grown : !llvm.ptr to i64
+    llvm.store %grownAddress, %dataSlot : i64, !llvm.ptr
+    llvm.store %newLength, %lengthSlot : i64, !llvm.ptr
+    %lockAgain = llvm.mlir.addressof @strict_captured_lock : !llvm.ptr
+    llvm.store %free, %lockAgain atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %added = arith.constant true
+    return %added : i1
+  ^other:
+    %kept = arith.constant false
+    return %kept : i1
+  }
+  // Logger.Captured: true collects the log output from now on and gives an empty text, false gives back what was
+  // collected and logs to where it went before again
+  func.func private @strict_logger_captured(%writer: f64, %isCapturing: f64) -> f64 {
+    %no = arith.constant 0.0 : f64
+    %isStart = arith.cmpf one, %isCapturing, %no : f64
+    cf.cond_br %isStart, ^start, ^take
+  ^start:
+    func.call @strict_capture_start() : () -> ()
+    %bytes = arith.constant 0 : i64
+    %room = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
+    %empty = func.call @strict_text_made(%room, %bytes) : (!llvm.ptr, i64) -> f64
+    return %empty : f64
+  ^take:
+    %text = func.call @strict_capture_taken() : () -> f64
+    return %text : f64
+  }
   func.func private @strict_log(%format: !llvm.ptr, %text: !llvm.ptr) {
     %first = llvm.load %format : !llvm.ptr -> i8
     %secondAddress = llvm.getelementptr %format[1] : (!llvm.ptr) -> !llvm.ptr, i8
@@ -1244,6 +1336,9 @@
     cf.cond_br %due, ^check, ^done(%running : f64)
   ^check:
     llvm.store %now, %heardSlot : f64, !llvm.ptr
+    %isSocket = arith.cmpi sgt, %output, %zero : i64
+    cf.cond_br %isSocket, ^peek, ^done(%running : f64)
+  ^peek:
     %hungUp = func.call @strict_test_hungup(%output) : (i64) -> i1
     cf.cond_br %hungUp, ^cancel, ^done(%running : f64)
   ^cancel:

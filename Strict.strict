@@ -140,14 +140,14 @@ Message(command Text, rest Texts) Text slow
 	isFolder = command is "test" and Directory.Exists(rest(0))
 	command is in ("check", "update") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
 Examined(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
-	"nightly" is in rest then Answer(Nightly(rest), known) else Tested(rest, known, inferred)
+	"nightly" is in rest then Answer(Nightly(rest), known) else Testing(rest, known, inferred)
 Nightly(rest Texts) Number slow
 	if File(rest(0)).Exists is false
 		return Folders.Nightly(rest(0), rest(1)) + Native("test", (rest(0), rest(1), "native"))
 	unit = Execute.Served(rest(0), rest(1), true).code
 	unit > 0 then unit else Execute("*").Served(rest(0), rest(1), true).code
-Tested(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
-	Strict.Tested(("Missing.strict", ".")).code is 1
+Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
+	Strict.Testing(("Missing.strict", ".")).code is 1
 	request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
@@ -158,6 +158,8 @@ Tested(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCach
 		return Answer(Traced(request, rest), known)
 	execute = request.Executing(logger, known, inferred)
 	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
+Test(text Text) Text slow
+	Trial(text).Tested
 Traced(request TestRequest, rest Texts) Number slow
 	trace = ValueTrace(request.Selection)
 	profile = Profile(request.Selection)
@@ -178,8 +180,7 @@ Main(folder Text) Text slow
 	isCurrent = folder is "" or folder is "."
 	target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
 	clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
-	prefix = isCurrent then "" else clean + "/"
-	named = TypeSource.Cased(prefix + Path(clean).FileName.text)
+	named = TypeSource.Cased((isCurrent then "" else clean + "/") + Path(clean).FileName.text)
 	if File(named).Exists
 		return named
 	files = Directory.Files(isCurrent then "." else clean, "*.strict")
@@ -203,10 +204,10 @@ Resolved(arguments Texts, main Text) Texts slow
 	given = arguments.Length > 1 then arguments(1) else ""
 	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
 		folder = Main(given)
-		return folder is "" then arguments else (List(Text) + "build" + folder) + arguments.Slice(2, arguments.Length - 2)
+		return folder is "" then arguments else List(Text) + "build" + folder + arguments.Slice(2, arguments.Length - 2)
 	isSource = given is not "" and (File(TypeSource.Cased(given)).Exists or Directory.Exists(given))
 	target = arguments(0) is "test" and main is "" then "." else main
-	isSource or target is "" then arguments else (List(Text) + arguments(0) + target) + Rest(arguments)
+	isSource or target is "" then arguments else List(Text) + arguments(0) + target + Rest(arguments)
 Projected(arguments Texts) Texts slow
 	Strict.Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
 	Strict.Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")

@@ -1691,6 +1691,11 @@
     %size = arith.addi %length, %one : i64
     %buffer = func.call @strict_alloc_text(%size) : (i64) -> !llvm.ptr
     %formatted = llvm.call @snprintf(%buffer, %size, %format, %text) vararg(!llvm.func<i32 (ptr, i64, ptr, ...)>) : (!llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> i32
+    %isCaptured = func.call @strict_capture_add(%handle, %buffer, %length) : (i64, !llvm.ptr, i64) -> i1
+    cf.cond_br %isCaptured, ^captured, ^write
+  ^captured:
+    return
+  ^write:
     %target = llvm.inttoptr %handle : i64 to !llvm.ptr
     %count = arith.trunci %length : i64 to i32
     %slots = arith.constant 1 : i64

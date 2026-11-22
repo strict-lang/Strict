@@ -1,3 +1,4 @@
 has textWriter
 Log(text)
 	textWriter.Write(text)
+Captured(isCapturing Boolean) Text slow
