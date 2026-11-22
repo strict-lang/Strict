@@ -1,0 +1,33 @@
+has lines Texts
+has typeName Text = ""
+constant Hint = ", a Boolean method reads as an assertion: start its name with Is, Has, Can or Should"
+constant Starts = ("Is", "Has", "Can", "Should")
+constant Plain = ("Number", "Boolean", "Text")
+constant Completing = Assertions(("Completed Boolean", "\tCompleting.Completed", "\ttrue"))
+Issues List(ValidationIssue)
+	Completing.Issues.First to Text is "BooleanMethodMustBeAnAssertion: Completed" + Hint
+	Completing.Issues.First.Line is 1
+	Assertions(("IsDone Boolean", "\ttrue")).Issues.Length is 0
+	Assertions(("is(other Text) Boolean", "\ttrue")).Issues.Length is 0
+	Assertions(Completing.lines, "Number").Issues.Length is 0
+	Assertions(("Island Number", "\t1")).Issues.Length is 0
+	if typeName is in Plain
+		return List(ValidationIssue)
+	shape = TypeShape(lines)
+	for lines
+		if shape.IsMethodHeader(value) and IsUnasserted(value)
+			ValidationIssue("BooleanMethodMustBeAnAssertion", Tokenizer(value).Tokens.First + Hint, index + 1)
+IsUnasserted(header Text) Boolean
+	Completing.IsUnasserted("Completed Boolean")
+	Completing.IsUnasserted("IsDone(count Number) Boolean slow") is false
+	Completing.IsUnasserted("Island Number") is false
+	name = Tokenizer(header).Tokens.First
+	head = name(0)
+	isBoolean = header.EndsWith(" Boolean") or header.EndsWith(" Boolean slow")
+	isBoolean and head.Lower is not head and IsAsserted(name) is false
+IsAsserted(name Text) Boolean
+	Completing.IsAsserted("HasMask") and Completing.IsAsserted("Island") is false
+	for Starts
+		if name.StartsWith(value) and name.Length > value.Length
+			return name(value.Length).Lower is not name(value.Length)
+	false
