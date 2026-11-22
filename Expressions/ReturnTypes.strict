@@ -92,8 +92,7 @@ Unresulted(scoped ScopedStatement, current Scope, lines Texts) Text
 	(Naming.Unresulted(Tail, Drawers, Running) + Naming.Unresulted(Compared, Drawers, Counting)) is ""
 	Naming.Unresulted(Unreturning, Drawers, Running) is ""
 	Naming.Unresulted(ScopedStatement(Tail.statement, Dropped, 1), Drawers, Counting) is ""
-	isReturning = Declared(lines, scoped.line) is not "None"
-	isValue = isReturning and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
+	isValue = Declared(lines, scoped.line) is not "None" and (scoped.statement.Kind is "Return" or IsTail(scoped, lines))
 	names = Resultless(scoped.statement, isValue, scoped.scope, current)
 	names.Length is 0 then "" else "ReturnTypeMismatch: " + names.First + " has no return type, its call gives no value"
 Resultless(node SyntaxNode, isValue Boolean, scope Scope, current Scope) Texts

@@ -110,7 +110,8 @@ ParseElse SyntaxNode
 		return SyntaxNode("Else", "else")
 	tokens(1) is "if" then SyntaxNode("ElseIf", "", Rest(2)) else SyntaxNode("ElseValue", "", Rest(1))
 ParseAssignmentOrExpression SyntaxNode
-	StatementParser("a", "=", "1").ParseAssignmentOrExpression.Kind is "Declaration" and StatementParser("a", "=", "1").ParseAssignmentOrExpression.text is "let a"
+	StatementParser("a", "=", "1").ParseAssignmentOrExpression.Kind is "Declaration"
+	StatementParser("a", "=", "1").ParseAssignmentOrExpression.text is "let a"
 	StatementParser(Tokenizer("a").Tokens).ParseAssignmentOrExpression.Kind is "Identifier"
 	StatementParser(Tokenizer("next(add = 1) = add").Tokens).ParseAssignmentOrExpression to Text is "next(add = 1) = add"
 	StatementParser(Tokenizer("next(add = 1) = add").Tokens).ParseAssignmentOrExpression.Kind is "Computed"
