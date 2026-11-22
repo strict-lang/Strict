@@ -5,6 +5,10 @@ constant Label = Labeled.members.First
 constant Instances = MlirInstances(Labeling.function, 0)
 constant Greeting = TypeCodegen("Strict/Greeting", ("Greeted(name = \"Hi\") Text", "\tname"), ValueCodegen.NoTypes, List(Text)).Entry
 constant Greets = MlirDefaults(MlirFunction(List(TypeEntry) + Greeting, Greeting, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
+constant JoinTexts = MemberEntry("texts", "Strict/List(Text)", Labeled.members.Last.initial, false)
+constant Joining = TypeEntry("Strict/Joining", List(MemberEntry), List(MethodEntry) + MethodEntry("Join", List(MemberEntry) + JoinTexts, "Strict/Text", List(InstructionEntry)))
+constant Joins = MlirDefaults(MlirFunction(List(TypeEntry) + Joining, Joining, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
+constant Pair = VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b"))
 constant LargestWhole = 1000000
 constant Mixed = TypeCodegen("Strict/Mixed", ("has empty Text = \"\"", "has count = 3", "Run(name = \"Hi\", other = \"\", again = \"Hi\", count = 3) Text", "\tname"), ValueCodegen.NoTypes, List(Text)).Entry
 constant Mixing = MlirDefaults(MlirFunction(List(TypeEntry) + Mixed, Mixed, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry))))
@@ -24,7 +28,7 @@ Globals Texts
 		type = value
 		for MlirInstances(function, 0).Store(type)
 			lines = lines + Declare(type, value)
-	lines + ParameterGlobals
+	lines + ParameterGlobals + ElementGlobals
 Declare(owner TypeEntry, member MemberEntry) Texts
 	Labeling.Declare(Labeled, Label) is (LabelGlobal)
 	Mixing.Declare(Mixed, Mixed.members.First).Length is 0
@@ -43,6 +47,33 @@ ParameterGlobals Texts
 	Greets.ParameterGlobals.Length is 1
 	for ParameterTexts
 		MlirConstants(function, 0, "@dp" + index).TextGlobal(value, "")
+NameParameter(initial Runtime/VmValue) Text
+	Greets.NameParameter(VmValue.OfText("Hi")) is "@dp0"
+	Greets.NameParameter(VmValue.OfNumber(1)) is ""
+	Joins.NameParameter(Pair) is "@dl0"
+	if initial.kind is "Text"
+		return ParameterName(initial.text)
+	at = initial.kind is "List" then ParameterLists.Index(initial) else -1
+	at < 0 then "" else "@dl" + at
+ElementGlobals Texts
+	Joins.ElementGlobals.Last.StartsWith("  llvm.mlir.global internal constant @dl0_1(")
+	Joins.ElementGlobals.Length is 2 and Greets.ElementGlobals.Length is 0
+	mutable lines = List(Mutable(Text))
+	for ParameterLists
+		list = value
+		constants = MlirConstants(function, 0, "@dl" + index)
+		for constants.TextElements(list)
+			lines.Add(constants.TextGlobal(list.items(value).text, "_" + value))
+	lines
+ParameterLists List(Runtime/VmValue)
+	Joins.ParameterLists is (Pair)
+	Greets.ParameterLists.Length is 0
+	mutable lists = List(Mutable(VmValue))
+	for type, method, parameter in function.types, type.methods, method.parameters
+		initial = Natives(function.types).Initial(parameter)
+		if initial.kind is "List" and initial is not in lists and MlirConstants(function, 0).TextElements(initial).Length > 0
+			lists.Add(initial)
+	lists
 ParameterTexts Texts
 	Greets.ParameterTexts is ("Hi")
 	mutable texts = List(Mutable(Text))
