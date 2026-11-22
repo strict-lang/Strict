@@ -1,9 +1,18 @@
 has block DeltaBlock
 has sequences Number
+has channels Number
+has heads Number
+has size Number
 constant Started = Hybrid.Single.Copies(2).layers.First
 constant Paired = DeltaBlock.Tiny.Combine(Drafter.Pair)
 constant Reference = Hybrid.Tiny.CacheEach(Started, Paired, 2)
-constant Batch = DeltaBatch(Started, 2)
+constant Batch = DeltaBatch.Of(Started, 2)
+Of(delta DeltaBlock, count Number) DeltaBatch
+	DeltaBatch.Of(Started, 2).channels is Started.convolution.Length / 4
+	DeltaBatch(delta, count, delta.convolution.Length / 4, delta.decays.Length, delta.norm.Length)
+IsFull Boolean
+	Batch.IsFull and DeltaBatch.Of(DeltaBlock.Tiny, 2).IsFull is false
+	block.memory.Length is sequences * heads * size * size and block.window.Length is sequences * 3 * channels
 Step(combined Numbers) DeltaBlock
 	Batch.Step(Paired).memory is Reference.memory
 	Batch.Step(Paired).window is Reference.window
@@ -12,71 +21,54 @@ Step(combined Numbers) DeltaBlock
 	memory = Update(keyed, block.Decay(combined, sequences), Read(keyed, block.memory, 1))
 	DeltaBlock(block, memory = memory, window = Shift(combined), merged = block.Gate(Read(keyed, memory, 0), combined))
 Convolve(combined Numbers) Numbers
-	Batch.Convolve(Paired).Length is 2 * Batch.Channels
-	channels = Channels
+	Batch.Convolve(Paired).Length is 2 * Batch.channels
 	width = combined.Length / sequences
+	span = 3 * channels
+	window = block.window
+	weights = block.convolution
 	for sequences * channels
 		sequence = (index / channels).Floor
 		channel = index % channels
-		older = Past(sequence, 0, channel) * block.convolution(4 * channel)
-		old = older + Past(sequence, 1, channel) * block.convolution(4 * channel + 1)
-		sum = old + Past(sequence, 2, channel) * block.convolution(4 * channel + 2)
-		all = sum + combined(sequence * width + channel) * block.convolution(4 * channel + 3)
+		past = sequence * span + channel
+		older = window(past) * weights(4 * channel) + window(past + channels) * weights(4 * channel + 1)
+		nearer = older + window(past + 2 * channels) * weights(4 * channel + 2)
+		all = nearer + combined(sequence * width + channel) * weights(4 * channel + 3)
 		all / (1 + (-all).Exponential)
 Shift(combined Numbers) Numbers
 	Batch.Shift(Paired).Length is Started.window.Length
-	channels = Channels
 	width = combined.Length / sequences
 	span = 3 * channels
+	window = block.window
 	for sequences * span
 		sequence = (index / span).Floor
 		slot = (index % span / channels).Floor
 		channel = index % channels
-		slot < 2 then Past(sequence, slot + 1, channel) else combined(sequence * width + channel)
-Past(sequence Number, slot Number, channel Number) Number
-	Batch.Past(1, 2, 0) is Started.window(Batch.Channels * 5)
-	Batch.Past(0, 0, 0) is Started.window(0)
-	size = 3 * Channels
-	at = (block.window.Length > size then sequence * size else 0) + slot * Channels + channel
-	block.window.Length is 0 then 0 else block.window(at)
+		slot < 2 then window(sequence * span + (slot + 1) * channels + channel) else combined(sequence * width + channel)
 Read(keyed Numbers, memory Numbers, part Number) Numbers
-	Batch.Read(Layer.Zeros(32), Started.memory, 0).Length is 2 * Batch.Heads * Batch.Size
-	size = Size
+	Batch.Read(Layer.Zeros(32), Started.memory, 0).Length is 2 * Batch.heads * Batch.size
+	span = heads * size
+	one = span * size
 	groups = block.KeyHeads
-	for sequences * Heads * size
-		sequence = (index / (Heads * size)).Floor
-		head = (index % (Heads * size) / size).Floor
-		first = sequence * Channels + (part * groups + head % groups) * size
-		column = (memory.Length > One then sequence * One else 0) + head * size * size + index % size
+	for sequences * span
+		sequence = (index / span).Floor
+		head = (index % span / size).Floor
+		first = sequence * channels + (part * groups + head % groups) * size
+		column = sequence * one + head * size * size + index % size
 		mutable sum = 0
 		for size
 			sum = sum + keyed(first + index) * memory(column + index * size)
 		sum
 Update(keyed Numbers, decayed Numbers, remembered Numbers) Numbers
-	Batch.Update(Layer.Zeros(32), Layer.Zeros(16), Layer.Zeros(16)).Length is 2 * Batch.One
-	size = Size
+	Batch.Update(Layer.Zeros(32), Layer.Zeros(16), Layer.Zeros(16)).Length is Started.memory.Length
 	groups = block.KeyHeads
-	for sequences * One
-		sequence = (index / One).Floor
-		head = (index % One / (size * size)).Floor
-		column = head * size + index % size
-		decay = decayed(2 * sequence * Heads + head).Exponential
-		start = sequence * Channels
-		change = keyed(start + 2 * groups * size + column) - remembered(sequence * Heads * size + column) * decay
-		key = keyed(start + (groups + head % groups) * size + (index % One / size).Floor % size)
-		Memory(index) * decay + key * change * decayed((2 * sequence + 1) * Heads + head)
-Memory(index Number) Number
-	Batch.Memory(Batch.One) is Started.memory(Batch.One)
-	block.memory(block.memory.Length > One then index else index % One)
-Channels Number
-	Batch.Channels is DeltaBlock.Tiny.convolution.Length / 4
-	block.convolution.Length / 4
-Heads Number
-	Batch.Heads is DeltaBlock.Tiny.decays.Length
-	block.decays.Length
-Size Number
-	Batch.Size is DeltaBlock.Tiny.norm.Length
-	block.norm.Length
-One Number
-	Batch.One is Batch.Heads * Batch.Size * Batch.Size
-	Heads * Size * Size
+	one = heads * size * size
+	for block.memory
+		sequence = (index / one).Floor
+		local = index % one
+		head = (local / (size * size)).Floor
+		column = head * size + local % size
+		decay = decayed(2 * sequence * heads + head).Exponential
+		start = sequence * channels
+		change = keyed(start + 2 * groups * size + column) - remembered(sequence * heads * size + column) * decay
+		key = keyed(start + (groups + head % groups) * size + (local / size).Floor % size)
+		value * decay + key * change * decayed((2 * sequence + 1) * heads + head)
