@@ -7,6 +7,7 @@ has known Dictionary(Text, TypeEntry) = Dictionary(Text, TypeEntry)
 has cached Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
 has quietUntil Number = 0
 has inferred InferenceCache = InferenceCache.None
+has trial TrialMachine = TrialMachine.None
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 constant Unstamped = BinarySources(List(Text))
@@ -125,7 +126,7 @@ Completed(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn
 	current.Length is files.Length then stamped else BinarySources(current).Stamped
 Tested(types List(TypeEntry), path Text, isQuiet = false) Answer
 	home = Directory.Current
-	machine = Constants(Started(types, path)).Seeded(cached)
+	machine = Constants(trial.Covers(types) then trial.Machined(types, path) else Started(types, path)).Seeded(cached)
 	failed = Machine(machine, isQuiet = isQuiet or quietUntil > 0, quietUntil = quietUntil).Tested(types.First.Name)
 	Directory.Change(home)
 	if failed > 0
@@ -164,7 +165,7 @@ Started(types List(TypeEntry), path Text, isTracing = false, isInlining = true, 
 	Execute.Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", true).isTracing
 	Execute.Started(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", false, true, true).isSampling
 	started = Process.Elapsed
-	rewritten = TailCalls(isInlining then Inliner(types).Inlined else types).Rewritten
+	rewritten = isInlining then Inliner(types).Rewritten else TailCalls(types).Rewritten
 	BuildProfile.Reported("Machine inlining (" + types.Length + " types)", started)
 	before = Process.Elapsed
 	folder = Path(path).PathOnly.text

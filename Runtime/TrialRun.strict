@@ -1,27 +1,29 @@
 has trial Trial
 constant Sample = Trial("has numbers Numbers\nWarmed Number\n\tWarmUp((1, 2, 3)).Warmed is 20\n\tnumbers.Sum + numbers.Length + numbers.Reverse.First + numbers.Maximum + (numbers.First - 5).Absolute + (numbers.First < 2 then 1 else 0)")
 constant Warm = TrialRun(Sample).Warmed
+constant Prepared = TrialMachine.Prepared(Warm.Types, FileCompiler.Normalized(Sample.Located))
 Tested Text slow
 	"Test passed: AddTwoNumbers(2, 3) is 5" is in TrialRun(Trial.Adding).Tested
 	if trial.Name is ""
 		return ""
 	warm = Warm
+	prepared = Prepared
 	Placed
 	started = logger.Captured(true)
-	answer = Ran(warm)
+	answer = Ran(warm, prepared)
 	output = started + logger.Captured(false)
 	answer is Error then output + answer to Text else output
 Warmed Answer slow
 	Placed
 	started = logger.Captured(true)
-	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)))
+	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)), TrialMachine.None)
 	output = started + logger.Captured(false)
 	if answer is Error or answer.code is not 0
 		logger.Log(output)
 	answer
-Ran(last Answer) Answer slow
+Ran(last Answer, machine TrialMachine) Answer slow
 	request = TestRequest((trial.Located, TypeSource.Root, "unit"))
-	request.Executing(last.known, last.inferred).Served(trial.Located, TypeSource.Root)
+	Execute(request.Executing(last.known, last.inferred), trial = machine).Served(trial.Located, TypeSource.Root)
 Placed slow
 	TrialRun(Trial.Adding).Placed is not Error and Execute.IsEdited(Trial.Adding.Located)
 	trial.Written

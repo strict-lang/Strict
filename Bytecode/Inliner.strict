@@ -48,6 +48,9 @@ Inlined List(TypeEntry)
 	Again.Name is "Again" and Again.declaredType is "None"
 	Sample.Inlined.First.methods.First.instructions.Length is 6
 	isSplitting then ExpandedTypes(ExpandedTypes(types)) else ExpandedTypes(types)
+Rewritten List(TypeEntry)
+	Sample.Rewritten is TailCalls(Sample.Inlined).Rewritten
+	TailCalls(Inlined).Rewritten
 ExpandedTypes(source List(TypeEntry)) List(TypeEntry)
 	Sample.ExpandedTypes(Sample.types).First.methods.First.instructions.Length is 6
 	mutable updated = List(Mutable(TypeEntry))

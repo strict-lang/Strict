@@ -1,0 +1,60 @@
+has rewritten List(TypeEntry)
+has machine Machine
+has inputs Dictionary(Text, TypeEntry)
+constant None = TrialMachine(List(TypeEntry), Machine.Hello, Dictionary(Text, TypeEntry))
+constant IsReused = Process.Variable("STRICT_TRIAL_MACHINE") is not "0"
+constant Adding = FileCompiler.Compiled("Examples/PureAdder.strict", ".", true)
+constant Counting = FileCompiler.Compiled("Examples/FindNumberCount.strict", ".", true)
+constant Added = TrialMachine.Prepared(Adding, "./Examples/PureAdder.strict")
+constant Counted = TrialMachine.Prepared(Counting, "./Examples/FindNumberCount.strict")
+Prepared(types List(TypeEntry), path Text) TrialMachine slow
+	Counted.rewritten.Length is Counting.Length and Counted.machine.types.First.Name is Counting.First.Name
+	TrialMachine.Prepared(List(TypeEntry), "").rewritten.Length is 0
+	if types.Length is 0
+		return None
+	mutable kept = Dictionary(Text, TypeEntry)
+	for types.Slice(1, types.Length - 1)
+		kept(value.Name) = value
+	TrialMachine(Inliner(types).Rewritten, outer.Execute.Started(types, path), kept)
+Covers(types List(TypeEntry)) Boolean slow
+	Counted.Covers(Adding) and Counted.Covers(Counting)
+	Added.Covers(Counting) is false and None.Covers(Adding) is false
+	if rewritten.Length is 0 or IsReused is false
+		return false
+	for types.Slice(1, types.Length - 1)
+		if value.Name is not in inputs or IsLacking(value)
+			return false
+	true
+IsLacking(entry TypeEntry) Boolean slow
+	Counted.IsLacking(Counting(1)) is false
+	Counted.IsLacking(TypeEntry(Counting(1), methods = Counting(1).methods + MethodEntry.GoRun))
+	known = inputs(entry.Name)
+	entry.members is not known.members or (entry.methods - known.methods).Length > 0
+Machined(types List(TypeEntry), path Text) Machine slow
+	Counted.Machined(Adding, "./Examples/PureAdder.strict").types.First.Name is Adding.First.Name
+	Counted.Machined(Adding, "./Examples/PureAdder.strict").Tested(Adding.First.Name) is 0
+	Counted.Machined(Counting, "./Examples/FindNumberCount.strict").Tested(Counting.First.Name) is 0
+	trial = types.First
+	others = rewritten.Slice(1, rewritten.Length - 1)
+	inlined = TypeEntry(trial, methods = Inliner(types).Methods(trial))
+	tailed = TypeEntry(inlined, methods = TailCalls((List(TypeEntry) + inlined) + others).Methods(inlined))
+	resolved = Resolver((List(TypeEntry) + tailed) + others).Methods(tailed)
+	Placed(TypeEntry(tailed, methods = resolved), Path(path).PathOnly.text)
+Placed(trial TypeEntry, folder Text) Machine slow
+	Counted.Placed(Counted.rewritten.First, "./Examples").types.Length is Counting.Length
+	staged = Staged(trial, folder)
+	entries = staged.prototypes.entries
+	loads = ConstantLoads(List(TypeEntry) + trial, entries.Length)
+	filled = (List(VmValue) + Constants(staged).Filled(0)) + entries.Slice(1, entries.Length - 1)
+	types = (List(TypeEntry) + loads.Rewritten.First) + staged.types.Slice(1, staged.types.Length - 1)
+	Machine(staged, types = types, prototypes = ConstantCache(filled + loads.Decoded))
+Staged(trial TypeEntry, folder Text) Machine slow
+	Counted.Staged(Counted.rewritten.First, "./Examples").places(Counting.First.Name) is 0
+	types = (List(TypeEntry) + trial) + machine.types.Slice(1, machine.types.Length - 1)
+	entries = machine.prototypes.entries
+	fresh = (List(VmValue) + Natives(types).Fresh(trial)) + entries.Slice(1, entries.Length - 1)
+	mutable sources = machine.sources
+	sources(trial.Name) = TypeSource(trial).Located(folder)
+	mutable places = machine.places
+	places(trial.Name) = 0
+	Machine(machine, types = types, prototypes = ConstantCache(fresh), folder = folder, sources = sources, places = places)
