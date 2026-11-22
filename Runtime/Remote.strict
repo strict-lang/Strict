@@ -22,31 +22,31 @@ Without(arguments Texts) Texts
 		else
 			kept.Add(value)
 	kept
-Named(arguments Texts) Number
-	Sample.Named(List(Text)) is -1
+RunRemote(arguments Texts) Number
+	Sample.RunRemote(List(Text)) is -1
 	remote = Target(arguments, "")
-	Peers.IsAny(remote) or remote is "" then Number.NotFound else Forwarded(remote, Without(arguments))
-Sent(arguments Texts, absent Text, reply Text, line Text) Number
-	Sample.Sent(List(Text), Ben, "go\tjob\t0", "need") is -1
-	Sample.Sent(List(Text), Ben, "", "need") is -1
+	Peers.IsAny(remote) or remote is "" then Number.NotFound else Forward(remote, Without(arguments))
+Send(arguments Texts, absent Text, reply Text, line Text) Number
+	Sample.Send(List(Text), Ben, "go\tjob\t0", "need") is -1
+	Sample.Send(List(Text), Ben, "", "need") is -1
 	remote = Target(arguments, absent)
 	verdict = reply.Split("\t").First
 	if Peers.IsAny(remote) is false or verdict is "go" or verdict is ""
 		return Number.NotFound
-	chosen = Placement.Chosen(remote, verdict, Peers.Probed(line))
-	chosen is "" then Number.NotFound else Forwarded(chosen, Without(arguments))
-Forwarded(name Text, arguments Texts) Number
-	Sample.Forwarded("missing", List(Text)) is Error
+	chosen = Placement.Chosen(remote, verdict, Peers.Probe(line))
+	chosen is "" then Number.NotFound else Forward(chosen, Without(arguments))
+Forward(name Text, arguments Texts) Number
+	Sample.Forward("missing", List(Text)) is Error
 	host = Peers.Host(name)
 	if host is ""
 		logger.Log("No peer named " + name)
 		return Error("PeerNotFound")
 	socket = Socket.Connect(host, Peers.Port)
-	socket is Error then socket else Finished(socket, arguments)
-Finished(socket Number, arguments Texts) Number
+	socket is Error then socket else Finish(socket, arguments)
+Finish(socket Number, arguments Texts) Number
 	Peers.Host("missing") is ""
 	Resident("").Send(socket, "run\t" + Text.Combine(arguments, "\t") + "\n")
-	reply = Resident("").Received(socket, "\n")
+	reply = Resident("").Receive(socket, "\n")
 	Socket.Close(socket)
 	logger.Log(reply.Trim)
 	reply.Trim.Split("\t").First to Number

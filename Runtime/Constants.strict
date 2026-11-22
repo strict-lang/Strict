@@ -10,11 +10,11 @@ Computed Machine
 	Listing.prototypes.At(Listing.types.First.methods.First.instructions.First.payload(2)) to Text is "(1, 1.5)"
 	mutable created = List(Mutable(VmValue))
 	for machine.types
-		created.Add(Filled(index))
+		created.Add(Fill(index))
 	loads = ConstantLoads(machine.types, created.Length)
 	Machine(machine, types = loads.Rewritten, prototypes = ConstantCache(created + loads.Decoded))
-Filled(route Number) VmValue
-	Constants(Machine.Hello.Prepared).Filled(0).kind is "HelloLogger"
+Fill(route Number) VmValue
+	Constants(Machine.Hello.Prepared).Fill(0).kind is "HelloLogger"
 	type = machine.types(route)
 	prototype = machine.prototypes.At(route)
 	mutable items = prototype.items
@@ -30,25 +30,25 @@ Value(route Number, slot Number) VmValue
 		return VmValue.OfError("RecursiveConstant")
 	if found.kind is not "$Constant"
 		return found
-	Saved(route, slot, VmValue(found, kind = "$Computing"))
+	Save(route, slot, VmValue(found, kind = "$Computing"))
 	method = machine.types(route).methods(found.items.First.number)
-	computed = Computed(route, method, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
-	Saved(route, slot, computed)
+	computed = Compute(route, method, Invocation(InstructionEntry.Return(0), List(VmValue), prototype))
+	Save(route, slot, computed)
 	computed
-Computed(route Number, method MethodEntry, call Invocation) VmValue
+Compute(route Number, method MethodEntry, call Invocation) VmValue
 	entered = TestBudget.Entered
-	computed = machine.Executed(route, method, call)
+	computed = machine.Dispatch(route, method, call)
 	TestBudget.Left(entered)
 	computed
-Saved(route Number, slot Number, result VmValue)
+Save(route Number, slot Number, result VmValue)
 	prototype = machine.prototypes.At(route)
-	items = Storage(machine.types).Replaced(prototype.items, slot, result)
+	items = Storage(machine.types).Replace(prototype.items, slot, result)
 	machine.prototypes.Stored(route, VmValue(prototype, items = items))
 Member(type TypeEntry, slot Number) VmValue
 	route = type.Name is in machine.places then machine.places(type.Name) else Resolver(machine.types).Position(type)
 	isPrepared = route >= 0 and route < machine.prototypes.entries.Length
 	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))
-Seeded(cache Dictionary(Text, VmValue)) Machine
+SeedMachine(cache Dictionary(Text, VmValue)) Machine
 	if cache.Length is 0
 		return machine
 	for machine.types
@@ -56,14 +56,14 @@ Seeded(cache Dictionary(Text, VmValue)) Machine
 			cached = cache(value.Name)
 			proto = machine.prototypes.At(index)
 			if cached.items.Length is proto.items.Length
-				machine.prototypes.Stored(index, VmValue(proto, items = Merged(proto.items, cached.items)))
+				machine.prototypes.Stored(index, VmValue(proto, items = Merge(proto.items, cached.items)))
 	machine
-Merged(current List(VmValue), cached List(VmValue)) List(VmValue)
-	Constants(Machine.Hello.Prepared).Merged(List(VmValue) + Unset, List(VmValue) + VmValue.OfNumber(7)).First.number is 7
+Merge(current List(VmValue), cached List(VmValue)) List(VmValue)
+	Constants(Machine.Hello.Prepared).Merge(List(VmValue) + Unset, List(VmValue) + VmValue.OfNumber(7)).First.number is 7
 	for current
 		keep = value.kind is "$Constant" and cached(index).kind is not in ("$Constant", "$Computing")
 		keep and cached(index).kind is not in VmValue.ErrorKinds then cached(index) else value
-Recorded(cache Dictionary(Text, VmValue)) Dictionary(Text, VmValue)
+Record(cache Dictionary(Text, VmValue)) Dictionary(Text, VmValue)
 	mutable result = cache
 	for machine.types
 		proto = machine.prototypes.At(index)

@@ -22,18 +22,18 @@ Result(call Invocation) VmValue
 	if name is "from"
 		type = TypeOf(call.TypeName)
 		if type.members.Length is 1 and type.methods.Length > 0
-			return Foreign(call, types, folder).Constructed(type)
-		return Rounding.Single.Built(type, call, value, type.IsStruct)
+			return Foreign(call, types, folder).Construct(type)
+		return Rounding.Single.Build(type, call, value, type.IsStruct)
 	if name is in ("to", "Code")
-		return name is "to" then Converted(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)
+		return name is "to" then Convert(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)
 	if name is in ("Length", "Count")
-		return VmValue.OfNumber(call.Instance.Counted(call.Arguments))
-	name is in ("not", "and", "or", "xor") then Logical(name, call.Instance, call) else Queried(name, call.Instance, call)
-Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
-	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
-	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")
-	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(1)).Length is 1
-	Shapes.Keyed("set", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))).items.Last.items.Last.number is 5
+		return VmValue.OfNumber(call.Instance.CountMatches(call.Arguments))
+	name is in ("not", "and", "or", "xor") then Logical(name, call.Instance, call) else Query(name, call.Instance, call)
+Key(name Text, pairs VmValue, arguments List(VmValue)) VmValue
+	Shapes.Key("get", Pairs, List(VmValue) + VmValue.OfNumber(2)).number is 4
+	Shapes.Key("Add", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))) is VmValue.OfError("DuplicateKey")
+	Shapes.Key("Remove", Pairs, List(VmValue) + VmValue.OfNumber(1)).Length is 1
+	Shapes.Key("set", Pairs, (VmValue.OfNumber(2), VmValue.OfNumber(5))).items.Last.items.Last.number is 5
 	found = ValueSearch(pairs.items).Key(arguments.First)
 	if name is "in"
 		return VmValue.OfBoolean(found >= 0)
@@ -41,41 +41,41 @@ Keyed(name Text, pairs VmValue, arguments List(VmValue)) VmValue
 		return found >= 0 then pairs.items(found).items.Last else VmValue.OfError("KeyNotFound")
 	if found < 0
 		return name is "Remove" then pairs else VmValue.OfList(pairs.items + VmValue.OfList(arguments))
-	name is "Add" then VmValue.OfError("DuplicateKey") else Changed(name, pairs, found, arguments)
-Changed(name Text, pairs VmValue, position Number, arguments List(VmValue)) VmValue
+	name is "Add" then VmValue.OfError("DuplicateKey") else Change(name, pairs, found, arguments)
+Change(name Text, pairs VmValue, position Number, arguments List(VmValue)) VmValue
 	Shapes.Initial(Byted.members(1)) is VmValue.None
 	Shapes.Initial(MemberEntry("flag", "Strict/Boolean", List(InstructionEntry), false)) is VmValue.FalseValue
-	Shapes.Changed("Remove", Pairs, 0, List(VmValue) + VmValue.OfNumber(1)).items.First.items.First.number is 2
-	Shapes.Changed("set", Pairs, 0, (VmValue.OfNumber(1), VmValue.OfNumber(5))).items.First.items.Last.number is 5
+	Shapes.Change("Remove", Pairs, 0, List(VmValue) + VmValue.OfNumber(1)).items.First.items.First.number is 2
+	Shapes.Change("set", Pairs, 0, (VmValue.OfNumber(1), VmValue.OfNumber(5))).items.First.items.Last.number is 5
 	if name is "set"
-		return VmValue.OfList(Storage(types).Replaced(pairs.items, position, VmValue.OfList(arguments)))
+		return VmValue.OfList(Storage(types).Replace(pairs.items, position, VmValue.OfList(arguments)))
 	mutable kept = List(Mutable(VmValue))
 	for pairs.items
 		if index is not position
 			kept.Add(value)
 	VmValue.OfList(kept)
-Converted(instance VmValue, target Text) VmValue
-	Shapes.Converted(VmValue.OfText("5"), "Strict/Number").number is 5
-	Shapes.Converted(VmValue.OfList(VmValue.OfNumber(6)), "Strict/List(Number)").items.First.number is 6
-	Shapes.Converted(VmValue.OfNumber(2), "Strict/Text").text is "2"
-	Shapes.Converted(VmValue.OfNumber(75), "Strict/Character").text is "7"
-	Shapes.Converted(VmValue.OfText(""), "Strict/Character").text is ""
-	Shapes.Converted(VmValue.OfText("ab"), "Strict/Character").kind is in VmValue.ErrorKinds
+Convert(instance VmValue, target Text) VmValue
+	Shapes.Convert(VmValue.OfText("5"), "Strict/Number").number is 5
+	Shapes.Convert(VmValue.OfList(VmValue.OfNumber(6)), "Strict/List(Number)").items.First.number is 6
+	Shapes.Convert(VmValue.OfNumber(2), "Strict/Text").text is "2"
+	Shapes.Convert(VmValue.OfNumber(75), "Strict/Character").text is "7"
+	Shapes.Convert(VmValue.OfText(""), "Strict/Character").text is ""
+	Shapes.Convert(VmValue.OfText("ab"), "Strict/Character").kind is in VmValue.ErrorKinds
 	if target.StartsWith("Strict/List(")
 		mutable converted = List(Mutable(VmValue))
 		for instance.items
-			converted.Add(Converted(value, target is "Strict/List(Text)" then "Strict/Text" else "Strict/Number"))
+			converted.Add(Convert(value, target is "Strict/List(Text)" then "Strict/Text" else "Strict/Number"))
 		return VmValue.OfList(converted)
 	if target is "Strict/Number"
-		return instance.kind is "Number" then instance else Parsed(instance.text)
+		return instance.kind is "Number" then instance else Parse(instance.text)
 	text = instance to Text
 	if target is "Strict/Character" and instance.kind is "Text" and text.Length > 1
 		return VmValue.OfError("InvalidCharacter")
 	VmValue.OfText(target is "Strict/Character" then text.Substring(0, text.Length is 0 then 0 else 1) else text)
-Parsed(text Text) VmValue
-	Shapes.Parsed("5").number is 5
-	Shapes.Parsed("abc").items.First.text is "InvalidNumber: abc"
-	Shapes.Searched("EndsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("EndsWith", "ab", BcTwo).IsTrue is false
+Parse(text Text) VmValue
+	Shapes.Parse("5").number is 5
+	Shapes.Parse("abc").items.First.text is "InvalidNumber: abc"
+	Shapes.Search("EndsWith", "abbc", BcTwo).IsTrue and Shapes.Search("EndsWith", "ab", BcTwo).IsTrue is false
 	number = text to Number
 	number is Error then VmValue.OfError("InvalidNumber: " + TraceEntry.Cut(text)) else VmValue.OfNumber(number)
 Logical(name Text, left VmValue, call Invocation) VmValue
@@ -102,22 +102,22 @@ Bitwise(name Text, left Number, right Number) Number
 	Shapes.Bitwise("and", 12, 10) is 8
 	Shapes.Bitwise("or", 12, 10) is 14
 	name is "and" then left and right else name is "or" then left or right else left xor right
-Queried(name Text, instance VmValue, call Invocation) VmValue
-	Shapes.Queried("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue
-	Shapes.Queried("Index", VmValue.Numbered, NewShape).number is -1
-	Shapes.Queried("Fail", VmValue.None, NewShape).kind is "Strict/Error"
+Query(name Text, instance VmValue, call Invocation) VmValue
+	Shapes.Query("in", VmValue.OfList(VmValue.OfNumber(3)), NewShape).IsTrue
+	Shapes.Query("Index", VmValue.Numbered, NewShape).number is -1
+	Shapes.Query("Fail", VmValue.None, NewShape).kind is "Strict/Error"
 	if call.TypeName.StartsWith("Strict/Dictionary(")
-		return Keyed(name, instance, call.Arguments)
+		return Key(name, instance, call.Arguments)
 	position = name is in ("in", "Index") then ValueSearch(instance.items).Index(call.Arguments.First) else -1
 	if name is "in"
 		return VmValue.OfBoolean(position >= 0)
 	name is "Index" then VmValue.OfNumber(position) else Foreign(call, types, folder).Called
-Searched(name Text, text Text, arguments List(VmValue)) VmValue
-	Shapes.Searched("StartsWith", "abbc", BcTwo).IsTrue and Shapes.Searched("IndexOf", "bcbcbc", BcTwo).number is 2
-	Shapes.Searched("Substring", "abc", BcTwo).text is "ab" and Shapes.Searched("Substring", "a", BcTwo) is Cut
-	Shapes.Searched("Substring", "abc", List(VmValue) + VmValue.OfNumber(1)).text is "bc"
+Search(name Text, text Text, arguments List(VmValue)) VmValue
+	Shapes.Search("StartsWith", "abbc", BcTwo).IsTrue and Shapes.Search("IndexOf", "bcbcbc", BcTwo).number is 2
+	Shapes.Search("Substring", "abc", BcTwo).text is "ab" and Shapes.Search("Substring", "a", BcTwo) is Cut
+	Shapes.Search("Substring", "abc", List(VmValue) + VmValue.OfNumber(1)).text is "bc"
 	if arguments.Length is 0 or name is "Utf8"
-		return name is in ("Bytes", "Utf8") then ByteTexts(name, text, arguments) else Edited(name, text)
+		return name is in ("Bytes", "Utf8") then ByteTexts(name, text, arguments) else Edit(name, text)
 	first = arguments.First
 	second = arguments.Length > 1 then arguments(1).number else name is "Substring" then Text.End else 0
 	if name is "Substring"
@@ -139,10 +139,10 @@ ByteTexts(name Text, text Text, arguments List(VmValue)) VmValue
 	for arguments.First.items
 		bytes = bytes + value.number
 	VmValue.OfText(Text.Utf8(bytes))
-Edited(name Text, text Text) VmValue
-	Shapes.Edited("Capitalize", "ab").text is "Ab" and Shapes.Edited("Trim", " a ").text is "a"
-	Shapes.Edited("TrimEnd", " a ").text is " a" and Shapes.Edited("TrimStart", " a ").text is "a "
-	Shapes.Edited("Upper", "ab").text is "AB" and Shapes.Edited("Lower", "AB").text is "ab"
+Edit(name Text, text Text) VmValue
+	Shapes.Edit("Capitalize", "ab").text is "Ab" and Shapes.Edit("Trim", " a ").text is "a"
+	Shapes.Edit("TrimEnd", " a ").text is " a" and Shapes.Edit("TrimStart", " a ").text is "a "
+	Shapes.Edit("Upper", "ab").text is "AB" and Shapes.Edit("Lower", "AB").text is "ab"
 	if name is "Upper"
 		return VmValue.OfText(text.Upper)
 	if name is "Lower"
@@ -152,30 +152,30 @@ Edited(name Text, text Text) VmValue
 	if name is "Trim"
 		return VmValue.OfText(text.Trim)
 	VmValue.OfText(name is "TrimStart" then text.TrimStart else text.TrimEnd)
-Constructed(call Invocation) VmValue
+Construct(call Invocation) VmValue
 	Shapes.Initial(MemberEntry("list", "Strict/List(Number)", List(InstructionEntry), false)).kind is "List"
-	Shapes.Constructed(Shape, Frame.Listed).items.Last is Frame.Listed(7)
+	Shapes.Construct(Shape, Frame.Listed).items.Last is Frame.Listed(7)
 	Natives((TypeEntry("Strict/X/Shape", List(MemberEntry), List(MethodEntry)), Shape)).TypeOf("Strict/Shape") is Shape
-	Shapes.Constructed(NewShape).kind is "Strict/Shape"
-	Natives(List(TypeEntry) + Degree).Constructed(NewDegree).number is 3
-	Natives(List(TypeEntry) + Single).Constructed(NewSingle).number is 0.10000000149011612
-	Natives((Byted, Pixel)).Constructed(NewPixel).items.First.number is 127
+	Shapes.Construct(NewShape).kind is "Strict/Shape"
+	Natives(List(TypeEntry) + Degree).Construct(NewDegree).number is 3
+	Natives(List(TypeEntry) + Single).Construct(NewSingle).number is 0.10000000149011612
+	Natives((Byted, Pixel)).Construct(NewPixel).items.First.number is 127
 	type = TypeOf(call.TypeName)
-	Rounding.Single.Built(type, call, value, type.IsStruct)
+	Rounding.Single.Build(type, call, value, type.IsStruct)
 Fresh(type TypeEntry) VmValue
-	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(2)) is VmValue.TrueValue
-	Shapes.Keyed("in", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.FalseValue
-	Shapes.Keyed("get", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.OfError("KeyNotFound")
-	Shapes.Keyed("Remove", Pairs, List(VmValue) + VmValue.OfNumber(7)) is Pairs
-	Shapes.Keyed("Add", Pairs, (VmValue.OfNumber(7), VmValue.OfNumber(8))).items.Last.items.Last.number is 8
+	Shapes.Key("in", Pairs, List(VmValue) + VmValue.OfNumber(2)) is VmValue.TrueValue
+	Shapes.Key("in", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.FalseValue
+	Shapes.Key("get", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.OfError("KeyNotFound")
+	Shapes.Key("Remove", Pairs, List(VmValue) + VmValue.OfNumber(7)) is Pairs
+	Shapes.Key("Add", Pairs, (VmValue.OfNumber(7), VmValue.OfNumber(8))).items.Last.items.Last.number is 8
 	Shapes.Fresh(Shape).items.First.number is 0
 	mutable values = List(Mutable(VmValue))
 	for type.members
 		values.Add(Initial(value))
 	VmValue(type.Name, 0, "", values)
-Constructed(type TypeEntry, finished List(VmValue)) VmValue
-	Shapes.Constructed(Shape, Frame.Listed).items.First.number is 1
-	Shapes.Constructed(Shape, (VmValue.None, VmValue.None, VmValue.OfError("a"))).kind is "Strict/Error"
+Construct(type TypeEntry, finished List(VmValue)) VmValue
+	Shapes.Construct(Shape, Frame.Listed).items.First.number is 1
+	Shapes.Construct(Shape, (VmValue.None, VmValue.None, VmValue.OfError("a"))).kind is "Strict/Error"
 	result = finished(Frame.ResultSlot)
 	if result.kind is in VmValue.ErrorKinds
 		return result
@@ -200,12 +200,12 @@ Initial(member MemberEntry) VmValue
 	isList = member.typeName.StartsWith("Strict/List") or member.typeName.StartsWith("Strict/Dictionary")
 	isList then VmValue.OfList(List(VmValue)) else VmValue.None
 IsMemberCall(call Invocation, type TypeEntry, chosen MethodEntry) Boolean
-	Shapes.Converted(VmValue.OfList(VmValue.OfNumber(1)), "Strict/List(Text)") is VmValue.OfList(VmValue.OfText("1"))
-	Shapes.Converted(VmValue.OfNumber(75), "Strict/Text").text is "75"
-	Shapes.Searched("Upper", "ab", List(VmValue)).text is "AB"
-	Shapes.Searched("StartsWith", "abc", List(VmValue) + VmValue.OfText("ab")) is VmValue.TrueValue
-	Shapes.Searched("IndexOf", "abab", (VmValue.OfText("a"), VmValue.OfNumber(1))).number is 2
-	Shapes.Searched("LastIndexOf", "abab", List(VmValue) + VmValue.OfText("b")).number is 3
+	Shapes.Convert(VmValue.OfList(VmValue.OfNumber(1)), "Strict/List(Text)") is VmValue.OfList(VmValue.OfText("1"))
+	Shapes.Convert(VmValue.OfNumber(75), "Strict/Text").text is "75"
+	Shapes.Search("Upper", "ab", List(VmValue)).text is "AB"
+	Shapes.Search("StartsWith", "abc", List(VmValue) + VmValue.OfText("ab")) is VmValue.TrueValue
+	Shapes.Search("IndexOf", "abab", (VmValue.OfText("a"), VmValue.OfNumber(1))).number is 2
+	Shapes.Search("LastIndexOf", "abab", List(VmValue) + VmValue.OfText("b")).number is 3
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.Rounded, TypeEntry.Rounded.methods.First) is false
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, TypeEntry.ToNumber)
 	Natives(TypeEntry.Holding).IsMemberCall(Invocation.Coding, TypeEntry.CharacterEntry, Either) is false

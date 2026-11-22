@@ -20,8 +20,8 @@ constant Seven = VmValue.OfNumber(7)
 constant Letters = "abcdefghijklmnopqrstuvwxyz"
 constant Started = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, Looping.Begun(VmValue.None, VmValue.OfNumber(3), VmValue.None, 2))
 constant Counted = (VmValue.None, VmValue.None, VmValue.None, VmValue.None, Looping.Counting)
-Finished(arguments List(VmValue)) List(VmValue)
-	TracedFrame(Frame.Twice).Finished(Frame.Listed).Index(VmValue.OfNumber(42)) is Frame.ResultSlot
+Finish(arguments List(VmValue)) List(VmValue)
+	TracedFrame(Frame.Twice).Finish(Frame.Listed).Index(VmValue.OfNumber(42)) is Frame.ResultSlot
 	mutable slots = List(VmValue) + arguments
 	mutable position = 0
 	mutable isReporting = false
@@ -30,9 +30,9 @@ Finished(arguments List(VmValue)) List(VmValue)
 		entry = frame.method.instructions(position)
 		isReporting = IsReporting(entry, isReporting)
 		slots(entry.Target) = (isReporting then untraced else frame).Value(entry, position, slots)
-		Logged(position, slots)
+		Log(position, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)
-	Looping.Returned(slots)
+	Looping.ReturnSlots(slots)
 IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 	Reporting.IsReporting(InstructionEntry.Print("x"), true)
 	Reporting.IsReporting(InstructionEntry.Print("x"), false) is false
@@ -44,7 +44,7 @@ IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 	if frame.method.Name is not TestCodegen.Runner or entry.kind is not InstructionType.Print
 		return isReporting
 	entry.texts(0).StartsWith("Test failed: ") or isReporting and entry.texts(0) is not "  got: "
-Logged(position Number, slots List(VmValue))
+Log(position Number, slots List(VmValue))
 	for Logs(position, slots)
 		logger.Log(value)
 Logs(position Number, slots List(VmValue)) Texts
@@ -71,8 +71,8 @@ Events(position Number, result VmValue) Texts
 	isStored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 	isUsed = entry.kind is in (InstructionType.LoadVariableToRegister, InstructionType.FieldLoad)
 	named = isStored then "$Set " else isUsed then "$Use " else ""
-	set = named is "" then List(Text) else List(Text) + (named + place + "|" + entry.texts(0) + "|" + Shown(result))
-	Hit(position) + set + Ended(position, place, result)
+	set = named is "" then List(Text) else List(Text) + (named + place + "|" + entry.texts(0) + "|" + Show(result))
+	Hit(position) + set + End(position, place, result)
 Hit(position Number) Texts
 	Lined.Hit(0) is ("$Hit Strict/Doubler|2")
 	Lined.Hit(2).Length is 0
@@ -92,19 +92,19 @@ IsLoopLine(line Number) Boolean
 		if value.kind is InstructionType.LoopBegin and value.line is line
 			return true
 	false
-Ended(position Number, place Text, result VmValue) Texts
-	Lined.Ended(2, "A|4", Seven).Length is 0
-	Lined.Ended(3, "A|5", Seven) is ("$Result A|5|7")
-	Same.Ended(0, "A|4", Seven).Length is 0
-	Same.Ended(1, "A|4", Seven) is ("$Result A|4|7")
-	Same.Ended(2, "A|3", Seven).Length is 0
-	Same.Ended(3, "A|4", Seven) is ("$Result A|4|7")
-	Lined.Ended(4, "A|0", Seven) is ("$Result A|0|7")
+End(position Number, place Text, result VmValue) Texts
+	Lined.End(2, "A|4", Seven).Length is 0
+	Lined.End(3, "A|5", Seven) is ("$Result A|5|7")
+	Same.End(0, "A|4", Seven).Length is 0
+	Same.End(1, "A|4", Seven) is ("$Result A|4|7")
+	Same.End(2, "A|3", Seven).Length is 0
+	Same.End(3, "A|4", Seven) is ("$Result A|4|7")
+	Lined.End(4, "A|0", Seven) is ("$Result A|0|7")
 	instructions = frame.method.instructions
 	entry = instructions(position)
 	isLast = position + 1 is instructions.Length or instructions(position + 1).line is not entry.line
 	isControl = entry.kind > InstructionType.Return and entry.kind <= InstructionType.JumpEnd
-	isLast and isControl is false then List(Text) + ("$Result " + place + "|" + Shown(result)) else List(Text)
+	isLast and isControl is false then List(Text) + ("$Result " + place + "|" + Show(result)) else List(Text)
 Iteration(position Number, slots List(VmValue)) Texts
 	Lined.Iteration(2, Counted).Length is 0
 	Lined.Iteration(3, Started).Length is 0
@@ -116,27 +116,27 @@ Iteration(position Number, slots List(VmValue)) Texts
 	state = slots(Frame.LoopSlot)
 	isOwn = entry.line > 0 and state.items.Length > 0 and state.items(0).items(3).number is begin
 	place = frame.owner + "|" + entry.line
-	current = isOwn then Shown(Looping.Current(state, false, false, VmValue.None)) else ""
+	current = isOwn then Show(Looping.Current(state, false, false, VmValue.None)) else ""
 	isOwn then ("$Hit " + place, "$Set " + place + "|for|" + current) else List(Text)
-Shown(result VmValue) Text
-	Lined.Shown(VmValue.OfText("ab")) is "\"ab\""
-	Lined.Shown(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))) is "(1, 2)"
-	Lined.Shown(VmValue.OfList(List(VmValue))) is "()"
-	Pairs.Shown(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
-	Lined.Shown(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
-	Lined.Shown(VmValue.OfError("x")) is ValueCode(VmValue.OfError("x")).Code
+Show(result VmValue) Text
+	Lined.Show(VmValue.OfText("ab")) is "\"ab\""
+	Lined.Show(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfNumber(2))) is "(1, 2)"
+	Lined.Show(VmValue.OfList(List(VmValue))) is "()"
+	Pairs.Show(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
+	Lined.Show(VmValue.OfText(Letters + Letters + Letters + "abcdef")).Length is 83
+	Lined.Show(VmValue.OfError("x")) is ValueCode(VmValue.OfError("x")).Code
 	constant MaxShownLength = 80
 	items = result.items
 	elements = "(" + Text.Combine(Elements(items)) + (items.Length > 5 then ", ...)" else ")")
 	isRecord = result.items.Length > 0 and result.kind is not in ("List", "Strict/Error")
-	code = result.kind is "List" then elements else isRecord then Named(result) else ValueCode(result).Code
+	code = result.kind is "List" then elements else isRecord then NameRecord(result) else ValueCode(result).Code
 	code.Length > MaxShownLength then code.Substring(0, MaxShownLength) + "..." else code
-Named(record VmValue) Text
-	Pairs.Named(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0)))) is "Pair(b = 0)"
+NameRecord(record VmValue) Text
+	Pairs.NameRecord(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(0)))) is "Pair(b = 0)"
 	Lined.Iteration(2, Started) is ("$Hit Strict/Doubler|4", "$Set Strict/Doubler|4|for|0")
 	Lined.Iteration(3, Started).Length is 0
-	Lined.Shown(VmValue.OfList(Seven, Seven, Seven, Seven, Seven, Seven)) is "(7, 7, 7, 7, 7, ...)"
-	Pairs.Named(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
+	Lined.Show(VmValue.OfList(Seven, Seven, Seven, Seven, Seven, Seven)) is "(7, 7, 7, 7, 7, ...)"
+	Pairs.NameRecord(VmValue("Strict/Pair", 0, "", (VmValue.None, VmValue.OfNumber(2)))) is "Pair(b = 2)"
 	TypeEntry.ShortName(record.kind) + "(" + Text.Combine(Members(record, true) + Members(record, false)) + ")"
 Members(record VmValue, isChanged Boolean) Texts
 	Pairs.Members(VmValue("Strict/Pair", 0, "", List(VmValue) + VmValue.None), true).Length is 0

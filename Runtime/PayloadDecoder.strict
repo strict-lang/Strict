@@ -39,11 +39,11 @@ End(position Number) Number
 	for entry.payload(position + 2)
 		next = End(next)
 	next
-Cached(position Number, cache ConstantCache) VmValue
-	Listed.Cached(1, Constants.Listing.prototypes) to Text is "(1, 1.5)"
-	Ones.Cached(1, ConstantCache(List(VmValue))) to Text is "(1, 1.5)"
-	CachedSeven.Cached(1, ConstantCache(List(VmValue))).number is 7
-	PayloadDecoder(InstructionEntry.LoadNumber(0, 5)).Cached(1, ConstantCache(List(VmValue))).number is 5
+Cache(position Number, cache ConstantCache) VmValue
+	Listed.Cache(1, Constants.Listing.prototypes) to Text is "(1, 1.5)"
+	Ones.Cache(1, ConstantCache(List(VmValue))) to Text is "(1, 1.5)"
+	CachedSeven.Cache(1, ConstantCache(List(VmValue))).number is 7
+	PayloadDecoder(InstructionEntry.LoadNumber(0, 5)).Cache(1, ConstantCache(List(VmValue))).number is 5
 	kind = entry.payload(position)
 	if kind is 1
 		return VmValue.OfNumber(entry.payload(position + 1))

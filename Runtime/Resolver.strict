@@ -17,21 +17,21 @@ constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVa
 constant StoringSeven = (InstructionEntry.LoadNumber(0, 7), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"))
 constant Sample = MethodEntry("Run", List(MemberEntry), "None", StoringSeven + (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "a"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 0, "list")))
 Resolved List(TypeEntry)
-	Doubling.Slotted(InstructionEntry(InstructionType.IndexCall, "a", (4, 3, 9)), Specials + "a").payload is (4, 3, 6)
+	Doubling.Allot(InstructionEntry(InstructionType.IndexCall, "a", (4, 3, 9)), Specials + "a").payload is (4, 3, 6)
 	Doubling.Local(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a")) is "a"
 	Doubling.Local(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0)) is "#result"
 	Doubling.Local(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "pair.b(1)")) is "pair.b(1)"
 	Doubling.Local(Sample.instructions(1)) is "a" and Doubling.Local(ElementStore) is "a"
-	Doubling.Slotted(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "index"), Specials).payload.Length is 5
-	Doubling.Slotted(ElementStore, Specials + "a").payload is (0, 6, LiteralIndex, 1)
+	Doubling.Allot(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "index"), Specials).payload.Length is 5
+	Doubling.Allot(ElementStore, Specials + "a").payload is (0, 6, LiteralIndex, 1)
 	Doubling.Resolved.First.methods.First.instructions.Length is 3
-	Routes(TypeEntry(TypeEntry.Holding(1), Name = "Strict/Character")).Called(Invocation.Coding) is (0, 0, 1)
+	Routes(TypeEntry(TypeEntry.Holding(1), Name = "Strict/Character")).Call(Invocation.Coding) is (0, 0, 1)
 	for types
 		TypeEntry(value.Name, value.members, Methods(value))
 Methods(type TypeEntry) List(MethodEntry)
 	Doubling.Destination(InstructionEntry(InstructionType.InvokeRemove, "list", (0, 4)), 9) is 4
-	Routes(TypeEntry("T", List(MemberEntry), Machine.Defaulted)).Called(Invocation.AddCall).First is Native
-	Routes(TypeEntry("Strict/Doubler", MemberEntry.LoggerMember, Machine.Doubler.methods)).Called(Twice) is (0, 0, 0)
+	Routes(TypeEntry("T", List(MemberEntry), Machine.Defaulted)).Call(Invocation.AddCall).First is Native
+	Routes(TypeEntry("Strict/Doubler", MemberEntry.LoggerMember, Machine.Doubler.methods)).Call(Twice) is (0, 0, 0)
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.Name is "Run"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + Sample)).First.declaredType is "None"
 	Doubling.Methods(TypeEntry("Strict/Go", List(MemberEntry), List(MethodEntry) + MethodEntry.GoRun)).Length is 1
@@ -46,16 +46,16 @@ Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEn
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.payload.Length is 1
 	Doubling.Instructions(MethodEntry.GoRun, Specials, 7).First.payload.Length is 10
 	Doubling.Instructions(Machine.Doubler.methods.First, Specials, 8).Last.Target is Frame.ResultSlot
-	changed = Changed(method, names)
+	changed = Change(method, names)
 	for method.instructions
-		resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
-		placed = Fielded(Placed(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch))
+		resolved = value.kind is InstructionType.Invoke then Target(value) else Allot(value, names)
+		placed = Field(Place(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch))
 		value.kind is InstructionType.Return then InstructionEntry(placed, payload = placed.payload + changed) else placed
-Fielded(entry InstructionEntry) InstructionEntry
-	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Pair"), (4, 3, -1, -2))).payload is (4, 3, 0, 1)
-	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("x", "Pair"), (4, 3, -1, -2))).payload is (4, 3, -1, -2)
-	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, "b", (4, 3, -1))).payload is (4, 3, -1)
-	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Other"), (4, 3, -1, -2))).payload.Last is -2
+Field(entry InstructionEntry) InstructionEntry
+	Pairs.Field(InstructionEntry(InstructionType.FieldLoad, ("b", "Pair"), (4, 3, -1, -2))).payload is (4, 3, 0, 1)
+	Pairs.Field(InstructionEntry(InstructionType.FieldLoad, ("x", "Pair"), (4, 3, -1, -2))).payload is (4, 3, -1, -2)
+	Pairs.Field(InstructionEntry(InstructionType.FieldLoad, "b", (4, 3, -1))).payload is (4, 3, -1)
+	Pairs.Field(InstructionEntry(InstructionType.FieldLoad, ("b", "Other"), (4, 3, -1, -2))).payload.Last is -2
 	if entry.kind is not InstructionType.FieldLoad or entry.texts.Length < 2 or entry.payload.Length < 4
 		return entry
 	route = Position(Natives(types).TypeOf(entry.texts.Last))
@@ -63,12 +63,12 @@ Fielded(entry InstructionEntry) InstructionEntry
 		if value.Name is entry.texts.First
 			return InstructionEntry(entry, payload = (entry.payload(0), entry.payload(1), route, index))
 	entry
-Changed(method MethodEntry, names Texts) Numbers
-	Doubling.Changed(MethodEntry.Logged, List(Text) + "changed_0") is (-1, 0)
-	Doubling.Changed(MethodEntry.Logged, List(Text) + ChangedInstance.Name) is (0, -1)
-	Doubling.Changed(MethodEntry.Logged, Specials).Length is 0
-	Doubling.Changed(MethodEntry.GoRun, Specials).Length is 0
-	Doubling.Changed(MethodEntry.GoRun, List(Text) + ChangedInstance.Name) is (0)
+Change(method MethodEntry, names Texts) Numbers
+	Doubling.Change(MethodEntry.Logged, List(Text) + "changed_0") is (-1, 0)
+	Doubling.Change(MethodEntry.Logged, List(Text) + ChangedInstance.Name) is (0, -1)
+	Doubling.Change(MethodEntry.Logged, Specials).Length is 0
+	Doubling.Change(MethodEntry.GoRun, Specials).Length is 0
+	Doubling.Change(MethodEntry.GoRun, List(Text) + ChangedInstance.Name) is (0)
 	mutable slots = List(Mutable(Number)) + names.Index(ChangedInstance.Name)
 	mutable isChanged = slots.First >= 0
 	for method.parameters
@@ -76,20 +76,20 @@ Changed(method MethodEntry, names Texts) Numbers
 		slots.Add(slot)
 		isChanged = isChanged or slot >= 0
 	isChanged then slots else List(Number)
-Targeted(entry InstructionEntry) InstructionEntry
-	Doubling.Placed(InstructionEntry(InstructionType.CheckError, List(Text), (5, 0)), Sample, 0, 9).payload is (5, 0)
-	Doubling.Placed(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), MethodEntry.Branching, 0, 9).payload(1) is 4
-	Doubling.Slotted(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0), Specials).payload is (2)
-	Doubling.Targeted(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
-	Doubling.Targeted(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9
-	Doubling.Targeted(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
+Target(entry InstructionEntry) InstructionEntry
+	Doubling.Place(InstructionEntry(InstructionType.CheckError, List(Text), (5, 0)), Sample, 0, 9).payload is (5, 0)
+	Doubling.Place(InstructionEntry.Jump(InstructionType.JumpToIdIfTrue, 1), MethodEntry.Branching, 0, 9).payload(1) is 4
+	Doubling.Allot(InstructionEntry(InstructionType.CheckError, List(Text), List(Number), 0), Specials).payload is (2)
+	Doubling.Target(Twice.entry).payload is (0, -1, -2, 0, -3, 0, 0, 0, 0, 0)
+	Doubling.Target(InstructionEntry(InstructionType.Invoke, Twice.entry.texts, Twice.entry.payload, 9)).line is 9
+	Doubling.Target(Invocation.AddCall.entry).payload is (2, -1, -2, 1, -4, -3, 1, 0, 1, 1, Native, 0, 0)
 	Accessor.FirstResolved.payload is (1, -1, -2, 0, -3, 0, 1, 0, 0, 1, 0, 0, 1, -1, 0)
 	call = Invocation(entry, List(VmValue), VmValue.None)
 	target = Routes(types).Target(call)
-	path = Accessor(Machine(types)).Marked(target, call.Count)
+	path = Accessor(Machine(types)).Mark(target, call.Count)
 	InstructionEntry(entry.kind, entry.texts, entry.payload + target + path, entry.line)
 Position(type TypeEntry) Number
-	Doubling.Placed(ElementStore, Sample, 0, 9).payload is ElementStore.payload
+	Doubling.Place(ElementStore, Sample, 0, 9).payload is ElementStore.payload
 	Doubling.Destination(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 7), "a"), 9) is 0
 	Doubling.Destination(InstructionEntry.LoopBegin(0, -1), 9) is Frame.LoopSlot
 	Doubling.Destination(InstructionEntry.Binary(InstructionType.Add, (0, 0, 1)), 9) is 1
@@ -126,23 +126,23 @@ Local(entry InstructionEntry) Text
 		return entry.texts(0)
 	dot = parts(0).IndexOf(".")
 	dot > 0 then parts(0).Substring(0, dot) else parts(0)
-Slotted(entry InstructionEntry, names Texts) InstructionEntry
-	Doubling.Slotted(Sample.instructions(2), Specials + "a").payload is (1, 6)
-	Doubling.Slotted(InstructionEntry.LoadNumber(0, 7), Specials).payload is (0, 1, 7)
+Allot(entry InstructionEntry, names Texts) InstructionEntry
+	Doubling.Allot(Sample.instructions(2), Specials + "a").payload is (1, 6)
+	Doubling.Allot(InstructionEntry.LoadNumber(0, 7), Specials).payload is (0, 1, 7)
 	local = Local(entry)
 	if local is ""
-		return Decoded(entry)
+		return Decode(entry)
 	kind = entry.kind
 	slot = Slot(local, names)
 	if kind is InstructionType.StoreConstantToVariable or kind is InstructionType.CheckError
-		return Decoded(InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line))
+		return Decode(InstructionEntry(kind, entry.texts, entry.payload + slot, entry.line))
 	payload = entry.payload
 	start = kind is InstructionType.IndexCall then (payload(0), payload(1)) else List(Number) + payload(0)
 	InstructionEntry(kind, entry.texts, start + slot + Element(entry, names), entry.line)
-Decoded(entry InstructionEntry) InstructionEntry
-	Doubling.Decoded(InstructionEntry.LoadNumber(0, 1.5)).payload is (0, 1, 1.5)
-	Doubling.Decoded(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
-	Doubling.Decoded(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "a")).payload is (1, 0.5, -1, 0)
+Decode(entry InstructionEntry) InstructionEntry
+	Doubling.Decode(InstructionEntry.LoadNumber(0, 1.5)).payload is (0, 1, 1.5)
+	Doubling.Decode(InstructionEntry.LoadNumber(0, 7)).payload is (0, 1, 7)
+	Doubling.Decode(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0.5), "a")).payload is (1, 0.5, -1, 0)
 	at = entry.kind is InstructionType.LoadConstantToRegister then 1 else 0
 	if (at is 1 or entry.kind is InstructionType.StoreConstantToVariable) is false or entry.payload(at) is not 3
 		return entry
@@ -176,12 +176,12 @@ Slot(name Text, names Texts) Number
 		if names(value) is name
 			return value
 	Number.NotFound
-Placed(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
-	Doubling.Placed(InstructionEntry(InstructionType.CheckError, "e", (5, 0)), MethodEntry.Branching, 0, 9).payload(2) is 2
-	Doubling.Placed(Sample.instructions(0), Sample, 0, 9).payload is Sample.instructions(0).payload
-	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
-	Doubling.Placed(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
-	Doubling.Placed(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
+Place(entry InstructionEntry, method MethodEntry, position Number, scratch Number) InstructionEntry
+	Doubling.Place(InstructionEntry(InstructionType.CheckError, "e", (5, 0)), MethodEntry.Branching, 0, 9).payload(2) is 2
+	Doubling.Place(Sample.instructions(0), Sample, 0, 9).payload is Sample.instructions(0).payload
+	Doubling.Place(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).payload is (0, 2)
+	Doubling.Place(MethodEntry.Branching.instructions(0), MethodEntry.Branching, 0, 9).Target is 9
+	Doubling.Place(MethodEntry.CountingLoop.instructions(1), MethodEntry.CountingLoop, 1, 9).payload is (1, 0)
 	isJump = entry.kind is InstructionType.JumpToIdIfFalse or entry.kind is InstructionType.JumpToIdIfTrue
 	isFailing = entry.kind is InstructionType.CheckError and entry.texts.Length > 0
 	ended = isFailing then InstructionEntry.Jump(InstructionType.JumpEnd, PayloadDecoder(entry).SevenBit(1)) else entry

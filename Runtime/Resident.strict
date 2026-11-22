@@ -54,17 +54,17 @@ Stamped Text
 Freed Text
 	Resident("Compiler/output", "2").Freed is "Compiler/output/obj/strict.free2"
 	root + Free + slot
-Released(request Text)
-	Resident("Compiler/output/Missing").Released(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is not Error
-	Resident("Compiler/output/Missing").Released("broken") is not Error
+FreePort(request Text)
+	Resident("Compiler/output/Missing").FreePort(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is not Error
+	Resident("Compiler/output/Missing").FreePort("broken") is not Error
 	port = Claim(request) to Number
 	if port is not Error
 		File(Freed + "." + port).Rename(Freed)
 Send(socket Number, text Text)
 	Sample.Send(0, "a") is Error
 	Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text))
-Received(socket Number, ending Text) Text
-	Sample.Received(0, "\n") is ""
+Receive(socket Number, ending Text) Text
+	Sample.Receive(0, "\n") is ""
 	mutable gathered = ""
 	mutable isOpen = true
 	for as long as isOpen and gathered.EndsWith(ending) is false
@@ -82,43 +82,43 @@ Opened Number
 	File(Stamped).Write(port)
 	File(Freed).Write(port)
 	server
-Accepted(server Number, built Number, limit = IdleSeconds) Number
-	Sample.Accepted(0, -1) is Unaccepted
-	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, 0) is Unaccepted
-	Sample.Accepted(Socket.Local(0), File(Process.Current.executable).Modified, WakeSeconds) is Unaccepted
+Accept(server Number, built Number, limit = IdleSeconds) Number
+	Sample.Accept(0, -1) is Unaccepted
+	Sample.Accept(Socket.Local(0), File(Process.Current.executable).Modified, 0) is Unaccepted
+	Sample.Accept(Socket.Local(0), File(Process.Current.executable).Modified, WakeSeconds) is Unaccepted
 	mutable idle = 0
 	own = File(Process.Current.executable)
 	stamp = File(Stamped)
 	for as long as idle < limit and own.Modified is built and Socket.Port(server) to Text is in stamp.ReadLines
 		waited = Socket.Waiting(server, WakeSeconds)
 		if waited is not 0
-			return waited is Error then Unaccepted else Taken(server, built)
+			return waited is Error then Unaccepted else Take(server, built)
 		idle = idle + WakeSeconds
 	Unaccepted
-Taken(server Number, built Number) Number
+Take(server Number, built Number) Number
 	socket = Socket.Accept(server)
 	if File(Process.Current.executable).Modified is built
 		return socket
-	Ended(socket, Refused)
+	End(socket, Refused)
 	Unaccepted
-Requested(socket Number) Text
+ReadRequest(socket Number) Text
 	Forwarding.Sample.Loopback(3) is 3
 	Forwarding.Sample.Loopback(Refused) is Forwarding.Unserved
-	Send(socket, Greeting) is not Error then Received(socket, Ending) else Unrequested
-Finished(socket Number, code Number)
-	Sample.Finished(0, 1) is Error
+	Send(socket, Greeting) is not Error then Receive(socket, Ending) else Unrequested
+Finish(socket Number, code Number)
+	Sample.Finish(0, 1) is Error
 	if Send(socket, Exiting + code + "\n") is Error
 		Socket.Close(socket)
 		return Error("SendFailed")
 	Socket.Close(socket)
-Ended(socket Number, code Number)
-	Sample.Ended(0, 1) is not Error
-	if Finished(socket, code) is Error
+End(socket Number, code Number)
+	Sample.End(0, 1) is not Error
+	if Finish(socket, code) is Error
 		Socket.Close(socket)
-Closed(server Number)
-	Resident("Compiler/output/Missing").Closed(0) is not Error
+Close(server Number)
+	Resident("Compiler/output/Missing").Close(0) is not Error
 	Sample.Opened > 0
-	Sample.Closed(Socket.Local(0)) is not Error
+	Sample.Close(Socket.Local(0)) is not Error
 	File(Sample.Stamped).Exists
 	stamp = File(Stamped)
 	if stamp.Exists and stamp.ReadLines.First is (Socket.Port(server) to Text)

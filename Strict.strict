@@ -30,17 +30,17 @@ Run(arguments Texts) Number
 	rebuilt = SelfBuild(resident.root, Process.Current.executable).Rebuilt(arguments)
 	if rebuilt is not SelfBuild.Current
 		return rebuilt
-	passed = CommandLimit(Scripted.Packed(arguments)).Armed
-	forwarded = Forwarding(resident.root).Forwarded(passed)
+	passed = CommandLimit(Scripted.Pack(arguments)).Armed
+	forwarded = Forwarding(resident.root).Forward(passed)
 	forwarded is Forwarding.Ended then 1 else forwarded is Error then Log(passed).code else forwarded
 Host(command Text, arguments Texts, resident Resident) slow
 	if command is "coordinator"
 		mutable coordinator = Coordinator
-		return coordinator.Served
+		return coordinator.Serve
 	if command is "serve"
 		return Serve(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
 	if command is "status"
-		return Coordinator.Reported
+		return Coordinator.Report
 	rest = arguments.Slice(1, arguments.Length - 1)
 	NativeChunks(rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
 Serve(resident Resident) slow
@@ -48,24 +48,24 @@ Serve(resident Resident) slow
 	if server is Error
 		return server
 	built = File(Process.Current.executable).Modified
-	mutable socket = resident.Accepted(server, built)
+	mutable socket = resident.Accept(server, built)
 	mutable answer = Answer(0, Dictionary(Text, TypeEntry))
 	for as long as socket is not Error
-		request = resident.Requested(socket)
+		request = resident.ReadRequest(socket)
 		arguments = resident.Arguments(request)
 		answer = Reply(resident, request, socket, arguments, Resident.Variables, answer)
-		socket = arguments is (Resident.Stopping) then Resident.Unaccepted else resident.Accepted(server, built)
-	resident.Closed(server)
+		socket = arguments is (Resident.Stopping) then Resident.Unaccepted else resident.Accept(server, built)
+	resident.Close(server)
 Reply(resident Resident, request Text, socket Number, arguments Texts, variables Text, last Answer) Answer slow
 	isStopping = arguments is (Resident.Stopping)
 	isAnswered = isStopping is false and resident.IsCurrent(request, variables)
 	started = isAnswered and Scripted.IsRun(arguments) is false then Time.Now else 0
 	answer = isAnswered then GenerateAnswer(resident, request, socket, arguments, last) else last
 	stamped = isAnswered and started > 0 then answer.Stamped(started) else answer
-	resident.Released(request)
+	resident.FreePort(request)
 	code = isAnswered then stamped.code else (isStopping then 0 else Resident.Refused)
 	logger.Log(Time(Time.Now).Iso8601 + " " + Text.Combine(arguments, " ") + " exit " + code)
-	resident.Ended(socket, code)
+	resident.End(socket, code)
 	stamped
 GenerateAnswer(resident Resident, request Text, socket Number, arguments Texts, last Answer) Answer slow
 	home = Directory.Current
@@ -126,7 +126,7 @@ Clean(command Text, rest Texts) Texts slow
 		return rest
 	folder = Directory.Exists(rest(0)) then rest(0) else Path(rest(0)).PathOnly.text
 	target = folder is "" then "." else folder
-	logger.Log("Removed " + Folders.Cleaned(target) + " files in the obj folders of " + target)
+	logger.Log("Removed " + Folders.Clean(target) + " files in the obj folders of " + target)
 	command is "build" then rest - "full" else rest
 Message(command Text, rest Texts) Text slow
 	Strict.Message("version", List(Text)).StartsWith(Version + " 20")
@@ -146,8 +146,8 @@ Examine(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) 
 Nightly(rest Texts) Number slow
 	if File(rest(0)).Exists is false
 		return Folders.Nightly(rest(0), rest(1)) + Native("test", (rest(0), rest(1), "native"))
-	unit = Execute.Served(rest(0), rest(1), true).code
-	unit > 0 then unit else Execute("*").Served(rest(0), rest(1), true).code
+	unit = Execute.Serve(rest(0), rest(1), true).code
+	unit > 0 then unit else Execute("*").Serve(rest(0), rest(1), true).code
 Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
 	Strict.Testing(("Missing.strict", ".")).code is 1
 	request = TestRequest(rest)
@@ -159,15 +159,15 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 	if request.Option is in ("values", "trace", "profile", "sampled")
 		return Answer(Trace(request, rest), known)
 	execute = request.Executing(known, inferred)
-	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
+	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Serve(rest(0), rest(1))
 Test(text Text) Text slow
 	Trial(text).Ran
 Trace(request TestRequest, rest Texts) Number slow
 	trace = ValueTrace(request.Selection)
 	profile = Profile(request.Selection)
 	if request.Option is in ("profile", "sampled")
-		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sampled(rest(0), rest(1))
-	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
+		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sample(rest(0), rest(1))
+	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Trace(rest(0), rest(1))
 Root(arguments Texts) Texts slow
 	Strict.Root(List(Text) + "a.strict") is ("a.strict", ".")
 	Strict.Root(("a.strict", ".")) is ("a.strict", ".")
@@ -242,7 +242,7 @@ Launch(rest Texts, folder Text) Number slow
 	Start(rest, folder, fresh)
 Retest(rest Texts) Number slow
 	quietUntil = Process.Elapsed + QuietSeconds
-	tested = Execute("", quietUntil = quietUntil).Served(rest(0), rest(1)).code
+	tested = Execute("", quietUntil = quietUntil).Serve(rest(0), rest(1)).code
 	if tested is 0 and Process.Elapsed >= quietUntil
 		logger.Log(Execute.Summary(0, rest(0)))
 	tested

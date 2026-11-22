@@ -16,7 +16,7 @@ IsAny(name Text) Boolean
 	Peers.IsAny(Server) is false
 	Peers.IsAny("") is false
 	name is "any" or name is "Any"
-Probed(line Text) Texts
+Probe(line Text) Texts
 	Peers.Host("missing") is ""
 	mutable open = List(Mutable(Text))
 	for Named
@@ -32,6 +32,6 @@ IsAnswered(name Text, line Text) Boolean
 	if socket is Error
 		return false
 	Resident("").Send(socket, line.Replace("need\t", "fit\t") + "\n")
-	reply = Resident("").Received(socket, "\n")
+	reply = Resident("").Receive(socket, "\n")
 	Socket.Close(socket)
 	reply.Trim.StartsWith("go")

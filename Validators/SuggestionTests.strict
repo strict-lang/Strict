@@ -11,7 +11,7 @@ Passing(candidates Texts) Texts slow
 	mutable passed = List(Mutable(Text))
 	for candidates
 		changed = Change(types, index)
-		if Machine(changed, List(VmValue), Path(path).PathOnly.text).Prepared.Tested(changed.First.Name) is 0
+		if Machine(changed, List(VmValue), Path(path).PathOnly.text).Prepared.RunTests(changed.First.Name) is 0
 			passed.Add(value)
 	passed
 Prepare(candidates Texts) List(TypeEntry) slow

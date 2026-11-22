@@ -3,7 +3,7 @@ At(index Number) VmValue
 	entries(index)
 Stored(index Number, element VmValue)
 	Error("ConstantCache writes require the native runtime: " + index + " " + element.kind)
-Hosted(call Invocation) VmValue
+Host(call Invocation) VmValue
 	cache = ConstantCache(call.Instance.Member(0).items)
 	index = call.Arguments.First.number
 	if call.MethodName is "At"

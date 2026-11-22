@@ -73,14 +73,14 @@ Possible(position Number) Numbers
 		return method.returnType is in Primitives then (2) else List(Number)
 	if entry.kind is InstructionType.StoreRegisterToVariable and IsReassigned(position)
 		return List(Number) + 3
-	IsDropped(entry) or IsConstant(entry) then List(Number) + (IsDropped(entry) then 4 else 7) else Valued(position)
-Valued(position Number) Numbers
-	Twice.Valued(1) is (5)
-	Joined.Valued(0) is (6)
-	Joined.Valued(1).Length is 0 and MutationKinds(Shortcuts.Searching.method).Valued(0).Length is 0
-	Joined.Valued(2).Length is 0
-	(Valuing.Valued(3) + Valuing.Valued(4) + Valuing.Valued(9)) is (5, 5, 5)
-	(Valuing.Valued(2) + Valuing.Valued(5) + Valuing.Valued(6)).Length is 0
+	IsDropped(entry) or IsConstant(entry) then List(Number) + (IsDropped(entry) then 4 else 7) else Value(position)
+Value(position Number) Numbers
+	Twice.Value(1) is (5)
+	Joined.Value(0) is (6)
+	Joined.Value(1).Length is 0 and MutationKinds(Shortcuts.Searching.method).Value(0).Length is 0
+	Joined.Value(2).Length is 0
+	(Valuing.Value(3) + Valuing.Value(4) + Valuing.Value(9)) is (5, 5, 5)
+	(Valuing.Value(2) + Valuing.Value(5) + Valuing.Value(6)).Length is 0
 	entry = method.instructions(position)
 	if entry.kind is InstructionType.LoadConstantToRegister and entry.payload(1) is 4
 		isEmpty = entry.texts.Length is 0 or entry.texts.First is ""
@@ -186,11 +186,11 @@ Replacement(kind Number, entry InstructionEntry) Text
 	Twice.Replacement(7, Limiting) is "constant Limit with 0"
 	Twice.Replacement(7, InstructionEntry.Invoke(0, ("T", "N", "Strict/Text"), List(Number), -1)) is "constant N with \"\""
 	Twice.Replacement(7, InstructionEntry(Limiting, texts = ("T", "B", "Strict/Boolean"))) is "constant B with false"
-	type = Typed(kind, entry)
+	type = Classify(kind, entry)
 	empty = type is "Strict/Boolean" then "false" else (type is "Strict/Text" then "\"\"" else "0")
 	(kind is 2 then "the result" else "constant " + entry.texts(1)) + " with " + empty
-Typed(kind Number, entry InstructionEntry) Text
-	Twice.Typed(7, Logging) is "None" and Twice.Typed(2, Logging) is "Strict/Number"
+Classify(kind Number, entry InstructionEntry) Text
+	Twice.Classify(7, Logging) is "None" and Twice.Classify(2, Logging) is "Strict/Number"
 	kind is 7 then entry.texts(2) else method.returnType
 Subject(position Number) Text
 	Compared.Subject(0) is "comparison >" and MutationKinds(Mutation.Written.method).Subject(2) is "call Add"

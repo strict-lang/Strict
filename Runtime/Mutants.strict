@@ -8,7 +8,7 @@ constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Unbudgeted = (Budgeted.First, InstructionEntry.Invoke(2, ("A", "Started", "N", "x"), (0, 1), -1))
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
-constant Started13 = Resolver(Sample.Replaced(Doubled, Twice, Mutation.Twice.Mutant(13))).Resolved.First.methods.First
+constant Started13 = Resolver(Sample.Replace(Doubled, Twice, Mutation.Twice.Mutant(13))).Resolved.First.methods.First
 constant Sample = Mutants("Examples/Fibonacci.strict")
 constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
 constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
@@ -24,13 +24,13 @@ Survivors(types List(TypeEntry)) Texts
 		return List(Text)
 	survivors = isCached then cache.Survivors else Lines(types)
 	for survivors
-		logger.Log(Shown(value))
+		logger.Log(Show(value))
 	if isWhole and part is "" and isCached is false
-		cache.Saved(survivors)
+		cache.Save(survivors)
 	survivors
-Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Number
+RunMutants(types List(TypeEntry), root Text, files Texts, inference TypeInference) Number
 	cache = MutationCache(path, isWhole)
-	held = part is "" then cache.Held(TypeSource.Root + "/obj") else List(Text)
+	held = part is "" then cache.Hold(TypeSource.Root + "/obj") else List(Text)
 	isFresh = part is not "" or cache.IsCurrent is false
 	unoptimized = FileCompiler(true, isWhole then "*" else "", false)
 	survivors = Survivors(isFresh then unoptimized.Built(path, root, true, files, inference).entries else types)
@@ -41,35 +41,35 @@ Lines(types List(TypeEntry)) Texts
 	Sample.Lines(Doubled).Length is 0 and Sample.Lines(List(TypeEntry)).Length is 0
 	if types.Length is 0
 		return List(Text)
-	kept = Baseline(value).Kept(types)
+	kept = Baseline(value).Keep(types)
 	methods = Baseline(value).Methods(kept)
-	tested = Tested(types, Runner(types.First), methods)
+	tested = AddRunners(types, Runner(types.First), methods)
 	ready = Resolver(TailCalls(tested).Rewritten).Resolved
 	budgets = Baseline(value).Budgets(kept)
-	rounds = Mutation.Picked(part, Mutation.Rounds(methods), isWhole)
+	rounds = Mutation.Pick(part, Mutation.Rounds(methods), isWhole)
 	waves = Range(0, (rounds.Length / Wave).Ceiling)
 	for wave, found, survivor in waves, Rounds(tested, ready, methods, budgets, rounds, wave), found
 		survivor
 Rounds(types List(TypeEntry), ready List(TypeEntry), methods List(MethodEntry), budgets Numbers, rounds Numbers, wave Number) List(Texts)
 	Sample.Rounds(Doubled, Doubled, List(MethodEntry), List(Number), (0, 1), 0).Length is 2
-	Sample.Rounds(Doubled, Doubled, List(MethodEntry), List(Number), Mutation.Picked("", Wave + 6, true), 1).Length is 6
+	Sample.Rounds(Doubled, Doubled, List(MethodEntry), List(Number), Mutation.Pick("", Wave + 6, true), 1).Length is 6
 	for rounds.Slice(wave * Wave, (rounds.Length - wave * Wave).Clamp(0, Wave))
 		Round(types, ready, methods, budgets, value)
-Shown(survivor Text) Text
-	Sample.Shown(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
-	Sample.Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
-	Sample.Shown(Sample.path + ":line 3") is Sample.path + ":line 3"
-	Mutants(Sample.path, part = "1/2").Shown(Sample.path + ":line 3: MutationSurvived").Lines.Length is 1
+Show(survivor Text) Text
+	Sample.Show(Sample.path + ": MutationTestingFailed") is Sample.path + ": MutationTestingFailed"
+	Sample.Show(Sample.path + ":line 3: MutationSurvived").Lines.Length > 2
+	Sample.Show(Sample.path + ":line 3") is Sample.path + ":line 3"
+	Mutants(Sample.path, part = "1/2").Show(Sample.path + ":line 3: MutationSurvived").Lines.Length is 1
 	start = survivor.IndexOf(":line ")
 	end = start < 0 then -1 else survivor.IndexOf(": ", start)
 	if part is not "" or end < 0
 		return survivor
 	line = survivor.Substring(start + 6, end - start - 6) to Number
 	survivor + "\n" + Text.Combine(Mutation.Source(File(path).ReadLines, line), "\n")
-Mutated(type TypeEntry) List(MethodEntry)
-	Sample.Mutated(Machine.Doubler).Length is 0
-	Sample.Mutated(TypeEntry(Machine.Doubler, methods = List(MethodEntry) + Lined)).Length is 1
-	Sample.Mutated(Valued).Length is 0
+Mutate(type TypeEntry) List(MethodEntry)
+	Sample.Mutate(Machine.Doubler).Length is 0
+	Sample.Mutate(TypeEntry(Machine.Doubler, methods = List(MethodEntry) + Lined)).Length is 1
+	Sample.Mutate(Valued).Length is 0
 	for type.methods
 		if IsMutated(value) and type.ConstantSlot(value) < 0
 			value
@@ -96,22 +96,22 @@ Alone(ready List(TypeEntry), position Number, mutant MethodEntry) Machine
 	first = ready.First
 	looped = TailCalls(ready).Looped(first, mutant)
 	placed = Resolver(ready).Methods(TypeEntry(first, methods = List(MethodEntry) + looped)).First
-	changed = Replaced(ready, List(MethodEntry) + first.methods(position), List(MethodEntry) + placed)
+	changed = Replace(ready, List(MethodEntry) + first.methods(position), List(MethodEntry) + placed)
 	Machine(changed, ConstantCache(List(VmValue)), Path(path).PathOnly.text).Prepared
 Passes(started Machine, runner Text, budget Number, isRetried = false) Boolean
 	Sample.Passes(Machine.Hello, TestCodegen.Runner, 1)
 	Mutants("A.strict", 0).Passes(Frame.Doubling, "Missing", 0) is false
 	begun = Process.Elapsed
-	failed = Machine(started, deadline = begun + budget).Tested(started.types.First.Name, runner)
+	failed = Machine(started, deadline = begun + budget).RunTests(started.types.First.Name, runner)
 	if failed is not 0 and isRetried is false and Baseline.IsExpired(begun, budget)
 		return Passes(started, runner, budget, true)
 	failed is not Error and failed is 0
 Survivor(method MethodEntry, code Number) Text
 	Sample.Survivor(Twice, 13) is Sample.path + ":line 0: MutationSurvived: Twice: replaced + with -" + Hint
 	mutation = Mutation(method)
-	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + ": " + mutation.Described(code) + Hint
-Tested(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
-	Sample.Tested(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 3
+	path + ":line " + mutation.Line(code) + ": MutationSurvived: " + method.Name + ": " + mutation.Describe(code) + Hint
+AddRunners(types List(TypeEntry), runner MethodEntry, methods List(MethodEntry)) List(TypeEntry)
+	Sample.AddRunners(List(TypeEntry) + Machine.Doubler, Twice, List(MethodEntry) + Twice).First.methods.Length is 3
 	mutable runners = List(Mutable(MethodEntry))
 	mutable names = List(Mutable(Text))
 	for methods
@@ -141,8 +141,8 @@ IsInput(type Text) Boolean
 		if type.EndsWith(value) or type.IndexOf(value + "/") >= 0
 			return true
 	false
-Replaced(types List(TypeEntry), methods List(MethodEntry), replacements List(MethodEntry)) List(TypeEntry)
-	Sample.Replaced(Doubled, Twice, Mutation.Twice.Mutant(13)).First.methods.First is Mutation.Twice.Mutant(13)
+Replace(types List(TypeEntry), methods List(MethodEntry), replacements List(MethodEntry)) List(TypeEntry)
+	Sample.Replace(Doubled, Twice, Mutation.Twice.Mutant(13)).First.methods.First is Mutation.Twice.Mutant(13)
 	mutable changed = types
 	mutable replaced = List(Mutable(MethodEntry))
 	for types.First.methods

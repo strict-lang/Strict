@@ -8,25 +8,25 @@ constant Shifting = TraceEntry(MethodEntry("Shifted", Parameters, "Strict/Number
 constant Member = TraceEntry(Shifting.method, Shifting.owner, 1)
 constant Five = VmValue.OfList((VmValue.OfNumber(1), VmValue.OfNumber(2), VmValue.OfNumber(3), VmValue.OfNumber(4), VmValue.OfNumber(5)))
 constant Nested = VmValue.OfList((VmValue.OfList(List(VmValue) + VmValue.OfNumber(1)), VmValue.OfNumber(2)))
-Called(rest List(VmValue)) Text
-	Shifting.Called((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
-	Shifting.Called(List(VmValue)) is "Doubler.Shifted"
-	TraceEntry(Shifting.method, Shifting.owner, -1).Called((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted"
-	Member.Called((VmValue.OfNumber(7), VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
+Call(rest List(VmValue)) Text
+	Shifting.Call((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
+	Shifting.Call(List(VmValue)) is "Doubler.Shifted"
+	TraceEntry(Shifting.method, Shifting.owner, -1).Call((VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted"
+	Member.Call((VmValue.OfNumber(7), VmValue.OfNumber(1), VmValue.OfText("a"))) is "Doubler.Shifted(by 1, name \"a\")"
 	name = TypeEntry.ShortName(owner) + "." + method.Name
 	if start < 0 or method.parameters.Length is 0 or rest.Length < start + method.parameters.Length
 		return name
 	mutable shown = List(Mutable(Text))
 	for method.parameters
-		shown.Add(value.Name + " " + Shown(rest(start + index)))
+		shown.Add(value.Name + " " + Show(rest(start + index)))
 	name + "(" + Text.Combine(shown, ", ") + ")"
 Trace(rest List(VmValue), file Text, line Number) VmValue
 	Shifting.Trace(List(VmValue), "D.strict", 3).items(0).text is "Doubler.Shifted"
 	Shifting.Trace(List(VmValue), "D.strict", 3).items(2).number is 3
-	VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText(Called(rest)), VmValue.OfText(file), VmValue.OfNumber(line)))
-Shown(argument VmValue) Text
-	Shifting.Shown(VmValue.OfText("a")) is "\"a\"" and Shifting.Shown(VmValue.OfNumber(2)) is "2"
-	Shifting.Shown(Nested) is "List"
+	VmValue("Strict/Stacktrace", 0, "", (VmValue.OfText(Call(rest)), VmValue.OfText(file), VmValue.OfNumber(line)))
+Show(argument VmValue) Text
+	Shifting.Show(VmValue.OfText("a")) is "\"a\"" and Shifting.Show(VmValue.OfNumber(2)) is "2"
+	Shifting.Show(Nested) is "List"
 	IsFlat(argument) is false then TypeEntry.ShortName(argument.kind) else Cut(ValueCode(argument).Code)
 Cut(text Text) Text
 	TraceEntry.Cut("abc") is "abc"

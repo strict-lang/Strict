@@ -10,7 +10,7 @@ Run(path Text, root Text) Number
 	mode = selection is "" then "unit" else (selection is "*" then "" else selection)
 	result = ToolRunner(Process.Current.executable).Execute("test \"" + path + "\" \"" + root + "\" trace " + mode)
 	lines = result.Output.Lines
-	for Plain(lines) + Valued(lines, Path(path).PathOnly.text)
+	for Plain(lines) + Value(lines, Path(path).PathOnly.text)
 		logger.Log(value)
 	if result.exitCode >= 0 and result.exitCode < Folders.CrashExitCode
 		logger.Log(Execute.Summary(result.exitCode, path))
@@ -20,15 +20,15 @@ Plain(lines Texts) Texts
 	for lines
 		if value.StartsWith("$") is false
 			value
-Traced(path Text, root Text) Number
-	ValueTrace.Traced("Missing.strict", ".") is 2
+Trace(path Text, root Text) Number
+	ValueTrace.Trace("Missing.strict", ".") is 2
 	if File(path).Exists is false
 		return 2
 	types = FileCompiler(true, selection).Compiled(path, root, true)
-	types.Length is 0 then 1 else Execute.Started(types, path, true).Tested(types.First.Name)
-Valued(lines Texts, folder Text) Texts
-	ValueTrace.Valued(Events, "Examples").First.EndsWith("line 1 hit 2 times")
-	ValueTrace.Valued(Events, "Examples").Last.EndsWith("line 2 hit 2 times, each: 1, 2")
+	types.Length is 0 then 1 else Execute.Start(types, path, true).RunTests(types.First.Name)
+Value(lines Texts, folder Text) Texts
+	ValueTrace.Value(Events, "Examples").First.EndsWith("line 1 hit 2 times")
+	ValueTrace.Value(Events, "Examples").Last.EndsWith("line 2 hit 2 times, each: 1, 2")
 	for Hits(lines)
 		Line(value.Key, value.Value, folder)
 Hits(lines Texts) Dictionary(Text, Texts)
@@ -69,7 +69,7 @@ Help(code Text, summaries Texts) Text
 	ValueTrace.Help("for Range(0, 3)", ("\nSet|for|0", "\nSet|for|1")) is ", each: 0, 1"
 	ValueTrace.Help("let sum = a + b", List(Text) + "\nUse|a|5\nUse|b|3\nSet|sum|8") is ": sum = 5 + 3 = 8"
 	ValueTrace.Help("value * 2", ("\nUse|value|1\nRes|2", "\nUse|value|2\nRes|4")) is ", each: 2, 4"
-	named = Assigned(code)
+	named = Assign(code)
 	isLoop = code.StartsWith("for ")
 	prefix = isLoop then "Set|for|" else named.Length is 2 then "Set|" + named(0) + "|" else "Res|"
 	mutable results = List(Mutable(Text))
@@ -102,25 +102,25 @@ Same(code Text, named Texts, summary Text, result Text) Text
 	ValueTrace.Same("a + b", List(Text), "\nUse|a|5\nUse|b|3", "8") is ": 5 + 3 = 8"
 	ValueTrace.Same("let a = 7", ("a", "a"), "", "7") is ": a = 7"
 	ValueTrace.Same("return false", List(Text), "", "false") is ": false = false"
-	plain = Unselected(code.Replace("return ", ""))
+	plain = Unselect(code.Replace("return ", ""))
 	start = code.IndexOf(" = ") + 3
 	expression = named.Length is 2 then code.Substring(start) else plain
 	isSimple = Tokenizer(expression).Tokens.Length is 1
-	shown = isSimple then result else Substituted(expression, summary) + " = " + result
+	shown = isSimple then result else Substitute(expression, summary) + " = " + result
 	if named.Length is 2
 		return ": " + named(0) + " = " + shown
 	isHidden = code.StartsWith("return ") is false and (result is "true" or isSimple and expression is result)
 	isHidden then "" else ": " + (isSimple then expression + " = " + shown else shown)
-Unselected(code Text) Text
+Unselect(code Text) Text
 	ValueTrace.Same("a > b", List(Text), "", "true") is ""
-	ValueTrace.Unselected("\"add\" then first + second") is "first + second"
-	ValueTrace.Unselected("a > 0 then a else 0") is "a > 0 then a else 0"
+	ValueTrace.Unselect("\"add\" then first + second") is "first + second"
+	ValueTrace.Unselect("a > 0 then a else 0") is "a > 0 then a else 0"
 	at = code.IndexOf(" then ")
 	at < 0 or code.IndexOf(" else ") >= 0 then code else code.Substring(at + 6, code.Length - at - 6)
-Substituted(expression Text, summary Text) Text
-	ValueTrace.Substituted("numbers(0) + b", Summed) is "numbers(0) + 5"
-	ValueTrace.Substituted("number.b", Summed) is "number.b"
-	ValueTrace.Substituted("b + b", Summed) is "5 + 5" and ValueTrace.Substituted("b.", Summed) is "5."
+Substitute(expression Text, summary Text) Text
+	ValueTrace.Substitute("numbers(0) + b", Summed) is "numbers(0) + 5"
+	ValueTrace.Substitute("number.b", Summed) is "number.b"
+	ValueTrace.Substitute("b + b", Summed) is "5 + 5" and ValueTrace.Substitute("b.", Summed) is "5."
 	tokens = Tokenizer(expression).Tokens
 	mutable text = ""
 	for tokens
@@ -130,10 +130,10 @@ Substituted(expression Text, summary Text) Text
 		isTight = isClosing or value is "(" and previous is not in Operators
 		text = text + (isTight then "" else " ") + (used is "" then value else used)
 	text
-Assigned(line Text) Texts
-	ValueTrace.Assigned("\tlet scale = 10 ^ decimals") is ("scale", "scale")
-	ValueTrace.Assigned("\t\tcount = count + 1") is ("count", "count")
-	ValueTrace.Assigned("has number with value >= -1").Length is 0
+Assign(line Text) Texts
+	ValueTrace.Assign("\tlet scale = 10 ^ decimals") is ("scale", "scale")
+	ValueTrace.Assign("\t\tcount = count + 1") is ("count", "count")
+	ValueTrace.Assign("has number with value >= -1").Length is 0
 	words = line.Trim.Split(" ")
 	at = words.First is in ("let", "mutable") then 1 else 0
 	words.Length > at + 2 and words(at + 1) is "=" then (words(at), words(at)) else List(Text)

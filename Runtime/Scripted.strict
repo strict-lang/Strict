@@ -19,10 +19,10 @@ IsRun(arguments Texts) Boolean
 	Scripted.IsRun(("run", "-c")) is false
 	Scripted.IsRun(("test", "a.strict")) is false
 	IsCode(arguments) or (arguments.Length > 1 then arguments(0) is "run" and arguments(1) is not "-c" else false)
-Packed(arguments Texts) Texts
-	Scripted.Packed(("run", "-c", "a\n\tb")) is ("run", "-c", "a" + NewLine + Tab + "b")
-	Scripted.Packed(("-c", "a\n\tb")) is ("run", "-c", "a" + NewLine + Tab + "b")
-	Scripted.Packed(("test", "a\tb")) is ("test", "a\tb")
+Pack(arguments Texts) Texts
+	Scripted.Pack(("run", "-c", "a\n\tb")) is ("run", "-c", "a" + NewLine + Tab + "b")
+	Scripted.Pack(("-c", "a\n\tb")) is ("run", "-c", "a" + NewLine + Tab + "b")
+	Scripted.Pack(("test", "a\tb")) is ("test", "a\tb")
 	isShort = arguments.Length > 1 then arguments(0) is "-c" else false
 	expanded = isShort then List(Text) + "run" + arguments else arguments
 	if IsCode(expanded) is false
@@ -38,11 +38,11 @@ Lines Texts
 		if unit is 0 and value.StartsWith(" ")
 			unit = value.Length - value.TrimStart.Length
 	for lines
-		Tabbed(value, unit)
-Tabbed(line Text, unit Number) Text
-	Scripted.Tabbed("    a  b", 2) is "\t\ta  b"
-	Scripted.Tabbed("\ta", 0) is "\ta"
-	Scripted.Tabbed("a", 2) is "a"
+		TabLine(value, unit)
+TabLine(line Text, unit Number) Text
+	Scripted.TabLine("    a  b", 2) is "\t\ta  b"
+	Scripted.TabLine("\ta", 0) is "\ta"
+	Scripted.TabLine("a", 2) is "a"
 	if unit is 0 or line.StartsWith(" ") is false
 		return line
 	mutable tabbed = line.TrimStart
@@ -61,19 +61,19 @@ Owner(lines Texts, at Number) Text
 	isUpper = lines(top).Length > 0 then lines(top)(0) is not lines(top)(0).Lower else false
 	isHeader = top + 1 < lines.Length then isUpper and lines(top + 1).StartsWith("\t") else false
 	isMember then "member" else isHeader then "method" else "run"
-Picked(owner Text, lines = List(Text)) Texts
-	Doubling.Picked("member") is ("has number")
-	Doubling.Picked("method") is ("Twice(count Number) Number", "\tcount * 2")
+Pick(owner Text, lines = List(Text)) Texts
+	Doubling.Pick("member") is ("has number")
+	Doubling.Pick("method") is ("Twice(count Number) Number", "\tcount * 2")
 	items = lines.Length > 0 then lines else Lines
 	mutable picked = List(Mutable(Text))
 	for items
 		if value.Trim is not "" and Owner(items, index) is owner
 			picked.Add(owner is "run" then "\t" + value else value)
 	picked
-Named(lines Texts, at Number) Texts
-	Doubling.Named(Doubling.Lines, 1) is ("twice")
-	Doubling.Named(Doubling.Lines, 3) is ("count")
-	Scripted.Named(List(Text) + "for row, cell in rows, row", 0) is ("for", "row", "cell")
+FindNames(lines Texts, at Number) Texts
+	Doubling.FindNames(Doubling.Lines, 1) is ("twice")
+	Doubling.FindNames(Doubling.Lines, 3) is ("count")
+	Scripted.FindNames(List(Text) + "for row, cell in rows, row", 0) is ("for", "row", "cell")
 	tokens = Tokenizer(lines(at).Trim).Tokens
 	isHeader = Owner(lines, at) is "method" and lines(at).StartsWith("\t") is false
 	last = (tokens.Length > 0 then tokens.First is "for" else false) then tokens.Index("in") else 0
@@ -84,12 +84,12 @@ Named(lines Texts, at Number) Texts
 		if (isNamed or isAssigned or isHeader or index < last) and value(0) is not value(0).Upper
 			names.Add(value)
 	names
-Declared(lines = List(Text)) Texts
-	Doubling.Declared is ("number", "twice", "count")
+Declare(lines = List(Text)) Texts
+	Doubling.Declare is ("number", "twice", "count")
 	items = lines.Length > 0 then lines else Lines
 	mutable declared = List(Text)
 	for items
-		declared = declared + Named(items, index)
+		declared = declared + FindNames(items, index)
 	declared
 Used(line Text) Texts
 	Scripted.Used("logger.Log(first.second.third)") is ("logger", "first")
@@ -103,12 +103,12 @@ Used(line Text) Texts
 		if isAccess and isFirst and value(0) is not value(0).Upper
 			used.Add(value)
 	used
-Wanted(lines = List(Text)) Texts
-	Loop.Wanted.Length is 0
-	Doubling.Wanted.Length is 0
-	Scripted("let file = File(arguments(0))\nfile.Delete").Wanted.Length is 0
+Want(lines = List(Text)) Texts
+	Loop.Want.Length is 0
+	Doubling.Want.Length is 0
+	Scripted("let file = File(arguments(0))\nfile.Delete").Want.Length is 0
 	items = lines.Length > 0 then lines else Lines
-	declared = Declared(items) + Given
+	declared = Declare(items) + Given
 	mutable wanted = List(Mutable(Text))
 	for line, name in items, Used(line)
 		if name is not in declared and name is not in wanted
@@ -119,39 +119,39 @@ LinesOf(members Texts, lines = List(Text)) Texts
 	Doubling.LinesOf(List(Text) + "logger") is Doubled.Split("\n")
 	Scripted("Run\n\t1").LinesOf(List(Text)) is ("Run", "\t1")
 	items = lines.Length > 0 then lines else Lines
-	mutable result = Picked("member", items)
+	mutable result = Pick("member", items)
 	for members
 		result.Add("has " + value)
-	run = Picked("run", items)
+	run = Pick("run", items)
 	header = "arguments" is in code then "Run(arguments Texts)" else "Run"
-	result + (run.Length > 0 then List(Text) + header + run else run) + Picked("method", items)
+	result + (run.Length > 0 then List(Text) + header + run else run) + Pick("method", items)
 Source(members Texts) Text
 	Loop.Source(List(Text) + "logger") is Looped
 	Doubling.Source(List(Text) + "logger") is Doubled
 	Scripted("Run\n\t1").Source(List(Text)) is "Run\n\t1"
 	Text.Combine(LinesOf(members), "\n")
-Stored(source Text) Texts slow
-	Loop.Stored("a\nb") is ("a", "b")
+Store(source Text) Texts slow
+	Loop.Store("a\nb") is ("a", "b")
 	File(Path).InMemory(source)
 	File(Path).ReadLines
 Members(root Text, lines = List(Text)) Texts slow
 	mutable members = List(Mutable(Text))
-	for Wanted(lines)
+	for Want(lines)
 		if File(root + "/" + value.Capitalize + ".strict").Exists or File(value.Capitalize + ".strict").Exists
 			members.Add(value)
 	members
-Loaded(root Text) List(TypeEntry) slow
-	if Stored(Source(Members(root))).Length is 0
+Load(root Text) List(TypeEntry) slow
+	if Store(Source(Members(root))).Length is 0
 		return List(TypeEntry)
-	types = Execute.Loaded(Path, root, false)
+	types = Execute.Load(Path, root, false)
 	File(Path).InMemory("")
 	types
 HasRun(arguments Texts, root Text) Boolean slow
 	mutable texts = List(Mutable(VmValue))
 	for Range(3, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
-	types = Loaded(root)
-	types.Length > 0 then Execute.Started(types, Path).IsCompleted(types.First.Name, texts) else false
+	types = Load(root)
+	types.Length > 0 then Execute.Start(types, Path).IsCompleted(types.First.Name, texts) else false
 RanWith(arguments Texts, root Text, cache Answer, path = "") Answer slow
 	raw = Lines
 	lines = LinesOf(Members(root, raw), raw)

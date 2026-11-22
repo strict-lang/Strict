@@ -28,11 +28,11 @@ Run Number
 			Directory.Delete("obj/" + Path(value).FileName.text)
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	logger.Log("Cached passes, unit deadlines, Slow selection, internal packages, Run order and shares passed")
 	0
-Checked(folder Text)
+Check(folder Text)
 	CheckDeps(folder)
 	CheckBudget(folder)
 	CheckLazy(folder)
@@ -44,78 +44,78 @@ CheckDeps(folder Text)
 	File(folder + "/Doubling.strict").Write(DoubleCode)
 	File(folder + "/Tripling.strict").Write(TripleCode)
 	File(folder + "/Sixfold.strict").Write(SixCode)
-	if Ran("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is not 0
+	if RunTests("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is not 0
 		return Error("InitialDependencyChainFailed")
 	File(folder + "/Doubling.strict").Write(("has number", "Doubled Number", "	Doubling(2).Doubled is 6", "	number * 3"))
-	if Ran("test " + folder + "/Tripling.strict unit", Pooled).exitCode is not 0
+	if RunTests("test " + folder + "/Tripling.strict unit", Pooled).exitCode is not 0
 		return Error("UnchangedCallerFailed")
-	if Ran("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is 0
+	if RunTests("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is 0
 		return Error("StaleCacheSurvivedChange")
 CheckBudget(folder Text)
 	File(folder + "/TestWork.strict").Write(PauseLines)
 	File(folder + "/OverBudget.strict").Write(("Delay Number", "	OverBudget.Delay is 1", "	TestWork.Pause"))
 	overSource = folder + "/OverBudget.strict"
-	CheckFail(Ran("test " + overSource + " unit", Pooled), DeadlineName, "OverBudgetVm")
+	CheckFail(RunTests("test " + overSource + " unit", Pooled), DeadlineName, "OverBudgetVm")
 	if File(folder + "/obj/OverBudget.strictbinary").Exists
 		return Error("FailedUnitWasCached")
-	CheckFail(Ran("build " + overSource, Pooled), DeadlineName, "OverBudgetBuild")
-	CheckFail(Ran("test " + overSource + " unit native", Pooled), DeadlineName, "OverBudgetNative")
+	CheckFail(RunTests("build " + overSource, Pooled), DeadlineName, "OverBudgetBuild")
+	CheckFail(RunTests("test " + overSource + " unit native", Pooled), DeadlineName, "OverBudgetNative")
 	CheckSharedBudget(folder)
 CheckSharedBudget(folder Text)
 	sharedSource = folder + "/SharedBudget.strict"
 	File(sharedSource).Write(SharedBudgetCode)
-	CheckPass(Ran("test " + sharedSource + " unit", Pooled), "", "SharedVm")
-	CheckPass(Ran("test " + sharedSource + " unit native", Pooled), "", "SharedNative")
+	CheckPass(RunTests("test " + sharedSource + " unit", Pooled), "", "SharedVm")
+	CheckPass(RunTests("test " + sharedSource + " unit native", Pooled), "", "SharedNative")
 CheckLazy(folder Text)
 	File(folder + "/LazyFixture.strict").Write(LazyHead + LazyTail)
-	lazy = Ran("test " + folder + "/LazyFixture.strict unit", Pooled)
+	lazy = RunTests("test " + folder + "/LazyFixture.strict unit", Pooled)
 	if lazy.exitCode is not 0 or lazy.Output.Split("fixture computed").Length is not 2
 		return Error("LazyFixtureCountWrong: " + lazy.Output)
 	if lazy.Output.IndexOf(PassedLine) >= lazy.Output.IndexOf("fixture computed")
 		return Error("FixtureInitializedTooEarly: " + lazy.Output)
 	File(folder + "/SetupBudget.strict").Write(SetupBudgetCode)
-	CheckFail(Ran("test " + folder + "/SetupBudget.strict unit", Pooled), DeadlineName, "SetupBudget")
+	CheckFail(RunTests("test " + folder + "/SetupBudget.strict unit", Pooled), DeadlineName, "SetupBudget")
 	CheckHangs(folder)
 CheckHangs(folder Text)
 	hangs = folder + "/Hangs.strict"
 	File(hangs).Write(HangLines)
-	CheckFail(Ran("test " + hangs + " unit", Pooled), DeadlineName, "HangsVm")
-	CheckFail(Ran("test " + hangs + " unit native", Pooled), DeadlineName, "HangsNative")
-	CheckFail(Ran("check " + folder, Pooled), DeadlineName, "HangsCheck")
+	CheckFail(RunTests("test " + hangs + " unit", Pooled), DeadlineName, "HangsVm")
+	CheckFail(RunTests("test " + hangs + " unit native", Pooled), DeadlineName, "HangsNative")
+	CheckFail(RunTests("check " + folder, Pooled), DeadlineName, "HangsCheck")
 CheckPolicy(folder Text)
 	File(folder + "/Policy.strict").Write(PolicyHead + PolicyMid + PolicyTail)
 	source = folder + "/Policy.strict"
-	unit = Ran("test " + source + " unit", Pooled)
+	unit = RunTests("test " + source + " unit", Pooled)
 	if unit.exitCode is not 0 or "manual fixture" is in unit.Output
 		return Error("UnitRanSlowTest: " + unit.Output)
-	CheckPass(Ran("test " + source, Pooled), "manual fixture", "ExplicitSlow")
-	selected = Ran("test " + source + " Quick", Pooled)
+	CheckPass(RunTests("test " + source, Pooled), "manual fixture", "ExplicitSlow")
+	selected = RunTests("test " + source + " Quick", Pooled)
 	if selected.exitCode is not 0 or "manual fixture" is in selected.Output
 		return Error("SelectedRanSlowTest: " + selected.Output)
 	CheckPolicyRun(source)
 CheckPolicyRun(source Text)
-	ran = Ran(source, Pooled)
+	ran = RunTests(source, Pooled)
 	if ran.exitCode is not 0 or ran.Output.IndexOf("manual fixture") >= ran.Output.IndexOf("application")
 		return Error("ManualRunOrderWrong: " + ran.Output)
-	unitNat = Ran("test " + source + " unit native", Pooled)
-	slowNat = Ran("test " + source + " native Value", Pooled)
+	unitNat = RunTests("test " + source + " unit native", Pooled)
+	slowNat = RunTests("test " + source + " native Value", Pooled)
 	badUnit = unitNat.exitCode is not 0 or "manual fixture" is in unitNat.Output
 	if badUnit or slowNat.exitCode is not 0 or "manual fixture" is not in slowNat.Output
 		return Error("NativeSlowSelectionWrong")
 CheckWaiting(folder Text)
 	waitSource = folder + "/Waiting.strict"
 	File(waitSource).Write(WaitLines)
-	CheckPass(Ran("test " + waitSource + " unit", Pooled), "", "WaitingVm")
-	CheckPass(Ran("test " + waitSource + " unit native", Pooled), "", "WaitingNative")
-	broken = Ran("test Runtime/broken unit", Pooled)
+	CheckPass(RunTests("test " + waitSource + " unit", Pooled), "", "WaitingVm")
+	CheckPass(RunTests("test " + waitSource + " unit native", Pooled), "", "WaitingNative")
+	broken = RunTests("test Runtime/broken unit", Pooled)
 	if "All tests passed in Runtime/broken/Fine.strict" is not in broken.Output
 		return Error("BrokenFileStoppedFolder: " + broken.Output)
 	CheckFail(broken, "LoopBodyMissing", "BrokenFile")
 CheckProbe
 	File(ProbePath).Write(ProbeLines)
-	unitRes = Ran("test " + ProbePath + " unit", Pooled)
-	natRes = Ran("test " + ProbePath + " unit native", Pooled)
-	full = Ran("test " + ProbePath, Pooled)
+	unitRes = RunTests("test " + ProbePath + " unit", Pooled)
+	natRes = RunTests("test " + ProbePath + " unit native", Pooled)
+	full = RunTests("test " + ProbePath, Pooled)
 	File(ProbePath).Delete
 	File("Bytecode/obj/PolicyProbe.strictbinary").Delete
 	badUnit = unitRes.exitCode is not 0 or "Test passed" is not in unitRes.Output
@@ -132,20 +132,20 @@ CheckShares(folder Text)
 	callLine = "	for Process.RunTools(\"" + tool + "\", (\"" + line + "\", \"" + line + "\"))"
 	sharesCode = ("has logger", "Run Number", callLine, "		logger.Log(\"threads \" + value.Output.Trim)", "	0")
 	File(folder + "/Shares.strict").Write(sharesCode)
-	shared = Ran(folder + "/Shares.strict", NoThreads)
+	shared = RunTests(folder + "/Shares.strict", NoThreads)
 	if shared.exitCode is not 0 or SharedCount(shared.Output) is not 2
 		return Error("ToolSharesWrong: " + shared.Output)
-	kept = Ran(folder + "/Shares.strict", Pooled)
+	kept = RunTests(folder + "/Shares.strict", Pooled)
 	if kept.exitCode is not 0 or kept.Output.Split("threads 8").Length is not 3
 		return Error("ExplicitThreadsNotKept: " + kept.Output)
 	CheckDeadline(folder)
 CheckDeadline(folder Text)
 	File(folder + "/Loops.strict").Write(LoopLines)
-	looped = Ran("test " + folder + "/Loops.strict Spin", ShortDeadline)
+	looped = RunTests("test " + folder + "/Loops.strict Spin", ShortDeadline)
 	marker = folder + "/alive.txt"
 	child = Process.OperatingSystem is "Windows" then WindowsChild + marker + "\")" else LinuxChild + marker + "'\")"
 	File(folder + "/Orphan.strict").Write("result = Process.RunTool(" + child + "\nlogger.Log(result.exitCode to Text)")
-	parent = Ran("run " + folder + "/Orphan.strict", ShortDeadline)
+	parent = RunTests("run " + folder + "/Orphan.strict", ShortDeadline)
 	Process.Wait(8)
 	if File(marker).Exists
 		return Error("ChildOutlivedParent: " + parent.Output)
@@ -156,7 +156,7 @@ SharedCount(output Text) Number
 		if value.StartsWith("threads ") and value.Substring(8) to Number >= 2
 			count = count + 1
 	count
-Ran(arguments Text, variables Texts) ProcessResult
+RunTests(arguments Text, variables Texts) ProcessResult
 	win = Process.OperatingSystem is "Windows"
 	exe = "\"" + Process.Find("strict").executable + "\" "
 	cmd = variables(win then 0 else 1) + exe + arguments

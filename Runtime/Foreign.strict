@@ -16,19 +16,19 @@ Called VmValue
 	Foreign(Invocation.AddCall, List(TypeEntry)).Called.items.First.text is "Unsupported native call T.Add"
 	Framed.Called.items.First.text.StartsWith("TraitHasNoImplementation")
 	type = Natives(types).TypeOf(call.TypeName)
-	built = IsForeign(type) then Built(type) else "Unsupported native call " + call.TypeName + "." + call.MethodName
+	built = IsForeign(type) then Build(type) else "Unsupported native call " + call.TypeName + "." + call.MethodName
 	if built.StartsWith("Built ") is false
 		return VmValue.OfError(built)
 	library = Library(built.Substring(6, built.Length - 6))
 	method = Method(type)
 	bits = library.Call(type.JustName + "_" + call.MethodName, Arguments(library, method))
 	failure = library.Failure(bits)
-	failure is "" then Converted(library, method.returnType, bits) else VmValue.OfError(failure)
-Constructed(type TypeEntry) VmValue
-	Adding.Constructed(Adder) is Adding.Called
-	IsForeign(type) then Called else Rounding.Single.Built(type, call, Natives(types, folder), type.IsStruct)
-Built(type TypeEntry) Text
-	Adding.Built(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")
+	failure is "" then Convert(library, method.returnType, bits) else VmValue.OfError(failure)
+Construct(type TypeEntry) VmValue
+	Adding.Construct(Adder) is Adding.Called
+	IsForeign(type) then Called else Rounding.Single.Build(type, call, Natives(types, folder), type.IsStruct)
+Build(type TypeEntry) Text
+	Adding.Build(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")
 	native = Folder(type)
 	if Directory.Exists(native) is false
 		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
@@ -64,9 +64,9 @@ Arguments(library Library, method MethodEntry) Numbers
 		number = kind.EndsWith("Text") then library.TextSlot(given.text) else given.number
 		arguments = arguments + (MlirForeign.IsNumbers(kind) then library.NumbersSlot(Numbers(given.items)) else number)
 	arguments
-Converted(library Library, returnType Text, bits Number) VmValue
-	Adding.Converted(Library("missing.dll"), "Strict/Number", 3).number is 3
-	Adding.Converted(Library("missing.dll"), "Strict/Boolean", 0).kind is "Boolean"
+Convert(library Library, returnType Text, bits Number) VmValue
+	Adding.Convert(Library("missing.dll"), "Strict/Number", 3).number is 3
+	Adding.Convert(Library("missing.dll"), "Strict/Boolean", 0).kind is "Boolean"
 	if returnType.EndsWith("Boolean")
 		return VmValue.OfBoolean(bits is not 0)
 	if returnType.EndsWith("Text")
@@ -117,7 +117,7 @@ Hosted VmValue
 	library = Library(call.Instance.Member(0).text)
 	name = call.MethodName
 	if name is not in ("Call", "TextSlot", "NumbersSlot")
-		return Copied(library, name, call.Arguments.First.number)
+		return Copy(library, name, call.Arguments.First.number)
 	result = Raw(library, name)
 	result is Error then VmValue.OfError(result.Name.text) else VmValue.OfNumber(result)
 Raw(library Library, name Text) Number
@@ -126,8 +126,8 @@ Raw(library Library, name Text) Number
 	if name is "Call"
 		return library.Call(argument.text, Numbers(call.Arguments.Last.items))
 	name is "TextSlot" then library.TextSlot(argument.text) else library.NumbersSlot(Numbers(argument.items))
-Copied(library Library, name Text, bits Number) VmValue
-	Adding.Copied(Library("missing.dll"), "Failure", 3).text is ""
+Copy(library Library, name Text, bits Number) VmValue
+	Adding.Copy(Library("missing.dll"), "Failure", 3).text is ""
 	if name is "TextResult"
 		return VmValue.OfText(library.TextResult(bits))
 	name is "Failure" then VmValue.OfText(library.Failure(bits)) else Elements(library.NumbersResult(bits))

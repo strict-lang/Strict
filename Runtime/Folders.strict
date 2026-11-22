@@ -5,8 +5,8 @@ constant PendingFile = BinaryFile(PendingPath)
 constant PendingSource = PtxCache("Compiler/output/Pending/Go").Saved(".strict", "from") is not Error
 constant PendingHeader = PendingSource then BinarySources(List(Text) + PendingPath).Stamped.Header else List(Number)
 constant PendingBytes = PendingFile.Packed(PendingHeader, List(TypeEntry) + BinaryLinks.Tested, List(Text))
-Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
-	Folders.Tested("Missing", ".") is 0
+TestFolder(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
+	Folders.TestFolder("Missing", ".") is 0
 	files = NativeFolder(isRecursive = isRecursive).Files(folder)
 	pending = Pending(files, isMutating)
 	mutable failed = 0
@@ -14,9 +14,9 @@ Tested(folder Text, root Text, isRecursive = true, isMutating = false, isFull = 
 		if isMutating is false and isFull is false
 			failed = Execute.Failures(pending, pending, root, false)
 		else
-			failed = Ran(Commands("test", pending, root, isMutating, isFull))
+			failed = RunFolders(Commands("test", pending, root, isMutating, isFull))
 	for files - pending
-		failed = failed + Execute(isMutating = isMutating).Cached(value)
+		failed = failed + Execute(isMutating = isMutating).Cache(value)
 	failed
 Pending(files Texts, isMutating Boolean) Texts slow
 	Folders.Pending(List(Text) + "Missing.strict", false) is ("Missing.strict")
@@ -33,7 +33,7 @@ IsChanged(path Text) Boolean slow
 	Execute.IsEdited(path) or isTested is false
 Nightly(folder Text, root Text) Number slow
 	Folders.Nightly("Missing", ".") is 0
-	Ran(Commands("test", Execute("*").Stale(NativeFolder.Files(folder)), root, false, false, true))
+	RunFolders(Commands("test", Execute("*").Stale(NativeFolder.Files(folder)), root, false, false, true))
 Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false, isNightly = false) Texts
 	Folders.Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders.Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")
@@ -43,17 +43,17 @@ Commands(command Text, paths Texts, root Text, isMutating = false, isFull = fals
 	options = isNightly then " nightly" else checked
 	for paths
 		command + " \"" + value + "\" \"" + root + "\"" + options
-Cleaned(folder Text) Number
-	Folders.Cleaned("Missing") is 0
+Clean(folder Text) Number
+	Folders.Clean("Missing") is 0
 	Directory.Create("Compiler/output/Clean") is not Error
 	Directory.Create("Compiler/output/Clean/obj") is not Error
 	Directory.Exists("Compiler/output/Clean/obj")
-	Folders.Cleaned("Compiler/output/Clean") is 0
+	Folders.Clean("Compiler/output/Clean") is 0
 	Directory.Exists("Compiler/output/Clean/obj") is false
 	mutable removed = 0
 	for Directory.Directories(folder)
 		name = Path(value).FileName.text
-		removed = removed + (name is "obj" then Removed(value) else (name is in (".git", "Tools") then 0 else Cleaned(value)))
+		removed = removed + (name is "obj" then Remove(value) else (name is in (".git", "Tools") then 0 else Clean(value)))
 	removed
 IsKept(file Text) Boolean
 	Folders.IsKept("./obj/strict.ptx")
@@ -63,19 +63,19 @@ IsKept(file Text) Boolean
 	program = Path(Path(file).PathOnly.text).PathOnly.text + "/" + name.Split(".").First
 	isDevice = ("." + name.Split(".").Last) is in (".ptx", ".fatbin", ".hsaco", ".metal")
 	isDevice and (File(program + ".exe").Exists or File(program).Exists)
-Removed(folder Text) Number
-	Folders.Removed("Missing") is 0
+Remove(folder Text) Number
+	Folders.Remove("Missing") is 0
 	mutable removed = 0
 	for Directory.Files(folder)
 		if IsKept(value) is false
 			File(value).Delete
 			removed = removed + 1
 	for Directory.Directories(folder)
-		removed = removed + Removed(value)
+		removed = removed + Remove(value)
 	Directory.Delete(folder)
 	removed
-Ran(arguments Texts) Number
-	Folders.Ran(List(Text)) is 0
+RunFolders(arguments Texts) Number
+	Folders.RunFolders(List(Text)) is 0
 	mutable failed = 0
 	for Range(0, ((arguments.Length + Batch - 1) / Batch).Floor)
 		start = value * Batch
@@ -84,10 +84,10 @@ Ran(arguments Texts) Number
 			logger.Log((value.Output + value.error).Replace("\r", "").Trim)
 			if value.exitCode is not 0
 				logger.Log("strict " + arguments(start + index) + " exited with " + value.exitCode)
-			failed = failed + Failed(value.exitCode)
+			failed = failed + Fail(value.exitCode)
 	failed
-Failed(exitCode Number) Number
-	Folders.Failed(3) is 3
-	Folders.Failed(-1073741819) is 1
-	Folders.Failed(0) is 0 and Folders.Failed(200) is 1
+Fail(exitCode Number) Number
+	Folders.Fail(3) is 3
+	Folders.Fail(-1073741819) is 1
+	Folders.Fail(0) is 0 and Folders.Fail(200) is 1
 	exitCode >= 0 and exitCode < CrashExitCode then exitCode else 1

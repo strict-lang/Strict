@@ -106,7 +106,7 @@ Linked(entry TypeEntry, main TypeCodegen) ScriptCache
 	round = fast.Linked((List(TypeEntry) + entry) + BaseRaw, signatures)
 	if round.entries.Length is 0
 		return ScriptCache(value, code = 1)
-	nextMachine = outer.Execute.Started(round.entries, Scripted.Path, false, true)
+	nextMachine = outer.Execute.Start(round.entries, Scripted.Path, false, true)
 	mutable nextKnown = known
 	for round.signatures
 		nextKnown(value) = round.entries(index + 1)
@@ -129,7 +129,7 @@ IsExecuted(entry TypeEntry, arguments List(VmValue)) Boolean
 		return Machine(nextTypes, ConstantCache(List(VmValue)), folder).Prepared.IsCompleted(entry.Name, arguments)
 	machine.prototypes.Stored(0, Natives(nextTypes).Fresh(resolved))
 	prepared = Machine(nextTypes, machine.prototypes, folder, false, machine.sources)
-	machine.prototypes.Stored(0, Constants(prepared).Filled(0))
+	machine.prototypes.Stored(0, Constants(prepared).Fill(0))
 	prepared.IsCompleted(entry.Name, arguments)
 Ran(entry TypeEntry, main TypeCodegen, arguments List(VmValue)) ScriptCache
 	if IsHit(entry)

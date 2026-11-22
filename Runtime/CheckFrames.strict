@@ -4,10 +4,10 @@ constant SourceCheck = ("		if (slots.Length is not 32) or (slots.First.number is
 constant SourceTail = ("	logger.Log(\"Initialized 10,000 frames in \" + elapsed * 1000 + \" ms\")", "	elapsed < 0.02 then 0 else 2")
 Run Number
 	folder = "Examples/FrameCheck" + 1000000.Random.Floor
-	result = Checked(folder)
+	result = Check(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Checked(folder Text)
+Check(folder Text)
 	source = folder + "/FrameBudget.strict"
 	extension = Process.OperatingSystem is "Windows" then ".exe" else ""
 	if Directory.Create(folder) is Error

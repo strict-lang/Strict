@@ -29,31 +29,31 @@ IsCompleted(typeName Text, arguments List(VmValue)) Boolean
 	if isFailed
 		logger.Log(result to Text)
 	isFailed is false
-Typed(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
-	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
-	Hello.Typed(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
-	Hello.Typed(List(MemberEntry) + MemberEntry.NumbersMember, List(VmValue) + VmValue.OfText("5")).First.items.Length is 1
-	Hello.Typed((MemberEntry.NumbersMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6"))).Length is 2
-	Hello.Typed(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("abc")).Last.kind is "Strict/Error"
+Cast(parameters List(MemberEntry), arguments List(VmValue)) List(VmValue)
+	Hello.Cast(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("5")).First.number is 5
+	Hello.Cast(List(MemberEntry) + MemberEntry.LoggerMember, List(VmValue) + VmValue.OfText("a")).First.text is "a"
+	Hello.Cast(List(MemberEntry) + MemberEntry.NumbersMember, List(VmValue) + VmValue.OfText("5")).First.items.Length is 1
+	Hello.Cast((MemberEntry.NumbersMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6"))).Length is 2
+	Hello.Cast(List(MemberEntry) + Paired.members.Last, List(VmValue) + VmValue.OfText("abc")).Last.kind is "Strict/Error"
 	mutable typed = List(Mutable(VmValue))
 	for arguments
 		parameter = index < parameters.Length then parameters(index) else parameters.Last
 		isNumber = parameter.typeName is in ("Strict/Number", "Strict/List(Number)")
-		typed.Add(isNumber then Natives(types).Parsed(value.text) else value)
+		typed.Add(isNumber then Natives(types).Parse(value.text) else value)
 	isListed = parameters.Length is 1 and parameters.First.typeName.StartsWith("Strict/List(")
 	isListed then List(VmValue) + VmValue.OfList(typed) else typed
-Tested(typeName Text, runner Text = TestCodegen.Runner) Number
-	Hello.Tested("HelloLogger") is 0
-	Machine(Hello, deadline = 0.001).Tested("HelloLogger") is 1
-	Defaulting.Tested("Pair") is 5
+RunTests(typeName Text, runner Text = TestCodegen.Runner) Number
+	Hello.RunTests("HelloLogger") is 0
+	Machine(Hello, deadline = 0.001).RunTests("HelloLogger") is 1
+	Defaulting.RunTests("Pair") is 5
 	main = Natives(types).TypeOf(typeName)
 	tests = main.Callee(runner, 0, "None", List(Text))
-	instance = Started(main)
+	instance = Start(main)
 	result = Execute(tests, Bound(main, instance, tests, List(VmValue), instance), main.Name)
 	result.kind is "Strict/Error" then 1 else result.number
-Started(main TypeEntry) VmValue
-	Defaulting.Started(Defaulting.types.First).items.Last.number is 5
-	Hello.Started(TypeEntry.HelloLogger) is Natives(Hello.types).Fresh(TypeEntry.HelloLogger)
+Start(main TypeEntry) VmValue
+	Defaulting.Start(Defaulting.types.First).items.Last.number is 5
+	Hello.Start(TypeEntry.HelloLogger) is Natives(Hello.types).Fresh(TypeEntry.HelloLogger)
 	fresh = Natives(types).Fresh(main)
 	start = DefaultInstance.Start(main)
 	if start.instructions.Length is 0
@@ -82,7 +82,7 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	mode = type.members.Length is 0 then 0 else Ownership(type, instance.kind)
 	empty = VmValue.None
 	for (end, method.Slots).Maximum
-		head = index < 2 then instance else index is Index and end > start then Indexed(method, arguments) else empty
+		head = index < 2 then instance else index is Index and end > start then CallIndex(method, arguments) else empty
 		arg = index >= start then (index < end then Argument(method, arguments, index - start) else empty) else empty
 		index < Frame.MembersSlot then head else index < start then Member(type, instance, index, mode, prototype) else arg
 Member(type TypeEntry, instance VmValue, slot Number, ownership Number, prototype VmValue) VmValue
@@ -110,10 +110,10 @@ Argument(method MethodEntry, arguments List(VmValue), position Number) VmValue
 	if position >= method.parameters.Length
 		return VmValue.None
 	position < arguments.Length then arguments(position) else Natives(types).Initial(method.parameters(position))
-Indexed(method MethodEntry, arguments List(VmValue)) VmValue
-	Hello.Indexed(MethodEntry.Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
-	Hello.Indexed(Defaulted, List(VmValue)).kind is "None"
-	Hello.Indexed(MethodEntry.Indexing, List(VmValue)).number is 0
+CallIndex(method MethodEntry, arguments List(VmValue)) VmValue
+	Hello.CallIndex(MethodEntry.Indexing, List(VmValue) + VmValue.OfNumber(4)).number is 4
+	Hello.CallIndex(Defaulted, List(VmValue)).kind is "None"
+	Hello.CallIndex(MethodEntry.Indexing, List(VmValue)).number is 0
 	for method.parameters
 		if value.Name is "index"
 			return index < arguments.Length then arguments(index) else Natives(types).Initial(value)
@@ -151,34 +151,34 @@ Execute(method MethodEntry, locals List(VmValue), owner Text, depth = 0) VmValue
 	Machine(Frame.Doubling, isQuiet = true, isSampling = true).Execute(Frame.Twice.method, Frame.Listed, "D").number is 42
 	if depth > Invocation.MaxDepth
 		return VmValue.OfError("StackOverflow")
-	stopped = deadline > 0 or depth % 64 is 0 then MutationCache.Stopped(deadline) else ""
+	stopped = deadline > 0 or depth % 64 is 0 then MutationCache.Stop(deadline) else ""
 	if stopped is not ""
 		return VmValue.OfError(stopped)
 	frame = Frame(value, method, owner, depth)
-	(isTracing or isSampling then SampledFrame(frame).Chosen(locals) else frame.Finished(locals))(Frame.ResultSlot)
+	(isTracing or isSampling then SampledFrame(frame).Chosen(locals) else frame.Finish(locals))(Frame.ResultSlot)
 Call(call Invocation) VmValue
 	Machine(List(TypeEntry) + Doubler).Call(Invocation.AddCall).kind is "Strict/Error"
 	Hello.Call(Invocation.Uppered).text is "AB"
 	Hello.Call(Invocation.Emptied).text is ""
-	Hello.Typed((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
-	Hello.Typed(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
+	Hello.Cast((MemberEntry.LoggerMember, Paired.members.Last), (VmValue.OfText("5"), VmValue.OfText("6")))(0).text is "5"
+	Hello.Cast(List(MemberEntry) + Paired.members.Last, (VmValue.OfText("5"), VmValue.OfText("6"))).Last.number is 6
 	Hello.Bound(Doubler, VmValue.None, MethodEntry.Indexing, VmValue.OfNumber(4), VmValue.None)(5).number is 4
-	(deadline > 0 then Hosted(call).IsChanging else false) then VmValue.OfError("ChangeInMutationRun") else Routed(call)
-Routed(call Invocation) VmValue
-	Hello.Routed(Invocation.Uppered).text is "AB"
+	(deadline > 0 then Hosted(call).IsChanging else false) then VmValue.OfError("ChangeInMutationRun") else Route(call)
+Route(call Invocation) VmValue
+	Hello.Route(Invocation.Uppered).text is "AB"
 	at = call.Resolution
-	entry = call.entry.payload.Length > at then call.entry else Resolver(types).Targeted(call.entry)
+	entry = call.entry.payload.Length > at then call.entry else Resolver(types).Target(call.entry)
 	route = entry.payload(at)
 	if route is Resolver.Hosting
 		return Hosted(call).Contained
 	if route is Resolver.Searching
-		return Natives(types).Searched(call.MethodName, call.Instance.text, call.Arguments)
+		return Natives(types).Search(call.MethodName, call.Instance.text, call.Arguments)
 	if route is Resolver.Native and entry.payload(at + 1) > 0
-		return Rounding.Single.Built(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
+		return Rounding.Single.Build(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
 	skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
-	skip then call.Native(Natives(types, folder)) else Executed(route, types(route).methods(entry.payload(at + 1)), call)
-Executed(route Number, method MethodEntry, call Invocation) VmValue
-	Pairing.Executed(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
+	skip then call.Native(Natives(types, folder)) else Dispatch(route, types(route).methods(entry.payload(at + 1)), call)
+Dispatch(route Number, method MethodEntry, call Invocation) VmValue
+	Pairing.Dispatch(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1
 	Hello.Ownership(TypeEntry("Strict/List", List(MemberEntry), List(MethodEntry)), "Strict/List") is 1
 	type = types(route)
@@ -186,7 +186,7 @@ Executed(route Number, method MethodEntry, call Invocation) VmValue
 	if (method.Name is "from" then type.IsStruct and method.IsInitializer(type.Changing) else false) is false
 		return Execute(method, Bound(type, call.Instance, method, call.Arguments, prototype), type.Name, call.Depth)
 	frame = Frame(value, method, type.Name, call.Depth)
-	Natives(types).Constructed(type, frame.Finished(Bound(type, prototype, method, call.Arguments, prototype)))
+	Natives(types).Construct(type, frame.Finish(Bound(type, prototype, method, call.Arguments, prototype)))
 Field(entry InstructionEntry, instance VmValue) VmValue
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "characters", (1, 0, -1)), VmValue.OfText("ab")).text is "ab"
 	Hello.Field(InstructionEntry(InstructionType.FieldLoad, "c", (1, 0, -1)), VmValue.OfError("a")).kind is "Strict/Error"
@@ -200,9 +200,9 @@ Field(entry InstructionEntry, instance VmValue) VmValue
 		if value.Name is entry.texts(0)
 			return MemberValue(owner, instance, index)
 	instance
-Logged(message Text)
-	Hello.Logged("") is not Error
-	Machine(Hello, isQuiet = true).Logged("a") is not Error
+Log(message Text)
+	Hello.Log("") is not Error
+	Machine(Hello, isQuiet = true).Log("a") is not Error
 	isLate = isQuiet and quietUntil > 0 and Process.Elapsed >= quietUntil
 	if message is not "" and IsShown(message, isLate)
 		logger.Log(isLate then "Still testing after " + Process.Elapsed.Round(1) + " s: " + message else message)

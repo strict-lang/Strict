@@ -40,12 +40,12 @@ Target(call Invocation) Numbers
 	Doubling.Target(Hosted.SystemCall) is (Resolver.Hosting, 0, 0)
 	Doubling.Target(HostedJson.Getting) is (Resolver.Hosting, 0, 0)
 	JsonOnly.Target(HostedJson.Getting)(0) is Resolver.Native and Searchable.Target(Searching)(0) is Resolver.Native
-	Textual.Called(Invocation.Parsing) is (Resolver.Native, 0, 0)
-	Characters.Called(Invocation.Coding) is (0, 0, 1)
+	Textual.Call(Invocation.Parsing) is (Resolver.Native, 0, 0)
+	Characters.Call(Invocation.Coding) is (0, 0, 1)
 	if Hosted(call).IsHosted and IsSourceRun(call) is false
 		return (Resolver.Hosting, 0, 0)
 	isText = call.TypeName is "Strict/Text" and call.MethodName is in Natives.TextMethods
-	IsSearch(call) then (Resolver.Native, 0, 0) else isText then (Resolver.Searching, 0, 0) else Called(call)
+	IsSearch(call) then (Resolver.Native, 0, 0) else isText then (Resolver.Searching, 0, 0) else Call(call)
 IsSearch(call Invocation) Boolean
 	Doubling.IsSearch(Searching)
 	Routes(List(TypeEntry) + Lists).IsSearch(Searching) is false
@@ -88,11 +88,11 @@ IsFailing(method MethodEntry) Boolean
 		if value.kind > InstructionType.Return and value.kind < InstructionType.InvokeWriteToList
 			return false
 	method.instructions(count - 2).texts.First is "Strict/Error"
-Called(call Invocation) Numbers
-	Doubling.Called(Resolver.Twice) is (0, 0, 0) and Doubling.Called(Invocation.AddCall)(0) is Resolver.Native
-	Routes(TypeEntry.Holding).Called(Invocation.Held) is (1, 0, 0) and Redirecting.Called(WrapperTwice)(0) is 1
-	Ticking.Called(Resolver.Twice) is (0, 0, 0) and Redirecting.Called(WrapperFrom) is (-1, 1, 0)
-	Defaulting.Called(DefaultAdd) is (Resolver.Native, 0, 0)
+Call(call Invocation) Numbers
+	Doubling.Call(Resolver.Twice) is (0, 0, 0) and Doubling.Call(Invocation.AddCall)(0) is Resolver.Native
+	Routes(TypeEntry.Holding).Call(Invocation.Held) is (1, 0, 0) and Redirecting.Call(WrapperTwice)(0) is 1
+	Ticking.Call(Resolver.Twice) is (0, 0, 0) and Redirecting.Call(WrapperFrom) is (-1, 1, 0)
+	Defaulting.Call(DefaultAdd) is (Resolver.Native, 0, 0)
 	name = call.MethodName
 	own = Natives(types).TypeOf(call.TypeName)
 	isMissing = own.Chosen(name, call.Count, call.ReturnType, call.ParameterNames) < 0 and name is not "from"

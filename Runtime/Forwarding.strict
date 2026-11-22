@@ -19,22 +19,22 @@ constant Finding = "-NoProfile -Command Get-CimInstance Win32_Process | Where-Ob
 constant Serving = "' -and $_.CommandLine -like '* serve*' } | ForEach-Object { taskkill /F /T /PID $_.ProcessId }"
 constant Searching = "-c 'for found in $(pgrep -f \""
 constant Ending = " [s]erve\"); do pkill -KILL -P $found; kill -KILL $found; done'"
-Forwarded(arguments Texts) Number
-	Sample.Forwarded(List(Text) + "format") is Unserved
+Forward(arguments Texts) Number
+	Sample.Forward(List(Text) + "format") is Unserved
 	if IsForwarded(arguments) is false
 		return Unserved
-	arguments(0) is Resident.Stopping then Stopped else Slotted(arguments, 0)
-Slotted(arguments Texts, slot Number) Number
-	Missing.Slotted(List(Text) + "test", Resident.Servers) is Unserved
+	arguments(0) is Resident.Stopping then Stopped else Slot(arguments, 0)
+Slot(arguments Texts, slot Number) Number
+	Missing.Slot(List(Text) + "test", Resident.Servers) is Unserved
 	if slot >= Resident.Servers
 		return Unserved
 	server = Resident(root, ServerFamily(Resident.Variables).Name + (slot is 0 then "" else slot to Text))
 	port = Port(server)
 	isFree = File(server.Freed).Exists and port > 0
-	answer = isFree then Answered(server, port, arguments) else Unserved
+	answer = isFree then ForwardAnswer(server, port, arguments) else Unserved
 	if answer is not Unserved
 		return answer
-	(isFree then false else port is NoPort or IsDead(port)) then Started(server.slot) else Slotted(arguments, slot + 1)
+	(isFree then false else port is NoPort or IsDead(port)) then Start(server.slot) else Slot(arguments, slot + 1)
 Port(server Resident) Number
 	Missing.Port(Resident("Compiler/output/Missing")) is 0
 	stamp = File(server.Stamped)
@@ -47,24 +47,24 @@ IsDead(port Number) Boolean
 		return true
 	Socket.Close(socket)
 	false
-Answered(server Resident, port Number, arguments Texts) Number
-	Sample.Answered(Server, 0, List(Text) + "test") is Unserved
+ForwardAnswer(server Resident, port Number, arguments Texts) Number
+	Sample.ForwardAnswer(Server, 0, List(Text) + "test") is Unserved
 	socket = Socket.Connect("127.0.0.1", port)
 	if socket is Error
 		File(server.Stamped).Delete
 		return Unserved
-	claim = Claimed(server, socket)
+	claim = Claim(server, socket)
 	request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	code = claim is not NoClaim and IsGreeted(socket) then Requested(socket, request) else Unserved
+	code = claim is not NoClaim and IsGreeted(socket) then Request(socket, request) else Unserved
 	Socket.Close(socket)
 	if code is Unserved and claim is not NoClaim
 		File(server.Freed + "." + claim).Rename(server.Freed)
-	code is Dropped then Interrupted(server, port) else code
-Requested(socket Number, request Text) Number
-	Sample.Requested(0, "") is Unserved
-	Server.Send(socket, request) is Error then Unserved else Streamed(socket)
-Interrupted(server Resident, port Number) Number
-	Missing.Interrupted(Resident("Compiler/output/Missing"), 0) is Ended
+	code is Dropped then Interrupt(server, port) else code
+Request(socket Number, request Text) Number
+	Sample.Request(0, "") is Unserved
+	Server.Send(socket, request) is Error then Unserved else Stream(socket)
+Interrupt(server Resident, port Number) Number
+	Missing.Interrupt(Resident("Compiler/output/Missing"), 0) is Ended
 	stamp = File(server.Stamped)
 	if stamp.Exists and stamp.ReadLines.First is (port to Text)
 		return Unserved
@@ -74,7 +74,7 @@ Stopped Number
 	Missing.Stopped is 0
 	killed = Directory.Files(root + "/obj", "strict.server*").Length is 0 then 0 else Killed
 	job = Path(Process.Current.executable.Replace("\\", "/")).FileName.RemoveExtension.text
-	if Coordinator(coordinator).Sent("exit\t" + job, false) is "busy"
+	if Coordinator(coordinator).Send("exit\t" + job, false) is "busy"
 		logger.Log("The coordinator keeps running for a job of another program")
 	killed
 Killed Number
@@ -102,31 +102,31 @@ IsForwarded(arguments Texts) Boolean
 	isOptedOut = Process.Variable("STRICT_SERVER") is "0"
 	isServed = command is in ("test", "check", "build", "run") and isLocal is false and isOptedOut is false
 	command is Resident.Stopping or isServed
-Started(slot Text) Number
+Start(slot Text) Number
 	executable = Process.Current.executable
 	isWindows = Process.OperatingSystem is "Windows"
-	served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
+	served = " serve " + slot + Log(root + "/obj", isWindows, slot)
 	command = "/c \"\"" + executable + "\"" + served + "\""
 	nohup = "-c \"nohup '" + executable + "'" + served + " &\""
 	if isWindows then Process.Find("cmd").Launch(command) is 0 else Process.RunTool("sh", nohup).exitCode is not 0
 		logger.Log("strict server " + slot + " did not start: " + executable + served)
 	Unserved
-Logged(objects Text, isWindows Boolean, slot Text) Text
-	Sample.Logged("Compiler", true, "").EndsWith(" 2>>\"Compiler/server.errors.log\"")
-	Sample.Logged("Compiler", false, "2") is " >>'Compiler/server2.log' 2>>'Compiler/server2.errors.log'"
+Log(objects Text, isWindows Boolean, slot Text) Text
+	Sample.Log("Compiler", true, "").EndsWith(" 2>>\"Compiler/server.errors.log\"")
+	Sample.Log("Compiler", false, "2") is " >>'Compiler/server2.log' 2>>'Compiler/server2.errors.log'"
 	hasObjects = Directory.Create(objects) is not Error
 	output = Output.Replace("server", "server" + slot)
 	errors = Errors.Replace("server", "server" + slot)
-	Kept(objects, output)
-	Kept(objects, errors)
+	Keep(objects, output)
+	Keep(objects, errors)
 	if hasObjects is false
 		return isWindows then "" else " >/dev/null 2>&1"
 	mark = isWindows then "\"" else "'"
 	" >>" + mark + objects + output + mark + " 2>>" + mark + objects + errors + mark
-Kept(objects Text, log Text)
-	Missing.Kept("Compiler/output/Missing", Output) is not Error
+Keep(objects Text, log Text)
+	Missing.Keep("Compiler/output/Missing", Output) is not Error
 	File("Compiler/output/server.log").Write("kept") is not Error
-	Missing.Kept("Compiler/output", Output) is not Error
+	Missing.Keep("Compiler/output", Output) is not Error
 	File("Compiler/output/server.log").Exists
 	current = File(objects + log)
 	if (current.Exists then current.Length > LogLimit else false) is false
@@ -134,8 +134,8 @@ Kept(objects Text, log Text)
 	previous = objects + log.Replace("/server", Previous)
 	File(previous).Delete
 	current.Rename(previous)
-Claimed(server Resident, socket Number) Text
-	Sample.Claimed(Server, 0) is ""
+Claim(server Resident, socket Number) Text
+	Sample.Claim(Server, 0) is ""
 	port = Socket.Port(socket)
 	if port is Error
 		return NoClaim
@@ -148,11 +148,11 @@ IsGreeted(socket Number) Boolean
 		return false
 	greeting = Resident.Greeting
 	ByteEncoder(Socket.Receive(socket, greeting.Length)).Spelled(0, greeting.Length) is greeting
-Streamed(socket Number) Number
-	Sample.Streamed(0) is Dropped
+Stream(socket Number) Number
+	Sample.Stream(0) is Dropped
 	mutable code = -2
 	for as long as code is -2
-		block = Server.Received(socket, "\n")
+		block = Server.Receive(socket, "\n")
 		code = StreamedLines.Code(block.Split("\n"), block.EndsWith("\n") then code else Dropped)
 	code is Resident.Refused then Unserved else code
 Loopback(code Number) Number slow
@@ -160,9 +160,9 @@ Loopback(code Number) Number slow
 	client = Socket.Connect("127.0.0.1", Socket.Port(server))
 	accepted = Socket.Accept(server)
 	Server.Send(client, Resident.Request(Directory.Current, ("test", "a.strict")))
-	isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
-	Server.Finished(accepted, code)
-	streamed = isRequested and IsGreeted(client) then Streamed(client) else 1
+	isRequested = Resident.Arguments(Server.ReadRequest(accepted)) is ("test", "a.strict")
+	Server.Finish(accepted, code)
+	streamed = isRequested and IsGreeted(client) then Stream(client) else 1
 	Socket.Close(client)
 	Socket.Close(server)
 	streamed

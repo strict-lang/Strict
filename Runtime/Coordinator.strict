@@ -30,26 +30,26 @@ Opened Number
 	Directory.Create(Path(Place).PathOnly.text)
 	File(Place).Write(Socket.Port(bound) to Text)
 	bound
-Served
-	Sample.Taken(0) is 0
+Serve
+	Sample.Take(0) is 0
 	server = Opened
 	if server is Error
 		return server
 	mutable idle = Process.Elapsed
 	for as long as isEnding is false and Process.Elapsed - idle < Resident.IdleSeconds
-		socket = Taken(server)
+		socket = Take(server)
 		if socket > 0
 			idle = HasReplied(socket) then Process.Elapsed else idle
 			Socket.Close(socket)
 	File(Place).Delete
 	Socket.Close(server)
-Taken(server Number) Number
-	Sample.Taken(0) is 0
+Take(server Number) Number
+	Sample.Take(0) is 0
 	waiting = Socket.Waiting(server, 1)
 	waiting is Error or waiting is not 1 then 0 else Socket.Accept(server)
 HasReplied(socket Number) Boolean
 	Sample.Chosen(("hello", "a", "1", "b", "0")) is "ok"
-	words = Resident("").Received(socket, "\n").Trim.Split("\t")
+	words = Resident("").Receive(socket, "\n").Trim.Split("\t")
 	isEnding = words(0) is "exit" and (busyJob is "" or words.Last is busyJob)
 	answer = words(0) is "exit" then (isEnding then "ok" else "busy") else Chosen(words)
 	if Resident("").Send(socket, answer + "\n") is Error
@@ -59,15 +59,15 @@ Chosen(words Texts) Text
 	Sample.Chosen("status") is "busy\t\t"
 	Coordinator(busyLabel = "H3Image").Chosen("status") is "busy\t\t"
 	if words.Length > 0 and words(0) is "holding"
-		return Held(words)
+		return Hold(words)
 	if words.Length > 0 and (words(0) is "done" or JobCancel.Matches(words, busyJob))
-		return Finished(words(0))
+		return Finish(words(0))
 	if words.Length > 0 and words(0) is "need"
-		return Needed(Need.Parsed(words), Seen)
+		return Admit(Need.Parsed(words), Seen)
 	busy = "busy\t" + busyJob + "\t" + (busyJob is "" then "" else busyLabel)
-	words.Length > 0 and words(0) is "status" then busy else RemoteRun.Answered(words, Seen)
-Finished(word Text) Text
-	Coordinator(busyJob = "video", busyLabel = "H3Image").Finished("done") is "ok"
+	words.Length > 0 and words(0) is "status" then busy else RemoteRun.AnswerWords(words, Seen)
+Finish(word Text) Text
+	Coordinator(busyJob = "video", busyLabel = "H3Image").Finish("done") is "ok"
 	wantsFree = word is not "done"
 	busyJob = ""
 	busyLabel = ""
@@ -78,10 +78,10 @@ Launcher(current Text) Text
 	Sample.Launcher("C:/Release/Ben.exe") is Process.Find("strict").executable
 	strict = Process.Find("strict")
 	strict.IsAvailable then strict.executable else current
-Held(words Texts) Text
-	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
-	Coordinator(busyJob = "video", busyVram = LockNeed + 1).Held(("holding", "0", LockHeld to Text)) is "free"
-	Coordinator(busyJob = "video", busyVram = LockNeed).Held(("holding", "0", LockHeld to Text)) is "ok"
+Hold(words Texts) Text
+	Sample.Grant(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
+	Coordinator(busyJob = "video", busyVram = LockNeed + 1).Hold(("holding", "0", LockHeld to Text)) is "free"
+	Coordinator(busyJob = "video", busyVram = LockNeed).Hold(("holding", "0", LockHeld to Text)) is "ok"
 	idleRam = words.Length > 1 then words(1) to Number else 0
 	idleVram = words.Length > 2 then words(2) to Number else 0
 	seenAt = Process.Elapsed
@@ -89,7 +89,7 @@ Held(words Texts) Text
 	if (wantsFree or isBlocking) and (busyLabel is "exit" or idleRam > 0 or idleVram > 0)
 		return busyLabel is "exit" then "exit" else "free"
 	"ok"
-Needed(need Need, seen MachineView) Text
+Admit(need Need, seen MachineView) Text
 	verdict = Admission.Verdict(need, seen)
 	if verdict is "go"
 		busyJob = need.job
@@ -102,40 +102,40 @@ Needed(need Need, seen MachineView) Text
 	refusal = "refused\t" + need.job + "\t"
 	waiting = "wait\t" + need.job + "\t1\t" + need.label + "\t0\t0"
 	verdict is "refused" and wantsFree is false then refusal + Admission.Reason(need, seen) else waiting
-Granted(words Texts, seen MachineView) Text
-	Sample.Granted(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
+Grant(words Texts, seen MachineView) Text
+	Sample.Grant(("need", "job", "label", "4", "8", "2", "4", "0", "wait"), MachineView.Wide) is "go\tjob\t0"
 	mutable sample = Coordinator
-	isHeld = sample.Held(("holding", "4", "2")) is "ok" and sample.idleRam is 4
-	isHeld then sample.Needed(Need.Parsed(words), seen) else "bad"
+	isHeld = sample.Hold(("holding", "4", "2")) is "ok" and sample.idleRam is 4
+	isHeld then sample.Admit(Need.Parsed(words), seen) else "bad"
 Seen MachineView slow
 	Sample.Seen.freeRam >= 0
 	video = MachineView.Vram("")
 	idle = Process.Elapsed - seenAt < StaleSeconds then idleRam else 0
 	device = Process.Elapsed - seenAt < StaleSeconds then idleVram else 0
-	freeRam = MachineView.Forced("STRICT_MACHINE_RAM", GpuMemory.HostAvailable)
-	totalRam = MachineView.Forced("STRICT_MACHINE_RAM", GpuMemory.HostTotal)
+	freeRam = MachineView.Force("STRICT_MACHINE_RAM", GpuMemory.HostAvailable)
+	totalRam = MachineView.Force("STRICT_MACHINE_RAM", GpuMemory.HostTotal)
 	MachineView(freeRam, video(1), totalRam, video(0), idle, device, busyJob is not "")
-Sent(line Text, isStarting = true) Text
-	Coordinator("Compiler/output/MissingCoordinator").Sent("status") is ""
-	Coordinator("Compiler/output/MissingCoordinator").Sent("exit\tH3Video", false) is ""
+Send(line Text, isStarting = true) Text
+	Coordinator("Compiler/output/MissingCoordinator").Send("status") is ""
+	Coordinator("Compiler/output/MissingCoordinator").Send("exit\tH3Video", false) is ""
 	socket = root is "" and isStarting then Linked else Connected
 	if socket is NoSocket
 		return NoReply
 	if Resident("").Send(socket, line + "\n") is Error
 		Socket.Close(socket)
 		return NoReply
-	reply = Resident("").Received(socket, "\n")
+	reply = Resident("").Receive(socket, "\n")
 	Socket.Close(socket)
 	reply is Error then NoReply else reply.Trim
-Resolved(line Text) Text
-	Coordinator("Compiler/output/MissingCoordinator").Resolved("need") is ""
-	mutable reply = Sent(line)
+Resolve(line Text) Text
+	Coordinator("Compiler/output/MissingCoordinator").Resolve("need") is ""
+	mutable reply = Send(line)
 	if reply.StartsWith("wait")
 		logger.Log("Waiting for other programs to finish or to free the memory this run needs")
 	for as long as reply.StartsWith("wait")
 		Process.Wait(1)
-		again = Sent(line)
-		reply = again is NoReply then Sent(line) else again
+		again = Send(line)
+		reply = again is NoReply then Send(line) else again
 	reply
 Connected Number
 	Coordinator("Compiler/output/MissingCoordinator").Connected is 0
@@ -154,7 +154,7 @@ Linked Number
 			return Connected
 		Process.Wait(1)
 	NoSocket
-Reported
-	Coordinator("Compiler/output/MissingCoordinator").Reported is not Error
-	reply = Sent("status")
+Report
+	Coordinator("Compiler/output/MissingCoordinator").Report is not Error
+	reply = Send("status")
 	logger.Log(reply is NoReply then "No coordinator" else reply)

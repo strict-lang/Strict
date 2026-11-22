@@ -18,10 +18,10 @@ Issues(rules Text, files Texts) Number native
 RunRule(rule Text, files Texts) Number native
 	ProjectRules(".").RunRule(Fixture + "Validators/GetPrefix.strict", List(Text)) is 0
 	ProjectRules(".").RunRule(Fixture + "Validators/GetPrefix.strict", List(Text) + (Fixture + "Crate.strict")) is 1
-	types = Execute.Loaded(rule, root, false)
+	types = Execute.Load(rule, root, false)
 	if types.Length is 0
 		return Error("ProjectRuleNotCompiled: " + rule)
-	result = ProgramRun(Execute.Started(types, rule)).Result(types.First.Name, Arguments(files))
+	result = ProgramRun(Execute.Start(types, rule)).Result(types.First.Name, Arguments(files))
 	isFailed = result.kind is in VmValue.ErrorKinds
 	isFailed then Error("ProjectRuleFailed: " + rule + ", " + (result to Text)) else result.number
 Arguments(files Texts) List(VmValue)

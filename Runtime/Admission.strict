@@ -10,11 +10,11 @@ Verdict(need Need, seen MachineView) Text
 	Sample.Verdict(Need.Small, MachineView.Wide) is "go"
 	Sample.Verdict(Need.Small, MachineView.Idle) is "free"
 	Sample.Verdict(Need.Small, MachineView.Tight) is "refused"
-	Decided(need, seen)
-Decided(need Need, seen MachineView) Text
-	Sample.Decided(Need.Small, MachineView.Busy) is "wait"
-	Sample.Decided(Need.Small, MachineView.Room) is "go"
-	Sample.Decided(Need(Need.Tiny, mode = "force"), MachineView.Wide) is "go"
+	Decide(need, seen)
+Decide(need Need, seen MachineView) Text
+	Sample.Decide(Need.Small, MachineView.Busy) is "wait"
+	Sample.Decide(Need.Small, MachineView.Room) is "go"
+	Sample.Decide(Need(Need.Tiny, mode = "force"), MachineView.Wide) is "go"
 	if IsTiny(need, seen) and need.mode is not "force"
 		return "refused"
 	if seen.isBusy and Fits(need, seen.freeRam, seen.freeVram) is false
@@ -43,16 +43,16 @@ Reason(need Need, seen MachineView) Text
 	Sample.Reason(BigNeed, HeldMachine).StartsWith("it needs 70 GB RAM and 10 GB VRAM, 20 GB of 128 GB RAM and 4 GB")
 	Sample.Reason(BigNeed, HeldMachine).EndsWith(", idle backends could free 40 GB RAM and 18 GB VRAM")
 	if IsTiny(need, seen)
-		return Undersized(need, seen)
-	needs = "it needs " + Sized(need.Ram) + " RAM and " + Sized(need.Vram) + " VRAM, "
-	free = Sized(seen.freeRam) + " of " + Sized(seen.totalRam) + " RAM and " + Sized(seen.freeVram) + " of "
-	idle = ", idle backends could free " + Sized(seen.idleRam) + " RAM and " + Sized(seen.idleVram) + " VRAM"
-	text = needs + free + Sized(seen.totalVram) + " VRAM are free"
+		return Undersize(need, seen)
+	needs = "it needs " + FormatSize(need.Ram) + " RAM and " + FormatSize(need.Vram) + " VRAM, "
+	free = FormatSize(seen.freeRam) + " of " + FormatSize(seen.totalRam) + " RAM and " + FormatSize(seen.freeVram) + " of "
+	idle = ", idle backends could free " + FormatSize(seen.idleRam) + " RAM and " + FormatSize(seen.idleVram) + " VRAM"
+	text = needs + free + FormatSize(seen.totalVram) + " VRAM are free"
 	seen.idleRam > 0 or seen.idleVram > 0 then text + idle else text
-Undersized(need Need, seen MachineView) Text
-	Sample.Undersized(BigNeed, SmallMachine).EndsWith(" VRAM, it needs at least 64 GB RAM and 10 GB VRAM")
-	total = "this machine has " + Sized(seen.totalRam) + " RAM and " + Sized(seen.totalVram) + " VRAM"
-	total + ", it needs at least " + Sized(need.minimumRam) + " RAM and " + Sized(need.minimumVram) + " VRAM"
-Sized(bytes Number) Text
-	Sample.Sized(Gigabyte * 2.5) is "2.5 GB"
+Undersize(need Need, seen MachineView) Text
+	Sample.Undersize(BigNeed, SmallMachine).EndsWith(" VRAM, it needs at least 64 GB RAM and 10 GB VRAM")
+	total = "this machine has " + FormatSize(seen.totalRam) + " RAM and " + FormatSize(seen.totalVram) + " VRAM"
+	total + ", it needs at least " + FormatSize(need.minimumRam) + " RAM and " + FormatSize(need.minimumVram) + " VRAM"
+FormatSize(bytes Number) Text
+	Sample.FormatSize(Gigabyte * 2.5) is "2.5 GB"
 	(bytes / Gigabyte).Round(1) + " GB"

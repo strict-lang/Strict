@@ -3,29 +3,29 @@ constant Quiet = SampledFrame(Frame(Machine(Frame.Doubling, isQuiet = true), Fra
 Chosen(arguments List(VmValue)) List(VmValue)
 	Quiet.Chosen(Frame.Listed)(Frame.ResultSlot).number is 42
 	SampledFrame(Frame(Machine(Frame.Doubling, isTracing = true), Frame.Twice.method, "D")).Chosen(Frame.Listed).Length > 6
-	frame.machine.isTracing then TracedFrame(frame).Finished(arguments) else Finished(arguments)
-Finished(arguments List(VmValue)) List(VmValue)
-	Quiet.Finished(Frame.Listed)(Frame.ResultSlot).number is 42
+	frame.machine.isTracing then TracedFrame(frame).Finish(arguments) else Finish(arguments)
+Finish(arguments List(VmValue)) List(VmValue)
+	Quiet.Finish(Frame.Listed)(Frame.ResultSlot).number is 42
 	mutable slots = arguments
 	mutable position = 0
 	for Invocation.MaxSteps
 		if position >= frame.method.instructions.Length
-			return frame.Ended(slots)
+			return frame.Close(slots)
 		entry = frame.method.instructions(position)
 		slots(entry.Target) = frame.Value(entry, position, slots)
-		slots = Stepped(entry, slots)
+		slots = Step(entry, slots)
 		position = entry.kind < InstructionType.Return then position + 1 else frame.Next(entry, position, slots)
-	MutationCache.Exhausted(slots)
-Sampled(entry InstructionEntry)
-	Quiet.Sampled(InstructionEntry.Return(1)) is not Error
+	MutationCache.Exhaust(slots)
+Sample(entry InstructionEntry)
+	Quiet.Sample(InstructionEntry.Return(1)) is not Error
 	if Sampler.IsTaken((Process.Elapsed * 1000).Floor)
-		frame.machine.Logged(Place(entry))
+		frame.machine.Log(Place(entry))
 Place(entry InstructionEntry) Text
 	Quiet.Place(InstructionEntry(InstructionType.Return, List(Text), 1, 3)) is "$Sample Strict/Doubler.Twice line 3"
 	"$Sample " + frame.owner + "." + frame.method.Name + " line " + entry.line
-Stepped(entry InstructionEntry, slots List(VmValue)) List(VmValue)
-	Quiet.Stepped(InstructionEntry.Return(1), Frame.Listed) is Frame.Listed
-	Sampled(entry)
+Step(entry InstructionEntry, slots List(VmValue)) List(VmValue)
+	Quiet.Step(InstructionEntry.Return(1), Frame.Listed) is Frame.Listed
+	Sample(entry)
 	mutable changed = slots
 	if entry.kind is InstructionType.Invoke then slots(entry.Target).kind is "Changing" else false
 		for slots(entry.Target).items

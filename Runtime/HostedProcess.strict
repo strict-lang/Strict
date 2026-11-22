@@ -23,7 +23,7 @@ Result VmValue
 	if call.MethodName is in ("Wait", "Collect")
 		return Paused
 	if call.MethodName is "RunTools"
-		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments(1)), Seconds))
+		return WrapResults(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments(1)), Seconds))
 	Hosted(call).Processed
 Spawned VmValue
 	HostedProcess(Starting).Spawned.number is 127
@@ -41,7 +41,7 @@ Direct VmValue
 		return VmValue.OfBoolean(Sampler.IsTaken(call.Arguments.First.number))
 	if TypeEntry.ShortName(call.TypeName) is in ("Logger", "Strict")
 		return Captured
-	call.MethodName is in ("At", "Stored") then ConstantCache.Hosted(call) else HostedBudget(call).Result
+	call.MethodName is in ("At", "Stored") then ConstantCache.Host(call) else HostedBudget(call).Result
 Captured VmValue
 	HostedProcess(Uncaptured).Captured.text is ""
 	isLogger = TypeEntry.ShortName(call.TypeName) is "Logger"
@@ -70,16 +70,16 @@ Texted Text
 	if call.MethodName is "Variable"
 		return Process.Variable(call.Arguments.First.text)
 	call.MethodName is "Built" then Process(call.Instance.Member(0).text).Built else Process.OperatingSystem
-Ran(results List(ProcessResult)) VmValue
-	HostedProcess(Running).Ran(List(ProcessResult) + ProcessResult(1, "a", "b")).items.First.items(2).text is "b"
+WrapResults(results List(ProcessResult)) VmValue
+	HostedProcess(Running).WrapResults(List(ProcessResult) + ProcessResult(1, "a", "b")).items.First.items(2).text is "b"
 	mutable values = List(Mutable(VmValue))
 	for results
-		values.Add(Resulted(value))
+		values.Add(WrapResult(value))
 	VmValue.OfList(values)
-Resulted(result ProcessResult) VmValue
-	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b")).items.First.number is 2
-	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b")).kind is "Strict/ProcessResult"
-	HostedProcess(Running).Resulted(ProcessResult(2, "a", "b", 1.5, 0.5)).items.Last.number is 0.5
+WrapResult(result ProcessResult) VmValue
+	HostedProcess(Running).WrapResult(ProcessResult(2, "a", "b")).items.First.number is 2
+	HostedProcess(Running).WrapResult(ProcessResult(2, "a", "b")).kind is "Strict/ProcessResult"
+	HostedProcess(Running).WrapResult(ProcessResult(2, "a", "b", 1.5, 0.5)).items.Last.number is 0.5
 	Process.RunTool("strict", "version").Seconds > 0
 	code = VmValue.OfNumber(result.exitCode)
 	timing = (VmValue.OfNumber(result.Seconds), VmValue.OfNumber(result.ProcessorSeconds))

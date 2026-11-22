@@ -82,13 +82,13 @@ Processed VmValue
 	if name is "IsDetailed"
 		return VmValue.OfBoolean(BuildProfile.IsDetailed)
 	if name is in ("Elapsed", "FilesRead", "Executed", "MemoryUsed", "Id")
-		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Reported(name)
+		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Report(name)
 	if name is in ("OperatingSystem", "Built", "Variable")
 		return VmValue.OfText(HostedProcess(call).Texted)
 	first = name is "Current" then Process.Current.executable else call.Arguments.First.text
 	if name is in ("Find", "Current")
 		return VmValue("Strict/Process", 0, "", List(VmValue) + VmValue.OfText(Process.Find(first).executable))
-	HostedProcess(call).Resulted(Process.RunTool(first, call.Arguments(1).text, HostedProcess(call).Seconds))
+	HostedProcess(call).WrapResult(Process.RunTool(first, call.Arguments(1).text, HostedProcess(call).Seconds))
 Stored VmValue
 	Hosted(Existing).Stored.IsTrue
 	if call.MethodName is "Write"
@@ -100,7 +100,7 @@ Stored VmValue
 		return Moved
 	if call.MethodName is "Create"
 		return Directory.Create(Location) is Error then VmValue.OfError("DirectoryNotCreated") else VmValue.None
-	Answered(Location)
+	AnswerPath(Location)
 Moved VmValue
 	Hosted(Deleting).Moved.IsTrue is false
 	Hosted(Changing).Moved.kind is "None"
@@ -112,10 +112,10 @@ Moved VmValue
 		File(Location).InMemory(call.Arguments.First.text)
 	else
 		File(Location).Rename(call.Arguments.First.text)
-	Answered(Location)
-Answered(path Text) VmValue
-	Hosted(Existing).Answered(".").IsTrue and Hosted(Probing).Answered(".").IsTrue is false
-	Hosted(Dating).Answered("Any.strict").number > 1.7e9
+	AnswerPath(Location)
+AnswerPath(path Text) VmValue
+	Hosted(Existing).AnswerPath(".").IsTrue and Hosted(Probing).AnswerPath(".").IsTrue is false
+	Hosted(Dating).AnswerPath("Any.strict").number > 1.7e9
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
 	File("Runtime/Answered.lock").IsLocked and File("Runtime/Answered.lock").IsLocked is false
 	File("Runtime/Held.lock").IsLocked and File("Runtime/Held.lock").Exists
@@ -123,13 +123,13 @@ Answered(path Text) VmValue
 	if call.MethodName is "IsLocked"
 		return VmValue.OfBoolean(File(path).IsLocked)
 	if call.MethodName is in ("Modified", "ReadModified", "Length")
-		return VmValue.OfNumber(call.MethodName is "Length" then File(path).Length else Dated(path))
+		return VmValue.OfNumber(call.MethodName is "Length" then File(path).Length else Date(path))
 	exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists
 	call.MethodName is "Exists" then VmValue.OfBoolean(exists) else VmValue.None
-Dated(path Text) Number
-	Hosted(Dating).Dated("Any.strict") is File("Any.strict").Modified
-	Hosted(Newest).Dated("Math") >= File("Math/Vector3.strict").Modified
-	Hosted(Newest).Dated("Missing") is 0
+Date(path Text) Number
+	Hosted(Dating).Date("Any.strict") is File("Any.strict").Modified
+	Hosted(Newest).Date("Math") >= File("Math/Vector3.strict").Modified
+	Hosted(Newest).Date("Missing") is 0
 	call.TypeName is "Strict/Directory" then Directory.ReadModified(path) else File(path).Modified
 Entries VmValue slow
 	Hosted(Listing).Entries.Length > 0
@@ -141,10 +141,10 @@ Entries VmValue slow
 		return ByteValues(File(path).ReadBytes)
 	pattern = call.Arguments.Length > 1 then call.Arguments.Last.text else ""
 	Values(call.MethodName is "Files" then Directory.Files(path, pattern) else Directory.Directories(path))
-Reported(name Text) VmValue
-	Hosted(SystemCall).Reported("Executed").items(5).number > 0
-	Hosted(SystemCall).Reported("MemoryUsed").number > 1000000
-	Hosted(SystemCall).Reported("Id").number > 0
+Report(name Text) VmValue
+	Hosted(SystemCall).Report("Executed").items(5).number > 0
+	Hosted(SystemCall).Report("MemoryUsed").number > 1000000
+	Hosted(SystemCall).Report("Id").number > 0
 	if name is "FilesRead"
 		return Values(Process.FilesRead)
 	if name is in ("MemoryUsed", "Id")

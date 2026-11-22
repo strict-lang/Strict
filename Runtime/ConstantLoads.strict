@@ -22,7 +22,7 @@ Methods(type TypeEntry, start Number) List(MethodEntry)
 	mutable next = start
 	mutable methods = List(Mutable(MethodEntry))
 	for type.methods
-		count = Counted(value)
+		count = CountLoads(value)
 		methods.Add(count is 0 then value else MethodEntry(value, instructions = Instructions(value, next)))
 		next = next + count
 	methods
@@ -33,11 +33,11 @@ Instructions(method MethodEntry, start Number) List(InstructionEntry)
 	mutable instructions = List(Mutable(InstructionEntry))
 	for method.instructions
 		at = At(value)
-		instructions.Add(at < 0 then value else Marked(value, at, next))
+		instructions.Add(at < 0 then value else Mark(value, at, next))
 		next = at < 0 then next else next + 1
 	instructions
-Marked(entry InstructionEntry, at Number, index Number) InstructionEntry
-	Ones.Marked(Stored, 0, 4).payload is (Cached, 4) + Stored.payload
+Mark(entry InstructionEntry, at Number, index Number) InstructionEntry
+	Ones.Mark(Stored, 0, 4).payload is (Cached, 4) + Stored.payload
 	rest = entry.payload.Slice(at, entry.payload.Length - at)
 	InstructionEntry(entry, payload = entry.payload.Slice(0, at) + Cached + index + rest)
 Decoded List(VmValue)
@@ -52,10 +52,10 @@ Count(type TypeEntry) Number
 	Pair.Count(Pair.types.First) is 3
 	mutable count = 0
 	for type.methods
-		count = count + Counted(value)
+		count = count + CountLoads(value)
 	count
-Counted(method MethodEntry) Number
-	Ones.Counted(Both) is 2 and Ones.Counted(Machine.TwiceMethod) is 0
+CountLoads(method MethodEntry) Number
+	Ones.CountLoads(Both) is 2 and Ones.CountLoads(Machine.TwiceMethod) is 0
 	mutable count = 0
 	for method.instructions
 		count = At(value) < 0 then count else count + 1

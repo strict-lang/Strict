@@ -13,17 +13,17 @@ Begun(state VmValue, iterable VmValue, ending VmValue, begin Number) VmValue
 	bounds = (VmValue.OfNumber(start), VmValue.OfNumber(end), VmValue.OfNumber(begin))
 	count = VmValue.OfNumber((end - start).Absolute)
 	code = iterable.kind is "List" then 1 else iterable.kind is "Text" then 2 else 0
-	Iterated(VmValue("Loop", code, "", List(VmValue) + iterable + bounds + count + state), 0)
-Iterated(loop VmValue, iteration Number) VmValue
-	Read(Iterated(Counting.items(0), 2), false).number is 2
-	Read(Iterated(Ranged.items(0), 1), true).number is 4 and Read(Iterated(Listed.items(0), 1), true).number is 1
-	Read(Iterated(VmValue("Loop", 2, "", List(VmValue) + VmValue.OfText("ab")), 1), false).text is "b"
+	Iterate(VmValue("Loop", code, "", List(VmValue) + iterable + bounds + count + state), 0)
+Iterate(loop VmValue, iteration Number) VmValue
+	Read(Iterate(Counting.items(0), 2), false).number is 2
+	Read(Iterate(Ranged.items(0), 1), true).number is 4 and Read(Iterate(Listed.items(0), 1), true).number is 1
+	Read(Iterate(VmValue("Loop", 2, "", List(VmValue) + VmValue.OfText("ab")), 1), false).text is "b"
 	VmValue("Iteration", iteration, "", List(VmValue) + loop)
-Ended(state VmValue, isStopped Boolean) VmValue
-	Ended(Counting, false).number is 1 and Ended(Counting, false).items is Counting.items
-	Ended(Ended(Ended(Counting, false), false), false).kind is "None"
-	Ended(Counting, true).kind is "None"
-	Ended(Iterated(Counting.items(0), 5), false).kind is "None"
+EndLoop(state VmValue, isStopped Boolean) VmValue
+	EndLoop(Counting, false).number is 1 and EndLoop(Counting, false).items is Counting.items
+	EndLoop(EndLoop(EndLoop(Counting, false), false), false).kind is "None"
+	EndLoop(Counting, true).kind is "None"
+	EndLoop(Iterate(Counting.items(0), 5), false).kind is "None"
 	loop = state.items(0)
 	next = state.number + 1
 	isStopped or next >= loop.items(4).number then loop.items(5) else VmValue(state, number = next)
@@ -41,8 +41,8 @@ Current(state VmValue, isOuter Boolean, isIndex Boolean, fallback VmValue) VmVal
 	current = isOuter and state.items.Length > 0 then state.items(0).items(5) else state
 	current.items.Length is 0 then fallback else Read(current, isIndex)
 Read(state VmValue, isIndex Boolean) VmValue
-	Read(Ended(Listed, false), false).number is 6 and Read(Ended(Listed, false), true).number is 1
-	Read(Ended(Ranged, false), true).number is 4
+	Read(EndLoop(Listed, false), false).number is 6 and Read(EndLoop(Listed, false), true).number is 1
+	Read(EndLoop(Ranged, false), true).number is 4
 	loop = state.items(0)
 	isIndex and loop.number > 0 then VmValue.OfNumber(state.number) else Element(loop, state.number)
 IsEmpty(iterable VmValue, ending VmValue) Boolean
@@ -72,15 +72,15 @@ Count(iterable VmValue) Number
 	Count(VmValue.OfText("abc")) is 3
 	Count(VmValue.OfNumber(-2)) is 0
 	iterable.kind is "Number" then (iterable.number < 0 then 0 else iterable.number.Floor) else iterable.Length
-Failed(iterable VmValue, ending VmValue) VmValue
-	Failed(VmValue.OfError("a"), VmValue.None).kind is "Strict/Error"
-	Failed(VmValue.OfNumber(3), VmValue.OfError("b")).items.First.text is "b"
-	Failed(VmValue.OfNumber(3), VmValue.OfNumber(5)).kind is "None"
+Fail(iterable VmValue, ending VmValue) VmValue
+	Fail(VmValue.OfError("a"), VmValue.None).kind is "Strict/Error"
+	Fail(VmValue.OfNumber(3), VmValue.OfError("b")).items.First.text is "b"
+	Fail(VmValue.OfNumber(3), VmValue.OfNumber(5)).kind is "None"
 	failing = iterable.kind is in VmValue.ErrorKinds then iterable else ending
 	failing.kind is in VmValue.ErrorKinds then failing else VmValue.None
-Returned(slots List(VmValue)) List(VmValue)
-	Returned(Frame.Broken)(Frame.ResultSlot).kind is "Strict/Error"
-	Returned(Frame.Listed) is Frame.Listed
+ReturnSlots(slots List(VmValue)) List(VmValue)
+	ReturnSlots(Frame.Broken)(Frame.ResultSlot).kind is "Strict/Error"
+	ReturnSlots(Frame.Listed) is Frame.Listed
 	if slots(Frame.LoopSlot).kind is not in VmValue.ErrorKinds
 		return slots
 	mutable failed = slots

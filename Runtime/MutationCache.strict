@@ -18,29 +18,29 @@ Location Text
 	Sample.Location.EndsWith("Cached.mutations")
 	BinaryFile(FileCompiler.Normalized(path)).Path.Replace(".strictbinary", ".mutations")
 IsCurrent Boolean
-	Sample.Saved(Survived) is not Error and Sample.IsCurrent
+	Sample.Save(Survived) is not Error and Sample.IsCurrent
 	MutationCache("Compiler/output/Cached.strict", true).IsCurrent is false
 	lines = File(Location).Exists then File(Location).ReadLines else List(Text)
 	whole = "whole " + Stamp.Substring(Stamp.IndexOf(" ") + 1, Stamp.Length - Stamp.IndexOf(" ") - 1)
 	lines.Length > 0 and (lines.First is Stamp or lines.First is whole)
 Survivors Texts
-	Sample.Saved(Survived) is not Error and Sample.Survivors is Survived
+	Sample.Save(Survived) is not Error and Sample.Survivors is Survived
 	lines = File(Location).ReadLines
 	lines.Slice(1, lines.Length - 1)
-Saved(survivors Texts)
-	Sample.Saved(List(Text)) is not Error and File(Sample.Location).ReadLines is (List(Text) + Sample.Stamp)
+Save(survivors Texts)
+	Sample.Save(List(Text)) is not Error and File(Sample.Location).ReadLines is (List(Text) + Sample.Stamp)
 	File(Location).Write(Text.Combine(List(Text) + Stamp + survivors, "\n"))
-Held(slots Text) Texts
-	MutationCache("Compiler/output/Missing/Waiting.strict", true).Held("Compiler/output/Missing/Deeper").Length is 0
-	Sample.Saved(List(Text)) is not Error and Sample.Held("Compiler/output/Missing/Deeper").Length is 0
-	whole = isWhole and IsCurrent is false then Claimed(List(Text) + Lock) else List(Text)
-	IsCurrent then (IsReleased(whole) then List(Text) else whole) else whole + Claimed(Slotted(slots))
+Hold(slots Text) Texts
+	MutationCache("Compiler/output/Missing/Waiting.strict", true).Hold("Compiler/output/Missing/Deeper").Length is 0
+	Sample.Save(List(Text)) is not Error and Sample.Hold("Compiler/output/Missing/Deeper").Length is 0
+	whole = isWhole and IsCurrent is false then Claim(List(Text) + Lock) else List(Text)
+	IsCurrent then (IsReleased(whole) then List(Text) else whole) else whole + Claim(Slot(slots))
 Lock Text
 	Sample.Lock is Sample.Location + "." + HashCode(Sample.Stamp).number + ".lock"
 	Location + "." + HashCode(Stamp).number + ".lock"
-Claimed(locks Texts) Texts
-	MutationCache.Claimed(List(Text) + "Compiler/output/Missing/Deeper/Waiting.lock").Length is 0
-	MutationCache.Claimed(List(Text) + ("Compiler/output/Claimed" + Process.Elapsed + ".lock")).Length is 1
+Claim(locks Texts) Texts
+	MutationCache.Claim(List(Text) + "Compiler/output/Missing/Deeper/Waiting.lock").Length is 0
+	MutationCache.Claim(List(Text) + ("Compiler/output/Claimed" + Process.Elapsed + ".lock")).Length is 1
 	folder = Path(locks.First).PathOnly.text
 	if Directory.Exists(folder) is false and Directory.Exists(Path(folder).PathOnly.text)
 		Directory.Create(folder)
@@ -52,22 +52,22 @@ Claimed(locks Texts) Texts
 		Process.Wait(0.1)
 	List(Text)
 IsReleased(locks Texts) Boolean
-	MutationCache.IsReleased(MutationCache.Claimed(List(Text) + ("Compiler/output/Released" + Process.Elapsed + ".lock")))
+	MutationCache.IsReleased(MutationCache.Claim(List(Text) + ("Compiler/output/Released" + Process.Elapsed + ".lock")))
 	for locks
 		File(value).Delete
 	for locks
 		if File(value).Exists
 			return false
 	true
-Slotted(folder Text) Texts
-	MutationCache.Slotted("obj").Length is MaxRuns
-	MutationCache.Slotted("obj").Last is "obj/mutation25.slot"
+Slot(folder Text) Texts
+	MutationCache.Slot("obj").Length is MaxRuns
+	MutationCache.Slot("obj").Last is "obj/mutation25.slot"
 	for Range(0, MaxRuns)
 		folder + "/mutation" + value + ".slot"
-Exhausted(slots List(VmValue), deadline = 0) List(VmValue)
-	MutationCache.Exhausted(Frame.Listed)(Frame.ResultSlot).kind is "Strict/Error"
-	MutationCache.Exhausted(Frame.Listed, 0.001)(Frame.ResultSlot).items.First.text is "Timeout"
-	stopped = Stopped(deadline)
+Exhaust(slots List(VmValue), deadline = 0) List(VmValue)
+	MutationCache.Exhaust(Frame.Listed)(Frame.ResultSlot).kind is "Strict/Error"
+	MutationCache.Exhaust(Frame.Listed, 0.001)(Frame.ResultSlot).items.First.text is "Timeout"
+	stopped = Stop(deadline)
 	mutable exhausted = slots
 	exhausted(Frame.ResultSlot) = VmValue.OfError(stopped is "" then "Timeout" else stopped)
 	exhausted
@@ -77,17 +77,17 @@ IsOversized(result VmValue, limit = MaxItems) Boolean
 	MutationCache.IsOversized(VmValue.OfText("abc"), 2)
 	MutationCache.IsOversized(VmValue.OfNumber(5), 0) is false
 	(result.kind is "List" then result.items.Length else result.text.Length) > limit
-Budgeted(result VmValue, limit = MaxItems) VmValue
-	MutationCache.Budgeted(Operations.OneTwo, 1).items(0).text is "MemoryBudget"
-	MutationCache.Budgeted(Operations.OneTwo, 2) is Operations.OneTwo
+Budget(result VmValue, limit = MaxItems) VmValue
+	MutationCache.Budget(Operations.OneTwo, 1).items(0).text is "MemoryBudget"
+	MutationCache.Budget(Operations.OneTwo, 2) is Operations.OneTwo
 	IsOversized(result, limit) then VmValue.OfError("MemoryBudget") else result
 IsLate(machine Machine) Boolean
 	MutationCache.IsLate(Machine(Machine.Hello, deadline = 0.001)) and MutationCache.IsLate(Machine.Hello) is false
-	Stopped(machine.deadline) is not ""
-Stopped(deadline Number, step = 1) Text
-	MutationCache.Stopped(0) is ""
-	MutationCache.Stopped(0.001) is "Timeout"
-	MutationCache.Stopped(0.001, 2) is ""
+	Stop(machine.deadline) is not ""
+Stop(deadline Number, step = 1) Text
+	MutationCache.Stop(0) is ""
+	MutationCache.Stop(0.001) is "Timeout"
+	MutationCache.Stop(0.001, 2) is ""
 	if step % Frame.CheckSteps is not 1
 		return ""
 	(deadline > 0 then Process.Elapsed > deadline else false) then "Timeout" else TestBudget.Expired

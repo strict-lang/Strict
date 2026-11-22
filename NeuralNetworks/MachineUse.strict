@@ -52,7 +52,7 @@ Needed Text
 IsAdmitted Boolean slow
 	MachineUse("H3Video", 0, 0, true, Nowhere).IsAdmitted
 	Gpu.Require(program)
-	reply = Coordinator(coordinator).Resolved(Needed)
+	reply = Coordinator(coordinator).Resolve(Needed)
 	if reply.StartsWith("refused")
 		Explained(reply)
 		return false

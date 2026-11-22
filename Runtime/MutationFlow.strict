@@ -141,22 +141,22 @@ IsLogical(position Number) Boolean
 	entry = method.instructions(position)
 	stored = position > 1 then method.instructions(position - 2) else entry
 	entry.kind is InstructionType.Equal and Text.Combine(stored.texts).StartsWith("logical")
-Forced(position Number, kind Number, nth Text) Text
-	Anded.Forced(2, 1, "") is "and with its left side" and Anded.Forced(2, 0, "") is "and with its right side"
-	Ored.Forced(2, 0, "") is "or with its left side" and Ored.Forced(2, 1, "") is "or with its right side"
-	Branched.Forced(2, 0, "2nd ") is "2nd condition with true" and Branched.Forced(2, 1, "") is "condition with false"
-	Lessened.Forced(1, 0, "") is "is of <= with true" and Lessened.Forced(2, 1, "") is "comparison is not with false"
+Force(position Number, kind Number, nth Text) Text
+	Anded.Force(2, 1, "") is "and with its left side" and Anded.Force(2, 0, "") is "and with its right side"
+	Ored.Force(2, 0, "") is "or with its left side" and Ored.Force(2, 1, "") is "or with its right side"
+	Branched.Force(2, 0, "2nd ") is "2nd condition with true" and Branched.Force(2, 1, "") is "condition with false"
+	Lessened.Force(1, 0, "") is "is of <= with true" and Lessened.Force(2, 1, "") is "comparison is not with false"
 	forced = " with " + (kind is 0 then "true" else "false")
-	ordered = Ordered(position)
+	ordered = Order(position)
 	if ordered is not ""
 		return nth + ordered + forced
 	if IsLogical(position) is false
 		return nth + MutationKinds(method).Subject(position) + forced
 	isAnd = method.instructions(position + 1).kind is InstructionType.JumpToIdIfFalse
 	(isAnd then "and" else "or") + " with its " + (isAnd is (kind is 1) then "left" else "right") + " side"
-Ordered(position Number) Text
-	Lessened.Ordered(1) is "is of <=" and Above.Ordered(1) is "is of >=" and Lessened.Ordered(2) is ""
-	Unjoined.Ordered(1) is "" and Equals.Ordered(1) is ""
+Order(position Number) Text
+	Lessened.Order(1) is "is of <=" and Above.Order(1) is "is of >=" and Lessened.Order(2) is ""
+	Unjoined.Order(1) is "" and Equals.Order(1) is ""
 	ordered = position > 0 then method.instructions(position - 1).kind else InstructionType.Equal
 	joined = position + 1 < method.instructions.Length then method.instructions(position + 1).kind else ordered
 	if ordered is in (InstructionType.LessThan, InstructionType.GreaterThan) and joined is InstructionType.NotEqual

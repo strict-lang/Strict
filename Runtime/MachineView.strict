@@ -12,8 +12,8 @@ constant Tight = MachineView(freeRam = 2, freeVram = 1, totalRam = 64, totalVram
 constant Idle = MachineView(freeRam = 2, freeVram = 1, totalRam = 64, totalVram = 16, idleRam = 8, idleVram = 4)
 constant Busy = MachineView(freeRam = 2, freeVram = 1, totalRam = 64, totalVram = 16, isBusy = true)
 constant Room = MachineView(freeRam = 16, freeVram = 8, totalRam = 64, totalVram = 16, isBusy = true)
-Forced(name Text, fallback Number) Number
-	MachineView.Forced("StrictVariableNeverSet", 4) is 4
+Force(name Text, fallback Number) Number
+	MachineView.Force("StrictVariableNeverSet", 4) is 4
 	forced = Process.Variable(name)
 	forced is "" or forced to Number is Error then fallback else forced to Number
 Vram(text Text) Numbers

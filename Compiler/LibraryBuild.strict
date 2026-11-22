@@ -1,6 +1,6 @@
 constant NoExports = ", a library exports the public methods with Number, Text, Boolean or record values and lists of numbers or records"
 Built(path Text, root Text)
-	Exported(MlirLibrary(Execute.Loaded(path, root, false)), NativeBuild.Output(path, true), root)
+	Exported(MlirLibrary(Execute.Load(path, root, false)), NativeBuild.Output(path, true), root)
 Exported(library MlirLibrary, base Text, root Text)
 	if library.Exported.Length is 0
 		logger.Log("No exported methods in " + base + ".strict" + NoExports)

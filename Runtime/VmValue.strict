@@ -41,9 +41,9 @@ OfError(name Text) VmValue
 	OfError("Missing").items.First.text is "Missing"
 	OfError("M").kind is "Strict/Error" and OfError("M").items.Length is 2
 	VmValue("Strict/Error", 0, "", (OfText(name), OfList(List(VmValue))))
-Counted(arguments List(VmValue)) Number
-	OfList(OfNumber(1), OfNumber(2), OfNumber(1)).Counted(List(VmValue) + OfNumber(1)) is 2
-	OfList(OfNumber(1)).Counted(List(VmValue)) is 1
+CountMatches(arguments List(VmValue)) Number
+	OfList(OfNumber(1), OfNumber(2), OfNumber(1)).CountMatches(List(VmValue) + OfNumber(1)) is 2
+	OfList(OfNumber(1)).CountMatches(List(VmValue)) is 1
 	if arguments.Length is 0
 		return Length
 	for items

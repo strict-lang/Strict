@@ -18,7 +18,7 @@ Marker(path Text) Text
 Unit(path Text) Text slow
 	SlowTests.Unit("Missing.strict") is "0"
 	File(BinaryFile(FileCompiler.Normalized(path)).Path).Modified to Text
-Passed(path Text) slow
+Pass(path Text) slow
 	File(Marker(path)).Write(List(Text) + Unit(path))
 IsPassed(path Text) Boolean slow
 	SlowTests.IsPassed("Missing.strict") is false

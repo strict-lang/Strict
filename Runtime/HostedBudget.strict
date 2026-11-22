@@ -11,8 +11,8 @@ Result VmValue
 	if call.MethodName is "Left"
 		TestBudget.Left(arguments(0).number)
 		return VmValue.None
-	Measured(arguments)
-Measured(arguments List(VmValue)) VmValue
+	Measure(arguments)
+Measure(arguments List(VmValue)) VmValue
 	if call.MethodName is "Overran"
 		return VmValue.OfText(SlowTests.Overran(arguments(0).number, arguments(1).text))
 	if call.MethodName is "Busy"

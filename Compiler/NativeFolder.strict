@@ -21,7 +21,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	MlirModule(inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol, platform)
 Tested(path Text, root Text, sources Texts) List(TypeEntry)
 	NativeFolder(gated = Greeting).Tested("Missing.strict", ".", List(Text)) is Greeting
-	gated.Length > 0 then gated else Execute(selection).Loaded(path, root, true, sources)
+	gated.Length > 0 then gated else Execute(selection).Load(path, root, true, sources)
 Natives(path Text, root Text, types List(TypeEntry)) Texts slow
 	NativeFolder.Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
 	paths = Paths(path)
@@ -45,7 +45,7 @@ Programmed(loaded List(TypeEntry), path Text, root Text, sources Texts) List(Typ
 	NativeFolder.Programmed(List(TypeEntry) + TypeEntry.HelloLogger, "Missing.strict", ".", List(Text)).Length is 1
 	Execute.HasRun(NativeFolder.Programmed(Runless, "Examples/HelloLogger.strict", ".", List(Text)).First)
 	isOld = loaded.Length > 0 then Execute.HasRun(loaded.First) is false else false
-	isOld then Execute(selection).Loaded(path, root, false, sources) else loaded
+	isOld then Execute(selection).Load(path, root, false, sources) else loaded
 Paths(path Text) Texts
 	NativeFolder.Paths("Examples/Sum.strict") is ("Examples/Sum.strict")
 	Directory.Exists(path) then Files(path) else List(Text) + path
@@ -108,7 +108,7 @@ Typed(path Text, root Text, files Texts, inference TypeInference, known Dictiona
 	if File(path).Exists is false
 		return FileCompiler.Unlinked
 	if selection is "" and Execute.Stale(List(Text) + path).Length is 0
-		return FileCompiler.Unlinked.With(Execute.Loaded(path, root))
+		return FileCompiler.Unlinked.With(Execute.Load(path, root))
 	linked = FileCompiler(false, selection).Built(path, root, true, files, inference, known)
 	if linked.entries.Length is 0
 		logger.Log("CompilationFailed: " + path)

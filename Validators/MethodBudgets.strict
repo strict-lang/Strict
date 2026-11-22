@@ -4,10 +4,10 @@ has typeName Text = ""
 constant MaxTests = 10
 constant MaxLets = 10
 constant MaxProduction = 10
-constant VmLoops = List(Text) + "Frame.Finished"
+constant VmLoops = List(Text) + "Frame.Finish"
 constant MaxVmLoop = 12
 constant Tested = MethodBudgets(("Run Number", "	Run is 1", "	constant one = 1", "	Run > 0", "	let a = 1", "	if a > 0", "		let b = 2", "		return b", "	a"))
-constant Looping = ("Finished", "	a", "	b", "	c", "	d", "	e", "	f", "	g", "	h", "	i", "	j", "	k", "	l")
+constant Looping = ("Finish", "	a", "	b", "	c", "	d", "	e", "	f", "	g", "	h", "	i", "	j", "	k", "	l")
 constant Busy = MethodBudgets(("Run", "	a", "	b", "	c", "	d", "	e", "	f", "	g", "	h", "	i", "	j", "	k"))
 Issues List(ValidationIssue)
 	Busy.Issues.First to Text is "ProductionLinesMustNotExceedTen: Run has 11"

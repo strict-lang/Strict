@@ -8,23 +8,23 @@ Tested Text slow
 		return ""
 	warm = Warm
 	prepared = Prepared
-	Placed
+	Place
 	started = logger.Capture(true)
-	answer = Ran(warm, prepared)
+	answer = RunTrial(warm, prepared)
 	output = started + logger.Capture(false)
 	answer is Error then output + answer to Text else output
 Warmed Answer slow
-	Placed
+	Place
 	started = logger.Capture(true)
-	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)), TrialMachine.None)
+	answer = RunTrial(Answer(0, Dictionary(Text, TypeEntry)), TrialMachine.None)
 	output = started + logger.Capture(false)
 	if answer is Error or answer.code is not 0
 		logger.Log(output)
 	answer
-Ran(last Answer, machine TrialMachine) Answer slow
+RunTrial(last Answer, machine TrialMachine) Answer slow
 	request = TestRequest((trial.Located, TypeSource.Root, "unit"))
-	Execute(request.Executing(last.known, last.inferred), trial = machine).Served(trial.Located, TypeSource.Root)
-Placed slow
-	TrialRun(Trial.Adding).Placed is not Error and Execute.IsEdited(Trial.Adding.Located)
+	Execute(request.Executing(last.known, last.inferred), trial = machine).Serve(trial.Located, TypeSource.Root)
+Place slow
+	TrialRun(Trial.Adding).Place is not Error and Execute.IsEdited(Trial.Adding.Located)
 	trial.Write
 	File(FileCompiler.Normalized(trial.Located)).InMemory(trial.source)

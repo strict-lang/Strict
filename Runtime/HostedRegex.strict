@@ -26,7 +26,7 @@ Result VmValue
 		return VmValue.OfText(regex.Find(text))
 	if call.MethodName is "Replace"
 		return VmValue.OfText(regex.Replace(text, call.Arguments.Last.text))
-	Hosted(call).Values(call.MethodName is "FindAll" then regex.FindAll(text) else Listed(regex, text))
-Listed(regex Regex, text Text) Texts
-	HostedRegex(Splitting).Listed(Regex("\\d"), "a1b") is ("a", "b")
+	Hosted(call).Values(call.MethodName is "FindAll" then regex.FindAll(text) else SplitText(regex, text))
+SplitText(regex Regex, text Text) Texts
+	HostedRegex(Splitting).SplitText(Regex("\\d"), "a1b") is ("a", "b")
 	call.MethodName is "Groups" then regex.Groups(text) else regex.Split(text)

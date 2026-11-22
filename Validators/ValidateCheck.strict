@@ -11,7 +11,7 @@ Run(folder Text, root Text) Number
 	BuildProfile.Reported("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
 	tested = Process.Elapsed
-	failed = issues is 0 then Folders.Tested(folder, root) else 0
+	failed = issues is 0 then Folders.TestFolder(folder, root) else 0
 	BuildProfile.Reported("Check tests", tested)
 	issues + failed
 Validate(folder Text, root Text, mutations Texts) Number slow

@@ -8,19 +8,19 @@ constant Sampled = Baseline(Mutants.Sample)
 constant Rolled = InstructionEntry.Invoke(1, ("Strict/Number", "Random", "Strict/Number"), List(Number), 0)
 constant Splitting = (InstructionEntry.LoadNumber(0, 0), Mutation.Marking, Rolled, Mutants.Budget, InstructionEntry.LoadNumber(1, 1), InstructionEntry.Return(0))
 constant Rolling = TypeEntry(Machine.Doubler, methods = (Mutants.Lined, MethodEntry(Mutants.Lined, Name = TestCodegen.Runner, instructions = Splitting)))
-Kept(types List(TypeEntry)) List(KeptMethod)
-	Baseline(Mutants.Sample).Kept(Mutants.Doubled).Length is 0
-	Libraries.Kept(Mutants.Doubled).Length is 0
-	methods = IsBase or IsExcluded then List(MethodEntry) else Picked(Usable(types))
-	tested = mutants.Tested(types, mutants.Runner(types.First), methods)
+Keep(types List(TypeEntry)) List(KeptMethod)
+	Baseline(Mutants.Sample).Keep(Mutants.Doubled).Length is 0
+	Libraries.Keep(Mutants.Doubled).Length is 0
+	methods = IsBase or IsExcluded then List(MethodEntry) else Pick(Usable(types))
+	tested = mutants.AddRunners(types, mutants.Runner(types.First), methods)
 	for methods
-		kept = Checked(tested, value, TestCodegen.Runner + index)
+		kept = Check(tested, value, TestCodegen.Runner + index)
 		if kept.budget > 0
 			kept
-Checked(tested List(TypeEntry), method MethodEntry, runner Text) KeptMethod
-	Sampled.Checked(Mutants.Doubled, Mutants.Twice, "Missing").budget is 0
+Check(tested List(TypeEntry), method MethodEntry, runner Text) KeptMethod
+	Sampled.Check(Mutants.Doubled, Mutants.Twice, "Missing").budget is 0
 	limit = mutants.isWhole then 1 else 0.1
-	started = Execute.Started(tested, mutants.path, false, false)
+	started = Execute.Start(tested, mutants.path, false, false)
 	begun = Process.Elapsed
 	reason = Reason(started, runner, limit)
 	budget = Budget(begun)
@@ -46,8 +46,8 @@ IsExpired(begun Number, budget Number) Boolean
 IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
 	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
 	failing = List(MethodEntry) + MethodEntry(method, instructions = Invocation.Failing.methods.First.instructions)
-	started = Execute.Started(mutants.Replaced(tested, List(MethodEntry) + method, failing), mutants.path, false, false)
-	Machine(started, deadline = Process.Elapsed + 1).Tested(tested.First.Name, runner) > 0
+	started = Execute.Start(mutants.Replace(tested, List(MethodEntry) + method, failing), mutants.path, false, false)
+	Machine(started, deadline = Process.Elapsed + 1).RunTests(tested.First.Name, runner) > 0
 Reaching(types List(TypeEntry)) Texts
 	Baseline(Mutants.Sample).Reaching(Reading) is ("T.Read", "T.Call")
 	mutable reaching = List(Mutable(Text))
@@ -65,7 +65,7 @@ Usable(types List(TypeEntry)) List(MethodEntry)
 	Sampled.Usable(List(TypeEntry) + Rolling).Length is 0
 	reaching = Reaching(types)
 	runner = mutants.Runner(types.First)
-	for mutants.Mutated(types.First)
+	for mutants.Mutate(types.First)
 		reason = Inputs(value, TypeEntry.ShortName(types.First.Name) + "." + value.Name, runner, reaching)
 		if reason is not "" and mutants.part is ""
 			logger.Log(mutants.path + ": " + value.Name + " is not mutated, " + reason)
@@ -94,9 +94,9 @@ IsReaching(method MethodEntry, reaching Texts) Boolean
 			if mutants.IsInput(value.texts(0)) or value.texts(1) is "Random" or name is in reaching
 				return true
 	false
-Picked(methods List(MethodEntry)) List(MethodEntry)
-	Sampled.Picked((Reader, Calling, Reader, Calling)).Length is 3
-	Baseline(Mutants("a.strict", isWhole = true)).Picked((Reader, Calling, Reader, Calling)).Length is 4
+Pick(methods List(MethodEntry)) List(MethodEntry)
+	Sampled.Pick((Reader, Calling, Reader, Calling)).Length is 3
+	Baseline(Mutants("a.strict", isWhole = true)).Pick((Reader, Calling, Reader, Calling)).Length is 4
 	constant LightMethods = 3
 	isAll = mutants.isWhole or methods.Length <= LightMethods
 	isAll then methods else methods.Shuffled(PseudoRandom(Byte.Values.Random)).Slice(0, LightMethods)
@@ -120,6 +120,6 @@ Reason(started Machine, runner Text, limit Number) Text
 	Baseline(Mutants.Sample).Reason(Frame.Doubling, "Missing", 0) is "its tests fail or take over 0s"
 	read = Process.FilesRead.Length
 	begun = Process.Elapsed
-	failed = Machine(started, deadline = begun + limit).Tested(started.types.First.Name, runner)
+	failed = Machine(started, deadline = begun + limit).RunTests(started.types.First.Name, runner)
 	slow = failed > 0 or IsExpired(begun, limit) then "its tests fail or take over " + limit + "s" else ""
 	Process.FilesRead.Length > read then "its tests read files" else slow

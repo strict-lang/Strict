@@ -67,7 +67,7 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
 	NativeBuild(false, selection = selection, isRecursive = isRecursive).Tested(rest(0), rest(1), isCounting, sources)
 Checked(rest Texts, sources Texts) Number
-	gate = Execute.Served(rest(0), rest(1), true, sources)
+	gate = Execute.Serve(rest(0), rest(1), true, sources)
 	if gate.code is 0
 		Built(rest, sources, gate.Types)
 	gate.code

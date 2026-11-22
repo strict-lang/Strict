@@ -1,12 +1,12 @@
-Started(words Texts) Text
-	RemoteRun.Started(("run", "AiServer")) is "1"
+Start(words Texts) Text
+	RemoteRun.Start(("run", "AiServer")) is "1"
 	if words.Length < 3
 		return "1"
 	ran = Process.RunTool(words(2), Text.Combine(words.Slice(3, words.Length - 3), " "))
 	logger.Log(ran.Output)
 	ran.exitCode to Text
-Answered(words Texts, seen MachineView) Text
-	RemoteRun.Answered("hello", MachineView.Wide) is "ok"
+AnswerWords(words Texts, seen MachineView) Text
+	RemoteRun.AnswerWords("hello", MachineView.Wide) is "ok"
 	if words.Length > 0 and words(0) is "run"
-		return Started(words)
+		return Start(words)
 	words.Length > 0 and words(0) is "fit" then Admission.Verdict(Need.Parsed(words), seen) else "ok"
