@@ -26,5 +26,5 @@ Ran(last Answer, machine TrialMachine) Answer slow
 	Execute(request.Executing(last.known, last.inferred), trial = machine).Served(trial.Located, TypeSource.Root)
 Placed slow
 	TrialRun(Trial.Adding).Placed is not Error and Execute.IsEdited(Trial.Adding.Located)
-	trial.Written
+	trial.Write
 	File(FileCompiler.Normalized(trial.Located)).InMemory(trial.source)

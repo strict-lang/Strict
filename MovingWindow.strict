@@ -12,11 +12,11 @@ Added(number Number) MovingWindow
 	MovingWindow(3).Added(5).Added(1).Added(4).Added(2).Added(3).Added(0).Minimum is 0
 	MovingWindow(3).Added(2).Added(7).Added(4).Added(9).Added(6).Sum is 19
 	removed = values.Length < capacity then 0 else values(added % capacity)
-	kept = Stored(number)
+	kept = Store(number)
 	total = (added + 1) % capacity is 0 then kept.Sum else sum - removed + number
 	MovingWindow(capacity, kept, added + 1, total, lows.Pushed(added, kept, capacity), highs.Pushed(added, kept, capacity))
-Stored(number Number) Numbers
-	Pair.Added(1).Added(3).Stored(5) is (5, 3)
+Store(number Number) Numbers
+	Pair.Added(1).Added(3).Store(5) is (5, 3)
 	if values.Length < capacity
 		return values + number
 	mutable kept = values

@@ -9,36 +9,36 @@ Pushed(entry Number) PriorityQueue
 		list(size) = entry
 	else
 		list = list + entry
-	PriorityQueue(Raised(list, size), size + 1)
+	PriorityQueue(Raise(list, size), size + 1)
 Popped PriorityQueue
 	Empty.Pushed(5).Pushed(3).Pushed(4).Popped.entries.First is 4
 	Empty.Pushed(5).Popped.size is 0
 	last = entries(size - 1)
 	mutable list = entries
 	list(0) = last
-	PriorityQueue(Lowered(list, size - 1), size - 1)
-Raised(list Numbers, start Number) Numbers
-	Raised((1, 5, 3, 0), 3) is (0, 1, 3, 5)
-	Raised((1, 3, 2, 6, 5, 4, 0), 6) is (0, 3, 1, 6, 5, 4, 2)
-	Raised((1, 2, 3, 4), 3) is (1, 2, 3, 4) and Raised((1, 2, 3, 4, 5, 6, 7, 8, 0), 8) is (0, 1, 3, 2, 5, 6, 7, 8, 4)
-	Raised((1, 4, 3, 5, 2), 4) is (1, 2, 3, 5, 4) and Raised((1, 3), 0) is (1, 3)
-	Raised((2, 1), 1) is (1, 2) and Raised((-1, 2, 3, 4, 5, 6, 7, 8, 0), 8) is (-1, 0, 3, 2, 5, 6, 7, 8, 4)
+	PriorityQueue(Lower(list, size - 1), size - 1)
+Raise(list Numbers, start Number) Numbers
+	Raise((1, 5, 3, 0), 3) is (0, 1, 3, 5)
+	Raise((1, 3, 2, 6, 5, 4, 0), 6) is (0, 3, 1, 6, 5, 4, 2)
+	Raise((1, 2, 3, 4), 3) is (1, 2, 3, 4) and Raise((1, 2, 3, 4, 5, 6, 7, 8, 0), 8) is (0, 1, 3, 2, 5, 6, 7, 8, 4)
+	Raise((1, 4, 3, 5, 2), 4) is (1, 2, 3, 5, 4) and Raise((1, 3), 0) is (1, 3)
+	Raise((2, 1), 1) is (1, 2) and Raise((-1, 2, 3, 4, 5, 6, 7, 8, 0), 8) is (-1, 0, 3, 2, 5, 6, 7, 8, 4)
 	mutable heap = list
 	mutable slot = start
 	for as long as slot > 0 and heap(((slot - 1) / 2).Floor) > heap(slot)
-		heap = Swapped(heap, slot, ((slot - 1) / 2).Floor)
+		heap = Swap(heap, slot, ((slot - 1) / 2).Floor)
 		slot = ((slot - 1) / 2).Floor
 	heap
-Lowered(list Numbers, count Number) Numbers
-	Lowered((5, 1, 3), 3) is (1, 5, 3) and Lowered((9, 1, 3, 0), 3) is (1, 9, 3, 0)
-	Lowered((7, 1, 2, 3, 4, 5, 6), 7) is (1, 3, 2, 7, 4, 5, 6)
-	Lowered((4, 1, 2, 5, 6), 5) is (1, 4, 2, 5, 6) and Lowered((9, 1, 2, 3, 4, 5, 6, 8), 8) is (1, 3, 2, 8, 4, 5, 6, 9)
-	Lowered((9, 1, 2, 3, 4, 5, 6, 10), 8) is (1, 3, 2, 9, 4, 5, 6, 10) and Lowered((5, 1), 1) is (5, 1)
+Lower(list Numbers, count Number) Numbers
+	Lower((5, 1, 3), 3) is (1, 5, 3) and Lower((9, 1, 3, 0), 3) is (1, 9, 3, 0)
+	Lower((7, 1, 2, 3, 4, 5, 6), 7) is (1, 3, 2, 7, 4, 5, 6)
+	Lower((4, 1, 2, 5, 6), 5) is (1, 4, 2, 5, 6) and Lower((9, 1, 2, 3, 4, 5, 6, 8), 8) is (1, 3, 2, 8, 4, 5, 6, 9)
+	Lower((9, 1, 2, 3, 4, 5, 6, 10), 8) is (1, 3, 2, 9, 4, 5, 6, 10) and Lower((5, 1), 1) is (5, 1)
 	mutable heap = list
 	mutable slot = 0
 	mutable child = Child(heap, 0, count)
 	for as long as child < count and heap(child) < heap(slot)
-		heap = Swapped(heap, slot, child)
+		heap = Swap(heap, slot, child)
 		slot = child
 		child = Child(heap, slot, count)
 	heap
@@ -50,8 +50,8 @@ Child(heap Numbers, parent Number, count Number) Number
 	Child((1, 3, 5), 0, 3) is 1
 	left = parent * 2 + 1
 	left + 1 < count and heap(left + 1) < heap(left) then left + 1 else left
-Swapped(list Numbers, first Number, second Number) Numbers
-	Swapped((1, 2, 3), 0, 2) is (3, 2, 1)
+Swap(list Numbers, first Number, second Number) Numbers
+	Swap((1, 2, 3), 0, 2) is (3, 2, 1)
 	left = list(first)
 	right = list(second)
 	mutable swapped = list

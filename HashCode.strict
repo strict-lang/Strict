@@ -9,11 +9,11 @@ from(generic)
 	if generic is
 		Number then generic
 		Character then generic.number
-		Iterator then Combined(generic)
+		Iterator then Combine(generic)
 		Boolean then (generic then 1 else 0)
 		else (generic to HashCode).number
-Combined(elements Generic) Number
-	HashCode((1, 2)).Combined((3, 4)) is 97
+Combine(elements Generic) Number
+	HashCode((1, 2)).Combine((3, 4)) is 97
 	mutable hash = 0
 	for elements
 		hash = (hash * Multiplier + HashCode(value).number) % UnsignedRange

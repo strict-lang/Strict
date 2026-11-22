@@ -25,25 +25,25 @@ Run(arguments Texts) Number
 	resident = Resident(Path(Process.Current.executable).PathOnly.text)
 	command = arguments.Length > 0 then arguments(0) else ""
 	if command is in ("coordinator", "serve", "linked", "status")
-		Hosted(command, arguments, resident)
+		Host(command, arguments, resident)
 		return 0
 	rebuilt = SelfBuild(resident.root, Process.Current.executable).Rebuilt(arguments)
 	if rebuilt is not SelfBuild.Current
 		return rebuilt
 	passed = CommandLimit(Scripted.Packed(arguments)).Armed
 	forwarded = Forwarding(resident.root).Forwarded(passed)
-	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(passed).code else forwarded
-Hosted(command Text, arguments Texts, resident Resident) slow
+	forwarded is Forwarding.Ended then 1 else forwarded is Error then Log(passed).code else forwarded
+Host(command Text, arguments Texts, resident Resident) slow
 	if command is "coordinator"
 		mutable coordinator = Coordinator
 		return coordinator.Served
 	if command is "serve"
-		return Served(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
+		return Serve(arguments.Length > 1 then Resident(resident.root, arguments(1)) else resident)
 	if command is "status"
 		return Coordinator.Reported
 	rest = arguments.Slice(1, arguments.Length - 1)
 	NativeChunks(rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
-Served(resident Resident) slow
+Serve(resident Resident) slow
 	server = resident.Opened
 	if server is Error
 		return server
@@ -53,21 +53,21 @@ Served(resident Resident) slow
 	for as long as socket is not Error
 		request = resident.Requested(socket)
 		arguments = resident.Arguments(request)
-		answer = Replied(resident, request, socket, arguments, Resident.Variables, answer)
+		answer = Reply(resident, request, socket, arguments, Resident.Variables, answer)
 		socket = arguments is (Resident.Stopping) then Resident.Unaccepted else resident.Accepted(server, built)
 	resident.Closed(server)
-Replied(resident Resident, request Text, socket Number, arguments Texts, variables Text, last Answer) Answer slow
+Reply(resident Resident, request Text, socket Number, arguments Texts, variables Text, last Answer) Answer slow
 	isStopping = arguments is (Resident.Stopping)
 	isAnswered = isStopping is false and resident.IsCurrent(request, variables)
 	started = isAnswered and Scripted.IsRun(arguments) is false then Time.Now else 0
-	answer = isAnswered then Answered(resident, request, socket, arguments, last) else last
+	answer = isAnswered then GenerateAnswer(resident, request, socket, arguments, last) else last
 	stamped = isAnswered and started > 0 then answer.Stamped(started) else answer
 	resident.Released(request)
 	code = isAnswered then stamped.code else (isStopping then 0 else Resident.Refused)
 	logger.Log(Time(Time.Now).Iso8601 + " " + Text.Combine(arguments, " ") + " exit " + code)
 	resident.Ended(socket, code)
 	stamped
-Answered(resident Resident, request Text, socket Number, arguments Texts, last Answer) Answer slow
+GenerateAnswer(resident Resident, request Text, socket Number, arguments Texts, last Answer) Answer slow
 	home = Directory.Current
 	folder = resident.Folder(request)
 	isMoved = folder is not home
@@ -75,19 +75,20 @@ Answered(resident Resident, request Text, socket Number, arguments Texts, last A
 		Directory.Change(folder)
 	Socket.Output(socket)
 	isCode = Scripted.IsRun(arguments)
-	answer = Logged(CommandLimit(arguments).Armed, isCode then last else Answer(last, known = last.Fresh(folder)))
+	answer = Log(CommandLimit(arguments).Armed, isCode then last else Answer(last, known = last.Fresh(folder)))
 	TestBudget.Limited(0, "")
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
 	isCode then answer else Answer(answer, folder = folder).Carried(last)
-Logged(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
-	answer = Scripted.IsRun(arguments) then Coded(arguments, last) else Ran(arguments, last.known, last.inferred)
+Log(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
+	isCode = Scripted.IsRun(arguments)
+	answer = isCode then GenerateCodeAnswer(arguments, last) else RunForAnswer(arguments, last.known, last.inferred)
 	if answer is Error
-		logger.Log(Shortened(answer to Text))
+		logger.Log(Shorten(answer to Text))
 		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
 	answer
-Coded(arguments Texts, last Answer) Answer slow
+GenerateCodeAnswer(arguments Texts, last Answer) Answer slow
 	if Scripted.IsCode(arguments)
 		return Scripted(arguments(2)).RanWith(arguments, TypeSource.Root, last)
 	given = arguments(1)
@@ -96,31 +97,31 @@ Coded(arguments Texts, last Answer) Answer slow
 		logger.Log(given + " not found")
 		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
 	Scripted(File(path).ReadText).RanWith(arguments, TypeSource.Root, last, path)
-Shortened(trace Text) Text
-	Strict.Shortened("Error: A\n\t1") is "Error: A\n\t1"
-	Strict.Shortened(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
+Shorten(trace Text) Text
+	Strict.Shorten("Error: A\n\t1") is "Error: A\n\t1"
+	Strict.Shorten(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
 	logged = trace.LastIndexOf("\n\tat Strict.Logged ")
 	lines = (logged < 0 then trace else trace.Substring(0, logged)).Split("\n")
 	if lines.Length <= FirstTraceLines + LastTraceLines
 		return Text.Combine(lines, "\n")
 	gap = "\t... (skipped " + (lines.Length - FirstTraceLines - LastTraceLines) + " lines)"
 	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
-Ran(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
+RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
 	folder = Directory.Current
 	head = arguments.Length > 0 then arguments(0) else ""
-	given = head is in Informing then List(Text) + head else Projected(Mained(arguments))
+	given = head is in Informing then List(Text) + head else Project(InsertMainFile(arguments))
 	command = given.Length > 0 then given(0) else "help"
-	rest = Cleaned(command, Rooted(command is in Commands then Rest(given) else given))
+	rest = Clean(command, Root(command is in Commands then Rest(given) else given))
 	message = Message(command, rest)
 	if message is not ""
 		logger.Log(message)
 		return Answer(command is in Informing then 0 else 2, known)
 	if command is in ("build", "check", "update", "format", "suggest")
 		return command is "build" then Answer(Native(command, rest), known) else Tool(command, rest, known)
-	command is "test" then Examined(rest, known, inferred) else Answer(Launched(rest, folder), known)
-Cleaned(command Text, rest Texts) Texts slow
-	Strict.Cleaned("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
-	Strict.Cleaned("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
+	command is "test" then Examine(rest, known, inferred) else Answer(Launch(rest, folder), known)
+Clean(command Text, rest Texts) Texts slow
+	Strict.Clean("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
+	Strict.Clean("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
 	if "full" is not in rest
 		return rest
 	folder = Directory.Exists(rest(0)) then rest(0) else Path(rest(0)).PathOnly.text
@@ -140,7 +141,7 @@ Message(command Text, rest Texts) Text slow
 		return Text.Combine(Help, "\n")
 	isFolder = command is "test" and Directory.Exists(rest(0))
 	command is in ("check", "update") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
-Examined(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
+Examine(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
 	"nightly" is in rest then Answer(Nightly(rest), known) else Testing(rest, known, inferred)
 Nightly(rest Texts) Number slow
 	if File(rest(0)).Exists is false
@@ -156,28 +157,28 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 	if request.Option is "-"
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
 	if request.Option is in ("values", "trace", "profile", "sampled")
-		return Answer(Traced(request, rest), known)
+		return Answer(Trace(request, rest), known)
 	execute = request.Executing(known, inferred)
 	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
 Test(text Text) Text slow
 	Trial(text).Ran
-Traced(request TestRequest, rest Texts) Number slow
+Trace(request TestRequest, rest Texts) Number slow
 	trace = ValueTrace(request.Selection)
 	profile = Profile(request.Selection)
 	if request.Option is in ("profile", "sampled")
 		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sampled(rest(0), rest(1))
 	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Traced(rest(0), rest(1))
-Rooted(arguments Texts) Texts slow
-	Strict.Rooted(List(Text) + "a.strict") is ("a.strict", ".")
-	Strict.Rooted(("a.strict", ".")) is ("a.strict", ".")
-	Strict.Rooted(("a.strict", "Compiler")) is ("a.strict", ".", "Compiler")
-	Strict.Rooted(("a.strict", "5")) is ("a.strict", ".", "5")
+Root(arguments Texts) Texts slow
+	Strict.Root(List(Text) + "a.strict") is ("a.strict", ".")
+	Strict.Root(("a.strict", ".")) is ("a.strict", ".")
+	Strict.Root(("a.strict", "Compiler")) is ("a.strict", ".", "Compiler")
+	Strict.Root(("a.strict", "5")) is ("a.strict", ".", "5")
 	if arguments.Length is 0 or arguments.Length > 1 and File(arguments(1) + "/Any.strict").Exists
 		return arguments
 	(List(Text) + arguments(0) + TypeSource.Root) + Rest(arguments)
-Main(folder Text) Text slow
-	Strict.Main(".") is "Strict.strict"
-	Strict.Main("Missing") is ""
+FindMainFile(folder Text) Text slow
+	Strict.FindMainFile(".") is "Strict.strict"
+	Strict.FindMainFile("Missing") is ""
 	isCurrent = folder is "" or folder is "."
 	target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
 	clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
@@ -186,33 +187,33 @@ Main(folder Text) Text slow
 		return named
 	files = Directory.Files(isCurrent then "." else clean, "*.strict")
 	isCurrent and File("Strict.strict").Exists then "Strict.strict" else (files.Length is 1 then files.First else "")
-Mained(arguments Texts) Texts slow
-	Strict.Mained(("build", "web")) is ("build", "Strict.strict", "web")
-	Strict.Mained(List(Text) + "build") is ("build", "Strict.strict")
-	Strict.Mained(("build", ".", "windows")) is ("build", "Strict.strict", "windows")
-	Strict.Mained(("build", "Examples/Sum.strict")) is ("build", "Examples/Sum.strict")
-	Strict.Mained(("test", "Math")) is ("test", "Math")
-	Strict.Mained(("test", "native")) is ("test", "Strict.strict", "native")
-	Strict.Projected(Strict.Mained(("build", "strict"))) is ("build", "Strict.strict")
-	main = Main(".")
+InsertMainFile(arguments Texts) Texts slow
+	Strict.InsertMainFile(("build", "web")) is ("build", "Strict.strict", "web")
+	Strict.InsertMainFile(List(Text) + "build") is ("build", "Strict.strict")
+	Strict.InsertMainFile(("build", ".", "windows")) is ("build", "Strict.strict", "windows")
+	Strict.InsertMainFile(("build", "Examples/Sum.strict")) is ("build", "Examples/Sum.strict")
+	Strict.InsertMainFile(("test", "Math")) is ("test", "Math")
+	Strict.InsertMainFile(("test", "native")) is ("test", "Strict.strict", "native")
+	Strict.Project(Strict.InsertMainFile(("build", "strict"))) is ("build", "Strict.strict")
+	main = FindMainFile(".")
 	if arguments.Length is 0
 		return main is "" or main is "Strict.strict" then arguments else List(Text) + main
-	arguments(0) is in ("build", "test") then Resolved(arguments, main) else arguments
-Resolved(arguments Texts, main Text) Texts slow
-	Strict.Resolved(("build", "."), "Strict.strict") is ("build", "Strict.strict")
-	Strict.Resolved(("test", "."), "Strict.strict") is ("test", ".")
-	Strict.Resolved(List(Text) + "test", "Strict.strict") is ("test", "Strict.strict")
+	arguments(0) is in ("build", "test") then Resolve(arguments, main) else arguments
+Resolve(arguments Texts, main Text) Texts slow
+	Strict.Resolve(("build", "."), "Strict.strict") is ("build", "Strict.strict")
+	Strict.Resolve(("test", "."), "Strict.strict") is ("test", ".")
+	Strict.Resolve(List(Text) + "test", "Strict.strict") is ("test", "Strict.strict")
 	given = arguments.Length > 1 then arguments(1) else ""
 	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
-		folder = Main(given)
+		folder = FindMainFile(given)
 		return folder is "" then arguments else List(Text) + "build" + folder + arguments.Slice(2, arguments.Length - 2)
 	isSource = given is not "" and (File(TypeSource.Cased(given)).Exists or Directory.Exists(given))
 	target = arguments(0) is "test" and main is "" then "." else main
 	isSource or target is "" then arguments else List(Text) + arguments(0) + target + Rest(arguments)
-Projected(arguments Texts) Texts slow
-	Strict.Projected(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
-	Strict.Projected(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
-	Strict.Projected(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
+Project(arguments Texts) Texts slow
+	Strict.Project(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
+	Strict.Project(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
+	Strict.Project(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
 	at = arguments.Length > 0 and arguments(0) is in Commands then 1 else 0
 	source = TypeSource.Cased(arguments.Length > at then arguments(at) else "")
 	project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
@@ -221,13 +222,13 @@ Projected(arguments Texts) Texts slow
 		Directory.Change(project)
 	for arguments
 		index is at then (project is "" then source else TypeSource.Relative(full)) else value
-Joined(arguments Texts) Text
-	Strict.Joined(("a b", "c")) is " \"a b\" c"
+Join(arguments Texts) Text
+	Strict.Join(("a b", "c")) is " \"a b\" c"
 	mutable joined = ""
 	for arguments
 		joined = joined + " " + (value.IndexOf(" ") >= 0 then "\"" + value + "\"" else value)
 	joined
-Launched(rest Texts, folder Text) Number slow
+Launch(rest Texts, folder Text) Number slow
 	if NativeBuild.IsProgram(rest(0)) is false
 		return Native("test", (rest(0), rest(1), "native"))
 	base = NativeBuild.Output(rest(0), true)
@@ -235,57 +236,57 @@ Launched(rest Texts, folder Text) Number slow
 	cache = NativeCache("build", (rest(0), rest(1)))
 	fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
 	if fresh is ""
-		tested = Retested(rest)
+		tested = Retest(rest)
 		if tested is not 0
 			return tested
-	Started(rest, folder, fresh)
-Retested(rest Texts) Number slow
+	Start(rest, folder, fresh)
+Retest(rest Texts) Number slow
 	quietUntil = Process.Elapsed + QuietSeconds
 	tested = Execute("", quietUntil = quietUntil).Served(rest(0), rest(1)).code
 	if tested is 0 and Process.Elapsed >= quietUntil
 		logger.Log(Execute.Summary(0, rest(0)))
 	tested
-Compiled(rest Texts, fresh Text) Number slow
+Compile(rest Texts, fresh Text) Number slow
 	if fresh is not ""
 		return 0
 	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
-Started(rest Texts, folder Text, fresh Text) Number slow
+Start(rest Texts, folder Text, fresh Text) Number slow
 	base = NativeBuild.Output(rest(0), true)
 	tools = Toolchain(Platform.Current, rest(1))
-	built = Compiled(rest, fresh)
+	built = Compile(rest, fresh)
 	if built is not 0
 		return built
 	if fresh is not ""
 		logger.Log("Up to date: " + fresh)
 	target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
 	Directory.Change(folder)
-	Process(target).Started(Joined(rest.Slice(2, rest.Length - 2)).Trim)
+	Process(target).Started(Join(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
 		arguments(value)
 Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 	if command is "format"
-		logger.Log(Formatted(rest(0)))
+		logger.Log(Format(rest(0)))
 	if command is "update"
-		Updated(Repositories("."), rest(0))
-	checked = command is "check" then Checked(ValidateCheck, rest(0), rest(1)) else 0
-	Answer(command is "suggest" then Suggested(rest) else checked, known)
-Checked(checker Validators/ValidateCheck, folder Text, root Text) Number slow
+		Update(Repositories("."), rest(0))
+	checked = command is "check" then Check(ValidateCheck, rest(0), rest(1)) else 0
+	Answer(command is "suggest" then Suggest(rest) else checked, known)
+Check(checker Validators/ValidateCheck, folder Text, root Text) Number slow
 	checker.Run(folder, root)
-Updated(updater Bytecode/Repositories, folder Text) slow
+Update(updater Bytecode/Repositories, folder Text) slow
 	logger.Log("Updated " + updater.Updated(folder) + " packages in " + folder)
 Native(command Text, rest Texts) Number slow
 	Strict.Native("test", ("Missing.strict", ".", "values", "other")) is 2
 	NativeCompiler.Ran((List(Text) + command) + rest)
-Formatted(path Text) Text slow
-	Strict.Formatted("Examples/HelloLogger.strict").StartsWith("has logger")
+Format(path Text) Text slow
+	Strict.Format("Examples/HelloLogger.strict").StartsWith("has logger")
 	lines = RoundTrip.Tabbed(File(path).ReadLines)
 	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
 		return Error(ResolveCheck.Located(FileCompiler.Normalized(path), broken + 1, FileCheck.Problem(lines, broken)))
 	Text.Combine(RoundTrip.Formatted(lines), "\n")
-Suggested(rest Texts) Number slow
+Suggest(rest Texts) Number slow
 	source = FileCompiler.Normalized(rest(0))
 	if rest.Length > 3 and rest(3) is "-"
 		File(source).InMemory(Process.Input)

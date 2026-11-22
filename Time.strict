@@ -42,20 +42,20 @@ Clock Numbers
 IsoDate Text
 	Moment.IsoDate is "2023-11-14"
 	date = Date
-	date(0) + "-" + Padded(date(1)) + "-" + Padded(date(2))
+	date(0) + "-" + Pad(date(1)) + "-" + Pad(date(2))
 IsoTime Text
 	Moment.IsoTime is "22:13:20"
 	clock = Clock
-	Padded(clock(0)) + ":" + Padded(clock(1)) + ":" + Padded(clock(2))
+	Pad(clock(0)) + ":" + Pad(clock(1)) + ":" + Pad(clock(2))
 to Text
 	Moment to Text is "2023-11-14 22:13:20"
 	IsoDate + " " + IsoTime
 Iso8601 Text
 	Moment.Iso8601 is "2023-11-14T22:13:20Z"
 	IsoDate + "T" + IsoTime + "Z"
-Padded(number Number) Text
-	Moment.Padded(7) is "07"
-	Moment.Padded(12) is "12"
+Pad(number Number) Text
+	Moment.Pad(7) is "07"
+	Moment.Pad(12) is "12"
 	number < 10 then "0" + number else "" + number
 Parse(text Text) Time
 	Time.Parse("2023-11-14 22:13:20") is Moment
@@ -88,11 +88,11 @@ IsWithin(start Time, end Time) Boolean
 	Moment.IsWithin(Time(0), Time(10)) is false
 	Moment.IsWithin(Time(1800000000), Time(1900000000)) is false
 	seconds >= start.seconds and seconds <= end.seconds
-Elapsed(current Time) Text
-	Moment.Elapsed(Time(1700000003)) is "just now"
-	Moment.Elapsed(Time(1700000180)) is "about 3 minutes ago"
-	Moment.Elapsed(Time(1700086400)) is "about 1 day ago"
-	Moment.Elapsed(Time(1800000000)) is "about 3 years ago"
+DescribeElapsed(current Time) Text
+	Moment.DescribeElapsed(Time(1700000003)) is "just now"
+	Moment.DescribeElapsed(Time(1700000180)) is "about 3 minutes ago"
+	Moment.DescribeElapsed(Time(1700086400)) is "about 1 day ago"
+	Moment.DescribeElapsed(Time(1800000000)) is "about 3 years ago"
 	passed = current.seconds - seconds
 	if passed <= 5
 		return "just now"

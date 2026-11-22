@@ -13,7 +13,7 @@ Name Text
 Located Text
 	Adding.Located is "obj/Trials/AddTwoNumbers/AddTwoNumbers.strict"
 	"obj/Trials/" + Name + "/" + Name + ".strict"
-Written slow
+Write slow
 	for ("obj", "obj/Trials", "obj/Trials/" + Name)
 		Directory.Create(value)
 	File(Located).Write(source)
@@ -21,5 +21,5 @@ Ran Text slow
 	"Test passed: AddTwoNumbers(2, 3) is 5" is in Adding.Ran
 	if Name is ""
 		return ""
-	Written
+	Write
 	Process.RunTool(Process.Find("strict").executable, "test " + Located + " unit").Output

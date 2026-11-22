@@ -14,7 +14,7 @@ Checked CommandLine
 Option(name Text, default Text) Text
 	Sample.Option("quality", "best") is "fastest"
 	Sample.Option("width", "720") is "720"
-	Repeated(name, List(Text) + default).Last
+	Repeat(name, List(Text) + default).Last
 Numeric(name Text, default Number) Number
 	Sample.Numeric("count", 1) is 8
 	Sample.Numeric("seed", 0) is -3
@@ -25,22 +25,22 @@ Numeric(name Text, default Number) Number
 		return default
 	number = text to Number
 	isExact = number is Error then false else number.IsFinite and number to Text is text
-	isExact then number else Error("InvalidNumber: " + Spelled(name) + " " + text)
+	isExact then number else Error("InvalidNumber: " + Spell(name) + " " + text)
 HasFlag(name Text, default Boolean) Boolean
 	Sample.HasFlag("jsonOutput", false)
 	Sample.HasFlag("width", false) is false
 	CommandLine(List(Text) + "--json_output=false", List(Text) + "jsonOutput").HasFlag("jsonOutput", true) is false
 	CommandLine(("--json_output", "false"), List(Text) + "jsonOutput").HasFlag("jsonOutput", false) is false
-	option = Spelled(name)
+	option = Spell(name)
 	at = arguments.Index(option)
 	if at >= 0
 		return at + 1 >= arguments.Length or arguments(at + 1) is not "false"
 	written = Values(option)
 	written.Length is 0 then default else written.Last is "true"
-Repeated(name Text, defaults Texts) Texts
-	Sample.Repeated("lora", List(Text)) is ("a.safetensors:0.8", "b")
-	Sample.Repeated("width", List(Text) + "x") is ("x")
-	found = Values(Spelled(name))
+Repeat(name Text, defaults Texts) Texts
+	Sample.Repeat("lora", List(Text)) is ("a.safetensors:0.8", "b")
+	Sample.Repeat("width", List(Text) + "x") is ("x")
+	found = Values(Spell(name))
 	found.Length is 0 then defaults else found
 Chosen(name Text, choices Texts, values Numbers, default Number) Number
 	Sample.Chosen("quality", Choices, (0, 5), 0) is 5
@@ -50,11 +50,11 @@ Chosen(name Text, choices Texts, values Numbers, default Number) Number
 	if text is ""
 		return default
 	at = choices.Index(text)
-	at < 0 then Error("UnknownChoice:" + Spelled(name)) else values(at)
-Spelled(name Text) Text
-	CommandLine.Spelled("jsonOutput") is "--json_output"
-	CommandLine.Spelled("count") is "--count"
-	CommandLine.Spelled("JsonOutput") is "--json_output"
+	at < 0 then Error("UnknownChoice:" + Spell(name)) else values(at)
+Spell(name Text) Text
+	CommandLine.Spell("jsonOutput") is "--json_output"
+	CommandLine.Spell("count") is "--count"
+	CommandLine.Spell("JsonOutput") is "--json_output"
 	mutable spelled = "--"
 	for name
 		letter = value to Text
@@ -66,7 +66,7 @@ Usage(defaults Texts, descriptions Texts) Text
 Spellings Texts
 	Sample.Spellings.First is "--quality"
 	for names
-		Spelled(value)
+		Spell(value)
 Values(option Text) Texts
 	Sample.Values("--lora") is ("a.safetensors:0.8", "b")
 	for arguments
@@ -85,4 +85,4 @@ Lines(defaults Texts, descriptions Texts) Texts
 	Flags.Lines(("1", "false"), List(Text) + "Outputs") is ("--count 1  Outputs", "--json_output false")
 	for names
 		described = index < descriptions.Length and descriptions(index) is not ""
-		Spelled(value) + " " + defaults(index) + (described then "  " + descriptions(index) else "")
+		Spell(value) + " " + defaults(index) + (described then "  " + descriptions(index) else "")
