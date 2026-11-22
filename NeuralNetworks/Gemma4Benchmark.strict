@@ -1,7 +1,7 @@
 constant Prompt = "Alan Turing theorized that computers would one day become"
 constant Tries = 3
 Run(path Text, count Number, repeats = 1, batch = 1)
-	if MachineUse.Weights("Gemma4Benchmark", path).Admitted
+	if MachineUse.Weights("Gemma4Benchmark", path).IsAdmitted
 		Ran(path, count, repeats, batch)
 Ran(path Text, count Number, repeats Number, batch Number) slow
 	tokenizer = GemmaTokens.Loaded(Gguf(path))

@@ -3,7 +3,7 @@ constant Count = 30
 constant Probe = FlashNextText
 constant Head = "NeuralNetworks/tinyqwen4expmtp.gguf"
 Run(folder Text, draft = "")
-	if MachineUse.Weights("FlashNextText", folder + "/" + Weights).Admitted
+	if MachineUse.Weights("FlashNextText", folder + "/" + Weights).IsAdmitted
 		Ran(folder, draft)
 Ran(folder Text, draft Text)
 	path = folder + "/" + Weights

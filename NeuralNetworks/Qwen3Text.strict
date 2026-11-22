@@ -6,7 +6,7 @@ Run
 	if File(Folder + "model.gguf").Exists is false
 		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + "model.gguf\" \"" + Address + "\"").HasFailed
 			return Error("DownloadFailed: " + Address)
-	if MachineUse.Weights("Qwen3Text", Folder + "model.gguf").Admitted
+	if MachineUse.Weights("Qwen3Text", Folder + "model.gguf").IsAdmitted
 		Ran
 Ran
 	started = Process.Elapsed

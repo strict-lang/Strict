@@ -49,15 +49,15 @@ Needed Text
 	MachineUse("H3Video", 4, 2).Needed.StartsWith("need\tH3Video\tH3Video\t4\t4\t2\t2\t0\t")
 	mode = isForced then "force" else "wait"
 	"need\t" + program + "\t" + program + "\t" + ram + "\t" + ram + "\t" + vram + "\t" + vram + "\t0\t" + mode
-Admitted Boolean slow
-	MachineUse("H3Video", 0, 0, true, Nowhere).Admitted
+IsAdmitted Boolean slow
+	MachineUse("H3Video", 0, 0, true, Nowhere).IsAdmitted
 	Gpu.Require(program)
 	reply = Coordinator(coordinator).Resolved(Needed)
 	if reply.StartsWith("refused")
 		Explained(reply)
 		return false
-	reply is "" then Checked else true
-Checked Boolean slow
+	reply is "" then HasRoom else true
+HasRoom Boolean slow
 	device = Device
 	problem = Problem(GpuMemory.HostAvailable, GpuMemory.HostTotal, device(1), device(0))
 	if problem is not "" and isForced
