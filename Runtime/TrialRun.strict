@@ -4,13 +4,16 @@ Tested Text slow
 	"Test passed: AddTwoNumbers(2, 3) is 5" is in TrialRun(Trial.Adding).Tested
 	if trial.Name is ""
 		return ""
+	warm = Warm
 	trial.Written
+	File(trial.Located).InMemory(trial.source)
 	started = logger.Captured(true)
-	answer = Ran(Warm)
+	answer = Ran(warm)
 	output = started + logger.Captured(false)
 	answer is Error then output + answer to Text else output
 Warmed Answer slow
 	trial.Written
+	File(trial.Located).InMemory(trial.source)
 	started = logger.Captured(true)
 	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)))
 	output = started + logger.Captured(false)

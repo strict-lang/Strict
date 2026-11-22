@@ -1,5 +1,6 @@
 # Bugs
 
+- `Logger.Captured(true)` inside a running capture overwrites the one saved output of the thread, so the outer `Captured(false)` keeps capturing and every later log line is lost (TrialRun evaluates its warm-up before it captures for that reason).
 - Since the let removal `a = Greet` after `mutable a = 1` parses as a new local, not a reassignment: `Bytecode/ErrorScope.strict` Reassigned and Prepared fail their tests (2 of `strict test Bytecode/ErrorScope.strict unit`).
 - A child that strict waits for ends with its parent on Windows (job with kill on close) and on Linux for `Process.RunTool` (PR_SET_PDEATHSIG), not yet on macOS (no parent death signal) and not for Linux `Process.Started`, which runs through `system()`.
 - A default argument that is a constant list breaks the split native build: `Ran(arguments Text, variables = EightThreads)` in `Runtime/CheckTests.strict` gave `mlir-opt failed: llvm.mlir.addressof op must reference a global` (`@cCheckTests_CheckPolicyRun_1_1_0`, defined in another module part); passing the constant explicitly builds.
