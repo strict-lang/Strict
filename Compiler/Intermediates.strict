@@ -36,8 +36,9 @@ Replaced(executable Text, target Text) Text
 	Intermediates.Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
 	unrunnable = Unrunnable(executable, target)
-	if unrunnable is not ""
-		return unrunnable
+	refused = unrunnable is "" then Unchecked(executable, target) else unrunnable
+	if refused is not ""
+		return refused
 	old = Free(executable)
 	File(executable).Rename(old)
 	File(target).Rename(executable)
@@ -55,6 +56,16 @@ Unrunnable(executable Text, target Text) Text
 		return ""
 	ran = Process.RunTool(target, "version")
 	ran.exitCode is 0 then "" else target + " does not run (version exit " + ran.exitCode + "), " + executable + " stays"
+Unchecked(executable Text, target Text) Text slow
+	Intermediates.Unchecked("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
+	Intermediates.Unchecked("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
+	if Path(executable).FileName.RemoveExtension.text is not "strict"
+		return ""
+	for ("Expressions", "Compiler")
+		checked = Process.RunTool(target, "check " + value)
+		if checked.exitCode is not 0
+			return target + " fails strict check " + value + " (exit " + checked.exitCode + "), " + executable + " stays"
+	""
 Free(executable Text) Text
 	Intermediates.Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
 	IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0
