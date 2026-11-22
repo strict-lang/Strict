@@ -22,10 +22,10 @@ Run Number
 	folder = "Compiler/output/Emission" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	result is Error then result else 0
-Checked(folder Text) Boolean
+	0
+Checked(folder Text)
 	isWin = Process.OperatingSystem is "Windows"
 	cFile = folder + "/run.c"
 	exe = folder + "/run" + (isWin then ".exe" else "")
@@ -37,12 +37,13 @@ Checked(folder Text) Boolean
 	started = Process.Elapsed
 	cmd = "\"" + Process.Find("strict").executable + "\" test Math/Matrix.strict . native"
 	Reported(Process.RunTool(exe, isWin then "\"" + cmd + "\"" else cmd, ToolSeconds), Process.Elapsed - started)
-Reported(res ProcessResult, elapsed Number) Boolean
+Reported(res ProcessResult, elapsed Number)
 	if res.exitCode is not 0
 		return Error("Matrix native tests failed (" + res.exitCode + "): " + res.Output + res.error)
 	peakBytes = Text.Combine(Regex("PEAK:(\\d+)").Groups(res.Output), "") to Number
 	logger.Log("Matrix: " + (peakBytes / MegaByte).Round(0) + " MB peak, " + elapsed.Round(2) + " s")
-	peakBytes >= LimitBytes then Error("Matrix compilation exceeded 1 GB") else true
+	if peakBytes >= LimitBytes
+		return Error("Matrix compilation exceeded 1 GB")
 WinLines Texts
 	WinA + WinB + WinC + WinD + WinE + WinF + WinG + WinH + WinI + WinJ
 NixLines Texts

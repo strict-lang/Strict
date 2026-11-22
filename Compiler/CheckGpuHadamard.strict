@@ -32,17 +32,17 @@ Run Number
 	folder = "Compiler/output/HadamardCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	result is Error then result else 0
-Checked(folder Text) Boolean
+	0
+Checked(folder Text)
 	body = ModuleLines("Device") + ModuleLines("Nvidia") + ModuleLines("Hadamard")
 	File(folder + "/hadamard.mlir").Write(MlirHeader + body + List(Text) + "}")
-	lowered = CompiledPtx(folder)
-	lowered is Error then lowered else RanHarness(folder)
+	CompiledPtx(folder)
+	RanHarness(folder)
 ModuleLines(name Text) Texts
 	File("Compiler/NativeRuntime" + name + ".mlir").ReadLines
-CompiledPtx(folder Text) Boolean
+CompiledPtx(folder Text)
 	optArgs = "\"" + folder + "/hadamard.mlir\" " + OptFlags + " -o \"" + folder + "/h.llvm.mlir\""
 	optRes = Process.RunTool(FindTool("mlir-opt", "C:/msys64/ucrt64/bin/mlir-opt.exe"), optArgs, ToolSeconds)
 	if optRes.exitCode is not 0
@@ -53,8 +53,9 @@ CompiledPtx(folder Text) Boolean
 		return Error("MlirTranslateFailed: " + trRes.Output + trRes.error)
 	ptxArgs = ClangFlags + " \"" + folder + "/h.ll\" -o \"" + folder + "/h.ptx\""
 	ptxRes = Process.RunTool(FindTool("clang", "C:/Program Files/LLVM/bin/clang.exe"), ptxArgs, ToolSeconds)
-	ptxRes.exitCode is not 0 then Error("ClangPtxFailed: " + ptxRes.Output + ptxRes.error) else true
-RanHarness(folder Text) Boolean
+	if ptxRes.exitCode is not 0
+		return Error("ClangPtxFailed: " + ptxRes.Output + ptxRes.error)
+RanHarness(folder Text)
 	win = Process.OperatingSystem is "Windows"
 	exe = folder + "/check" + (win then ".exe" else "")
 	File(folder + "/check.c").Write(HarnessCode)
@@ -64,7 +65,8 @@ RanHarness(folder Text) Boolean
 		return Error("CompileFailed: " + comp.Output + comp.error)
 	ran = Process.RunTool(exe, "\"" + folder + "/h.ptx\"", ToolSeconds)
 	logger.Log(ran.Output.Trim)
-	ran.exitCode is not 0 then Error("HadamardCheckFailed: " + ran.Output + ran.error) else true
+	if ran.exitCode is not 0
+		return Error("HadamardCheckFailed: " + ran.Output + ran.error)
 FindTool(name Text, windowsPath Text) Text
 	Process.OperatingSystem is "Windows" and File(windowsPath).Exists then windowsPath else name
 HarnessCode Texts

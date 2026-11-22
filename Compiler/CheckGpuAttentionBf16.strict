@@ -14,17 +14,19 @@ Run Number
 	folder = "Compiler/output/AttentionBf16" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	result is Error then result else 0
-Checked(folder Text) Boolean
+	0
+Checked(folder Text)
 	isWin = Process.OperatingSystem is "Windows"
 	if PreparedData(folder, isWin) is Error
 		return Error("PrepareSafetensorsFailed")
 	File(folder + "/AttentionBrains.strict").Write(ProgramHead + ProgramRun + ProgramTail)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/AttentionBrains.strict", BuildSeconds)
-	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else VerifiedBuild(folder, isWin)
-VerifiedBuild(folder Text, isWin Boolean) Boolean
+	if built.exitCode is not 0
+		return Error("BuildFailed: " + built.Output + built.error)
+	VerifiedBuild(folder, isWin)
+VerifiedBuild(folder Text, isWin Boolean)
 	obj = folder + "/obj/AttentionBrains.runtime.ptx"
 	ptx = Text.Combine(File(File(obj).Exists then obj else folder + "/AttentionBrains.runtime.ptx").ReadLines, "\n")
 	if ptx is ""
@@ -35,16 +37,15 @@ VerifiedBuild(folder Text, isWin Boolean) Boolean
 	if ran.exitCode is not 0 or "attention 2113536 0 1" is not in ran.Output
 		return Error("AttentionFailed: " + ran.Output + ran.error)
 	logger.Log(ran.Output.Trim)
-	true
-PreparedData(folder Text, isWin Boolean) Boolean
+PreparedData(folder Text, isWin Boolean)
 	cFile = folder + "/gen.c"
 	exe = folder + "/gen" + (isWin then ".exe" else "")
 	File(cFile).Write(WriterA + WriterB + WriterC + WriterD + WriterE)
 	comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"", CompileSeconds)
 	if comp.exitCode is not 0
 		return Error("CompileGenFailed: " + comp.Output + comp.error)
-	ran = Process.RunTool(exe, "\"" + folder + "/attention.safetensors\"", WriteSeconds)
-	ran.exitCode is not 0 then Error("WriteDataFailed") else true
+	if Process.RunTool(exe, "\"" + folder + "/attention.safetensors\"", WriteSeconds).exitCode is not 0
+		return Error("WriteDataFailed")
 RunGpu(folder Text, exe Text) ProcessResult
 	win = Process.OperatingSystem is "Windows"
 	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "

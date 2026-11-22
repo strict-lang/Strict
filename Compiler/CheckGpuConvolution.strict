@@ -13,13 +13,11 @@ Run Number
 	folder = "Compiler/output/Convolution" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	if result is Error
-		return result
 	logger.Log("Convolutions of 3 and 1024 channels run on the tensor cores like 512 channels")
 	0
-Checked(folder Text) Boolean
+Checked(folder Text)
 	src = folder + "/GpuConvolution.strict"
 	File(src).Write(ConvA + ConvB + ConvC + ConvD + ConvE + ConvF + ConvG + ConvH)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
@@ -30,18 +28,18 @@ Checked(folder Text) Boolean
 	cmd = (win then "set STRICT_GPU=all&& " else "STRICT_GPU=all ") + "\"" + exe + "\""
 	ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 	logger.Log(ran.Output.Trim)
-	ran.exitCode is not 0 then Error("GpuConvolutionFailed: " + ran.Output + ran.error) else VerifiedOutput(ran.Output)
-VerifiedOutput(output Text) Boolean
+	if ran.exitCode is not 0
+		return Error("GpuConvolutionFailed: " + ran.Output + ran.error)
+	VerifiedOutput(ran.Output)
+VerifiedOutput(output Text)
 	for ("few", "wide", "middle")
 		found = Regex(value + " ([\\d.]+) ms, difference ([\\d.]+) of ([\\d.]+)").Groups(output)
 		if found.Length < 4
 			return Error("Convolution did not report: " + value)
-		measured = Measured(value, found(1) to Number, found(2) to Number, found(3) to Number)
-		if measured is Error
-			return measured
-	true
-Measured(name Text, time Number, difference Number, size Number) Boolean
-	CheckGpuConvolution.Measured("few", 1, 0.003, 2)
+		Measured(value, found(1) to Number, found(2) to Number, found(3) to Number)
+Measured(name Text, time Number, difference Number, size Number)
+	CheckGpuConvolution.Measured("few", 1, 0.003, 2) is not Error
 	if difference > MaxRatio * (size > 1 then size else 1)
 		return Error(name + " differs from Tapped by " + difference + " of " + size)
-	time < MaxMs then true else Error(name + " took " + time + " ms, not the tensor core convolution")
+	if time >= MaxMs
+		return Error(name + " took " + time + " ms, not the tensor core convolution")
