@@ -21438,7 +21438,7 @@
     %slot = llvm.getelementptr %marks[0, %index] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<257 x i64>
     return %slot : !llvm.ptr
   }
-  func.func private @strict_gpu_elapsed(%self: f64, %from: f64, %to: f64) -> f64 {
+  func.func private @strict_gpu_elapse(%self: f64, %from: f64, %to: f64) -> f64 {
     %unknown = arith.constant -1.0 : f64
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
@@ -26713,7 +26713,7 @@
   // so a merge that can not run on the GPU never opens it)
   llvm.mlir.global internal constant @strict_gpu_tuned_name("\13\00\00\00\00\00\00\00\13\00\00\00\00\00\00\00strict_device_tuned\00") : !llvm.array<36 x i8>
   llvm.mlir.global internal @strict_gpu_tuned_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
-  func.func private @strict_gpu_tuned(%self: f64, %rows: f64, %downs: f64, %ups: f64, %scales: f64) -> f64 {
+  func.func private @strict_gpu_tune(%self: f64, %rows: f64, %downs: f64, %ups: f64, %scales: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
