@@ -145,7 +145,7 @@ Kernels(inspected MlirFunction) Texts
 		if value.kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, index).IsGpu
 			single = MlirFunction(inspected, Float = "f32")
 			exact = MlirGuards(MlirFunction(single, Guarded = index), index).Kernel
-			doubled = MlirDoubles(inspected, index).Failing then List(Text) else MlirDevice(inspected, index).Kernel
+			doubled = MlirDoubles(inspected, index).IsFailing then List(Text) else MlirDevice(inspected, index).Kernel
 			kernels = doubled + MlirDevice(single, index).Kernel + exact
 			isKernel = MlirWholeKernel(inspected, index).IsKernel
 			lines = lines + (isKernel then MlirKernelBody(inspected, index).Kernels else kernels)

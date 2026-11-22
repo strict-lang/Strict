@@ -179,9 +179,9 @@ Matched(arguments Texts, types Texts, instance Text, method Text) Number
 	Sizing.Matched(List(Text) + "Text", List(Text) + "Size", "Count", "from") is 0
 	Sizing.Matched(("Text", "Number"), ("Number", "Text"), "Letter", "from") is 0
 	Sizing.Issue(SyntaxParser(Tokenizer("Size(count)").Tokens).Parse, Counted, Counted) is ""
-	Odd.Mismatch("Word", "Empty") is false and Odd.IsBaseMismatch("Text", "Empty") is false
-	Couples.Mismatch("Text", "Texts") is false and Couples.IsBaseMismatch("Text", "Texts") is false
-	Sizing.Mismatch("Count", "Character") is false
+	Odd.IsMismatch("Word", "Empty") is false and Odd.IsBaseMismatch("Text", "Empty") is false
+	Couples.IsMismatch("Text", "Texts") is false and Couples.IsBaseMismatch("Text", "Texts") is false
+	Sizing.IsMismatch("Count", "Character") is false
 	members = inference.types.MembersOf(instance).types
 	isMemberCall = (arguments - members).Length is 0 and Mismatched(arguments, members) < 0
 	method is "from" and isMemberCall then Number.NotFound else Mismatched(arguments, types)
@@ -190,10 +190,10 @@ Arguments(call SyntaxNode, scope Scope, current Scope) Texts
 	Sizing.IsBaseMismatch("Number", "Count") is false
 	Sizing.IsBaseMismatch("Text", "Xyz") is false
 	Sizing.IsBaseMismatch("Count", "Number") is false
-	Sizing.Mismatch("Size", "Size") is false
-	Sizing.Mismatch("Count", "Xyz") is false
+	Sizing.IsMismatch("Size", "Size") is false
+	Sizing.IsMismatch("Count", "Xyz") is false
 	Sizing.Arguments(SyntaxParser(Tokenizer("count.Grow(area)").Tokens).Parse, Counted, Counted) is ("Area")
-	Odd.Mismatch("Character", "Word") is false and Odd.Mismatch("Empty", "Number") is false
+	Odd.IsMismatch("Character", "Word") is false and Odd.IsMismatch("Empty", "Number") is false
 	Odd.IsBaseMismatch("Text", "Character") is false and Odd.IsBaseMismatch("Text", "Word") is false
 	for Range(call.Kind is "MethodCall" then 1 else 0, call.children.Length)
 		inference.TypeOf(call.children(value), scope, current)
@@ -203,10 +203,10 @@ Mismatched(arguments Texts, types Texts) Number
 	Sizing.Mismatched(List(Text) + "Area", List(Text) + "Area") is -1
 	Sizing.Mismatched(("Text", "Text"), ("Sizes", "Text")) is 0
 	Sizing.Mismatched(("Text", "Text"), ("Texts", "Text")) is -1
-	Listing.Mismatch("Count", "Counts") is false and Listing.IsBaseMismatch("Text", "Texts") is false
+	Listing.IsMismatch("Count", "Counts") is false and Listing.IsBaseMismatch("Text", "Texts") is false
 	Scaling.Issue(SyntaxNode("MethodCall", "Scaled", Overloads.Rescaled.children(0)), Scalers, Scalers) is ""
 	for arguments
-		if index < types.Length and (Mismatch(value, types(index)) or IsWrongElement(value, types(index)))
+		if index < types.Length and (IsMismatch(value, types(index)) or IsWrongElement(value, types(index)))
 			return index
 	Number.NotFound
 IsWrongElement(argument Text, parameter Text) Boolean
@@ -221,12 +221,12 @@ IsWrongElement(argument Text, parameter Text) Boolean
 	elements = ListFits(inference.types).Elements(parameter)
 	listed = ListFits(inference.types).Elements(argument)
 	compared = listed.Length is not 1 or "Text" is in elements then argument else listed(0)
-	IsScalar(compared) and elements.Length is 1 and Mismatch(compared, elements(0))
-Mismatch(argument Text, parameter Text) Boolean
-	Sizing.Mismatch("Count", "Area") and Sizing.Mismatch("Text", "Size")
-	Sizing.Mismatch("Area", "Size") is false and Sizing.Mismatch("Number", "Area") is false
-	Sizing.Mismatch("Area", "Area") is false and Generics.Mismatch("Range", "Generic") is false
-	Sizing.Mismatch("Count", "Boolean") and Sizing.Mismatch("Count", "Number") is false
+	IsScalar(compared) and elements.Length is 1 and IsMismatch(compared, elements(0))
+IsMismatch(argument Text, parameter Text) Boolean
+	Sizing.IsMismatch("Count", "Area") and Sizing.IsMismatch("Text", "Size")
+	Sizing.IsMismatch("Area", "Size") is false and Sizing.IsMismatch("Number", "Area") is false
+	Sizing.IsMismatch("Area", "Area") is false and Generics.IsMismatch("Range", "Generic") is false
+	Sizing.IsMismatch("Count", "Boolean") and Sizing.IsMismatch("Count", "Number") is false
 	types = inference.types
 	isUser = (TypeEntry.IsBaseName(argument) or parameter is "Generic") is false and types.IsKnown(argument)
 	members = types.MembersOf(argument)
@@ -261,9 +261,9 @@ IsListed(types Texts) Boolean
 IsScalar(type Text) Boolean
 	Sizing.IsScalar("Boolean")
 	Sizing.IsScalar("Count") is false
-	Erring.Mismatch("Error", "Number") is false
+	Erring.IsMismatch("Error", "Number") is false
 	Sizing.IsWrongElement("Count", "Areas") is false
-	Sizing.Mismatch("Xyz", "Area") is false
+	Sizing.IsMismatch("Xyz", "Area") is false
 	Sizing.IsBaseMismatch("Count", "Area") is false
 	Sizing.IsBaseMismatch("Text", "Area")
 	Odd.CountIssue(Made, "Pair", List(Text) + "Number", 0) is ""

@@ -9,7 +9,7 @@ Run
 	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network) + " in " + milliseconds + " ms")
 	for Inputs
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
-	logger.Log("separated " + Smallest.Separated(network, Targets) + " after " + Smallest.Long + " steps")
+	logger.Log("separated " + Smallest.IsSeparated(network, Targets) + " after " + Smallest.Long + " steps")
 	logger.Log("exists " + (Smallest.Sought(Targets) to Text))
 Trained(network Network, steps Number, rate = 1) Network slow
 	Xor.Trained(Network.Pair, 1, 1).layers.Last.weights is Epoch.layers.Last.weights

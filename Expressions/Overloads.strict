@@ -101,18 +101,18 @@ Fits(declared Texts, argumentTypes Texts, owner Text, isExact Boolean, required 
 	if argumentTypes.Length > declared.Length or argumentTypes.Length < required
 		return false
 	for argumentTypes
-		if Assignable(value, declared(index) is "Other" then owner else declared(index), isExact) is false
+		if IsAssignable(value, declared(index) is "Other" then owner else declared(index), isExact) is false
 			return false
 	true
-Assignable(argument Text, declared Text, isExact Boolean) Boolean
-	Scaling.Assignable("List(Byte)", "Bytes", true)
-	Scaling.Assignable("List(A, B)", "List(A, B)", true)
-	Scaling.Assignable("Number", "Generic", true) is false
-	Scaling.Assignable("Number", "Generic", false)
-	Scaling.Assignable("Bytes", "Numbers", false) and Scaling.Assignable("Bytes", "Numbers", true) is false
+IsAssignable(argument Text, declared Text, isExact Boolean) Boolean
+	Scaling.IsAssignable("List(Byte)", "Bytes", true)
+	Scaling.IsAssignable("List(A, B)", "List(A, B)", true)
+	Scaling.IsAssignable("Number", "Generic", true) is false
+	Scaling.IsAssignable("Number", "Generic", false)
+	Scaling.IsAssignable("Bytes", "Numbers", false) and Scaling.IsAssignable("Bytes", "Numbers", true) is false
 	isList = argument.StartsWith("List(") and argument.IndexOf(",") < 0
 	plural = isList then argument.Substring(5, argument.Length - 6) + "s" else argument
-	plural is declared then true else isExact is false and ListFits(types).Widened(argument, declared)
+	plural is declared then true else isExact is false and ListFits(types).IsWidened(argument, declared)
 Converts(argument Text, declared Text) Boolean
 	Scaling.Converts("Byte", "Number")
 	Overloads(TypeInference.Colors.types).Converts("ColorValue", "Color")

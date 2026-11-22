@@ -3,9 +3,9 @@ constant Budget = 80
 constant Long = 500
 constant Repair = 40
 constant Margin = 1.5
-Separated(model Network, targets Numbers) Boolean
-	Smallest.Separated(Smallest.Hand(8), Xor.Targets)
-	Smallest.Separated(Network.Single, Xor.Targets) is false
+IsSeparated(model Network, targets Numbers) Boolean
+	Smallest.IsSeparated(Smallest.Hand(8), Xor.Targets)
+	Smallest.IsSeparated(Network.Single, Xor.Targets) is false
 	mutable wrong = 0
 	for Xor.Inputs
 		output = model.Predict(value).First
@@ -13,8 +13,8 @@ Separated(model Network, targets Numbers) Boolean
 			wrong = wrong + 1
 	wrong is 0
 Hand(scale Number) Network
-	Smallest.Separated(Smallest.Hand(8), Xor.Targets)
-	Smallest.Separated(Smallest.Hand(1), Xor.Targets) is false
+	Smallest.IsSeparated(Smallest.Hand(8), Xor.Targets)
+	Smallest.IsSeparated(Smallest.Hand(1), Xor.Targets) is false
 	mutable layers = List(Mutable(Layer))
 	layers.Add(Layer(((1, 1) * scale, (-1, -1) * scale), (-0.5, Margin) * scale))
 	layers.Add(Layer(List(Numbers) + ((1, 1) * scale), List(Number) + -Margin * scale))
@@ -22,10 +22,10 @@ Hand(scale Number) Network
 Decides(first Number, second Number, bias Number, targets Numbers) Boolean
 	Smallest.Decides(1, 1, -1, (0, 1, 1, 1))
 	Smallest.Decides(1, 1, -1, Xor.Targets) is false
-	Separated(Network(List(Layer) + Layer(List(Numbers) + (first, second), List(Number) + bias)), targets)
-HalfPlane(targets Numbers) Boolean slow
-	Smallest.HalfPlane((0, 1, 1, 1))
-	Smallest.HalfPlane(Xor.Targets) is false
+	IsSeparated(Network(List(Layer) + Layer(List(Numbers) + (first, second), List(Number) + bias)), targets)
+IsHalfPlane(targets Numbers) Boolean slow
+	Smallest.IsHalfPlane((0, 1, 1, 1))
+	Smallest.IsHalfPlane(Xor.Targets) is false
 	for Range(-4, 5)
 		first = index
 		for Range(-4, 5)
@@ -39,22 +39,22 @@ Wrapped(targets Numbers) List(Numbers)
 	for targets
 		List(Number) + value
 Tuned(model Network, targets Numbers, steps Number, rate Number) Network
-	Smallest.Separated(Smallest.Tuned(Smallest.Hand(4), Xor.Targets, 0, Rate), Xor.Targets)
+	Smallest.IsSeparated(Smallest.Tuned(Smallest.Hand(4), Xor.Targets, 0, Rate), Xor.Targets)
 	mutable trained = model
 	wrapped = Wrapped(targets)
 	for steps
 		trained = Descent(trained).Epoch(Xor.Inputs, wrapped, rate)
 	trained
 Fit(sizes Numbers, targets Numbers, steps Number, rate Number, seed Number) Network slow
-	Smallest.Separated(Smallest.Fit((2, 1), (0, 1, 1, 1), Repair, Rate, 1), (0, 1, 1, 1))
-	Smallest.Separated(Smallest.Fit((2, 1), Xor.Targets, Repair, Rate, 1), Xor.Targets) is false
+	Smallest.IsSeparated(Smallest.Fit((2, 1), (0, 1, 1, 1), Repair, Rate, 1), (0, 1, 1, 1))
+	Smallest.IsSeparated(Smallest.Fit((2, 1), Xor.Targets, Repair, Rate, 1), Xor.Targets) is false
 	Tuned(Draw(PseudoRandom(seed)).Stacked(sizes), targets, steps, rate)
 Hits(targets Numbers, width Number, steps Number) Boolean slow
 	Smallest.Hits((0, 1, 1, 1), 0, Repair)
 	Smallest.Hits(Xor.Targets, 0, Repair) is false
 	sizes = width is 0 then (2, 1) else (2, width, 1)
 	for Range(1, 5)
-		if Separated(Fit(sizes, targets, steps, Rate, index), targets)
+		if IsSeparated(Fit(sizes, targets, steps, Rate, index), targets)
 			return true
 	false
 Found(targets Numbers, steps Number) Number slow
@@ -70,7 +70,7 @@ Found(targets Numbers, steps Number) Number slow
 Sought(targets Numbers) Numbers slow
 	Smallest.Sought((0, 1, 1, 1)) is (0, 0)
 	Smallest.Sought(Xor.Targets) is (2, 3)
-	(HalfPlane(targets) then 0 else 2, Found(targets, Budget))
+	(IsHalfPlane(targets) then 0 else 2, Found(targets, Budget))
 Kept(rows List(Numbers), unit Number) List(Numbers)
 	Smallest.Kept(((1, 2), (3, 4)), 0) is List(Numbers) + (3, 4)
 	for rows
@@ -94,18 +94,18 @@ Narrowed(model Network, unit Number) Network
 Linear(targets Numbers, fallback Number) Number slow
 	Smallest.Linear(Xor.Targets, 2) is 2
 	Smallest.Linear((0, 1, 1, 1), 4) is 0
-	Separated(Tuned(Draw(PseudoRandom(2)).Stacked((2, 1)), targets, Repair, Rate), targets) then 0 else fallback
+	IsSeparated(Tuned(Draw(PseudoRandom(2)).Stacked((2, 1)), targets, Repair, Rate), targets) then 0 else fallback
 Cut(model Network, targets Numbers, width Number) Number
 	Smallest.Cut(Network.Single, Xor.Targets, 2) is -1
 	mutable current = model
 	mutable hidden = width
-	mutable working = Separated(current, targets) then hidden else -1
+	mutable working = IsSeparated(current, targets) then hidden else -1
 	for width
 		if working < 0 or hidden <= 1
 			return hidden <= 1 and working >= 0 then Linear(targets, working) else working
 		hidden = hidden - 1
 		current = Tuned(Narrowed(current, 0), targets, Repair, Rate)
-		working = Separated(current, targets) then hidden else working
+		working = IsSeparated(current, targets) then hidden else working
 	working
 Shrunk(targets Numbers) Number slow
 	Smallest.Shrunk((0, 1, 1, 1)) is 0

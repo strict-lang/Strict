@@ -28,11 +28,11 @@ Linked(entries List(TypeEntry), signatures Texts) LinkRound slow
 	for as long as true
 		started = Process.Elapsed
 		next = Next(round)
-		if Settled(next, round.IsSettled(next), started)
+		if IsSettled(next, round.IsSettled(next), started)
 			return isFast then next else next.With(next.Checked)
 		round = next
 	round
-Settled(next LinkRound, complete Boolean, started Number) Boolean
+IsSettled(next LinkRound, complete Boolean, started Number) Boolean
 	BuildProfile.Reported("Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")", started)
 	complete
 Next(round LinkRound) LinkRound slow

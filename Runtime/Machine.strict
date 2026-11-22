@@ -23,7 +23,7 @@ constant Starting = MethodEntry(DefaultInstance.Starter, List(MemberEntry), "Str
 constant Reading = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "b"), InstructionEntry.Return(0))
 constant Read = MethodEntry(TestCodegen.Runner, List(MemberEntry), "Strict/Number", Reading)
 constant Defaulting = Machine(Resolver(List(TypeEntry) + TypeEntry("Strict/Pair", Paired.members, (Starting, Read))).Resolved)
-Completed(typeName Text, arguments List(VmValue)) Boolean
+IsCompleted(typeName Text, arguments List(VmValue)) Boolean
 	result = ProgramRun(value).Result(typeName, arguments)
 	isFailed = result.kind is in VmValue.ErrorKinds
 	if isFailed

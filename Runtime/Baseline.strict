@@ -39,9 +39,9 @@ Budget(started Number) Number
 	Baseline.Budget(Process.Elapsed) is 0.001
 	Baseline.Budget(Process.Elapsed - 1) < 10.1
 	((Process.Elapsed - started) * 10, 0.001).Maximum
-Expired(begun Number, budget Number) Boolean
-	Baseline.Expired(Process.Elapsed - 1, 0.5)
-	Baseline.Expired(Process.Elapsed, 10) is false
+IsExpired(begun Number, budget Number) Boolean
+	Baseline.IsExpired(Process.Elapsed - 1, 0.5)
+	Baseline.IsExpired(Process.Elapsed, 10) is false
 	Process.Elapsed - begun >= budget
 IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
 	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
@@ -121,5 +121,5 @@ Reason(started Machine, runner Text, limit Number) Text
 	read = Process.FilesRead.Length
 	begun = Process.Elapsed
 	failed = Machine(started, deadline = begun + limit).Tested(started.types.First.Name, runner)
-	slow = failed > 0 or Expired(begun, limit) then "its tests fail or take over " + limit + "s" else ""
+	slow = failed > 0 or IsExpired(begun, limit) then "its tests fail or take over " + limit + "s" else ""
 	Process.FilesRead.Length > read then "its tests read files" else slow

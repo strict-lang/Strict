@@ -1,6 +1,6 @@
 has count Number
-Held Boolean slow
-	LockedCycles(1100).Held
+IsHeld Boolean slow
+	LockedCycles(1100).IsHeld
 	mutable held = 0
 	for count
 		lock = File("Examples/LockedCycles.lock")

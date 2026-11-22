@@ -11,16 +11,16 @@ constant Tested = NativeCompiler
 constant Web = "MossWeb.strict"
 Ran(arguments Texts) Number
 	rest = arguments.Slice(1, arguments.Length - 1)
-	if Locked(rest(0)) is false
+	if IsLocked(rest(0)) is false
 		return 1
 	started = Process.Elapsed
 	cache = NativeCache(arguments(0), rest)
-	result = Current(cache) then 0 else BuildProfile.Compiled(cache)
+	result = IsCurrent(cache) then 0 else BuildProfile.Compiled(cache)
 	code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
 	reported = Reported(code, started, result is Error then result to Text else "")
-	Unlocked(rest(0)) then reported else 1
-Current(cache NativeCache) Boolean
-	isCurrent = BuildProfile.Current(cache)
+	IsUnlocked(rest(0)) then reported else 1
+IsCurrent(cache NativeCache) Boolean
+	isCurrent = BuildProfile.IsCurrent(cache)
 	if isCurrent
 		logger.Log(cache.Message)
 	isCurrent
@@ -31,7 +31,7 @@ Reported(code Number, started Number, problem Text) Number
 		logger.Log(problem)
 	BuildProfile.Reported(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
 	code
-Locked(target Text) Boolean slow
+IsLocked(target Text) Boolean slow
 	lock = File(Lock(target))
 	if lock.IsLocked
 		return true
@@ -43,11 +43,11 @@ Locked(target Text) Boolean slow
 			return true
 	logger.Log("The other build of " + target + " did not finish within " + Strict.BuildWait + " seconds")
 	false
-Unlocked(target Text) Boolean
-	NativeCompiler.Locked("Compiler/output/Again.strict")
-	NativeCompiler.Unlocked("Compiler/output/Again.strict")
-	NativeCompiler.Locked("Compiler/output/Again.strict")
-	NativeCompiler.Unlocked("Compiler/output/Again.strict")
+IsUnlocked(target Text) Boolean
+	NativeCompiler.IsLocked("Compiler/output/Again.strict")
+	NativeCompiler.IsUnlocked("Compiler/output/Again.strict")
+	NativeCompiler.IsLocked("Compiler/output/Again.strict")
+	NativeCompiler.IsUnlocked("Compiler/output/Again.strict")
 	File(Lock(target)).Delete
 	File(Lock(target)).Exists is false
 Lock(target Text) Text

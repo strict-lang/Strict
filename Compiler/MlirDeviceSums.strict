@@ -104,9 +104,9 @@ IsWarped Boolean
 	Doubling.IsWarped is false
 	MlirDeviceSums(MlirTokens.Summing.function, 2).IsWarped is false
 	Summing.IsSummed(MlirGpu.Doubling.function, 0, MlirGpu.Doubling.function.method.instructions.Length, false) is false
-	Found(false)
-Found(strided Boolean) Boolean
-	MlirDeviceSums(MlirGpu.Layering.function, 2).Found(false)
+	IsFound(false)
+IsFound(strided Boolean) Boolean
+	MlirDeviceSums(MlirGpu.Layering.function, 2).IsFound(false)
 	end = function.method.LoopEndOf(at)
 	if IsSummed(function, at + 1, end, strided)
 		return true
@@ -131,7 +131,7 @@ IsSpread Boolean
 	Spreading.IsSpread
 	MlirDeviceSums(MlirGpu.Layering.function, 2).IsSpread is false
 	Summing.IsSummed(MlirDeviceChoice.Choosing, 0, 16, true) is false
-	Found(true)
+	IsFound(true)
 Lanes(target Text, count Text) Texts
 	MlirDeviceSums(MlirGpu.Layering.function, 2).Lanes("%y", "%c") is List(Text) + "    %y = arith.constant 32 : i64"
 	Doubling.Lanes("%y", "%c") is List(Text) + "    %y = arith.constant 1 : i64"

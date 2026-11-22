@@ -42,16 +42,16 @@ IsIgnored(register Number, position Number) Boolean
 	for Range(position + 1, method.instructions.Length)
 		entry = method.instructions(index)
 		if IsReading(entry, register)
-			return Followed(entry, register, index)
+			return IsFollowed(entry, register, index)
 		if entry.kind is in MutationKinds.Writers and Target(entry) is register
 			return false
 	false
-Followed(entry InstructionEntry, register Number, at Number) Boolean
-	Issued.Followed(Issuing, 0, 2) and Looped.Followed(Looped.method.instructions(2), 1, 2)
-	Twice.Followed(InstructionEntry.Invoke(1, ("T", "Twice", "N", "x"), 0, -1), 0, 1)
-	Twice.Followed(InstructionEntry.Return(0), 0, 0) is false
-	Twice.Followed(InstructionEntry(InstructionType.Print, "Settings: ", (-1, 1, 2, 1)), 2, 0)
-	Looped.Followed(InstructionEntry.Invoke(1, ("T", "Add", "N", "x"), 0, 1), 0, 1)
+IsFollowed(entry InstructionEntry, register Number, at Number) Boolean
+	Issued.IsFollowed(Issuing, 0, 2) and Looped.IsFollowed(Looped.method.instructions(2), 1, 2)
+	Twice.IsFollowed(InstructionEntry.Invoke(1, ("T", "Twice", "N", "x"), 0, -1), 0, 1)
+	Twice.IsFollowed(InstructionEntry.Return(0), 0, 0) is false
+	Twice.IsFollowed(InstructionEntry(InstructionType.Print, "Settings: ", (-1, 1, 2, 1)), 2, 0)
+	Looped.IsFollowed(InstructionEntry.Invoke(1, ("T", "Add", "N", "x"), 0, 1), 0, 1)
 	if entry.kind is in (InstructionType.LoopBegin, InstructionType.Print) or IsRecursive(entry)
 		return true
 	if entry.kind is InstructionType.StoreRegisterToVariable
@@ -91,8 +91,8 @@ Arguments(entry InstructionEntry) Numbers
 	Twice.Arguments(InstructionEntry.Invoke(2, ("T", "Add", "N", "x"), 0, 1)) is (0, 1)
 	Twice.Arguments(Issuing) is (1, 0)
 	Looped.method.instructions.Length is 4
-	Looped.Followed(InstructionEntry.Invoke(1, ("T", "Add", "None", "x"), 0, 1), 0, 1) is false
-	Looped.Followed(InstructionEntry.LoadNumber(1, 1), 0, 1) is false
+	Looped.IsFollowed(InstructionEntry.Invoke(1, ("T", "Add", "None", "x"), 0, 1), 0, 1) is false
+	Looped.IsFollowed(InstructionEntry.LoadNumber(1, 1), 0, 1) is false
 	Issued.IsMessage(InstructionEntry.Invoke(2, ("Other", "Log", "None", "x"), (1, 0), 3), 1) is false
 	Issued.IsMessage(InstructionEntry.Invoke(2, ("Logger", "Log", "None", "x"), (1, 0), 3), 5) is false
 	Issued.IsMessage(InstructionEntry.Invoke(2, ("Strict/Error", "to", "Error", "Name"), (1, 0), -1), 1) is false

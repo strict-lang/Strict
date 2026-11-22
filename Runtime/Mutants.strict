@@ -34,7 +34,7 @@ Ran(types List(TypeEntry), root Text, files Texts, inference TypeInference) Numb
 	isFresh = part is not "" or cache.IsCurrent is false
 	unoptimized = FileCompiler(true, isWhole then "*" else "", false)
 	survivors = Survivors(isFresh then unoptimized.Built(path, root, true, files, inference).entries else types)
-	if cache.Released(held) is false
+	if cache.IsReleased(held) is false
 		logger.Log("Could not release the mutation locks: " + Text.Combine(held, ", "))
 	survivors.Length
 Lines(types List(TypeEntry)) Texts
@@ -103,7 +103,7 @@ Passes(started Machine, runner Text, budget Number, isRetried = false) Boolean
 	Mutants("A.strict", 0).Passes(Frame.Doubling, "Missing", 0) is false
 	begun = Process.Elapsed
 	failed = Machine(started, deadline = begun + budget).Tested(started.types.First.Name, runner)
-	if failed is not 0 and isRetried is false and Baseline.Expired(begun, budget)
+	if failed is not 0 and isRetried is false and Baseline.IsExpired(begun, budget)
 		return Passes(started, runner, budget, true)
 	failed is not Error and failed is 0
 Survivor(method MethodEntry, code Number) Text

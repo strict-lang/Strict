@@ -94,9 +94,9 @@ Unresolved Texts
 	for TypeNames
 		positions(value) = index
 	for Targets.Unique
-		if Missing(value, List(Text), positions)
+		if IsMissing(value, List(Text), positions)
 			value
-Missing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
+IsMissing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
 	type = target.Substring(0, target.LastIndexOf("."))
 	method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
 	hosted = TypeEntry.ShortName(type) + "." + method is in Hosted.Methods
@@ -108,7 +108,7 @@ Missing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
 	converted = method.StartsWith("to ") then method.Split(" ") else (method, "")
 	found = entry.Chosen(converted.First, -1, converted.Last, List(Text)) >= 0
 	next = entry.Changing.Length is 1 then entry.Changing.First.typeName + "." + method else ""
-	found is false and (next is "" or Missing(next, seen + target, positions))
+	found is false and (next is "" or IsMissing(next, seen + target, positions))
 IsSettled(next LinkRound) Boolean
 	Single.IsSettled(Single)
 	Single.IsSettled(Twice) is false

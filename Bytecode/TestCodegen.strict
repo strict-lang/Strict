@@ -26,7 +26,7 @@ Tests List(MethodEntry) slow
 	start = CodeBlock(List(InstructionEntry), 0, 0, scope.With("elapsed", "Number"))
 	mutable block = start.Add(MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 0), "failed"))
 	for types.lines
-		if TypeShape(types.lines).IsMethodHeader(value) and Included(value)
+		if TypeShape(types.lines).IsMethodHeader(value) and IsIncluded(value)
 			block = Method(index, block)
 	failed = block.At(0).Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "failed"))
 	returned = failed.Add(InstructionEntry.Return(0))
@@ -53,14 +53,14 @@ Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
 		if (name is in targets or typed is in targets) and value is not in methods
 			added.Add(value)
 	added.Length is 0 then methods else Reachable(known, methods + added)
-Included(line Text) Boolean
-	TestCodegen(Even.types, false, "*").Included("Generated Numbers native") is false
-	TestCodegen(Even.types, false, Everything).Included("Generated Numbers native")
-	TestCodegen(Even.types, false, Everything + "Generated").Included("Generated Numbers native")
-	TestCodegen(Even.types, false, Everything + "Other").Included("Generated Numbers native") is false
-	Even.Included("IsEven(number Number) Boolean") and TestCodegen(Even.types).Included("Loaded Numbers slow") is false
-	Inward.Included("IsEven Boolean") and Inward.Included("Loaded Numbers slow") is false
-	TestCodegen(Inner).Included("IsEven Boolean") is false
+IsIncluded(line Text) Boolean
+	TestCodegen(Even.types, false, "*").IsIncluded("Generated Numbers native") is false
+	TestCodegen(Even.types, false, Everything).IsIncluded("Generated Numbers native")
+	TestCodegen(Even.types, false, Everything + "Generated").IsIncluded("Generated Numbers native")
+	TestCodegen(Even.types, false, Everything + "Other").IsIncluded("Generated Numbers native") is false
+	Even.IsIncluded("IsEven(number Number) Boolean") and TestCodegen(Even.types).IsIncluded("Loaded Numbers slow") is false
+	Inward.IsIncluded("IsEven Boolean") and Inward.IsIncluded("Loaded Numbers slow") is false
+	TestCodegen(Inner).IsIncluded("IsEven Boolean") is false
 	header = HeaderTokens(Tokenizer(line).Tokens)
 	matched = selection is in ("", "*", Unmarked, Everything, header.tokens(0), Everything + header.tokens(0))
 	isAllowed = header.tokens.Last is not "native" or selection.StartsWith(Everything)

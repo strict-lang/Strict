@@ -131,13 +131,13 @@ IsCollected(name Text) Boolean
 		isLoaded = value.kind is InstructionType.LoadVariableToRegister then value.texts(0) is name else false
 		built = isLoaded and index + 1 < steps.Length then index + 1 else -1
 		if built > 0 and MlirFlats(function, built).Constructing(steps(built), value.payload(0)) > 0
-			return Collected(built)
+			return IsCollectedAt(built)
 	false
-Collected(at Number) Boolean
-	Lined.Collected(6) is false
-	Lined.Collected(9)
-	Checked.Collected(9)
-	Lined.Collected(8) is false
+IsCollectedAt(at Number) Boolean
+	Lined.IsCollectedAt(6) is false
+	Lined.IsCollectedAt(9)
+	Checked.IsCollectedAt(9)
+	Lined.IsCollectedAt(8) is false
 	checkedAt = MlirDestined(function, at).CheckedAt
 	checked = function.method.instructions(checkedAt)
 	written = MlirDestined(function, checkedAt).Next(checked)

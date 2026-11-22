@@ -147,7 +147,7 @@ Embedded(host Text, ptx Texts, base Text) Text
 	if ptx.First.StartsWith("//") is false
 		return "GPU kernels failed: " + ptx.First
 	ending = tools.platform is Platform.MacOS then ".metal" else ".ptx"
-	written = PtxCache(base).IsWritten(ptx, ending) or PtxCache(base).Written(ptx, ending)
+	written = PtxCache(base).IsWritten(ptx, ending) or PtxCache(base).HasWritten(ptx, ending)
 	failure = written then CubinBuild(tools, isShipped).Fatbin(base) else "could not write " + base + ending
 	failure is "" then Referenced(host, base, ptx.First) else "GPU kernels failed: " + failure
 Referenced(host Text, base Text, newer Text) Text

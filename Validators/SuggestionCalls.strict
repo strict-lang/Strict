@@ -55,13 +55,13 @@ Receiver(receiver Text, type Text, sameName Boolean) Texts
 	mutable calls = List(Mutable(Text))
 	for known.MethodsOf(type).names
 		recursive = type is own and value is header.tokens.First
-		if Named(value) and recursive is false and Stem(value) is Stem(header.tokens.First) is sameName
+		if IsNamed(value) and recursive is false and Stem(value) is Stem(header.tokens.First) is sameName
 			if known.MemberType(type, value) is header.ReturnType and value is in known.ParameterScope(type).names
 				call = Call(type is own then value else receiver + "." + value, type, value, receiver)
 				if call is not ""
 					calls.Add(call)
 	calls
-Named(name Text) Boolean
+IsNamed(name Text) Boolean
 	first = name(0)
 	named = Tokenizer.IsWordCharacter(first) and Tokenizer.IsDigit(first) is false
 	named and name is not in DefaultCheck.Keywords and name is not "Run"

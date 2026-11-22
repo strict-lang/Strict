@@ -132,7 +132,7 @@ IsInput(name Text) Boolean
 	name.LastIndexOf(".") > name.LastIndexOf("/") + 1 and isOutput is false
 Contained(folder Text, ignored Texts = List(Text)) Texts
 	Probe.Contained("NeuralNetworks/images").Length is 2
-	if DataFiles(ignored).Excluded(folder)
+	if DataFiles(ignored).IsExcluded(folder)
 		return List(Text)
 	mutable files = Directory.Files(folder)
 	for Directory.Directories(folder)

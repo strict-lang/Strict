@@ -33,15 +33,15 @@ Folded(node SyntaxNode, block CodeBlock) SyntaxNode
 	ConversionCodegen(values).Typed(folding.Folded(typed), block)
 Handled(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Handled(Greeting, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
-	Plain.MayFail(SyntaxNode("Call", "Error", ValueCodegen.Hi), CodeBlock.Empty) is false
-	Plain.MayFail(ValueCodegen.ToText, CodeBlock.Empty)
-	Plain.MayFail(SyntaxNode("Call", "List", Greeting), CodeBlock.Empty) is false
-	Plain.MayFail(SyntaxNode("Call", "Dictionary", Greeting), CodeBlock.Empty) is false
-	Plain.MayFail(SyntaxNode("Call", "Mutable", Greeting), CodeBlock.Empty)
-	Plain.MayFail(SyntaxNode("Call", "Mutable", ValueCodegen.One), CodeBlock.Empty) is false
-	Plain.MayFail(SyntaxNode("MethodCall", "Add", (A, ValueCodegen.One)), ErrorScope.Numbered)
-	Plain.MayFail(SyntaxNode("Index", "", (A, ValueCodegen.One)), ErrorScope.Numbered)
-	Plain.MayFail(ValueCodegen.GreeterText, CodeBlock.Empty) is false
+	Plain.CanFail(SyntaxNode("Call", "Error", ValueCodegen.Hi), CodeBlock.Empty) is false
+	Plain.CanFail(ValueCodegen.ToText, CodeBlock.Empty)
+	Plain.CanFail(SyntaxNode("Call", "List", Greeting), CodeBlock.Empty) is false
+	Plain.CanFail(SyntaxNode("Call", "Dictionary", Greeting), CodeBlock.Empty) is false
+	Plain.CanFail(SyntaxNode("Call", "Mutable", Greeting), CodeBlock.Empty)
+	Plain.CanFail(SyntaxNode("Call", "Mutable", ValueCodegen.One), CodeBlock.Empty) is false
+	Plain.CanFail(SyntaxNode("MethodCall", "Add", (A, ValueCodegen.One)), ErrorScope.Numbered)
+	Plain.CanFail(SyntaxNode("Index", "", (A, ValueCodegen.One)), ErrorScope.Numbered)
+	Plain.CanFail(ValueCodegen.GreeterText, CodeBlock.Empty) is false
 	Dispatched(Folded(node, block), block)
 Dispatched(node SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Dispatched(ValueCodegen.One, CodeBlock.Empty).register is 1
@@ -63,7 +63,7 @@ Checked(node SyntaxNode, block CodeBlock, isRemainder = false) CodeBlock
 	Plain.Checked(ErrorScope.Remaining, ErrorScope.Scalar).instructions.Last.kind is not InstructionType.CheckError
 	folded = Folded(node, block)
 	generated = Dispatched(folded, block)
-	isRemainder or MayFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
+	isRemainder or CanFail(folded, block) then generated.Add(Check(generated.Result, block)) else generated
 Check(register Number, block CodeBlock) InstructionEntry
 	Plain.Check(2, CodeBlock.Empty).payload is List(Number) + 2
 	Plain.Check(2, InTest).payload is (2, 7)
@@ -77,16 +77,16 @@ IsLog(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsLog(LogHi, Logging)
 	Plain.IsLog(SyntaxNode("Identifier", "Log"), Logging) is false
 	Plain.IsLog(SyntaxNode("MethodCall", "Reset", (A, A)), Logging) is false
-	Plain.MayFail(LogHi, Logging) is false
+	Plain.CanFail(LogHi, Logging) is false
 	Plain.Dispatched(LogHi, Logging).instructions.Last.kind is InstructionType.Print
 	Plain.Dispatched(LogHi, CodeBlock.Empty).instructions.Last.kind is InstructionType.Invoke
 	if node.Kind is not "MethodCall" or node.text is not "Log"
 		return false
 	TypeEntry.ShortName(values.TypeOf(node.children(0), block)) is "Logger"
-MayFail(node SyntaxNode, block CodeBlock) Boolean
-	Plain.MayFail(Greeting, CodeBlock.Empty)
-	Plain.MayFail(BareError, CodeBlock.Empty) is false
-	Plain.MayFail(A, FallibleA)
+CanFail(node SyntaxNode, block CodeBlock) Boolean
+	Plain.CanFail(Greeting, CodeBlock.Empty)
+	Plain.CanFail(BareError, CodeBlock.Empty) is false
+	Plain.CanFail(A, FallibleA)
 	if IsLog(node, block) or values.TypeOf(node, block) is in ErrorTypes
 		return false
 	if node.Kind is "Identifier"
@@ -94,7 +94,7 @@ MayFail(node SyntaxNode, block CodeBlock) Boolean
 	if node.Kind is "Binary"
 		return IsFailing(node, block)
 	if node.Kind is "Call" and node.text is in ("List", "Dictionary", "Mutable")
-		return node.text is "Mutable" and MayFail(node.children(0), block)
+		return node.text is "Mutable" and CanFail(node.children(0), block)
 	node.Kind is in ("Call", "MethodCall", "Index") or node.Kind is "Member" and values.IsMethodCall(node, block)
 IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "+", (ValueCodegen.One, ValueCodegen.One)), CodeBlock.Empty) is false
@@ -103,7 +103,7 @@ IsFailing(node SyntaxNode, block CodeBlock) Boolean
 	Plain.IsFailing(SyntaxNode("Binary", "else", (SyntaxNode("Binary", "then", (A, BareError)), Greeting)), Counted)
 	Plain.IsFailing(SyntaxNode("Binary", "-", (A, A)), ErrorScope.Numbered)
 	if node.text is "else"
-		return MayFail(node.children(0).children(1), block) or MayFail(node.children(1), block)
+		return CanFail(node.children(0).children(1), block) or CanFail(node.children(1), block)
 	if node.text is in ("to", "then") or IsOverloaded(node, block)
 		return true
 	isList = ListFits(values.inference.types).IsList(values.TypeOf(node, block))
@@ -167,8 +167,8 @@ Right(node SyntaxNode, block CodeBlock, isConverted Boolean) CodeBlock
 	Compared(node, convert then ConversionCodegen(values).Operand(any, block) else any.children(1), block)
 Kept(node SyntaxNode, name Text, block CodeBlock) CodeBlock
 	Plain.Kept(Greeting, "kept", CodeBlock.Empty).instructions.Last.kind is InstructionType.StoreRegisterToVariable
-	Plain.MayFail(A, CodeBlock.Empty.Declare("a", "Number")) is false
-	Plain.MayFail(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty)
+	Plain.CanFail(A, CodeBlock.Empty.Declare("a", "Number")) is false
+	Plain.CanFail(SyntaxNode("Member", "Greet", ValueCodegen.NewGreeter), CodeBlock.Empty)
 	FallibleA.scope.TypeOf("a") is "Number"
 	ErrorScope.Plain.IsFallible("a", FallibleA)
 	Handled(node, block).Stored(name).At(block.register).WithNextId.Declare(name, values.TypeOf(node, block))

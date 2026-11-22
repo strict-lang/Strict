@@ -54,9 +54,9 @@ Stopping Texts
 		if IsStopped(value)
 			kept.Add(value)
 	kept
-Ended(id Text) Boolean
-	Missing.Ended("0") is false
-	Process.OperatingSystem is not "Windows" or Missing.Ended("999999")
+HasEnded(id Text) Boolean
+	Missing.HasEnded("0") is false
+	Process.OperatingSystem is not "Windows" or Missing.HasEnded("999999")
 	isClosed = Process.RunTool("taskkill", "/PID " + id).exitCode is in Stopped
 	isClosed or Process.RunTool("taskkill", "/F /PID " + id).exitCode is in Stopped or IsGone(id)
 IsGone(id Text) Boolean slow
@@ -73,7 +73,7 @@ Restarted(old Text) Text slow
 	stopping = Stopping
 	for stopping
 		logger.Log("Stopping " + executable + " (process " + Id(value) + ")")
-		if Ended(Id(value)) is false
+		if HasEnded(Id(value)) is false
 			return "process " + Id(value) + " did not stop"
 	if stopping.Length > 0 and IsStrict is false and Intermediates.Deleted(old) is Error
 		return old + " is still in use by " + Described

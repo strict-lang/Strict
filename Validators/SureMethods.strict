@@ -23,7 +23,7 @@ Records(type Text, lines Texts) Texts
 	shape = TypeShape(lines)
 	statements = MethodBodies(type, shape, inference).Statements
 	for lines
-		if shape.IsMethodHeader(value) and Kept(lines, index)
+		if shape.IsMethodHeader(value) and IsKept(lines, index)
 			name = Tokenizer(value).Tokens.First
 			type + "." + name + "|" + Text.Combine(Used(type, statements, lines, index) - (type + "." + name), ",")
 Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
@@ -33,11 +33,11 @@ Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
 		if value.line > header and value.line <= last and Duplicates.IsTest(lines(value.line).Trim) is false
 			keys = keys + SureCalls(inference).Calls(type, value.statement, value.scope)
 	keys
-Kept(lines Texts, header Number) Boolean
-	SureMethods.Kept(("Next Number", "\tlow + 1"), 0)
-	SureMethods.Kept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
-	SureMethods.Kept(("Parsed Number", "\tname to Number"), 0) is false
-	SureMethods.Kept(("Added(other Numbers) Numbers", "\t(1) + (\"Hi\") is Error", "\tother"), 0) is false
+IsKept(lines Texts, header Number) Boolean
+	SureMethods.IsKept(("Next Number", "\tlow + 1"), 0)
+	SureMethods.IsKept(("Send(socket Number)", "\tSend(0) is 1"), 0) is false
+	SureMethods.IsKept(("Parsed Number", "\tname to Number"), 0) is false
+	SureMethods.IsKept(("Added(other Numbers) Numbers", "\t(1) + (\"Hi\") is Error", "\tother"), 0) is false
 	body = Duplicates.Implementation(lines, header)
 	Fails(body) is false and HasBody(body) and IsTestedFailing(lines, header) is false
 IsTestedFailing(lines Texts, header Number) Boolean

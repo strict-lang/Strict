@@ -10,17 +10,17 @@ constant Architectures = ("sm_75", "sm_86", "sm_89", "sm_120")
 Fatbin(base Text) Text
 	Local.Fatbin("Compiler/output/missing") is ""
 	File("Compiler/output/missing.fatbin").Exists is false
-	PtxCache(Cubin).Written(List(Text) + Tiny, ".ptx")
+	PtxCache(Cubin).HasWritten(List(Text) + Tiny, ".ptx")
 	Local.Fatbin(Cubin) is ""
 	File(Cubin + ".fatbin").Exists is (Local.tools.Located("ptxas") is not "")
-	ptxas = Outdated(base) and isShipped then tools.Located("ptxas") else ""
+	ptxas = IsOutdated(base) and isShipped then tools.Located("ptxas") else ""
 	if ptxas is "" or File(base + ".ptx").Exists is false
 		return ""
 	stem = base + "." + 1000000000.Random.Floor
 	failures = Cubins(ptxas, base, stem)
 	packed = Packed(stem, base)
 	failures.Length > 0 then failures.First else packed
-Outdated(base Text) Boolean
+IsOutdated(base Text) Boolean
 	PtxCache(Outdating).Saved((".fatbin", ".ptx"), ("old", "// newer")) is not Error
 	CubinBuild(Local.tools, false).Fatbin(Outdating) is ""
 	File(Outdating + ".fatbin").Exists is false

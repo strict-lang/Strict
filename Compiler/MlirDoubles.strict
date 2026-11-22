@@ -10,10 +10,10 @@ constant Squaring = MlirDoubles(MlirFunction(Tabling.function.types, MlirParalle
 constant Float32Format = 32
 constant BFloat16Format = 17
 constant LanesFormat = 33
-Failing Boolean
-	Squaring.Failing
-	Tabling.Failing is false
-	MlirDoubles(MlirGpu.Doubling.function, 2).Failing is false
+IsFailing Boolean
+	Squaring.IsFailing
+	Tabling.IsFailing is false
+	MlirDoubles(MlirGpu.Doubling.function, 2).IsFailing is false
 	Text.Combine(MlirGpu.Kernels(Squaring.function)).IndexOf("_gpu2s(") > 0
 	Text.Combine(MlirGpu.Kernels(Squaring.function)).IndexOf("_gpu2(") is -1
 	MlirGuards(MlirFunction(Squaring.function, Guarded = 2), 2).Named.First.IndexOf("(\"\00") > 0
@@ -31,11 +31,11 @@ Fails(inspected MlirFunction, first Number, limit Number, depth Number) Boolean
 				if Fails(value, 0, value.method.instructions.Length, depth + 1)
 					return true
 	false
-Kept Boolean
-	Tabling.Kept
-	Squaring.Kept is false
-	MlirDoubles(MlirGpu.Doubling.function, 2).Kept is false
-	MlirDoubles(MlirLoops.Counting.function, 0).Kept is false
+IsKept Boolean
+	Tabling.IsKept
+	Squaring.IsKept is false
+	MlirDoubles(MlirGpu.Doubling.function, 2).IsKept is false
+	MlirDoubles(MlirLoops.Counting.function, 0).IsKept is false
 	isPlain = Uses(InstructionType.Invoke) is false and Uses(InstructionType.Power) is false
 	MlirLoops(function, position).IsCollecting and IsListed is false and isPlain
 IsListed Boolean
@@ -60,7 +60,7 @@ Format Number
 	MlirDoubles(MlirLayout.Halves, 2).Format is 17
 	MlirDoubles(WgslShader.Scaled.function, 2).Format is 32
 	packed = MlirLayout(function).Packed(position)
-	packed is 0 and IsSingle then Number.SingleBits else packed is 0 and Kept then Number.DoubleBits else packed
+	packed is 0 and IsSingle then Number.SingleBits else packed is 0 and IsKept then Number.DoubleBits else packed
 IsSingle Boolean
 	MlirDoubles(WgslShader.Scaled.function, 2).IsSingle
 	Tabling.IsSingle is false

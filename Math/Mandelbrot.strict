@@ -2,13 +2,13 @@ constant CardioidCenter = 0.25
 constant CardioidFactor = 0.25
 constant BulbRadiusSquared = 0.0625
 constant RoundingGrowth = 1.000000000000001
-Interior(real Number, imaginary Number) Boolean
-	Interior(0, 0)
-	Interior(-1, 0)
-	Interior(0.3, 0) is false
-	Interior(-1.25, 0) is false
-	Interior(0, 0.5) and Interior(-1.1, 0)
-	(Interior(0.4, 0.1) or Interior(0.25, 0) or Interior(-1, 0.3)) is false
+IsInterior(real Number, imaginary Number) Boolean
+	IsInterior(0, 0)
+	IsInterior(-1, 0)
+	IsInterior(0.3, 0) is false
+	IsInterior(-1.25, 0) is false
+	IsInterior(0, 0.5) and IsInterior(-1.1, 0)
+	(IsInterior(0.4, 0.1) or IsInterior(0.25, 0) or IsInterior(-1, 0.3)) is false
 	vertical = imaginary * imaginary
 	shifted = real - CardioidCenter
 	radius = shifted * shifted + vertical
@@ -23,20 +23,20 @@ Orbit(start ComplexDoubleDouble, seed ComplexDoubleDouble, limit Number) List(Co
 	for limit
 		point = point.Squared + seed
 		orbit = orbit + point.High
-		if Beyond(point.SquaredLength)
+		if IsBeyond(point.SquaredLength)
 			return orbit
 	orbit
-Enclosed(orbit List(Complex), radius Number, limit Number) Boolean
-	Enclosed((Complex.Zero, Complex.Zero, Complex.Zero), 0.01, 2)
-	Enclosed((Complex.Zero, Complex(2, 0)), 0.01, 1) is false
-	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 32), 0.0000001, 32)
-	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64), 0.0000001, 64) is false
-	Enclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Zero, 32), 0.75, 32) is false
-	Enclosed((Complex.Zero, Complex.Zero), 0.01, 2) is false
-	orbit.Length < limit + 1 then false else DiskEnclosed(orbit, radius, limit)
-DiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
-	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999977, 1) is false
-	DiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999976, 1)
+IsEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
+	IsEnclosed((Complex.Zero, Complex.Zero, Complex.Zero), 0.01, 2)
+	IsEnclosed((Complex.Zero, Complex(2, 0)), 0.01, 1) is false
+	IsEnclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 32), 0.0000001, 32)
+	IsEnclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Of(Complex(-0.75, 0.1)), 64), 0.0000001, 64) is false
+	IsEnclosed(Orbit(ComplexDoubleDouble.Zero, ComplexDoubleDouble.Zero, 32), 0.75, 32) is false
+	IsEnclosed((Complex.Zero, Complex.Zero), 0.01, 2) is false
+	orbit.Length < limit + 1 then false else IsDiskEnclosed(orbit, radius, limit)
+IsDiskEnclosed(orbit List(Complex), radius Number, limit Number) Boolean
+	IsDiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999977, 1) is false
+	IsDiskEnclosed((Complex.Zero, Complex(1, 0), Complex.Zero), 0.9999999999999976, 1)
 	mutable offset = Complex.Zero
 	mutable error = 0
 	for limit
@@ -51,9 +51,9 @@ DiskError(orbit List(Complex), position Number, offset Complex, previous Number)
 	bound = offset.Length * RoundingGrowth
 	factor = 2 * (orbit(position).Length + 0.000000000000001) + 2 * bound + previous
 	(factor * previous + bound * bound) * RoundingGrowth + bound * 0.000000000000001 + 0.00000000000000000000000000001
-Beyond(squared DoubleDouble) Boolean
-	Beyond(DoubleDouble(4, 0.000000000000000000000000000001))
-	Beyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false
-	Beyond(DoubleDouble(4.5, -0.000000000000000000000000000001))
-	Beyond(DoubleDouble(3.5, 0.000000000000000000000000000001)) is false
+IsBeyond(squared DoubleDouble) Boolean
+	IsBeyond(DoubleDouble(4, 0.000000000000000000000000000001))
+	IsBeyond(DoubleDouble(4, -0.000000000000000000000000000001)) is false
+	IsBeyond(DoubleDouble(4.5, -0.000000000000000000000000000001))
+	IsBeyond(DoubleDouble(3.5, 0.000000000000000000000000000001)) is false
 	squared.high >= 4 and (squared.high > 4 or squared.low > 0)

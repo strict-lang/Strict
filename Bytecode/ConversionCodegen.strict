@@ -185,7 +185,7 @@ IsElement(collection Text, operand SyntaxNode, block CodeBlock) Boolean
 	element = isSpelled then collection.Substring(5, collection.Length - 6) else types.ElementType(collection)
 	isListElement = ListFits(types).IsList(element) or types.IsPlural(types.ValueOf(element))
 	type = values.TypeOf(operand, block)
-	isListElement and (type is element or ListFits(types).IsList(type) and ListFits(types).Widened(type, element))
+	isListElement and (type is element or ListFits(types).IsList(type) and ListFits(types).IsWidened(type, element))
 Textual(node SyntaxNode, block CodeBlock) SyntaxNode
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, SyntaxNode("Call", "Kind"))), CodeBlock.Empty).text is "to"
 	Kinded.Textual(SyntaxNode("Binary", "+", (ValueCodegen.Hi, ValueCodegen.One)), CodeBlock.Empty).text is "1"

@@ -97,7 +97,7 @@ Captured(owner Text, prefix Text, name Text, scope Scope) SyntaxNode
 	isHeld = found is "" and values.target.Holding(values.target.TypeName, name) is not ""
 	expected = ParameterType(owner, prefix, name)
 	overloads = Overloads(values.inference.types)
-	mismatches = found is not "" and expected is not "" and overloads.Assignable(found, expected, false) is false
+	mismatches = found is not "" and expected is not "" and overloads.IsAssignable(found, expected, false) is false
 	isHeld then SyntaxNode("Number", "0") else mismatches then DefaultNode(expected, 0) else SyntaxNode("Identifier", name)
 ParameterType(owner Text, prefix Text, name Text) Text
 	Atlased.ParameterType("Font", "", "atlas") is "Size"

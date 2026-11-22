@@ -20,10 +20,10 @@ Probed(line Text) Texts
 	Peers.Host("missing") is ""
 	mutable open = List(Mutable(Text))
 	for Named
-		if Answered(value, line)
+		if IsAnswered(value, line)
 			open.Add(value)
 	open
-Answered(name Text, line Text) Boolean
+IsAnswered(name Text, line Text) Boolean
 	Peers.Host("missing") is ""
 	host = Host(name)
 	if host is ""

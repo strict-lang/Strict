@@ -42,7 +42,7 @@ IsInlinable(at Number) Boolean
 	if inlined is "" or BodyParser.Indent(Line(at + 1)) is not BodyParser.Indent(lines(at))
 		return false
 	name = Declared(lines(at))
-	if name is "" or Known(name, at)
+	if name is "" or IsKnown(name, at)
 		return false
 	next = Tokenizer(Line(at + 1).Trim).Tokens
 	length = Line(at + 1).Length + inlined.Length - name.Length
@@ -58,11 +58,11 @@ Declared(line Text) Text
 	if tokens.Length < 2
 		return ""
 	tokens(0) is in ("let", "mutable", "constant", "has") then tokens(1) else (tokens(1) is "=" then tokens(0) else "")
-Known(name Text, at Number) Boolean
-	Inlines(("Run(count Number)", "\tcount = 1", "\tcount")).Known("count", 1)
-	Inlines(("has quoted", "Run", "\tquoted = true", "\tquoted")).Known("quoted", 2)
-	Inlines(("Run", "\tmutable quoted = false", "\tquoted = true")).Known("quoted", 2)
-	Inlines(("Run", "\ttotal = 1", "\tLog(total)")).Known("total", 1) is false
+IsKnown(name Text, at Number) Boolean
+	Inlines(("Run(count Number)", "\tcount = 1", "\tcount")).IsKnown("count", 1)
+	Inlines(("has quoted", "Run", "\tquoted = true", "\tquoted")).IsKnown("quoted", 2)
+	Inlines(("Run", "\tmutable quoted = false", "\tquoted = true")).IsKnown("quoted", 2)
+	Inlines(("Run", "\ttotal = 1", "\tLog(total)")).IsKnown("total", 1) is false
 	for Range(0, at).Reverse
 		if lines(value).StartsWith("\t") is false
 			return name is in HeaderTokens(Tokenizer(lines(value)).Tokens).ParameterNames or IsMember(name)

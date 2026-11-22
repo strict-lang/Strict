@@ -130,12 +130,12 @@ IsCallCheck(callee MlirFunction, at Number) Boolean
 	Doubling.IsCallCheck(Guarding.function, 1) is false
 	previous = callee.method.instructions(at - 1)
 	previous.kind is InstructionType.Invoke and previous.payload(0) is callee.method.instructions(at).payload(0)
-CannotFail(callee MlirFunction, depth Number) Boolean
-	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, MlirParallel.Twice), 0)
-	Doubling.CannotFail(MlirFunction(Doubling.function.types, Calls, Guarded), 0) is false
-	Doubling.CannotFail(Measuring.function, 0)
-	Doubling.CannotFail(FlatRead.function, 0)
-	Doubling.CannotFail(MlirFunction(List(TypeEntry), MlirFunction.Shape, MlirFlats.FirstNumber), 0) is false
+IsCalleeInfallible(callee MlirFunction, depth Number) Boolean
+	Doubling.IsCalleeInfallible(MlirFunction(Doubling.function.types, Calls, MlirParallel.Twice), 0)
+	Doubling.IsCalleeInfallible(MlirFunction(Doubling.function.types, Calls, Guarded), 0) is false
+	Doubling.IsCalleeInfallible(Measuring.function, 0)
+	Doubling.IsCalleeInfallible(FlatRead.function, 0)
+	Doubling.IsCalleeInfallible(MlirFunction(List(TypeEntry), MlirFunction.Shape, MlirFlats.FirstNumber), 0) is false
 	returned = callee.method.declaredType
 	if returned.EndsWith("Error") or returned.EndsWith("ErrorWithValue") or MlirForeign(callee).IsForeign
 		return false
@@ -155,7 +155,9 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	nested = MlirModule(callee.types, "").Called(callee, at)
-	nested.Length is 0 then IsNativeFailing(callee, at) else depth >= 3 or CannotFail(nested.First, depth + 1) is false
+	if nested.Length is 0
+		return IsNativeFailing(callee, at)
+	depth >= 3 or IsCalleeInfallible(nested.First, depth + 1) is false
 IsNativeFailing(callee MlirFunction, at Number) Boolean
 	Doubling.IsNativeFailing(Measuring.function, 1) is false
 	Doubling.IsNativeFailing(Guarding.function, 1)
@@ -174,7 +176,7 @@ Returned(target MlirFunction, register Number) Texts
 	Text.Combine(MlirCalls(Doubling.function, 1).Emitted).IndexOf("@strict_trace(") < 0
 	Text.Combine(MlirCalls(Guarding.function, 1).Emitted).IndexOf("@strict_trace(") > 0
 	result = "%t" + position + "r"
-	if CannotFail(target, 0)
+	if IsCalleeInfallible(target, 0)
 		return List(Text) + function.Store(result, "%r" + register)
 	traced = "%t" + position + "tr"
 	MlirMemory(function, position).Traced(result, traced, "strict_trace") + function.Store(traced, "%r" + register)

@@ -1,7 +1,7 @@
 has values ValueCodegen
 constant Plain = TestComparison(ValueCodegen.Plain)
 constant Logical = SyntaxParser(Tokenizer("true and (1 is 1)").Tokens).Parse
-Precise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
+IsPrecise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
 	kinds = (values.TypeOf(left, block), values.TypeOf(right, block))
 	step = StepRounding(values)
 	if values.IsTypeName(right, block) or kinds.Last is in ("Error", "ErrorWithValue")
@@ -16,7 +16,7 @@ Precise(left SyntaxNode, right SyntaxNode, block CodeBlock) Boolean
 Checked(test SyntaxNode, left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
 	tested = SyntaxNode("Identifier", ErrorCodegen.Tested)
 	operator = test.text is in ("is", "is not") then test.text else "is"
-	Nearly(SyntaxNode("Binary", operator, (tested, right), test.line), Precise(left, right, block), block)
+	Nearly(SyntaxNode("Binary", operator, (tested, right), test.line), IsPrecise(left, right, block), block)
 Nearly(comparison SyntaxNode, isPrecise Boolean, block CodeBlock) CodeBlock
 	Plain.Nearly(Logical.children.Last, true, CodeBlock.Empty).scope.Count(TestReports.Nearing) is 0
 	if isPrecise
@@ -32,7 +32,7 @@ Evaluated(node SyntaxNode, block CodeBlock) CodeBlock
 	if IsLogical(node, block)
 		return OperatorCodegen(values, true).Logical(node, block)
 	if node.Kind is "Binary" and node.text is in ("is", "is not")
-		return Nearly(node, Precise(node.children(0), node.children(1), block), block)
+		return Nearly(node, IsPrecise(node.children(0), node.children(1), block), block)
 	values.Expression(node, block)
 Compared(left SyntaxNode, right SyntaxNode, block CodeBlock) CodeBlock
 	Plain.Compared(ValueCodegen.One, ValueCodegen.One, CodeBlock.Empty).instructions.Last.texts(1) is "$TestsNear0"

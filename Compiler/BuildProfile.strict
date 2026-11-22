@@ -5,7 +5,7 @@ Reported(phase Text, started Number)
 	elapsed = Process.Elapsed - started
 	if Detailed or elapsed >= 3
 		logger.Log((Detailed then "[build] " + phase else phase) + ": " + elapsed.Round(Detailed then 4 else 2) + " s")
-Current(cache NativeCache, phase = "Compiler build cache") Boolean
+IsCurrent(cache NativeCache, phase = "Compiler build cache") Boolean
 	started = Process.Elapsed
 	current = cache.IsCurrent
 	Reported(phase + (current then " hit" else " miss"), started)
@@ -49,7 +49,7 @@ Linked(linker Linker, entry TypeEntry) LinkRound
 	linked = linker.Linked(entry, List(Text))
 	Reported("Frontend / dependency linking (" + linked.entries.Length + " types)", started)
 	linked
-Parsed(compiler FileCompiler, sources Texts) Boolean
+IsParsed(compiler FileCompiler, sources Texts) Boolean
 	started = Process.Elapsed
 	problems = compiler.Problems(sources) - ""
 	Reported("Frontend / syntax validation (" + sources.Length + " files)", started)

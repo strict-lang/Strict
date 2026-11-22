@@ -17,26 +17,26 @@ Create(path) slow
 Change(path) slow
 	Change("Missing/Changed") is Error
 	Directory.Change(path)
-Created(path Text) Boolean slow
-	Created("Examples/BaseTypesTest/NewFolder")
+IsCreated(path Text) Boolean slow
+	IsCreated("Examples/BaseTypesTest/NewFolder")
 	Directory.Create(path)
 	exists = Directory.Exists(path)
 	Directory.Delete(path)
 	exists
-Written(path Text) Boolean slow
-	Written("Examples/BaseTypesTest/Created/written")
+IsWritten(path Text) Boolean slow
+	IsWritten("Examples/BaseTypesTest/Created/written")
 	File(path).Write(List(Text) + "written")
 	exists = File(path).Exists
 	File(path).Delete
 	exists
-Changed(path Text) Boolean slow
-	Changed("Examples/BaseTypesTest/Changed")
+IsChanged(path Text) Boolean slow
+	IsChanged("Examples/BaseTypesTest/Changed")
 	Directory.Change(".")
-	isWritten = Written(path + "/written")
+	isWritten = IsWritten(path + "/written")
 	Directory.Delete(path)
 	isWritten
-Renamed(path Text) Boolean slow
-	Renamed("Examples/BaseTypesTest/renamed")
+IsRenamed(path Text) Boolean slow
+	IsRenamed("Examples/BaseTypesTest/renamed")
 	File(path).Write(List(Text) + "renamed")
 	File(path).Rename(path + "2")
 	isMoved = File(path + "2").Exists and File(path).Exists is false

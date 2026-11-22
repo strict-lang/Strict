@@ -55,15 +55,15 @@ Changed(base Text, flags Text) Numbers
 	for Range(0, Toolchain.Parts)
 		part = base + "-" + value
 		File(part).Delete
-		if Refreshed(part, flags, value)
+		if IsRefreshed(part, flags, value)
 			changed.Add(value)
 	changed
-Refreshed(part Text, flags Text, index Number) Boolean
-	Sample.Refreshed("Compiler/output/Refreshed", "a", Sample.owners.First)
+IsRefreshed(part Text, flags Text, index Number) Boolean
+	Sample.IsRefreshed("Compiler/output/Refreshed", "a", Sample.owners.First)
 	File("Compiler/output/Refreshed.mlir").ReadLines.Length > 4
 	data = split.Data(index, shared, placed)
 	owned = split.Owned(starts, owners, index)
-	if Written(part, flags, Text.Combine(data + owned, "\n")) is false
+	if IsWritten(part, flags, Text.Combine(data + owned, "\n")) is false
 		return false
 	File(part + ".mlir").Write(Part(index, data, owned))
 	true
@@ -73,11 +73,11 @@ IsCurrent(part Text, key Text) Boolean
 	Sample.IsCurrent("Compiler/output/Current", "b") is false
 	Sample.IsCurrent("Compiler/output/Absent", "a") is false
 	File(part + ".o").Exists and File(part + ".owned").Exists and PtxCache(part).Read(".owned") is key
-Written(part Text, flags Text, owned Text) Boolean
+IsWritten(part Text, flags Text, owned Text) Boolean
 	PtxCache("Compiler/output/Keyed").Saved(".o", "compiled") is not Error
-	Sample.Written("Compiler/output/Keyed", "f", "") is false
+	Sample.IsWritten("Compiler/output/Keyed", "f", "") is false
 	File("Compiler/output/Keyed.o").Exists is false
-	Sample.Written("Compiler/output/Keyed", "f", "a")
+	Sample.IsWritten("Compiler/output/Keyed", "f", "a")
 	if owned is ""
 		File(part + ".o").Delete
 		return false

@@ -40,7 +40,7 @@ Remembered(device Text, ptx Texts) Texts
 	if ptx.First.StartsWith("//") is false
 		return ptx
 	isKeyed = device is "" then true else Saved(".kernels.mlir", device) is not Error
-	Written(ptx, ".ptx") and isKeyed then ptx else List(Text) + ("GPU cache write failed: " + base)
+	HasWritten(ptx, ".ptx") and isKeyed then ptx else List(Text) + ("GPU cache write failed: " + base)
 Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
 	PtxCache("Compiler/output/Metal").Built("module {\n}", false, Metal, "").Length is 1
@@ -64,7 +64,7 @@ Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
 		return previous
 	File(base + ".kept.mlir").Delete
 	built = builder.Ptx(base, isTiling, kept)
-	if key is not "" and built.First.StartsWith("//") and Written(built, ".ptx")
+	if key is not "" and built.First.StartsWith("//") and HasWritten(built, ".ptx")
 		Saved(".kept.mlir", key)
 	built
 Kept(tools Toolchain, kept Text) Text
@@ -147,12 +147,12 @@ IsWritten(ptx Texts, ending Text) Boolean
 	older = ptx.Length > 1 then ptx.Last else ""
 	isOlder = older is "" then File(base + ".older" + ending).Exists is false else Read(".older" + ending) is older
 	File(base + ending).Exists and Read(ending) is ptx.First and isOlder
-Written(ptx Texts, ending Text) Boolean
-	Single.Written(List(Text) + "// only", ".ptx")
+HasWritten(ptx Texts, ending Text) Boolean
+	Single.HasWritten(List(Text) + "// only", ".ptx")
 	File("Compiler/output/Single.older.ptx").Exists is false and Single.IsWritten("// only", ".ptx")
 	Sample.Saved(".fatbin", "binary") is not Error
-	Sample.Written(("// new", "// old"), ".ptx")
-	CubinBuild.Local.Outdated(Sample.base) is false
+	Sample.HasWritten(("// new", "// old"), ".ptx")
+	CubinBuild.Local.IsOutdated(Sample.base) is false
 	older = ptx.Length > 1 then ptx.Last else ""
 	if IsWritten(ptx, ending)
 		return true

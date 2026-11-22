@@ -34,7 +34,7 @@ Lines Texts
 	Text.Combine(Quads.Lines).IndexOf("arith.mulf") > 0
 	Text.Combine(Splits.Lines).IndexOf("wb2") < 0
 	Quads.Checks.Length > 2
-	if Grown is false
+	if IsGrown is false
 		return List(Text)
 	mutable lines = List(Mutable(Text))
 	for function.method.instructions
@@ -48,9 +48,9 @@ Checks Texts
 		if value.kind is in Bounded
 			checks.Add(Name("wk", index))
 	checks
-Grown Boolean
-	Halving.Grown is false
-	Quads.Grown
+IsGrown Boolean
+	Halving.IsGrown is false
+	Quads.IsGrown
 	for function.method.instructions
 		if value.kind is in Bounded or value.kind is InstructionType.LoopBegin
 			return true

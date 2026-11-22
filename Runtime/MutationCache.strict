@@ -34,7 +34,7 @@ Held(slots Text) Texts
 	MutationCache("Compiler/output/Missing/Waiting.strict", true).Held("Compiler/output/Missing/Deeper").Length is 0
 	Sample.Saved(List(Text)) is not Error and Sample.Held("Compiler/output/Missing/Deeper").Length is 0
 	whole = isWhole and IsCurrent is false then Claimed(List(Text) + Lock) else List(Text)
-	IsCurrent then (Released(whole) then List(Text) else whole) else whole + Claimed(Slotted(slots))
+	IsCurrent then (IsReleased(whole) then List(Text) else whole) else whole + Claimed(Slotted(slots))
 Lock Text
 	Sample.Lock is Sample.Location + "." + HashCode(Sample.Stamp).number + ".lock"
 	Location + "." + HashCode(Stamp).number + ".lock"
@@ -51,8 +51,8 @@ Claimed(locks Texts) Texts
 				return List(Text) + value
 		Process.Wait(0.1)
 	List(Text)
-Released(locks Texts) Boolean
-	MutationCache.Released(MutationCache.Claimed(List(Text) + ("Compiler/output/Released" + Process.Elapsed + ".lock")))
+IsReleased(locks Texts) Boolean
+	MutationCache.IsReleased(MutationCache.Claimed(List(Text) + ("Compiler/output/Released" + Process.Elapsed + ".lock")))
 	for locks
 		File(value).Delete
 	for locks

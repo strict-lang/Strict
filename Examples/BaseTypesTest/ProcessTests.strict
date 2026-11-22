@@ -1,5 +1,5 @@
-Waited(seconds Number) Boolean slow
-	Waited(0.002)
+HasWaited(seconds Number) Boolean slow
+	HasWaited(0.002)
 	started = Process.Elapsed
 	Process.Wait(seconds)
 	Process.Elapsed - started >= seconds

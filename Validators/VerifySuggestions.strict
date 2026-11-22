@@ -32,7 +32,7 @@ Verified(folder Text, root Text) slow
 CheckedMore(folder Text, root Text) slow
 	failing = File(folder + "/Temperature.strict").ReadLines + Extra
 	third = RanSuggest(folder, root, "Temperature.strict Clamped -", failing)
-	if third is Error or "Suggestion: celsius.Clamp(minimum, maximum)" is not in third or OnlyPrefix(third) is false
+	if third is Error or "Suggestion: celsius.Clamp(minimum, maximum)" is not in third or IsOnlyPrefix(third) is false
 		return Error("UnsavedOrFailingMethodsBroken: " + (third to Text))
 	if File(folder + "/Temperature.strict").ReadLines is not Temp
 		return Error("TemperatureFileModified")
@@ -86,7 +86,7 @@ CheckedCase(folder Text, root Text, name Text, method Text, lines Texts, expecte
 	if output is Error
 		return output
 	bodies = Bodies(output)
-	bad = expected is not in bodies or HasBlocked(bodies) or OnlyPrefix(output) is false
+	bad = expected is not in bodies or HasBlocked(bodies) or IsOnlyPrefix(output) is false
 	if bad or File(path).ReadLines is not lines or HasBinary(folder)
 		return Error("CaseFailed " + name + "." + method + ": " + output)
 	elapsed = ((Process.Elapsed - started) * 1000).Round
@@ -108,10 +108,10 @@ HasBlocked(bodies Texts) Boolean
 		if value is in ("number", "celsius", "minimum", "maximum") or "Bogus." is in value or bad
 			return true
 	false
-OnlyPrefix(output Text) Boolean
-	OnlyPrefix("Suggestion: a\nSuggestion: b")
-	OnlyPrefix("bad") is false
-	OnlyPrefix("Suggestion: a\n\nSuggestion: b")
+IsOnlyPrefix(output Text) Boolean
+	IsOnlyPrefix("Suggestion: a\nSuggestion: b")
+	IsOnlyPrefix("bad") is false
+	IsOnlyPrefix("Suggestion: a\n\nSuggestion: b")
 	for output.Lines
 		if value is not "" and value.StartsWith("Suggestion: ") is false
 			return false

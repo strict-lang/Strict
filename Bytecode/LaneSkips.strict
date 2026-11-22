@@ -32,7 +32,7 @@ IsUntouched(type TypeEntry, method MethodEntry) Boolean
 		return true
 	if TypeEntry.ShortName(type.Name) is in lanes
 		return false
-	Mentioned(Header(type, method), lanes) is false and Mentioned(Texts(method), lanes) is false
+	IsMentioned(Header(type, method), lanes) is false and IsMentioned(Texts(method), lanes) is false
 Header(type TypeEntry, method MethodEntry) Text
 	Paired.Header(StructLanes.Caller, MethodEntry.CountingLoop).EndsWith("None")
 	(type.members to Text) + (method.parameters to Text) + method.declaredType
@@ -42,8 +42,8 @@ Texts(method MethodEntry) Text
 	for method.instructions
 		joined = joined + " " + Text.Combine(value.texts, " ")
 	joined
-Mentioned(text Text, names Texts) Boolean
-	Paired.Mentioned("Strict/Pair", Paired.lanes) and Paired.Mentioned("Number", Paired.lanes) is false
+IsMentioned(text Text, names Texts) Boolean
+	Paired.IsMentioned("Strict/Pair", Paired.lanes) and Paired.IsMentioned("Number", Paired.lanes) is false
 	for names
 		if text.IndexOf(value) >= 0
 			return true
@@ -78,7 +78,7 @@ Built(names Texts) Texts
 Called(types List(TypeEntry), names Texts) Texts
 	Drawn.Called(List(TypeEntry) + LaneCalls.Drawer, Drawn.lanes) is ("Drawer.Shifted")
 	for type, method in types, type.methods
-		if Mentioned(method.parameters to Text, names)
+		if IsMentioned(method.parameters to Text, names)
 			TypeEntry.ShortName(type.Name) + "." + method.Name
 IsPlainCall(entry InstructionEntry) Boolean
 	Paired.IsPlainCall(StructLanes.Calling(4))

@@ -55,7 +55,7 @@ Answered(server Resident, port Number, arguments Texts) Number
 		return Unserved
 	claim = Claimed(server, socket)
 	request = Resident.Request(Directory.Current, arguments, Resident.Variables, claim)
-	code = claim is not NoClaim and Greeted(socket) then Requested(socket, request) else Unserved
+	code = claim is not NoClaim and IsGreeted(socket) then Requested(socket, request) else Unserved
 	Socket.Close(socket)
 	if code is Unserved and claim is not NoClaim
 		File(server.Freed + "." + claim).Rename(server.Freed)
@@ -141,8 +141,8 @@ Claimed(server Resident, socket Number) Text
 		return NoClaim
 	File(server.Freed).Rename(server.Freed + "." + port)
 	File(server.Freed + "." + port).Exists then port to Text else NoClaim
-Greeted(socket Number) Boolean
-	Sample.Greeted(0) is false
+IsGreeted(socket Number) Boolean
+	Sample.IsGreeted(0) is false
 	waited = Socket.Waiting(socket, Resident.GreetingSeconds)
 	if waited is Error or waited is not 1
 		return false
@@ -162,7 +162,7 @@ Loopback(code Number) Number slow
 	Server.Send(client, Resident.Request(Directory.Current, ("test", "a.strict")))
 	isRequested = Resident.Arguments(Server.Requested(accepted)) is ("test", "a.strict")
 	Server.Finished(accepted, code)
-	streamed = isRequested and Greeted(client) then Streamed(client) else 1
+	streamed = isRequested and IsGreeted(client) then Streamed(client) else 1
 	Socket.Close(client)
 	Socket.Close(server)
 	streamed

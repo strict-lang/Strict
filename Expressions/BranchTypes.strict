@@ -31,7 +31,7 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	thenType = Then(node.children(0), scope, current)
 	elseType = inference.TypeOf(node.children(1), scope, current)
 	checks = ArgumentTypes(inference)
-	isMixed = checks.Mismatch(elseType, thenType) or checks.Mismatch(thenType, elseType) or IsSplit(thenType, elseType)
+	isMixed = checks.IsMismatch(elseType, thenType) or checks.IsMismatch(thenType, elseType) or IsSplit(thenType, elseType)
 	message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
 	thenType is not in Unchecked and elseType is not in Unchecked and isMixed then message else ""
 IsSplit(first Text, second Text) Boolean

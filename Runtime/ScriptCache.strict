@@ -118,26 +118,27 @@ Cached(round LinkRound, entry TypeEntry, nextMachine Machine, nextKnown Dictiona
 	updated = ScriptCache(value, known = nextKnown, rawTypes = round.entries, code = 0)
 	wired = ScriptCache(updated, resolvedTypes = nextMachine.types, signatures = round.signatures)
 	ScriptCache(wired, targets = nextTargets, typeNames = nextNames, machine = nextMachine)
-Executed(entry TypeEntry, arguments List(VmValue)) Boolean
-	Sample.Executed(TypeEntry("Strict/Scratch", List(MemberEntry), ReturnOne), List(VmValue))
+IsExecuted(entry TypeEntry, arguments List(VmValue)) Boolean
+	Sample.IsExecuted(TypeEntry("Strict/Scratch", List(MemberEntry), ReturnOne), List(VmValue))
 	rewritten = TailCalls(List(TypeEntry) + entry).Rewritten.First
 	base = BaseResolved
 	methods = Resolver((List(TypeEntry) + rewritten) + base).Methods(rewritten)
 	resolved = TypeEntry(rewritten.Name, rewritten.members, methods)
 	nextTypes = (List(TypeEntry) + resolved) + base
 	if machine.prototypes.entries.Length is 0
-		return Machine(nextTypes, ConstantCache(List(VmValue)), folder).Prepared.Completed(entry.Name, arguments)
+		return Machine(nextTypes, ConstantCache(List(VmValue)), folder).Prepared.IsCompleted(entry.Name, arguments)
 	machine.prototypes.Stored(0, Natives(nextTypes).Fresh(resolved))
 	prepared = Machine(nextTypes, machine.prototypes, folder, false, machine.sources)
 	machine.prototypes.Stored(0, Constants(prepared).Filled(0))
-	prepared.Completed(entry.Name, arguments)
+	prepared.IsCompleted(entry.Name, arguments)
 Ran(entry TypeEntry, main TypeCodegen, arguments List(VmValue)) ScriptCache
 	if IsHit(entry)
-		return ScriptCache(value, code = Executed(entry, arguments) then 0 else 1)
+		return ScriptCache(value, code = IsExecuted(entry, arguments) then 0 else 1)
 	built = Linked(entry, main)
-	built.code > 0 then built else ScriptCache(built, code = built.machine.Completed(entry.Name, arguments) then 0 else 1)
-Validated(lines Texts, merged TypeInference, logger Logger) Boolean
-	Sample.Validated(("Run", "\tmissing"), Sample.MergedInference(("Run", "\tmissing")), Logger) is false
+	isCompleted = built.machine.IsCompleted(entry.Name, arguments)
+	built.code > 0 then built else ScriptCache(built, code = isCompleted then 0 else 1)
+IsValidated(lines Texts, merged TypeInference, logger Logger) Boolean
+	Sample.IsValidated(("Run", "\tmissing"), Sample.MergedInference(("Run", "\tmissing")), Logger) is false
 	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
 		logger.Log(ResolveCheck.Located(Scripted.Path, broken + 1, FileCheck.Problem(lines, broken)))
@@ -153,7 +154,7 @@ RanLines(lines Texts, texts List(VmValue), currentRoot Text, logger Logger, path
 	if base.code > 0
 		return ScriptCache(value, code = 1)
 	merged = base.MergedInference(lines)
-	if Validated(lines, merged, logger) is false
+	if IsValidated(lines, merged, logger) is false
 		return ScriptCache(base, code = 1)
 	main = TypeCodegen("Strict/Scratch", lines, merged, base.fullNames, false)
 	base.Ran(main.Entry, main, texts)

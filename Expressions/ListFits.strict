@@ -2,24 +2,24 @@ has types KnownTypes
 constant Scaling = ListFits(Overloads.Scaler)
 constant Sorter = KnownTypes("Sorter", KnownTypes.NoMembers, Scope(("Sorted", "Sorted"), ("Numbers", "Numbers")).Owned("Sorter"), Scope(("Sorted", "Sorted types", "Sorted", "Sorted types"), ("", "", "numbers", "Numbers")))
 constant Sorts = Overloads(Sorter)
-Widened(argument Text, declared Text) Boolean
-	Scaling.Widened("Bytes", "Numbers")
-	Scaling.Widened("List(Bytes, Numbers)", "List(Numbers)")
-	Scaling.Widened("List(Bytes, Text)", "List(Numbers)") is false
-	Scaling.Widened("Bytes", "Generic") and Scaling.Widened("Bytes", "Number") is false
-	Scaling.Widened("Byte", "Bytes") and Scaling.Widened("Text", "Bytes") is false
+IsWidened(argument Text, declared Text) Boolean
+	Scaling.IsWidened("Bytes", "Numbers")
+	Scaling.IsWidened("List(Bytes, Numbers)", "List(Numbers)")
+	Scaling.IsWidened("List(Bytes, Text)", "List(Numbers)") is false
+	Scaling.IsWidened("Bytes", "Generic") and Scaling.IsWidened("Bytes", "Number") is false
+	Scaling.IsWidened("Byte", "Bytes") and Scaling.IsWidened("Text", "Bytes") is false
 	elements = Elements(argument)
 	wanted = Elements(declared)
 	if wanted.Length is not 1
 		return Overloads(types).Converts(argument, declared)
 	if elements.Length is 0
-		return Overloads(types).Assignable(argument, wanted.First, false)
-	Fitting(elements, wanted.First)
-Fitting(elements Texts, element Text) Boolean
-	Scaling.Fitting(("Byte", "Number"), "Number")
-	Scaling.Fitting(("Byte", "Text"), "Number") is false
+		return Overloads(types).IsAssignable(argument, wanted.First, false)
+	IsFitting(elements, wanted.First)
+IsFitting(elements Texts, element Text) Boolean
+	Scaling.IsFitting(("Byte", "Number"), "Number")
+	Scaling.IsFitting(("Byte", "Text"), "Number") is false
 	for elements
-		if Overloads(types).Assignable(value, element, false) is false
+		if Overloads(types).IsAssignable(value, element, false) is false
 			return false
 	true
 Elements(type Text) Texts

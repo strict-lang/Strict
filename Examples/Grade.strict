@@ -11,9 +11,9 @@ Letter Text
 	else if score > MinimumB
 		return "B"
 	"F"
-Passed Boolean
-	Grade(95).Passed
-	Grade(50).Passed is false
+IsPassed Boolean
+	Grade(95).IsPassed
+	Grade(50).IsPassed is false
 	if score > MinimumPass
 		return true
 	else
@@ -25,5 +25,5 @@ Run
 	logger.Log("95: " + excellent.Letter)
 	logger.Log("85: " + good.Letter)
 	logger.Log("50: " + failing.Letter)
-	logger.Log("95 passed: " + excellent.Passed)
-	logger.Log("50 passed: " + failing.Passed)
+	logger.Log("95 passed: " + excellent.IsPassed)
+	logger.Log("50 passed: " + failing.IsPassed)

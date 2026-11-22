@@ -146,12 +146,12 @@ Loaded(root Text) List(TypeEntry) slow
 	types = Execute.Loaded(Path, root, false)
 	File(Path).InMemory("")
 	types
-Ran(arguments Texts, root Text) Boolean slow
+HasRun(arguments Texts, root Text) Boolean slow
 	mutable texts = List(Mutable(VmValue))
 	for Range(3, arguments.Length)
 		texts.Add(VmValue.OfText(arguments(value)))
 	types = Loaded(root)
-	types.Length > 0 then Execute.Started(types, Path).Completed(types.First.Name, texts) else false
+	types.Length > 0 then Execute.Started(types, Path).IsCompleted(types.First.Name, texts) else false
 RanWith(arguments Texts, root Text, cache Answer, path = "") Answer slow
 	raw = Lines
 	lines = LinesOf(Members(root, raw), raw)

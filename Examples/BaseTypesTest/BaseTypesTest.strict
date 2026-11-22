@@ -8,7 +8,7 @@ Run
 	constant numbers = (1, 2, 3)
 	constant numbersSum = numbers.Sum
 	logger.Log("(1, 2, 3).Sum = " + numbersSum)
-TestBoolean Boolean
+IsBooleanWorking Boolean
 	not false is true
 	(false or true) is true
 	(true and true) is true
@@ -38,7 +38,7 @@ TestCharacter Character
 TestDictionary Dictionary(Text, Text)
 	Dictionary(("a", "apple"), ("b", "banana")).Length is 2
 	Dictionary(("a", "apple"), ("b", "banana"))
-TestFile Boolean
+IsFileWorking Boolean
 	File("README.md").Exists
 	File("NonExistentFile.xyz").Exists is false
 	true

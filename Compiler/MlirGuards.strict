@@ -188,7 +188,7 @@ Named Texts
 	name = MlirDevice(MlirFunction(function, Float = "f64", Guarded = -1), at).Name
 	isExact = Mask > 0
 	formats = MlirFormats(function, at)
-	first = MlirDoubles(function, at).Failing then "" else name
+	first = MlirDoubles(function, at).IsFailing then "" else name
 	names = first + "\00" + name + "s\00" + (isExact then name + "sx\00" + formats.Names(name) else "")
 	size = first.Length + name.Length + 3 + (isExact then name.Length + 3 + formats.Count * (name.Length + 5) else 0)
 	text = "  llvm.mlir.global internal constant @k" + name + "(\"" + names + "\") : !llvm.array<" + size + " x i8>"

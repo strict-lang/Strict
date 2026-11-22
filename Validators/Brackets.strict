@@ -101,7 +101,7 @@ RedundantDetail(tokens Texts, open Number, close Number) Text
 	snippet = Text.Combine(tokens.Slice(open, close - open + 1), " ")
 	if inner is NoPrecedence and (tokens(open + 1) is "not" or IsDouble(tokens, open, close))
 		return snippet + (tokens(open + 1) is "not" then NotHint else UnneededHint)
-	InnerRedundant(tokens, open, after, inner, left) then snippet + UnneededHint else ""
+	IsInnerRedundant(tokens, open, after, inner, left) then snippet + UnneededHint else ""
 IsProtectedNot(tokens Texts, open Number) Boolean
 	Sample.IsProtectedNot(("a", "is", "(", "not", "b", ")"), 2)
 	Sample.IsProtectedNot(("(", "not", "a", ")"), 0) is false
@@ -126,13 +126,15 @@ IsDouble(tokens Texts, open Number, close Number) Boolean
 	if tokens(open + 1) is not "(" or Closing(tokens, open + 1) is not close - 1 or HasComma(tokens, open + 1, close)
 		return false
 	InnerLowest(tokens, open + 1, close) < NoPrecedence or tokens(open + 2) is "not"
-InnerRedundant(tokens Texts, open Number, after Text, inner Number, left Number) Boolean
-	Sample.InnerRedundant(("(", "a", "<", "1", ")", "or", "b"), 0, "or", 7, 0)
-	Sample.InnerRedundant(("(", "a", "or", "b", ")", "and", "c"), 0, "and", 4, 0) is false
-	Sample.InnerRedundant(("x", "("), 1, "then", 4, 0) and Sample.InnerRedundant(("=", "("), 1, "", 1, 0)
-	Sample.InnerRedundant(("(", ","), 0, "", 1, 0) and Sample.InnerRedundant(("x", "("), 1, ",", 7, 0)
-	Sample.InnerRedundant(("x", "("), 1, ",", 1, 0) is false and Sample.InnerRedundant((",", "("), 1, "", 1, 0) is false
-	Sample.InnerRedundant(("x", "("), 1, "", 4, 6) is false and Sample.InnerRedundant(("x", "("), 1, "", 13, 11) is false
+IsInnerRedundant(tokens Texts, open Number, after Text, inner Number, left Number) Boolean
+	Sample.IsInnerRedundant(("(", "a", "<", "1", ")", "or", "b"), 0, "or", 7, 0)
+	Sample.IsInnerRedundant(("(", "a", "or", "b", ")", "and", "c"), 0, "and", 4, 0) is false
+	Sample.IsInnerRedundant(("x", "("), 1, "then", 4, 0) and Sample.IsInnerRedundant(("=", "("), 1, "", 1, 0)
+	Sample.IsInnerRedundant(("(", ","), 0, "", 1, 0) and Sample.IsInnerRedundant(("x", "("), 1, ",", 7, 0)
+	Sample.IsInnerRedundant(("x", "("), 1, ",", 1, 0) is false
+	Sample.IsInnerRedundant((",", "("), 1, "", 1, 0) is false
+	Sample.IsInnerRedundant(("x", "("), 1, "", 4, 6) is false
+	Sample.IsInnerRedundant(("x", "("), 1, "", 13, 11) is false
 	right = Precedence(after)
 	needsRight = inner < right or inner is 1 and right is 1
 	hasComma = after is "," or open > 0 and tokens(open - 1) is ","

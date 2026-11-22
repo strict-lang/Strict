@@ -20,9 +20,9 @@ Lengths(data Dataset) Text
 	for data.inputs
 		text = text + (index is 0 then "" else " ") + value.Length
 	text
-Aligned(data Dataset, features Number) Boolean
-	Curve.Aligned(Dataset.Pairs, 4)
-	Curve.Aligned(Dataset.Pairs, 3) is false
+IsAligned(data Dataset, features Number) Boolean
+	Curve.IsAligned(Dataset.Pairs, 4)
+	Curve.IsAligned(Dataset.Pairs, 3) is false
 	mutable matched = true
 	for data.inputs
 		if value.Length is not features
@@ -31,7 +31,7 @@ Aligned(data Dataset, features Number) Boolean
 Tried(data Dataset, name Text, features Number, classes Number, epochs Number) Text
 	Curve.Tried(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
 	Curve.Tried(Dataset.Pairs, "Pairs", 3, 2, 0) is "Pairs lengths 4 4"
-	Aligned(data, features) then Reported(data, name, features, classes, epochs) else name + " lengths " + Lengths(data)
+	IsAligned(data, features) then Reported(data, name, features, classes, epochs) else name + " lengths " + Lengths(data)
 Run
 	logger.Log(Reported(Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3), "Iris", 4, 3, Passes))
 	logger.Log(Reported(Csv(File(Sugar).ReadLines).Classified(2), "Diabetes", Diabetes.Features, 2, Passes))

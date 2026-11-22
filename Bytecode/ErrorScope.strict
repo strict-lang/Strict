@@ -127,7 +127,7 @@ Declared(name Text, assigned SyntaxNode, isMutable Boolean, block CodeBlock) Cod
 	marked = isMutable then block.Declare(name + MutableMarker, "mutable") else block
 	errors = ErrorCodegen(values)
 	folded = errors.Folded(assigned, block)
-	errors.MayFail(folded, block) or IsRemainder(folded) then Fallible(name, marked) else marked
+	errors.CanFail(folded, block) or IsRemainder(folded) then Fallible(name, marked) else marked
 Fallible(name Text, block CodeBlock) CodeBlock
 	Plain.Fallible("a", CodeBlock.Empty).scope.TypeOf("a" + FallibleMarker) is "fallible"
 	Plain.Reassigned(SyntaxNode("Reassignment", "", (Increment.children(0), ValueCodegen.ToText))) is ("a")

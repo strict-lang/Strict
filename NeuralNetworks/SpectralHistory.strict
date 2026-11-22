@@ -4,13 +4,13 @@ has width Number = 0
 has fit SpectralFit = SpectralFit
 has maximum Number = 8
 constant Pair = SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 1), 2)
-Ready Boolean
-	Pair.Ready
-	SpectralHistory.Ready is false
-	SpectralHistory((-1, 0), List(Number), 0, SpectralFit(1, 0, 1), 2).Ready is false
-	SpectralHistory((-1, 0), (1, 2, 3), 2, SpectralFit(1, 0, 1), 2).Ready is false
-	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 2), 2).Ready is false
-	SpectralHistory(0, (1, 2), 2, SpectralFit(1, 0, 1), 2).Ready is false
+IsReady Boolean
+	Pair.IsReady
+	SpectralHistory.IsReady is false
+	SpectralHistory((-1, 0), List(Number), 0, SpectralFit(1, 0, 1), 2).IsReady is false
+	SpectralHistory((-1, 0), (1, 2, 3), 2, SpectralFit(1, 0, 1), 2).IsReady is false
+	SpectralHistory((-1, 0), (1, 2, 3, 4), 2, SpectralFit(1, 0, 2), 2).IsReady is false
+	SpectralHistory(0, (1, 2), 2, SpectralFit(1, 0, 1), 2).IsReady is false
 	width > 0 and features.Length is width * coords.Length and fit.IsValid and coords.Length >= fit.degree + 1
 Remembered(coord Number, feature Numbers) SpectralHistory
 	Pair.Remembered(0.5, (5, 6)).coords is (0, 0.5)
@@ -38,7 +38,7 @@ Appended(coord Number, feature Numbers) SpectralHistory
 Predicted(coord Number) Numbers
 	Pair.Predicted(1) is (5, 6)
 	SpectralHistory((-1, 0, 1), (1, 2, 3, 4, 5, 6), 2, SpectralFit(1, 0, 1), 3).Predicted(2) is (7, 8)
-	if Ready is false
+	if IsReady is false
 		return Error("Spectral history is not ready")
 	weights = fit.Weights(coords, coord)
 	if coords.Length <= 4

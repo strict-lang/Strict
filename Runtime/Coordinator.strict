@@ -39,7 +39,7 @@ Served
 	for as long as isEnding is false and Process.Elapsed - idle < Resident.IdleSeconds
 		socket = Taken(server)
 		if socket > 0
-			idle = Replied(socket) then Process.Elapsed else idle
+			idle = HasReplied(socket) then Process.Elapsed else idle
 			Socket.Close(socket)
 	File(Place).Delete
 	Socket.Close(server)
@@ -47,7 +47,7 @@ Taken(server Number) Number
 	Sample.Taken(0) is 0
 	waiting = Socket.Waiting(server, 1)
 	waiting is Error or waiting is not 1 then 0 else Socket.Accept(server)
-Replied(socket Number) Boolean
+HasReplied(socket Number) Boolean
 	Sample.Chosen(("hello", "a", "1", "b", "0")) is "ok"
 	words = Resident("").Received(socket, "\n").Trim.Split("\t")
 	isEnding = words(0) is "exit" and (busyJob is "" or words.Last is busyJob)

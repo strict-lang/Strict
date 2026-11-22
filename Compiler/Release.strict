@@ -71,13 +71,13 @@ Refreshed(release Text, content Text, stem Text, endings Texts)
 	for endings
 		built = stem + value
 		if File(built).Exists
-			if Placed(built, release + "/" + Named(built)) is false
+			if IsPlaced(built, release + "/" + Named(built)) is false
 				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
 				return Error("ReleaseNotReplaced")
 	logger.Log("Release: " + release)
 	Sidecar(release)
 	Mirrored(content)
-Placed(source Text, target Text) Boolean
+IsPlaced(source Text, target Text) Boolean
 	temporary = target + "." + 1000000000.Random.Floor + ".tmp"
 	bytes = File(source).ReadBytes
 	File(temporary).Write(bytes)
@@ -89,12 +89,12 @@ Placed(source Text, target Text) Boolean
 	isPlaced
 Sidecar(release Text)
 	Release("Missing/App").Sidecar("Missing/Release") is not Error
-	PtxCache("Compiler/output/Sided").Written(List(Text) + "// a", ".ptx")
+	PtxCache("Compiler/output/Sided").HasWritten(List(Text) + "// a", ".ptx")
 	Release("Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
 	Release("Compiler/output/obj/A").Packaged("module {\n}") is not Error
 	File("Compiler/output/Release/" + Platform.NameOf(Platform.Current) + "/A.shell.html").Exists
 	isWeb = Path(release).FileName.text is "Web"
-	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and Placed(Icon, release + "/favicon.ico") is false
+	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and IsPlaced(Icon, release + "/favicon.ico") is false
 		logger.Log("Release could not place " + release + "/favicon.ico")
 	for Sidecars
 		if isWeb is false

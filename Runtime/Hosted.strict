@@ -118,7 +118,7 @@ Answered(path Text) VmValue
 	File("Any.strict").Length is File("Any.strict").ReadBytes.Length
 	File("Runtime/Answered.lock").IsLocked and File("Runtime/Answered.lock").IsLocked is false
 	File("Runtime/Held.lock").IsLocked and File("Runtime/Held.lock").Exists
-	MutationCache.Released(("Runtime/Answered.lock", "Runtime/Held.lock"))
+	MutationCache.IsReleased(("Runtime/Answered.lock", "Runtime/Held.lock"))
 	if call.MethodName is "IsLocked"
 		return VmValue.OfBoolean(File(path).IsLocked)
 	if call.MethodName is in ("Modified", "Length")
