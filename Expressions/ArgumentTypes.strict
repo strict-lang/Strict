@@ -152,7 +152,7 @@ CountIssue(call SyntaxNode, name Text, types Texts, fewest Number) Text
 	if given < fewest
 		return "ArgumentMissing: " + name + " got " + given + " of " + fewest
 	given <= types.Length then "" else "TooManyArguments: " + name + " got " + given + " of " + types.Length
-Owner(instance Text, method Text) Text
+Owner(instance Text, method Text, depth = 3) Text
 	Inheriting.Owner("Settings", "Parsed") is "Any"
 	Inheriting.Owner("Text", "Parsed") is "Text"
 	Inheriting.Owner("Settings", "from") is "Settings"
@@ -160,14 +160,15 @@ Owner(instance Text, method Text) Text
 	Inheriting.Compare(Parsing, "Settings", "Parsed", Counted, Counted).EndsWith(".Parsed got a Number for a Texts")
 	Sizing.Owner("Count", "Grow") is "Count"
 	ArgumentTypes(TypeInference(KnownTypes.Nested, TypeInference.NoShapes)).Owner("G", "Length") is "Length"
+	ArgumentTypes(TypeInference(KnownTypes.Cycled, TypeInference.NoShapes)).Owner("A", "Length") is "F"
 	Sizing.ConstantAccess(SyntaxNode("Member", "Limit", SyntaxNode("Type", "Count")), CountNamed, Counted) is ""
 	Sizing.ConstantAccess(TypeLimited, CountNamed, Counted).StartsWith("ConstantNeedsTypeName")
 	types = inference.types
 	isOwn = types.ParameterScope(instance).Count(method) > 0 or types.MethodsOf(instance).TypeOf(method) is not ""
 	if isOwn or types.Inherit(instance, method) is not ""
 		return isOwn then instance else "Any"
-	holder = types.Holder(instance, method, 3)
-	holder is "" then instance else Owner(types.MembersOf(instance).TypeOf(holder), method)
+	holder = depth is 0 then "" else types.Holder(instance, method, depth)
+	holder is "" then instance else Owner(types.MembersOf(instance).TypeOf(holder), method, depth - 1)
 Declare(instance Text, method Text) Texts
 	Sizing.Declare("Count", "Grow") is ("Area")
 	Sizing.Declare("Size", "from") is ("Number")
