@@ -1,6 +1,9 @@
 has values ValueCodegen
 has borrowing Texts = List(Text)
 constant Plain = ListCodegen(ValueCodegen.Plain)
+constant Bytes = List(Text) + "Bytes"
+constant OneListed = SyntaxNode("List", "", ValueCodegen.One)
+constant Byting = ListCodegen(ValueCodegen(ValueCodegen.Plain, inference = TypeInference(Overloads.Scaler, CallTarget.NoScopes)))
 constant Declared = CodeBlock.Empty.Declare("x", "Number")
 constant Shared = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", true)
 constant Owned = CodeBlock.Empty.Declare("values", "Numbers").Sharing("values", false)
@@ -174,11 +177,16 @@ Argument(node SyntaxNode, position Number, parameters Texts, block CodeBlock) Co
 	Plain.IsUsed(SyntaxNode("Return", "", ValueCodegen.Ones.children), 0, true)
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Numbers", Declared).instructions.Length is 4
 	Plain.Argument(ValueCodegen.NoNode, 0, List(Text) + "Number", Declared).instructions.Length is 1
+	Byting.Argument(ValueCodegen.One, 0, Bytes, CodeBlock.Empty) is Byting.values.Expression(OneListed, CodeBlock.Empty)
 	Plain.Argument(ValueCodegen.NoNode, 1, List(Text), Declared).instructions.Length is 1
 	Iterated.Argument(ValueCodegen.Ones, 0, "List", Declared).instructions(0).payload(3) is 2
 	parameter = position < parameters.Length then parameters(position) else ""
-	element = values.inference.types.ElementType(parameter) is values.TypeOf(node, block)
-	wraps = values.inference.types.IsPlural(parameter) and element
+	element = values.inference.types.ElementType(parameter)
+	type = values.TypeOf(node, block)
+	types = values.inference.types
+	isSingle = element is not "Generic" and ListFits(types).IsList(type) is false
+	fits = element is type or isSingle and Overloads(types).IsAssignable(type, element, false)
+	wraps = types.IsPlural(parameter) and fits
 	converted = ConversionCodegen(values).Converted(node, parameter, block)
 	values.Expression(wraps then SyntaxNode("List", "", node) else converted, block)
 Grouped(node SyntaxNode, first Number, parameters Number) SyntaxNode
