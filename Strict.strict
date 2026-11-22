@@ -30,7 +30,7 @@ Run(arguments Texts) Number
 	rebuilt = SelfBuild(resident.root, Process.Current.executable).Rebuilt(arguments)
 	if rebuilt is not SelfBuild.Current
 		return rebuilt
-	passed = Scripted.Packed(arguments)
+	passed = CommandLimit(Scripted.Packed(arguments)).Armed
 	forwarded = Forwarding(resident.root).Forwarded(passed)
 	forwarded is Forwarding.Ended then 1 else forwarded is Error then Logged(passed).code else forwarded
 Hosted(command Text, arguments Texts, resident Resident) slow
@@ -75,7 +75,8 @@ Answered(resident Resident, request Text, socket Number, arguments Texts, last A
 		Directory.Change(folder)
 	Socket.Output(socket)
 	isCode = Scripted.IsRun(arguments)
-	answer = Logged(arguments, isCode then last else Answer(last, known = last.Fresh(folder)))
+	answer = Logged(CommandLimit(arguments).Armed, isCode then last else Answer(last, known = last.Fresh(folder)))
+	TestBudget.Limited(0, "")
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
@@ -156,7 +157,7 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 		File(FileCompiler.Normalized(rest(0))).InMemory(Process.Input)
 	if request.Option is in ("values", "trace", "profile", "sampled")
 		return Answer(Traced(request, rest), known)
-	execute = request.Executing(logger, known, inferred)
+	execute = request.Executing(known, inferred)
 	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Served(rest(0), rest(1))
 Test(text Text) Text slow
 	Trial(text).Tested

@@ -49,8 +49,7 @@ Instructions(method MethodEntry, names Texts, scratch Number) List(InstructionEn
 	changed = Changed(method, names)
 	for method.instructions
 		resolved = value.kind is InstructionType.Invoke then Targeted(value) else Slotted(value, names)
-		rebased = LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length)
-		placed = Fielded(Placed(rebased, method, index, scratch))
+		placed = Fielded(Placed(LoadReuse(List(InstructionEntry)).Rebased(resolved, names.Length), method, index, scratch))
 		value.kind is InstructionType.Return then InstructionEntry(placed, payload = placed.payload + changed) else placed
 Fielded(entry InstructionEntry) InstructionEntry
 	Pairs.Fielded(InstructionEntry(InstructionType.FieldLoad, ("b", "Pair"), (4, 3, -1, -2))).payload is (4, 3, 0, 1)

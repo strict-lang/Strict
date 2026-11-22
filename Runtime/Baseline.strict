@@ -46,8 +46,7 @@ Expired(begun Number, budget Number) Boolean
 IsRun(tested List(TypeEntry), method MethodEntry, runner Text) Boolean
 	Baseline(Mutants.Sample).IsRun(Mutants.Doubled, Mutants.Twice, TestCodegen.Runner) is false
 	failing = List(MethodEntry) + MethodEntry(method, instructions = Invocation.Failing.methods.First.instructions)
-	replaced = mutants.Replaced(tested, List(MethodEntry) + method, failing)
-	started = Execute.Started(replaced, mutants.path, false, false)
+	started = Execute.Started(mutants.Replaced(tested, List(MethodEntry) + method, failing), mutants.path, false, false)
 	Machine(started, deadline = Process.Elapsed + 1).Tested(tested.First.Name, runner) > 0
 Reaching(types List(TypeEntry)) Texts
 	Baseline(Mutants.Sample).Reaching(Reading) is ("T.Read", "T.Call")

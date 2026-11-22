@@ -1,0 +1,25 @@
+has arguments Texts
+constant UnitSeconds = 300
+constant CheckSeconds = 600
+constant LongSeconds = 1800
+constant Hint = " s, set STRICT_DEADLINE to more seconds (0 turns it off)"
+constant Unit = CommandLimit(("test", "Math/Size.strict", ".", "unit"))
+Seconds Number
+	Unit.Seconds is UnitSeconds and CommandLimit(("check", "Math")).Seconds is CheckSeconds
+	CommandLimit(("test", "Math")).Seconds is LongSeconds
+	CommandLimit(("build", "Strict.strict")).Seconds is LongSeconds
+	CommandLimit(("test", "Math/Size.strict", "unit", "native")).Seconds is LongSeconds
+	CommandLimit(("run", "-c", "1")).Seconds is 0 and CommandLimit(List(Text)).Seconds is 0
+	CommandLimit(("test", "nightly")).Seconds is 0
+	setting = Process.Variable("STRICT_DEADLINE")
+	if setting is not ""
+		return setting to Number
+	command = arguments.Length > 0 then arguments(0) else ""
+	isFile = arguments.Length > 1 then arguments(1).EndsWith(".strict") else false
+	isUnit = command is "test" and isFile and "unit" is in arguments and "native" is not in arguments
+	isLong = command is in ("test", "build") and "nightly" is not in arguments
+	isUnit then UnitSeconds else (command is "check" then CheckSeconds else (isLong then LongSeconds else 0))
+Armed Texts slow
+	limit = Seconds
+	TestBudget.Limited(limit, "strict " + Text.Combine(arguments, " ") + " ran past its limit of " + limit + Hint)
+	arguments

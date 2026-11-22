@@ -75,6 +75,6 @@ IsInternal Boolean
 	(TestRequest(("Number.strict", ".", "unit")).IsInternal or TestRequest(("Compiler", ".", "unit")).IsInternal) is false
 	name = FileCompiler.FullName(FileCompiler.Normalized(rest(0)), rest(1))
 	Directory.Exists(rest(0)) is false and TypeSource.IsInternal(name)
-Executing(logger Logger, known Dictionary(Text, TypeEntry), kept InferenceCache) Execute
-	Shown.Executing(Logger, Dictionary(Text, TypeEntry), InferenceCache.None).selection is "*"
+Executing(known Dictionary(Text, TypeEntry), kept InferenceCache) Execute
+	Shown.Executing(Dictionary(Text, TypeEntry), InferenceCache.None).selection is "*"
 	Execute(Selection, IsRecursive, IsMutating, Part, IsFull, known, inferred = kept)

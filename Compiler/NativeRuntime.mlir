@@ -1138,6 +1138,83 @@
   ^done:
     return
   }
+  // a whole command (strict test, check or build, or one request of a resident server) ends with an Error when it runs
+  // past this clock time (TestBudget.Limited, 0 is no limit): a compiler or a test child that loops can not stay for hours
+  llvm.mlir.global internal @strict_command_until(0.0 : f64) : f64
+  llvm.mlir.global internal @strict_command_message(0 : i64) : i64
+  llvm.mlir.global internal @strict_command_output(0 : i64) : i64
+  func.func private @strict_testbudget_limited(%self: f64, %seconds: f64, %message: f64) -> f64 {
+    %none = arith.constant 0.0 : f64
+    %untilSlot = llvm.mlir.addressof @strict_command_until : !llvm.ptr
+    %isLimited = arith.cmpf ogt, %seconds, %none : f64
+    cf.cond_br %isLimited, ^arm, ^off
+  ^off:
+    llvm.store %none, %untilSlot atomic release {alignment = 8 : i64} : f64, !llvm.ptr
+    return %none : f64
+  ^arm:
+    %text = func.call @strict_named(%message) : (f64) -> !llvm.ptr
+    %length = llvm.call @strlen(%text) : (!llvm.ptr) -> i64
+    %one = arith.constant 1 : i64
+    %bytes = arith.addi %length, %one : i64
+    %copy = func.call @strict_malloc(%bytes) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%copy, %text, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %copyBits = llvm.ptrtoint %copy : !llvm.ptr to i64
+    %messageSlot = llvm.mlir.addressof @strict_command_message : !llvm.ptr
+    llvm.store %copyBits, %messageSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %output = func.call @strict_output_handle() : () -> i64
+    %outputSlot = llvm.mlir.addressof @strict_command_output : !llvm.ptr
+    llvm.store %output, %outputSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %now = func.call @strict_clock() : () -> f64
+    %until = arith.addf %now, %seconds : f64
+    llvm.store %until, %untilSlot atomic release {alignment = 8 : i64} : f64, !llvm.ptr
+    %zero = arith.constant 0 : i64
+    %watchingSlot = llvm.mlir.addressof @strict_test_watching : !llvm.ptr
+    %watching = llvm.atomicrmw xchg %watchingSlot, %one acq_rel : !llvm.ptr, i64
+    %active = arith.cmpi ne, %watching, %zero : i64
+    cf.cond_br %active, ^armed, ^spawn
+  ^spawn:
+    %spawned = func.call @strict_test_spawn() : () -> i1
+    cf.br ^armed
+  ^armed:
+    return %none : f64
+  }
+  // called by the watcher thread: past the limit the message goes to the command output (the console or the socket
+  // of a served request) and the process ends, a resident server is started again by the next request
+  func.func private @strict_command_overdue() {
+    %none = arith.constant 0.0 : f64
+    %untilSlot = llvm.mlir.addressof @strict_command_until : !llvm.ptr
+    %until = llvm.load %untilSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
+    %isLimited = arith.cmpf one, %until, %none : f64
+    cf.cond_br %isLimited, ^clock, ^done
+  ^clock:
+    %now = func.call @strict_clock() : () -> f64
+    %isOver = arith.cmpf ogt, %now, %until : f64
+    cf.cond_br %isOver, ^stop, ^done
+  ^stop:
+    %messageSlot = llvm.mlir.addressof @strict_command_message : !llvm.ptr
+    %messageBits = llvm.load %messageSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %message = llvm.inttoptr %messageBits : i64 to !llvm.ptr
+    %outputSlot = llvm.mlir.addressof @strict_command_output : !llvm.ptr
+    %output = llvm.load %outputSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
+    %formatLengths = llvm.mlir.addressof @strict_gpu_unloaded_format : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %zero = arith.constant 0 : i64
+    %isSocket = arith.cmpi sgt, %output, %zero : i64
+    cf.cond_br %isSocket, ^socket, ^console
+  ^socket:
+    func.call @strict_log_handle(%output, %format, %message) : (i64, !llvm.ptr, !llvm.ptr) -> ()
+    cf.br ^quit
+  ^console:
+    %printed = llvm.call @printf(%format, %message) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr) -> i32
+    cf.br ^quit
+  ^quit:
+    %all = llvm.mlir.zero : !llvm.ptr
+    %flushed = llvm.call @fflush(%all) : (!llvm.ptr) -> i32
+    func.call @strict_test_quit() : () -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
   func.func private @strict_test_watch() {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -1148,6 +1225,7 @@
     cf.br ^loop
   ^loop:
     func.call @strict_test_pause() : () -> ()
+    func.call @strict_command_overdue() : () -> ()
     %claimed = llvm.load %claimedSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> i64
     %used = arith.minsi %claimed, %capacity : i64
     cf.br ^scan(%zero : i64)

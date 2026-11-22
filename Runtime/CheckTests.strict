@@ -14,6 +14,10 @@ constant PolicyHead = ("has logger", "constant Fixture = Policy.Value + 1", "Run
 constant PolicyMid = ("	mutable count = 0", "	for as long as Process.Elapsed - started < 0.04", "		count = count + 1", "	logger.Log(\"manual fixture\")", "	count > 0 then 7 else 0")
 constant PolicyTail = ("Quick Number", "	Policy.Quick is 3", "	3", "FixtureUsed Number slow", "	Policy.Fixture is 8", "	Fixture")
 constant WaitLines = ("Delay Number", "	Waiting.Delay is 1", "	let started = Process.Elapsed", "	mutable count = 0", "	for as long as Process.Elapsed - started < 0.04", "		count = count + 1", "	count > 0 then 1 else 0")
+constant LoopLines = ("Spin Number slow", "	Loops.Spin is 1", "	started = Process.Elapsed", "	mutable count = 0", "	for as long as Process.Elapsed - started < 20", "		count = count + 1", "	count > 0 then 1 else 0")
+constant Pooled = ("set STRICT_THREADS=8&& ", "STRICT_THREADS=8 ")
+constant NoThreads = ("set STRICT_THREADS=& ", "env -u STRICT_THREADS ")
+constant ShortDeadline = ("set STRICT_THREADS=8&& set STRICT_DEADLINE=2&& ", "STRICT_THREADS=8 STRICT_DEADLINE=2 ")
 constant PassedLine = "Test passed: LazyFixture.Check is \"seven\""
 Run Number
 	folder = "obj/TestPolicy" + 1000000.Random.Floor
@@ -36,83 +40,83 @@ Checked(folder Text) Boolean
 	fourth = third is Error then third else CheckShares(folder)
 	if fourth is Error
 		return fourth
-	broken = Ran("test Runtime/broken unit")
+	broken = Ran("test Runtime/broken unit", Pooled)
 	isRun = "All tests passed in Runtime/broken/Fine.strict" is in broken.Output
 	isRun then CheckFail(broken, "LoopBodyMissing", "BrokenFile") else Error("BrokenFileStoppedFolder: " + broken.Output)
 CheckDeps(folder Text) Boolean
 	File(folder + "/Doubling.strict").Write(DoubleCode)
 	File(folder + "/Tripling.strict").Write(TripleCode)
 	File(folder + "/Sixfold.strict").Write(SixCode)
-	if Ran("test " + folder + "/Sixfold.strict unit").exitCode is not 0
+	if Ran("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is not 0
 		return Error("InitialDependencyChainFailed")
 	File(folder + "/Doubling.strict").Write(("has number", "Doubled Number", "	Doubling(2).Doubled is 6", "	number * 3"))
-	if Ran("test " + folder + "/Tripling.strict unit").exitCode is not 0
+	if Ran("test " + folder + "/Tripling.strict unit", Pooled).exitCode is not 0
 		return Error("UnchangedCallerFailed")
-	Ran("test " + folder + "/Sixfold.strict unit").exitCode is 0 then Error("StaleCacheSurvivedChange") else true
+	Ran("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is 0 then Error("StaleCacheSurvivedChange") else true
 CheckBudget(folder Text) Boolean
 	File(folder + "/TestWork.strict").Write(PauseLines)
 	File(folder + "/OverBudget.strict").Write(("Delay Number", "	OverBudget.Delay is 1", "	TestWork.Pause"))
 	overSource = folder + "/OverBudget.strict"
-	unit = CheckFail(Ran("test " + overSource + " unit"), DeadlineName, "OverBudgetVm")
+	unit = CheckFail(Ran("test " + overSource + " unit", Pooled), DeadlineName, "OverBudgetVm")
 	if unit is Error or File(folder + "/obj/OverBudget.strictbinary").Exists
 		return Error("FailedUnitWasCachedOrPassed")
-	built = CheckFail(Ran("build " + overSource), DeadlineName, "OverBudgetBuild")
+	built = CheckFail(Ran("build " + overSource, Pooled), DeadlineName, "OverBudgetBuild")
 	natCmd = "test " + overSource + " unit native"
-	nat = built is Error then built else CheckFail(Ran(natCmd), DeadlineName, "OverBudgetNative")
+	nat = built is Error then built else CheckFail(Ran(natCmd, Pooled), DeadlineName, "OverBudgetNative")
 	nat is Error then nat else CheckSharedBudget(folder)
 CheckSharedBudget(folder Text) Boolean
 	sharedSource = folder + "/SharedBudget.strict"
 	File(sharedSource).Write(SharedBudgetCode)
-	vm = CheckPass(Ran("test " + sharedSource + " unit"), "", "SharedVm")
-	vm is Error then vm else CheckPass(Ran("test " + sharedSource + " unit native"), "", "SharedNative")
+	vm = CheckPass(Ran("test " + sharedSource + " unit", Pooled), "", "SharedVm")
+	vm is Error then vm else CheckPass(Ran("test " + sharedSource + " unit native", Pooled), "", "SharedNative")
 CheckLazy(folder Text) Boolean
 	File(folder + "/LazyFixture.strict").Write(LazyHead + LazyTail)
-	lazy = Ran("test " + folder + "/LazyFixture.strict unit")
+	lazy = Ran("test " + folder + "/LazyFixture.strict unit", Pooled)
 	if lazy.exitCode is not 0 or lazy.Output.Split("fixture computed").Length is not 2
 		return Error("LazyFixtureCountWrong: " + lazy.Output)
 	if lazy.Output.IndexOf(PassedLine) >= lazy.Output.IndexOf("fixture computed")
 		return Error("FixtureInitializedTooEarly: " + lazy.Output)
 	File(folder + "/SetupBudget.strict").Write(SetupBudgetCode)
-	setup = CheckFail(Ran("test " + folder + "/SetupBudget.strict unit"), DeadlineName, "SetupBudget")
+	setup = CheckFail(Ran("test " + folder + "/SetupBudget.strict unit", Pooled), DeadlineName, "SetupBudget")
 	setup is Error then setup else CheckHangs(folder)
 CheckHangs(folder Text) Boolean
 	hangs = folder + "/Hangs.strict"
 	File(hangs).Write(HangLines)
-	vm = CheckFail(Ran("test " + hangs + " unit"), DeadlineName, "HangsVm")
-	nat = vm is Error then vm else CheckFail(Ran("test " + hangs + " unit native"), DeadlineName, "HangsNative")
-	nat is Error then nat else CheckFail(Ran("check " + folder), DeadlineName, "HangsCheck")
+	vm = CheckFail(Ran("test " + hangs + " unit", Pooled), DeadlineName, "HangsVm")
+	nat = vm is Error then vm else CheckFail(Ran("test " + hangs + " unit native", Pooled), DeadlineName, "HangsNative")
+	nat is Error then nat else CheckFail(Ran("check " + folder, Pooled), DeadlineName, "HangsCheck")
 CheckPolicy(folder Text) Boolean
 	File(folder + "/Policy.strict").Write(PolicyHead + PolicyMid + PolicyTail)
 	source = folder + "/Policy.strict"
-	unit = Ran("test " + source + " unit")
+	unit = Ran("test " + source + " unit", Pooled)
 	if unit.exitCode is not 0 or "manual fixture" is in unit.Output
 		return Error("UnitRanSlowTest: " + unit.Output)
-	full = CheckPass(Ran("test " + source), "manual fixture", "ExplicitSlow")
-	sel = Ran("test " + source + " Quick")
+	full = CheckPass(Ran("test " + source, Pooled), "manual fixture", "ExplicitSlow")
+	sel = Ran("test " + source + " Quick", Pooled)
 	if full is Error or sel.exitCode is not 0 or "manual fixture" is in sel.Output
 		return Error("SelectedRanSlowTest: " + sel.Output)
 	CheckPolicyRun(source)
 CheckPolicyRun(source Text) Boolean
-	ran = Ran(source)
+	ran = Ran(source, Pooled)
 	if ran.exitCode is not 0 or ran.Output.IndexOf("manual fixture") >= ran.Output.IndexOf("application")
 		return Error("ManualRunOrderWrong: " + ran.Output)
-	unitNat = Ran("test " + source + " unit native")
-	slowNat = Ran("test " + source + " native Value")
+	unitNat = Ran("test " + source + " unit native", Pooled)
+	slowNat = Ran("test " + source + " native Value", Pooled)
 	badUnit = unitNat.exitCode is not 0 or "manual fixture" is in unitNat.Output
 	bad = badUnit or slowNat.exitCode is not 0 or "manual fixture" is not in slowNat.Output
 	bad then Error("NativeSlowSelectionWrong") else true
 CheckWaiting(folder Text) Boolean
 	waitSource = folder + "/Waiting.strict"
 	File(waitSource).Write(WaitLines)
-	unitRes = CheckPass(Ran("test " + waitSource + " unit"), "", "WaitingVm")
-	unitRes is Error then unitRes else CheckPass(Ran("test " + waitSource + " unit native"), "", "WaitingNative")
+	unitRes = CheckPass(Ran("test " + waitSource + " unit", Pooled), "", "WaitingVm")
+	unitRes is Error then unitRes else CheckPass(Ran("test " + waitSource + " unit native", Pooled), "", "WaitingNative")
 CheckProbe Boolean
 	File(ProbePath).Write(ProbeLines)
-	unitRes = Ran("test " + ProbePath + " unit")
-	natRes = Ran("test " + ProbePath + " unit native")
+	unitRes = Ran("test " + ProbePath + " unit", Pooled)
+	natRes = Ran("test " + ProbePath + " unit native", Pooled)
 	badUnit = unitRes.exitCode is not 0 or "Test passed" is not in unitRes.Output
 	badNat = natRes.exitCode is not 0 or "Test passed" is in natRes.Output
-	passed = CheckPass(Ran("test " + ProbePath), "Test passed: PolicyProbe.Delay", "ExplicitInternalProbe")
+	passed = CheckPass(Ran("test " + ProbePath, Pooled), "Test passed: PolicyProbe.Delay", "ExplicitInternalProbe")
 	res = badUnit or badNat then Error("InternalTestedAutomatically") else passed
 	File(ProbePath).Delete
 	File("Bytecode/obj/PolicyProbe.strictbinary").Delete
@@ -127,26 +131,26 @@ CheckShares(folder Text) Boolean
 	callLine = "	for Process.RunTools(\"" + tool + "\", (\"" + line + "\", \"" + line + "\"))"
 	sharesCode = ("has logger", "Run Number", callLine, "		logger.Log(\"threads \" + value.Output.Trim)", "	0")
 	File(folder + "/Shares.strict").Write(sharesCode)
-	shared = RanEnv(folder + "/Shares.strict", "")
+	shared = Ran(folder + "/Shares.strict", NoThreads)
 	if shared.exitCode is not 0 or SharedCount(shared.Output) is not 2
 		return Error("ToolSharesWrong: " + shared.Output)
-	kept = RanEnv(folder + "/Shares.strict", "8")
+	kept = Ran(folder + "/Shares.strict", Pooled)
 	badKept = kept.exitCode is not 0 or kept.Output.Split("threads 8").Length is not 3
-	badKept then Error("ExplicitThreadsNotKept: " + kept.Output) else true
+	badKept then Error("ExplicitThreadsNotKept: " + kept.Output) else CheckDeadline(folder)
+CheckDeadline(folder Text) Boolean
+	File(folder + "/Loops.strict").Write(LoopLines)
+	looped = Ran("test " + folder + "/Loops.strict Spin", ShortDeadline)
+	CheckFail(looped, "ran past its limit of 2 s", "LoopingTestWithoutDeadline")
 SharedCount(output Text) Number
 	mutable count = 0
 	for output.Lines
 		if value.StartsWith("threads ") and value.Substring(8) to Number >= 2
 			count = count + 1
 	count
-Ran(arguments Text) ProcessResult
-	RanEnv(arguments, "8")
-RanEnv(arguments Text, threads Text) ProcessResult
+Ran(arguments Text, variables Texts) ProcessResult
 	win = Process.OperatingSystem is "Windows"
-	winEnv = threads is "" then "set STRICT_THREADS=& " else "set STRICT_THREADS=" + threads + "&& "
-	nixEnv = threads is "" then "env -u STRICT_THREADS " else "STRICT_THREADS=" + threads + " "
 	exe = "\"" + Process.Find("strict").executable + "\" "
-	cmd = (win then winEnv else nixEnv) + exe + arguments
+	cmd = variables(win then 0 else 1) + exe + arguments
 	Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 CheckPass(res ProcessResult, needle Text, tag Text) Boolean
 	bad = res.exitCode is not 0 or needle is not "" and needle is not in res.Output

@@ -22,6 +22,6 @@ Tested Text slow
 	File(Located).Write(source)
 	started = logger.Captured(true)
 	request = TestRequest((Located, TypeSource.Root, "unit"))
-	answer = request.Executing(logger, Dictionary(Text, TypeEntry), InferenceCache.None).Served(Located, TypeSource.Root)
+	answer = request.Executing(Dictionary(Text, TypeEntry), InferenceCache.None).Served(Located, TypeSource.Root)
 	output = started + logger.Captured(false)
 	answer is Error then output + answer to Text else output
