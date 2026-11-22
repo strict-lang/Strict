@@ -34,6 +34,10 @@ Verb(name Text) Text
 	Hosting.Verb("Served") is "Serve" and Hosting.Verb("Examined") is "Examine" and Hosting.Verb("Joined") is "Join"
 	Hosting.Verb("Ran") is "Run" and Hosting.Verb("Added") is "Add"
 	Hosting.Verb("Speed") is "" and Hosting.Verb("Red") is ""
+	Hosting.Verb("Captured") is "Capture" and Hosting.Verb("Stored") is "Store" and Hosting.Verb("Raised") is "Raise"
+	Hosting.Verb("Named") is "Name" and Hosting.Verb("Declared") is "Declare" and Hosting.Verb("Parsed") is "Parse"
+	Hosting.Verb("Edited") is "Edit" and Hosting.Verb("Opened") is "Open" and Hosting.Verb("Lowered") is "Lower"
+	Hosting.Verb("Counted") is "Count" and Hosting.Verb("Started") is "Start" and Hosting.Verb("Passed") is "Pass"
 	at = Irregular.Index(name)
 	if at >= 0 and at % 2 is 0
 		return Irregular(at + 1)
@@ -47,5 +51,12 @@ Stem(stem Text, last Text) Text
 	Hosting.Stem("Stopp", "p") is "Stop" and Hosting.Stem("Add", "d") is "Add" and Hosting.Stem("Trac", "c") is "Trace"
 	if last is stem(stem.Length - 2) to Text and "bgmnprt".IndexOf(last) >= 0
 		return stem.Substring(0, stem.Length - 1)
-	isSilent = "vczu".IndexOf(last) >= 0 or stem.EndsWith("in") and "aeiou".IndexOf(stem(stem.Length - 3) to Text) < 0
-	isSilent then stem + "e" else stem
+	isSibilant = last is "s" and stem.EndsWith("ss") is false
+	"vczu".IndexOf(last) >= 0 or isSibilant or IsSingleVowel(stem) then stem + "e" else stem
+IsSingleVowel(stem Text) Boolean
+	Hosting.IsSingleVowel("Stor") and Hosting.IsSingleVowel("Examin")
+	Hosting.IsSingleVowel("Join") is false and Hosting.IsSingleVowel("Edit") is false
+	vowel = stem(stem.Length - 2) to Text
+	before = stem.Length > 2 then stem(stem.Length - 3) to Text else "a"
+	last = stem(stem.Length - 1) to Text
+	"aiou".IndexOf(vowel) >= 0 and "aeiou".IndexOf(before) < 0 and "wxy".IndexOf(last) < 0 and vowel + last is not "it"
