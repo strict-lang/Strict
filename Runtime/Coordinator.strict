@@ -149,7 +149,7 @@ Linked Number
 	existing = Connected
 	if existing is not NoSocket
 		return existing
-	for Range(0, Process(Launcher(Process.Current.executable)).Launched("coordinator") > 0 then BeatSeconds else 0)
+	for Range(0, Process(Launcher(Process.Current.executable)).Launch("coordinator") > 0 then BeatSeconds else 0)
 		if File(Place).Exists
 			return Connected
 		Process.Wait(1)

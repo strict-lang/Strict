@@ -17,7 +17,7 @@ Rebuilt(arguments Texts) Number slow
 	if File(root + HoldFile).Exists
 		logger.Log(Shown + " is older than Strict sources, not rebuilt while obj/Strict.hold exists")
 		return Current
-	IsBuilt(arguments) then Process(TargetExecutable).Started(Quoted(arguments)) else Current
+	IsBuilt(arguments) then Process(TargetExecutable).Start(Quoted(arguments)) else Current
 TargetExecutable Text
 	SelfBuild("C:\\a", "C:\\b\\strict.exe").TargetExecutable is "C:/a/strict.exe"
 	root.Replace("\\", "/") + "/" + Path(executable).FileName.text
@@ -37,7 +37,7 @@ IsBuilt(arguments Texts) Boolean slow
 	IsUnlocked and built
 IsCoreRebuilt Boolean slow
 	logger.Log(Shown + " is older than Strict sources, rebuilding")
-	IsRebuilt(Process(TargetExecutable).Started("build Strict.strict ."))
+	IsRebuilt(Process(TargetExecutable).Start("build Strict.strict ."))
 IsRebuilt(code Number) Boolean
 	SelfBuild("a", "strict.exe").IsRebuilt(0)
 	SelfBuild("a", "strict.exe").IsRebuilt(3) is false

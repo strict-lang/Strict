@@ -108,7 +108,7 @@ Started(slot Text) Number
 	served = " serve " + slot + Logged(root + "/obj", isWindows, slot)
 	command = "/c \"\"" + executable + "\"" + served + "\""
 	nohup = "-c \"nohup '" + executable + "'" + served + " &\""
-	if isWindows then Process.Find("cmd").Launched(command) is 0 else Process.RunTool("sh", nohup).exitCode is not 0
+	if isWindows then Process.Find("cmd").Launch(command) is 0 else Process.RunTool("sh", nohup).exitCode is not 0
 		logger.Log("strict server " + slot + " did not start: " + executable + served)
 	Unserved
 Logged(objects Text, isWindows Boolean, slot Text) Text

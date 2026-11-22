@@ -4,7 +4,7 @@ Directories(path) Texts slow
 Exists(path) Boolean slow
 Current Text
 Files(path, pattern = "") Texts slow
-Modified(path) Number slow
+ReadModified(path) Number slow
 Create(path) slow
 Change(path) slow
 Delete(path Text) slow

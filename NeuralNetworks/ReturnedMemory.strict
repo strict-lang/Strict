@@ -18,7 +18,7 @@ Recovered Boolean native
 	ReturnedMemory.Recovered
 	anchor = Anchor
 	measured = Measured(anchor)
-	Process.Collected
+	Process.Collect
 	left = measured(0) - GpuMemory.HostAvailable
 	logger.Log("spike " + (measured(0) - measured(2)).Round + " left " + left.Round + " after " + measured(1) + " numbers")
 	left < Kept and anchor.Last is 1

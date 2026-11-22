@@ -260,7 +260,7 @@ Start(rest Texts, folder Text, fresh Text) Number slow
 		logger.Log("Up to date: " + fresh)
 	target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
 	Directory.Change(folder)
-	Process(target).Started(Join(rest.Slice(2, rest.Length - 2)).Trim)
+	Process(target).Start(Join(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
 	Strict.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)

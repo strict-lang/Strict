@@ -23,15 +23,15 @@ Right(words Texts) Number
 Kept(count Number) Number
 	Spans.Kept(Many) is Many
 	words = Words(count)
-	Process.Collected
+	Process.Collect
 	others = Words(count * 2)
-	Process.Collected
+	Process.Collect
 	Right(words) + Right(others) - count * 2
 Scanned(count Number) Number
 	Spans.Scanned(Big) is Big
 	words = Words(count)
-	Process.Collected
-	Process.Collected
+	Process.Collect
+	Process.Collect
 	Right(words)
 Part(text Text) Text
 	Spans.Part(Spans.Long(Many)).Length is Size

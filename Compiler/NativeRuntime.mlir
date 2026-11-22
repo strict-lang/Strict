@@ -139,27 +139,7 @@
   }
   // Logger.Captured: true collects the log output from now on and gives an empty text, false gives back what was
   // collected and logs to where it went before again
-  func.func private @strict_directory_readmodified(%self: f64, %path: f64) -> f64 {
-    %modified = func.call @strict_directory_modified(%self, %path) : (f64, f64) -> f64
-    return %modified : f64
-  }
-  func.func private @strict_process_start(%path: f64, %arguments: f64) -> f64 {
-    %started = func.call @strict_process_started(%path, %arguments) : (f64, f64) -> f64
-    return %started : f64
-  }
-  func.func private @strict_process_launch(%path: f64, %arguments: f64) -> f64 {
-    %launched = func.call @strict_process_launched(%path, %arguments) : (f64, f64) -> f64
-    return %launched : f64
-  }
-  func.func private @strict_process_collect(%self: f64) -> f64 {
-    %collected = func.call @strict_process_collected(%self) : (f64) -> f64
-    return %collected : f64
-  }
   func.func private @strict_logger_capture(%writer: f64, %isCapturing: f64) -> f64 {
-    %captured = func.call @strict_logger_captured(%writer, %isCapturing) : (f64, f64) -> f64
-    return %captured : f64
-  }
-  func.func private @strict_logger_captured(%writer: f64, %isCapturing: f64) -> f64 {
     %no = arith.constant 0.0 : f64
     %isStart = arith.cmpf one, %isCapturing, %no : f64
     cf.cond_br %isStart, ^start, ^take
@@ -7758,7 +7738,7 @@
   }
   // `Process.Collected`: the full collection a program asks for between its stages or levels (never inside a frame or
   // a step, nothing else collects on request), then the unused GPU pool blocks go back too; not inside a pool job
-  func.func private @strict_process_collected(%self: f64) -> f64 {
+  func.func private @strict_process_collect(%self: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %busy = func.call @strict_rc_busy() : () -> i1
     cf.cond_br %busy, ^done(%zero : f64), ^collect

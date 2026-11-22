@@ -246,7 +246,7 @@
     return %result : f64
   }
   // newest write time of the folder, its subfolders and files: one listing per folder, no call per file
-  func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
+  func.func private @strict_directory_readmodified(%self: f64, %path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %size = arith.constant 320 : i64
     %invalidHandle = arith.constant -1 : i64
@@ -293,7 +293,7 @@
     %empty = func.call @strict_bits(%emptyText) : (!llvm.ptr) -> f64
     %copied = func.call @strict_text_concat(%nameBits, %empty) : (f64, f64) -> f64
     %full = func.call @strict_path_join(%path, %copied) : (f64, f64) -> f64
-    %inner = func.call @strict_directory_modified(%self, %full) : (f64, f64) -> f64
+    %inner = func.call @strict_directory_readmodified(%self, %full) : (f64, f64) -> f64
     %deeper = arith.maximumf %before, %inner : f64
     cf.br ^next(%deeper : f64)
   ^next(%current: f64):
@@ -896,7 +896,7 @@
   ^done:
     return
   }
-  func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_start(%path: f64, %arguments: f64) -> f64 {
     %count = arith.constant 1 : i64
     %startupSize = arith.constant 104 : i64
     %startupLength = arith.constant 104 : i32
@@ -949,7 +949,7 @@
   }
   // Process.Launched: a hidden child in its own process group that inherits no handles and is not waited for, outside
   // the job of strict_child_joined (breakaway, again inside it when an outer job does not allow that)
-  func.func private @strict_process_launched(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_launch(%path: f64, %arguments: f64) -> f64 {
     %startupSize = arith.constant 104 : i64
     %startupLength = arith.constant 104 : i32
     %noInherit = arith.constant 0 : i32

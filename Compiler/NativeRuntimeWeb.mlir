@@ -458,7 +458,7 @@
     %unknown = arith.constant -1 : i64
     return %unknown : i64
   }
-  func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
+  func.func private @strict_directory_readmodified(%self: f64, %path: f64) -> f64 {
     %newest = func.call @strict_directory_newest(%path) : (f64) -> f64
     return %newest : f64
   }
@@ -662,11 +662,11 @@
     %bits = func.call @strict_bits(%global) : (!llvm.ptr) -> f64
     return %bits : f64
   }
-  func.func private @strict_process_launched(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_launch(%path: f64, %arguments: f64) -> f64 {
     %none = arith.constant 0.0 : f64
     return %none : f64
   }
-  func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_start(%path: f64, %arguments: f64) -> f64 {
     %missing = arith.constant 127.0 : f64
     return %missing : f64
   }

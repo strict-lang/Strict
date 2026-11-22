@@ -88,11 +88,11 @@ IsWithin(start Time, end Time) Boolean
 	Moment.IsWithin(Time(0), Time(10)) is false
 	Moment.IsWithin(Time(1800000000), Time(1900000000)) is false
 	seconds >= start.seconds and seconds <= end.seconds
-DescribeElapsed(current Time) Text
-	Moment.DescribeElapsed(Time(1700000003)) is "just now"
-	Moment.DescribeElapsed(Time(1700000180)) is "about 3 minutes ago"
-	Moment.DescribeElapsed(Time(1700086400)) is "about 1 day ago"
-	Moment.DescribeElapsed(Time(1800000000)) is "about 3 years ago"
+DescribeElapsedTime(current Time) Text
+	Moment.DescribeElapsedTime(Time(1700000003)) is "just now"
+	Moment.DescribeElapsedTime(Time(1700000180)) is "about 3 minutes ago"
+	Moment.DescribeElapsedTime(Time(1700086400)) is "about 1 day ago"
+	Moment.DescribeElapsedTime(Time(1800000000)) is "about 3 years ago"
 	passed = current.seconds - seconds
 	if passed <= 5
 		return "just now"

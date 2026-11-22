@@ -351,7 +351,7 @@
     %unknown = arith.constant -1 : i64
     return %unknown : i64
   }
-  func.func private @strict_directory_modified(%self: f64, %path: f64) -> f64 {
+  func.func private @strict_directory_readmodified(%self: f64, %path: f64) -> f64 {
     %newest = func.call @strict_directory_newest(%path) : (f64) -> f64
     return %newest : f64
   }
@@ -738,7 +738,7 @@
   }
   llvm.func @system(!llvm.ptr) -> i32
   // runs a program with the console of this one (its output appears right away) and returns its exit code
-  func.func private @strict_process_started(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_start(%path: f64, %arguments: f64) -> f64 {
     %pathLength = func.call @strict_text_long(%path) : (f64) -> f64
     %noLength = arith.constant 0.0 : f64
     %isMissing = arith.cmpf oeq, %pathLength, %noLength : f64
@@ -776,7 +776,7 @@
     return %number : f64
   }
   // Process.Launched: a forked child in its own session runs the program through the shell with no terminal, unwaited
-  func.func private @strict_process_launched(%path: f64, %arguments: f64) -> f64 {
+  func.func private @strict_process_launch(%path: f64, %arguments: f64) -> f64 {
     %none = arith.constant 0 : i32
     %failure = arith.constant 127 : i32
     %noProcess = arith.constant 0.0 : f64

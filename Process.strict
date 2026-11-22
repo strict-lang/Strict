@@ -10,12 +10,12 @@ IsAvailable Boolean
 	executable is not ""
 Run(arguments Text, seconds = ToolSeconds) ProcessResult slow
 	ProcessResult(1, "", "Process.Run is not available for: " + arguments + " within " + seconds + " s")
-Started(arguments Text) Number slow
-	Process.Find("missingStrictTool").Started("") is 127
-	Error("Process.Started needs the native runtime to start " + executable + " " + arguments)
-Launched(arguments Text) Number slow
-	Process.Find("missingStrictTool").Launched("") is 0
-	Error("Process.Launched needs the native runtime to start " + executable + " " + arguments)
+Start(arguments Text) Number slow
+	Process.Find("missingStrictTool").Start("") is 127
+	Error("Process.Start needs the native runtime to start " + executable + " " + arguments)
+Launch(arguments Text) Number slow
+	Process.Find("missingStrictTool").Launch("") is 0
+	Error("Process.Launch needs the native runtime to start " + executable + " " + arguments)
 RunTool(name Text, arguments Text, seconds = ToolSeconds) ProcessResult slow
 	tool = Find(name)
 	tool.IsAvailable then tool.Run(arguments, seconds) else ProcessResult(NotFoundExitCode, "", "tool not found: " + name)
@@ -30,7 +30,7 @@ Current Process
 	Process.Current.IsAvailable
 	Process("")
 Wait(seconds Number) slow
-Collected
+Collect
 Elapsed Number
 	Process.Elapsed > 0
 	0

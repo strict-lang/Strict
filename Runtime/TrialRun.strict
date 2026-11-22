@@ -9,15 +9,15 @@ Tested Text slow
 	warm = Warm
 	prepared = Prepared
 	Placed
-	started = logger.Captured(true)
+	started = logger.Capture(true)
 	answer = Ran(warm, prepared)
-	output = started + logger.Captured(false)
+	output = started + logger.Capture(false)
 	answer is Error then output + answer to Text else output
 Warmed Answer slow
 	Placed
-	started = logger.Captured(true)
+	started = logger.Capture(true)
 	answer = Ran(Answer(0, Dictionary(Text, TypeEntry)), TrialMachine.None)
-	output = started + logger.Captured(false)
+	output = started + logger.Capture(false)
 	if answer is Error or answer.code is not 0
 		logger.Log(output)
 	answer

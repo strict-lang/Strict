@@ -5,7 +5,7 @@ constant Existing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "
 constant Listing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Directories", "Strict/List(Text)", "path"), 0, -1), Current, VmValue.None)
 constant AnyFile = VmValue("Strict/File", 0, "", List(VmValue) + VmValue.OfText("Any.strict"))
 constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadBytes", "Strict/List(Byte)"), List(Number), 0), List(VmValue), AnyFile)
-constant Newest = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "Modified", "Strict/Number", "path"), 0, -1), Current, VmValue.None)
+constant Newest = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "ReadModified", "Strict/Number", "path"), 0, -1), Current, VmValue.None)
 constant Dating = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Modified", "Strict/Number"), List(Number), 0), List(VmValue), AnyFile)
 constant Probing = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "Exists", "Strict/Boolean"), List(Number), 0), List(VmValue), VmValue.OfText("."))
 constant Timing = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Elapsed", "Strict/Number"), List(Number), -1), List(VmValue), VmValue.None)
@@ -14,21 +14,21 @@ constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "
 constant Releasing = Invocation(InstructionEntry.Invoke(0, ("Strict/GpuMemory", "Released", "None"), List(Number), -1), List(VmValue), VmValue.None)
 constant Unsent = VmValue.OfError("OutputNotChanged")
 constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.IsLocked", "File.InMemory")
-constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.ReadModified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
+constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.ReadModified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
 constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLine", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Id", "Process.MemoryUsed", "Process.FilesRead")
-constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Launched", "Process.Start", "Process.Launch", "Process.Executed", "Process.Wait", "Process.Collected", "Process.Collect")
+constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Start", "Process.Launch", "Process.Executed", "Process.Wait", "Process.Collect")
 constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan")
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 constant Budgeted = ("TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired")
 constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.IsDetailed", "ConstantCache.At", "ConstantCache.Stored") + Budgeted
 constant GpuMethods = ("GpuMemory.Released", "GpuMemory.Evicted", "GpuMemory.Yielded", "GpuMemory.Finished", "GpuMemory.Freed")
-constant MemoMethods = ("Memo.Has", "Memo.Texts", "Memo.Kept", "Sampler.IsTaken", "FrameSlots.Rooted", "Logger.Captured", "Logger.Capture", "Strict.Test")
+constant MemoMethods = ("Memo.Has", "Memo.Texts", "Memo.Kept", "Sampler.IsTaken", "FrameSlots.Rooted", "Logger.Capture", "Strict.Test")
 constant ProcessKinds = ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots", "Logger", "Strict")
 constant Listings = ("ReadLines", "ReadBytes", "Files", "Directories")
 constant BudgetMethods = ("TestBudget.Overran", "TestBudget.Overrun", "TestBudget.Watched", "TestBudget.Busy", "TestBudget.Limited")
 constant Methods = FileMethods + HostedText.Methods + DirectoryMethods + ProcessMethods + ToolMethods + MathMethods + LibraryMethods + RuntimeMethods + BudgetMethods + GpuMethods + MemoMethods
 constant Kinds = ("File", "Directory", "Process", "Logger", "Strict", "Number", "Degrees", "Ratio", "Vector2", "Library", "Time", "Socket", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots")
-constant LocalEffects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "File.WriteText", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Started", "Library.Call")
+constant LocalEffects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "File.WriteText", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Start", "Library.Call")
 constant Effects = LocalEffects + ("Socket.Connect", "Socket.Listen", "Socket.Local", "Socket.Accept", "Socket.Waiting", "Socket.Send", "Socket.Receive")
 IsChanging Boolean
 	Hosted(Deleting).IsChanging
@@ -41,7 +41,7 @@ IsHosted Boolean
 	Hosted(SystemCall).IsHosted
 	Hosted(Invocation.AddCall).IsHosted is false
 	"Process.InputLine" is in Hosted.Methods
-	"Process.Collected" is in Hosted.Methods
+	"Process.Collect" is in Hosted.Methods
 	Hosted(Releasing).IsHosted
 	Hosted(HostedJson.Getting).IsHosted
 	Hosted(HostedRegex.Matching).IsHosted and Hosted(HostedTokenizer.Tokening).IsHosted
@@ -130,7 +130,7 @@ Dated(path Text) Number
 	Hosted(Dating).Dated("Any.strict") is File("Any.strict").Modified
 	Hosted(Newest).Dated("Math") >= File("Math/Vector3.strict").Modified
 	Hosted(Newest).Dated("Missing") is 0
-	call.TypeName is "Strict/Directory" then Directory.Modified(path) else File(path).Modified
+	call.TypeName is "Strict/Directory" then Directory.ReadModified(path) else File(path).Modified
 Entries VmValue slow
 	Hosted(Listing).Entries.Length > 0
 	Hosted(Reading).Entries.items.First.number is 102

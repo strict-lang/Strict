@@ -87,7 +87,7 @@ Inputs(platform Number, root Text) Texts
 	inputs
 Placed(building Text, library Text) Text
 	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
-	Intermediates.IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Intermediates.Holding) is 0
+	Intermediates.IsWindows is false or Process.Find(Process.Variable("ComSpec")).Start(Intermediates.Holding) is 0
 	File(Fresh).Write("fresh") is not Error
 	Intermediates.IsWindows is false or Adding.Placed(Fresh, Intermediates.Kept) is Intermediates.Kept
 	File(building).Rename(library)
