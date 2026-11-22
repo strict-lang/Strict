@@ -14,15 +14,15 @@ constant Changing = Invocation(InstructionEntry.Invoke(1, ("Strict/Directory", "
 constant Releasing = Invocation(InstructionEntry.Invoke(0, ("Strict/GpuMemory", "Released", "None"), List(Number), -1), List(VmValue), VmValue.None)
 constant Unsent = VmValue.OfError("OutputNotChanged")
 constant FileMethods = ("File.ReadLines", "File.Exists", "File.Write", "File.Delete", "File.Rename", "File.ReadBytes", "File.WriteLines", "File.WriteBytes", "File.Modified", "File.Length", "File.IsLocked", "File.InMemory")
-constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
+constant DirectoryMethods = ("Directory.Files", "Directory.Directories", "Directory.Modified", "Directory.ReadModified", "Directory.Exists", "Directory.Create", "Directory.Change", "Directory.Current")
 constant ProcessMethods = ("Process.Input", "Process.Variable", "Process.InputLine", "Process.OperatingSystem", "Process.Current", "Process.Built", "Process.Elapsed", "Process.Id", "Process.MemoryUsed", "Process.FilesRead")
-constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Launched", "Process.Executed", "Process.Wait", "Process.Collected")
+constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "Process.Started", "Process.Launched", "Process.Start", "Process.Launch", "Process.Executed", "Process.Wait", "Process.Collected", "Process.Collect")
 constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan")
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 constant Budgeted = ("TestBudget.Started", "TestBudget.Finished", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired")
 constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.IsDetailed", "ConstantCache.At", "ConstantCache.Stored") + Budgeted
 constant GpuMethods = ("GpuMemory.Released", "GpuMemory.Evicted", "GpuMemory.Yielded", "GpuMemory.Finished", "GpuMemory.Freed")
-constant MemoMethods = ("Memo.Has", "Memo.Texts", "Memo.Kept", "Sampler.IsTaken", "FrameSlots.Rooted", "Logger.Captured", "Strict.Test")
+constant MemoMethods = ("Memo.Has", "Memo.Texts", "Memo.Kept", "Sampler.IsTaken", "FrameSlots.Rooted", "Logger.Captured", "Logger.Capture", "Strict.Test")
 constant ProcessKinds = ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots", "Logger", "Strict")
 constant Listings = ("ReadLines", "ReadBytes", "Files", "Directories")
 constant BudgetMethods = ("TestBudget.Overran", "TestBudget.Overrun", "TestBudget.Watched", "TestBudget.Busy", "TestBudget.Limited")
@@ -122,7 +122,7 @@ Answered(path Text) VmValue
 	MutationCache.IsReleased(("Runtime/Answered.lock", "Runtime/Held.lock"))
 	if call.MethodName is "IsLocked"
 		return VmValue.OfBoolean(File(path).IsLocked)
-	if call.MethodName is in ("Modified", "Length")
+	if call.MethodName is in ("Modified", "ReadModified", "Length")
 		return VmValue.OfNumber(call.MethodName is "Length" then File(path).Length else Dated(path))
 	exists = call.TypeName is "Strict/Directory" then Directory.Exists(path) else File(path).Exists
 	call.MethodName is "Exists" then VmValue.OfBoolean(exists) else VmValue.None

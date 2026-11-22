@@ -18,9 +18,9 @@ Result VmValue
 	Process.Find("strict").Launched("version") > 0
 	if TypeEntry.ShortName(call.TypeName) is in Directed
 		return Direct
-	if call.MethodName is in ("Started", "Launched")
+	if call.MethodName is in ("Started", "Launched", "Start", "Launch")
 		return Spawned
-	if call.MethodName is in ("Wait", "Collected")
+	if call.MethodName is in ("Wait", "Collected", "Collect")
 		return Paused
 	if call.MethodName is "RunTools"
 		return Ran(Process.RunTools(call.Arguments.First.text, Hosted(call).TextsOf(call.Arguments(1)), Seconds))
@@ -29,7 +29,8 @@ Spawned VmValue
 	HostedProcess(Starting).Spawned.number is 127
 	process = Process(call.Instance.Member(0).text)
 	arguments = call.Arguments.First.text
-	VmValue.OfNumber(call.MethodName is "Started" then process.Started(arguments) else process.Launched(arguments))
+	isStarting = call.MethodName is in ("Started", "Start")
+	VmValue.OfNumber(isStarting then process.Started(arguments) else process.Launched(arguments))
 Direct VmValue
 	HostedProcess(Sampling).Direct.kind is not "None" and HostedProcess(Sampling).Direct.IsTrue is false
 	HostedProcess(Rooting).Direct is Frame.Listed(7)
