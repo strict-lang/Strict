@@ -18,7 +18,7 @@ Finished(arguments List(VmValue)) List(VmValue)
 	MutationCache.Exhausted(slots)
 Sampled(entry InstructionEntry)
 	Quiet.Sampled(InstructionEntry.Return(1)) is not Error
-	if Sampler.Taken((Process.Elapsed * 1000).Floor)
+	if Sampler.IsTaken((Process.Elapsed * 1000).Floor)
 		frame.machine.Logged(Place(entry))
 Place(entry InstructionEntry) Text
 	Quiet.Place(InstructionEntry(InstructionType.Return, List(Text), 1, 3)) is "$Sample Strict/Doubler.Twice line 3"

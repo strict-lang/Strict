@@ -711,10 +711,10 @@
     %ran = func.call @strict_test_now(%slot) : (!llvm.ptr) -> f64
     return %ran : f64
   }
-  // the millisecond tick Sampler.Taken took last, one sample per millisecond of the whole process (SampledFrame)
+  // the millisecond tick Sampler.IsTaken took last, one sample per millisecond of the whole process (SampledFrame)
   llvm.mlir.global internal @strict_sampler_tick(-1.0e+300 : f64) : f64
-  // a tick is taken when it is not negative (like Sampler.Taken in Strict) and differs from the tick before it
-  func.func private @strict_sampler_taken(%self: f64, %tick: f64) -> f64 {
+  // a tick is taken when it is not negative (like Sampler.IsTaken in Strict) and differs from the tick before it
+  func.func private @strict_sampler_istaken(%self: f64, %tick: f64) -> f64 {
     %slot = llvm.mlir.addressof @strict_sampler_tick : !llvm.ptr
     %last = llvm.load %slot : !llvm.ptr -> f64
     %isNew = arith.cmpf une, %last, %tick : f64
