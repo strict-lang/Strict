@@ -58,9 +58,12 @@ Completed(entries List(TypeEntry), targets Texts) List(TypeEntry) slow
 Linkable(types Texts, signatures Texts) Texts
 	Hello.Linkable(("Strict/Logger", "Strict/Missing"), List(Text)) is ("Strict/Logger")
 	Hello.Linkable(List(Text) + "Strict/Missing", List(Text) + "Strict/Missing:") is ("Strict/Missing")
+	Knowing.Linkable(List(Text) + "Strict/Bytecode/HelloLogger", List(Text)).Length is 1
 	mutable linked = Dictionary(Text, Boolean)
 	for signatures
-		linked.Add(Signature(value).Type, true)
+		linked(Signature(value).Type) = true
+	for Known.keysAndValues
+		linked(Signature(value.Key).Type) = true
 	for types
 		if value is in linked
 			value

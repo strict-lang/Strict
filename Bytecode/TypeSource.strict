@@ -4,8 +4,10 @@ constant Projected = "Compiler/output/Projected"
 constant InternalPackages = ("Compiler", "Runtime", "Bytecode", "Expressions")
 Root Text
 	TypeSource.Root is "."
+	if File("Any.strict").Exists
+		return "."
 	folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
-	File("Any.strict").Exists then "." else File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
+	File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
 Located(folder Text) Text
 	Sizing.Located("./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Located("") is "List.strict"
@@ -17,7 +19,8 @@ Located(folder Text) Text
 	local = folder is "" then file else relative + "/" + file
 	if File(local).Exists
 		return local
-	Root is "." or File(Root + "/" + file).Exists is false then file else Root + "/" + file
+	root = Root
+	root is "." or File(root + "/" + file).Exists is false then file else root + "/" + file
 Resolved(owner Text, folder Text) Text
 	TypeSource.Resolved("Strict/Math/Size", "./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Located(folder)
