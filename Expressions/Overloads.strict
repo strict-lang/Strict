@@ -119,7 +119,7 @@ Converts(argument Text, declared Text) Boolean
 	Scaling.Converts("Text", "Number") is false
 	Overloads(ListToText).Converts("Texts", "Text") is false
 	Overloads(TypeInference.Colors.types).Converts("Color", "ColorValue")
-	Presetting.Indexed(SyntaxNode("Member", "Preset", PresetRead), Presets.methods(0)) is ""
+	Presetting.CheckIndex(SyntaxNode("Member", "Preset", PresetRead), Presets.methods(0)) is ""
 	if declared is "Generic" or types.ValueOf(declared) is argument or types.ValueOf(argument) is declared
 		return true
 	converter = TypeInference(types, List(Scope)).Converter(argument, declared)
@@ -204,7 +204,7 @@ Ambiguities(path Text, lines Texts) Texts
 	Scaling.Ambiguities("A", Valued) is (Clashing)
 	Scaling.Ambiguities("A", ("to Text", "\t\"a\"", "to Number", "\t1")).Length is 0
 	Scaling.Ambiguities("A", Limits) is ("A:line 3: NameAlreadyDeclared: Limit like line 1")
-	Twins.Indexed(SyntaxParser(Tokenizer("Values(2)").Tokens).Parse, TwinMethods(1)) is ""
+	Twins.CheckIndex(SyntaxParser(Tokenizer("Values(2)").Tokens).Parse, TwinMethods(1)) is ""
 	signatures = Signatures(lines)
 	for signatures
 		if value is not "" and signatures.Index(value) < index

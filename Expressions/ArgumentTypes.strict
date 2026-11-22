@@ -173,12 +173,16 @@ Declare(instance Text, method Text) Texts
 	Sizing.Declare("Size", "from") is ("Number")
 	Couples.Declare("Couple", "from").Length is 0
 	Sizing.Declare("Size", "Missing") is ("") and Couples.Declare("Couple", "Missing") is ("")
+	ArgumentTypes(FileCheck.Counting.inference).Declare("Count", "Increment") is ("")
+	ArgumentTypes(TypeInference(Overloads.Presets, Shapes)).Declare("Presets", "Preset") is ("Number")
 	parameters = inference.types.ParameterScope(Owner(instance, method))
 	if method is "from" and "Generic" is in inference.types.MembersOf(instance).types
 		return List(Text)
 	declared = parameters.TypeOf(method + " types")
+	isNone = declared is "" and parameters.TypeOf(method) is ""
+	none = IsListed(List(Text) + inference.types.ResolvedType(instance, method, 3)) then ("Number") else ("")
 	if declared is not "" or method is not "from"
-		return declared is "" then declared.Split(",") else inference.types.ParameterNames(declared)
+		return isNone then none else declared is "" then declared.Split(",") else inference.types.ParameterNames(declared)
 	for parameters.TypeOf("from").Split(",")
 		inference.types.MembersOf(instance).TypeOf(value)
 Match(arguments Texts, types Texts, instance Text, method Text) Number
