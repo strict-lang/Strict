@@ -34,11 +34,15 @@ Prepared(input Numbers, sequences = 1) Hybrid
 	mutable combinations = List(Mutable(Numbers))
 	for layers
 		combined = value.Combine(hidden)
-		cached = sequences is 1 then value.Cached(combined) else CacheEach(value, combined, sequences)
+		cached = sequences is 1 then value.Cached(combined) else CacheAll(value, combined, sequences)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
 		combinations.Add(combined.Length > RewindableTokens * value.Width then List(Number) else combined)
 	Hybrid(stepped, hidden, inputs = combinations)
+CacheAll(block DeltaBlock, combined Numbers, sequences Number) DeltaBlock
+	Tiny.CacheAll(Block, Block.Combine(Drafter.Pair), 2).memory.Length is 2 * Block.memory.Length
+	isStep = combined.Length is sequences * block.Width
+	isStep then DeltaBatch(block, sequences).Cached(combined) else CacheEach(block, combined, sequences)
 CacheEach(block DeltaBlock, combined Numbers, sequences Number) DeltaBlock slow
 	Tiny.CacheEach(Block, Block.Combine(Drafter.Pair), 2).memory.Length is 2 * Block.memory.Length
 	rows = combined.Length / sequences
