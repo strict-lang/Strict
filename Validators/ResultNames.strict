@@ -39,6 +39,7 @@ Verb(name Text) Text
 	Hosting.Verb("Edited") is "Edit" and Hosting.Verb("Opened") is "Open" and Hosting.Verb("Lowered") is "Lower"
 	Hosting.Verb("Counted") is "Count" and Hosting.Verb("Started") is "Start" and Hosting.Verb("Passed") is "Pass"
 	Hosting.Verb("Quoted") is "Quote" and Hosting.Verb("Unquoted") is "Unquote"
+	Hosting.Verb("Doubled") is "Double" and Hosting.Verb("Nudged") is "Nudge" and Hosting.Verb("Called") is "Call"
 	at = Irregular.Index(name)
 	if at >= 0 and at % 2 is 0
 		return Irregular(at + 1)
@@ -53,7 +54,8 @@ Stem(stem Text, last Text) Text
 	if last is stem(stem.Length - 2) to Text and "bgmnprt".IndexOf(last) >= 0
 		return stem.Substring(0, stem.Length - 1)
 	isSibilant = last is "s" and stem.EndsWith("ss") is false
-	"vczu".IndexOf(last) >= 0 or isSibilant or IsSingleVowel(stem) then stem + "e" else stem
+	isClosed = last is "l" and "bptgkdfz".IndexOf(stem(stem.Length - 2) to Text) >= 0 or stem.EndsWith("dg")
+	"vczu".IndexOf(last) >= 0 or isSibilant or isClosed or IsSingleVowel(stem) then stem + "e" else stem
 IsSingleVowel(stem Text) Boolean
 	Hosting.IsSingleVowel("Stor") and Hosting.IsSingleVowel("Examin")
 	Hosting.IsSingleVowel("Join") is false and Hosting.IsSingleVowel("Edit") is false
