@@ -167,7 +167,8 @@ Started(types List(TypeEntry), path Text, isTracing = false, isInlining = true, 
 	rewritten = TailCalls(isInlining then Inliner(types).Inlined else types).Rewritten
 	BuildProfile.Reported("Machine inlining (" + types.Length + " types)", started)
 	before = Process.Elapsed
+	folder = Path(path).PathOnly.text
 	resolved = Resolver(rewritten).Resolved
-	machine = Machine(resolved, ConstantCache(List(VmValue)), Path(path).PathOnly.text, isTracing, isSampling = isSampling).Prepared
+	machine = Machine(resolved, ConstantCache(List(VmValue)), folder, isTracing, isSampling = isSampling).Prepared
 	BuildProfile.Reported("Machine resolving and preparing", before)
 	machine
