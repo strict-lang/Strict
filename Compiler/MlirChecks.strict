@@ -1,7 +1,7 @@
 has function MlirFunction
 has position Number
 constant Tracing = " : (f64, !llvm.ptr, i64) -> f64"
-constant Presenting = MlirFunction(List(TypeEntry), TypeEntry("Strict/Game", List(MemberEntry) + MemberEntry.RealtimeMember, List(MethodEntry)), MethodEntry("Presented", List(MemberEntry), "Strict/Game", MlirLines.Twice.instructions))
+constant Presenting = MlirFunction(List(TypeEntry), TypeEntry("Strict/Game", List(MemberEntry) + MemberEntry.RealtimeMember, List(MethodEntry)), MethodEntry("Present", List(MemberEntry), "Strict/Game", MlirLines.Twice.instructions))
 constant Guarded = MethodEntry("Guarded", List(MemberEntry), "Strict/Number", (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0), InstructionEntry.Return(0)))
 constant Returning = MlirChecks(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "Strict/Number", Guarded.instructions)), 1)
 constant Tested = (InstructionEntry.LoadNumber(0, 7), InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 5)), InstructionEntry.Return(0), InstructionEntry.Jump(InstructionType.JumpEnd, 5))

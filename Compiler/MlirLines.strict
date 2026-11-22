@@ -58,7 +58,7 @@ End Texts
 Framed Texts
 	MlirLines(MlirChecks.Presenting).Framed is ("    func.call @strict_frame_ended() : () -> ()")
 	MlirLines(Unlined).Framed.Length is 0
-	isFramed = function.type.IsRealtime and function.method.Name is "Presented"
+	isFramed = function.type.IsRealtime and function.method.Name is "Present"
 	isFramed then List(Text) + "    func.call @strict_frame_ended() : () -> ()" else List(Text)
 Placed Texts
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")
