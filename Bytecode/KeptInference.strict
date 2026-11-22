@@ -88,7 +88,7 @@ Stamps(sources Texts) Numbers
 	for sources
 		File(value).Modified
 Mentioned(sources Texts) Texts
-	Empty.Mentioned(Pair).Slice(0, 3) is ("Logger", "TextWriter", "TextWriter")
+	Empty.Mentioned(Pair).Slice(0, 3) is ("Logger", "TextWriter", "Boolean")
 	"Logger" is not in Empty.Mentioned(Writer)
 	mutable names = ResolveCheck.TypeNames(sources)
 	for sources
