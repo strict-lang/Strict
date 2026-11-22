@@ -1,5 +1,8 @@
 # Bugs
 
+- A default argument of another package's method is linked under `Strict/`: `Strict.Testing(rest)` called from `Runtime/Trial.strict` fails with `UnresolvedLink: Strict/InferenceCache.None` (the default `inferred = InferenceCache.None` lives in `Runtime/`).
+- A test run inside a test (`Trial.Tested` on the VM) leaves the outer test with a negative time (`-2.3e8 ms`): both runs share the test clock of `TestBudget`.
+
 `strict check` lets a second way of writing the same thing through (from the review of all DeltaEngine files, 2026-11-11, counts are DeltaEngine sites then):
 - `ErrorCheckCannotFail` misses callees of other types that turn every Error into a literal themselves (same-type callees are covered since 2026-11-21: a Boolean method of only `let` lines and `x is Error then <Boolean> else <Boolean>`, without `Error(`); other types need the records `SureMethods` only builds for base types.
 - `StatusNumberMustNotBeReturned` misses a huge constant for nothing found (`-1` is `NotFoundMustBeNamed` since 2026-11-21) and Number results only compared with `is 1` (Window.IsDebug, WebPage.Picture). A 0/1 result or bit sum of an Is/Has/Can/Should method is `BooleanMustNotBeNumber` since 2026-11-21.
