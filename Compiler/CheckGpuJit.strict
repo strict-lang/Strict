@@ -6,13 +6,11 @@ Run Number
 	folder = "Compiler/output/GpuJit" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	if result is Error
-		return result
 	logger.Log("Shipped cubins load cleanly; driver compiles are logged, cached loads are silent")
 	0
-Checked(folder Text) Boolean
+Checked(folder Text)
 	src = folder + "/GpuJit.strict"
 	File(src).Write(JitHead + JitMid + JitRun)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
@@ -22,14 +20,14 @@ Checked(folder Text) Boolean
 	if not File(obj + ".fatbin").Exists or not File(obj + ".runtime.fatbin").Exists
 		return Error("With ptxas installed a program build ships its cubins: " + built.Output)
 	VerifiedShipping(obj, folder + "/GpuJit" + (Process.OperatingSystem is "Windows" then ".exe" else ""))
-VerifiedShipping(obj Text, exe Text) Boolean
+VerifiedShipping(obj Text, exe Text)
 	shipped = Ran(exe, true)
 	if shipped is Error or "The driver compiled" is in shipped
 		return Error("Shipped cubins were not loaded: " + (shipped to Text))
 	File(obj + ".fatbin").Delete
 	File(obj + ".runtime.fatbin").Delete
 	CheckCompiledAndCached(exe)
-CheckCompiledAndCached(exe Text) Boolean
+CheckCompiledAndCached(exe Text)
 	compiled = Ran(exe, true)
 	logger.Log(compiled.Trim)
 	if compiled is Error or "The driver compiled the GPU" is not in compiled
@@ -38,7 +36,6 @@ CheckCompiledAndCached(exe Text) Boolean
 	cached = warm is Error then warm else Ran(exe, false)
 	if cached is Error or "The driver compiled" is in cached
 		return Error("Cached load called compiled: " + (cached to Text))
-	true
 Ran(exe Text, noCache Boolean) Text
 	win = Process.OperatingSystem is "Windows"
 	extra = noCache then (win then "set CUDA_CACHE_DISABLE=1&& " else "CUDA_CACHE_DISABLE=1 ") else ""

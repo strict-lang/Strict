@@ -32,28 +32,20 @@ Run Number
 	folder = "Compiler/output/ResidencyCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	if result is Error
-		return result
 	logger.Log("A list computed on the GPU from numbers alone stays there until the CPU reads it")
 	0
-Checked(folder Text) Boolean
-	first = CheckPrimary(folder)
-	if first is Error
-		return first
-	second = CheckSmallAndPair(folder)
-	if second is Error
-		return second
-	third = CheckSimpleAndOrbit(folder)
-	third is Error then third else CheckViewingAndPending(folder)
-CheckPrimary(folder Text) Boolean
+Checked(folder Text)
+	CheckPrimary(folder)
+	CheckSmallAndPair(folder)
+	CheckSimpleAndOrbit(folder)
+	CheckViewingAndPending(folder)
+CheckPrimary(folder Text)
 	out = BuiltAndRan(folder, "GpuResidency", PrimaryCode, true, true)
 	if out is Error
 		return out
-	checkedOut = CheckedStrings(out, ResWantsA + ResWantsB, ResBansA + ResBansB)
-	if checkedOut is Error
-		return checkedOut
+	CheckedStrings(out, ResWantsA + ResWantsB, ResBansA + ResBansB)
 	if out.Split("Strict GPU download of 4194304 numbers").Length is not 2
 		return Error("Averaged download count wrong")
 	CheckedBytes(File(folder + "/codes.bin").ReadBytes)
@@ -62,28 +54,29 @@ PrimaryCode Text
 	a + "\n" + ResD2 + "\n" + PrimaryTail
 PrimaryTail Text
 	ResE1 + "\n" + ResE2 + "\n" + ResF1 + "\n" + ResF2 + "\n" + ResG1 + "\n" + ResG2
-CheckedBytes(bytes Bytes) Boolean
+CheckedBytes(bytes Bytes)
 	if bytes.Length is not ByteCount
 		return Error("codes.bin wrong length: " + bytes.Length)
 	for ByteCount
 		if bytes(index) is not (index % ByteMod)
 			return Error("codes.bin byte mismatch at " + index)
-	true
-CheckSmallAndPair(folder Text) Boolean
+CheckSmallAndPair(folder Text)
 	small = BuiltAndRan(folder, "SmallGpu", SmallA + "\n" + SmallB + "\n" + SmallC, false, false)
 	if small is Error or "gpu kernels 2, doubled 6, opened 2" is not in small
 		return Error("SmallGpu failed: " + (small to Text))
 	File(folder + "/Pair.strict").Write((PairA + "\n" + PairB).Split("\n"))
 	pair = BuiltAndRan(folder, "PairEscape", EscapeSrc, false, false)
-	pair is Error or "gpu kernels 1, 64 3" is not in pair then Error("PairEscape failed: " + (pair to Text)) else true
-CheckSimpleAndOrbit(folder Text) Boolean
+	if pair is Error or "gpu kernels 1, 64 3" is not in pair
+		return Error("PairEscape failed: " + (pair to Text))
+CheckSimpleAndOrbit(folder Text)
 	simple = BuiltAndRan(folder, "SimpleRead", SimpleA + "\n" + SimpleB, false, false)
 	if simple is Error or "read 0 1.998" is not in simple
 		return Error("SimpleRead failed: " + (simple to Text))
 	File(folder + "/Orbiting.strict").Write(OrbitingSrc.Split("\n"))
 	orbit = BuiltAndRan(folder, "OrbitGpu", OrbitGpuSrc, false, false)
-	orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit then Error("OrbitGpu failed: " + (orbit to Text)) else true
-CheckViewingAndPending(folder Text) Boolean
+	if orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit
+		return Error("OrbitGpu failed: " + (orbit to Text))
+CheckViewingAndPending(folder Text)
 	File(folder + "/Pair.strict").Write(UpdatedPair.Split("\n"))
 	File(folder + "/Viewing.strict").Write((ViewA + ViewB).Split("\n"))
 	built = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/Viewing.strict", ToolSeconds)
@@ -111,14 +104,13 @@ BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean
 	ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + c1 else "-c \"" + c1 + "\"", ToolSeconds)
 	logger.Log(ran.Output.Trim)
 	ran.exitCode is not 0 then Error("RunFailed " + name + ": " + ran.Output + ran.error) else ran.Output
-CheckedStrings(output Text, wants Texts, bans Texts) Boolean
+CheckedStrings(output Text, wants Texts, bans Texts)
 	for wants
 		if value is not in output
 			return Error("Missing output: " + value + "\n" + output)
 	for bans
 		if value is in output
 			return Error("Unexpected output: " + value + "\n" + output)
-	true
 EscapeSrc Text
 	mutable out = List(Text)
 	out = out + "has logger\nEscaped(count Number) Numbers\n\tPairEscape(Logger).Escaped(2) is (3, 64)\n\tfor count"

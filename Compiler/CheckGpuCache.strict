@@ -45,12 +45,13 @@ Run Number
 	src = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	kEx = "/export:" + KindExp.Replace(",", " /export:")
 	m = KindMlirText(src)
-	ok = CheckedPatterns(src) is Error then Error("Pattern") else BuiltDll(folder, "cache-kind", m, kEx)
-	ok2 = ok is Error then ok else BuiltDll(folder, "cache-pool", PoolMlirText(src), PoolExports)
-	err = ok2 is Error then ok2 else RunDriver(folder)
+	CheckedPatterns(src)
+	BuiltDll(folder, "cache-kind", m, kEx)
+	BuiltDll(folder, "cache-pool", PoolMlirText(src), PoolExports)
+	RunDriver(folder)
 	Directory.Delete(folder)
-	err is Error then err else 0
-CheckedPatterns(src Text) Boolean
+	0
+CheckedPatterns(src Text)
 	for ("strict_gpu_evicted", "strict_gpu_handed")
 		if "call @strict_gpu_active_has" is not in ExtractedFn(src, value)
 			return Error("Missing active-input check in " + value)
@@ -61,7 +62,7 @@ CheckedPatterns(src Text) Boolean
 		if "%slot[6]" is not in ExtractedFn(src, value)
 			return Error("Missing slot[6] in " + value)
 	CheckedUploadCalls(src, ExtractedFn(src, "strict_gpu_obtain").Split("  ^ownCollect")(1))
-CheckedUploadCalls(src Text, collect Text) Boolean
+CheckedUploadCalls(src Text, collect Text)
 	lp = collect.IndexOf("call @strict_gpu_lend")
 	if lp < 0 or lp >= collect.IndexOf("call @strict_gpu_alloc")
 		return Error("Lend must precede alloc in obtain")
@@ -69,7 +70,8 @@ CheckedUploadCalls(src Text, collect Text) Boolean
 		return Error("rows missing ahead_hit")
 	if "call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_replay")
 		return Error("replay missing ahead_join")
-	"call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_capture") then Error("capture missing") else true
+	if "call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_capture")
+		return Error("capture missing")
 ExtractedFn(src Text, name Text) Text
 	marker = "\n  func.func private @" + name + "("
 	split = src.Split(marker)
@@ -161,7 +163,7 @@ PoolTailB Text
 	out = out + "llvm.return %r : i64\n}\nllvm.func @pool_real(%d: i64, %c: i64) -> i64 {"
 	out = out + "%r = ~cstrict_gpu_lent_class(%d, %c) : (i64, i64) -> i64\nllvm.return %r : i64\n}"
 	Text.Combine(out, "\n") + "\n" + PoolStats
-BuiltDll(folder Text, name Text, lines Texts, exports Text) Boolean
+BuiltDll(folder Text, name Text, lines Texts, exports Text)
 	b = folder + "/" + name
 	File(b + ".mlir").Write(lines)
 	r1 = Process.RunTool("C:/msys64/ucrt64/bin/mlir-opt.exe", OptFlags + " " + b + ".mlir -o " + b + ".1", ToolSeconds)
@@ -173,8 +175,9 @@ BuiltDll(folder Text, name Text, lines Texts, exports Text) Boolean
 	r3 = r2.exitCode is 0 then Process.RunTool("C:/Program Files/LLVM/bin/clang.exe", cFlags, ToolSeconds) else r2
 	lFlags = "/dll /noentry " + exports + " /out:\"" + b + ".dll\" \"" + b + ".obj\""
 	r4 = r3.exitCode is 0 then Process.RunTool("C:/Program Files/LLVM/bin/lld-link.exe", lFlags, ToolSeconds) else r3
-	r4.exitCode is not 0 then Error("BuildDllFailed " + name + ": " + r4.Output + r4.error) else true
-RunDriver(folder Text) Boolean
+	if r4.exitCode is not 0
+		return Error("BuildDllFailed " + name + ": " + r4.Output + r4.error)
+RunDriver(folder Text)
 	rep = (DriverA + "\n" + DriverB + "\n" + DriverC).Replace("`G", "int64_t").Replace("`P", "GetProcAddress")
 	File(folder + "/driver.c").Write(rep.Split("\n"))
 	ccFlags = "-O2 \"" + folder + "/driver.c\" -o \"" + folder + "/driver.exe\""
@@ -183,7 +186,8 @@ RunDriver(folder Text) Boolean
 		return Error("DriverCompileFailed: " + comp.Output + comp.error)
 	args = "\"" + folder + "/cache-kind.dll\" \"" + folder + "/cache-pool.dll\""
 	ran = Process.RunTool(folder + "/driver.exe", args, ToolSeconds)
-	ran.exitCode is not 0 then Error("GpuCacheDriverFailed (" + ran.exitCode + "): " + ran.Output + ran.error) else true
+	if ran.exitCode is not 0
+		return Error("GpuCacheDriverFailed (" + ran.exitCode + "): " + ran.Output + ran.error)
 DriverA Text
 	constant entry = "#define GP(m,n,t) ((t)`P(m,#n))\nint main(int argc,char**argv){"
 	constant system = "#include <windows.h>\n#include <stdint.h>\n#include <stdio.h>"

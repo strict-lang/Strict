@@ -21,25 +21,24 @@ Run(arguments Texts) Number
 	folder = "Examples/AuditCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = RanSelected(folder, arguments)
+	RanSelected(folder, arguments)
 	Directory.Delete(folder)
-	result is Error then result else 0
-RanSelected(folder Text, arguments Texts) Boolean
+	0
+RanSelected(folder Text, arguments Texts)
 	for ("locks", "replace", "discovery", "linking", "values")
 		if arguments.Length is 0 or value is in arguments
-			err = RanNamed(folder, value)
-			if err is Error
-				return err
-	true
-RanNamed(folder Text, name Text) Boolean
+			RanNamed(folder, value)
+RanNamed(folder Text, name Text)
 	if name is "locks"
 		return CheckLocks(folder)
 	if name is "replace"
 		return CheckReplace(folder)
 	if name is "discovery"
 		return CheckDiscovery(folder)
-	name is "linking" then CheckLinking(folder) else CheckValues(folder)
-CheckLocks(folder Text) Boolean
+	if name is "linking"
+		return CheckLinking(folder)
+	CheckValues(folder)
+CheckLocks(folder Text)
 	posix = LockedMlir("Posix")
 	darwin = LockedMlir("Darwin")
 	kept = List(Text) + "  func.func private @strict_file_lock_kept(%p: f64, %k: i64) { return }"
@@ -48,10 +47,10 @@ CheckLocks(folder Text) Boolean
 	BuiltLocks(folder)
 LockedMlir(name Text) Texts
 	src = Text.Combine(File("Compiler/NativeRuntime" + name + ".mlir").ReadLines, "\n")
-	chunk = src.Split("  func.func private @strict_file_locked(")(1).Split("\n  }")(0)
+	chunk = src.Split("  func.func private @strict_file_islocked(")(1).Split("\n  }")(0)
 	renamed = "  func.func @lock_" + name + "(" + chunk.Replace("@open(", "@test_open(")
 	(renamed.Replace("@flock(", "@test_flock(").Replace("@close(", "@test_close(") + "\n  }").Split("\n")
-BuiltLocks(folder Text) Boolean
+BuiltLocks(folder Text)
 	trCmd = "--mlir-disable-threading --mlir-to-llvmir \"" + folder + "/l.mlir\" -o \"" + folder + "/l.ll\""
 	optArgs = "\"" + folder + "/locks.mlir\" " + OptLockFlags + " -o \"" + folder + "/l.mlir\""
 	r1 = Process.RunTool("mlir-opt", optArgs, ToolSeconds)
@@ -61,8 +60,9 @@ BuiltLocks(folder Text) Boolean
 	r3 = r2.exitCode is 0 then Process.RunTool("clang", lArgs + folder + "/locks" + ext + "\"", ToolSeconds) else r2
 	r4 = r3.exitCode is 0 then Process.RunTool(folder + "/locks" + ext, "", ToolSeconds) else r3
 	logger.Log(r4.Output.Trim)
-	r4.exitCode is not 0 then Error("LocksFailed: " + r4.Output + r4.error) else true
-CheckReplace(folder Text) Boolean
+	if r4.exitCode is not 0
+		return Error("LocksFailed: " + r4.Output + r4.error)
+CheckReplace(folder Text)
 	if Process.OperatingSystem is not "Windows"
 		return Error("Replacement check requires Windows file sharing")
 	File(folder + "/hold.c").Write(HoldC)
@@ -73,7 +73,7 @@ CheckReplace(folder Text) Boolean
 	File(folder + "/app.exe").Write("old".Bytes)
 	File(folder + "/app.new.exe").Write("new".Bytes)
 	VerifyReplace(folder)
-VerifyReplace(folder Text) Boolean
+VerifyReplace(folder Text)
 	cmd = "\"" + Process.Find("strict").executable + "\" \"" + folder + "/ReplaceCheck.strict\""
 	held = Process.RunTool(folder + "/hold.exe", "\"" + folder + "/app.new.exe\" \"" + cmd + "\"", ToolSeconds)
 	keptOld = File(folder + "/app.exe").Exists and File(folder + "/app.exe").ReadBytes is "old".Bytes
@@ -84,7 +84,6 @@ VerifyReplace(folder Text) Boolean
 	if not ok or File(folder + "/app.new.exe").Exists or File(folder + "/app.old.exe").Exists
 		return Error("CleanReplaceFailed: " + open.Output + open.error)
 	logger.Log("Failed replacement restores original; successful replacement removes backup")
-	true
 ReplaceBody(original Text) Texts
 	raw = Text.Combine(File("Compiler/NativeBuild.strict").ReadLines, "\n")
 	linked = raw.Split("Linked(base Text, tools Toolchain) Text slow\n")(1).Split("\nCrossBuild(")(0)
@@ -92,7 +91,7 @@ ReplaceBody(original Text) Texts
 	fixed = trimmed.Replace("tools.Executable(base)", "\"" + original + "\"").Replace("tools.isWeb", "false")
 	patched = Regex("\tlet built = [^\n]*").Replace(fixed, "\tlet built = \"Built \" + target")
 	("has build Compiler/NativeBuild", "has logger", "Run", "	logger.Log(Attempt)", "Attempt Text") + patched.Split("\n")
-CheckDiscovery(folder Text) Boolean
+CheckDiscovery(folder Text)
 	for ChainLength
 		line = index < ChainLast then "has next Hop" + (index + 1) else "has number"
 		File(folder + "/Hop" + index + ".strict").Write(List(Text) + line)
@@ -103,8 +102,7 @@ CheckDiscovery(folder Text) Boolean
 	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("DiscoveryFailed: " + res.Output + res.error)
 	logger.Log("Source discovery reaches all 70 dependency edges")
-	true
-CheckLinking(folder Text) Boolean
+CheckLinking(folder Text)
 	for ChainLength
 		body = index < ChainLast then "\tChain" + (index + 1) + ".Result" else "\t7"
 		File(folder + "/Chain" + index + ".strict").Write(("Result Number", body))
@@ -115,8 +113,7 @@ CheckLinking(folder Text) Boolean
 	if res.exitCode is not 0 or not res.Output.Trim.EndsWith("true")
 		return Error("LinkingFailed: " + res.Output + res.error)
 	logger.Log("Linking closes a chain longer than 50 rounds")
-	true
-CheckValues(folder Text) Boolean
+CheckValues(folder Text)
 	File(folder + "/CachePair.strict").Write(("has Left Number", "has Right Number"))
 	src = folder + "/ValueCheck.strict"
 	File(src).Write(ValueHead + ValueMid + ValueTailA + ValueTailB + ValueExtra)
@@ -128,7 +125,7 @@ CheckValues(folder Text) Boolean
 	if not hasClaim or "ValueCheck_Results_1_loop" is not in mlir
 		return Error("MissingCacheOrParallelMlir")
 	RunValues(folder + "/ValueCheck" + (Process.OperatingSystem is "Windows" then ".exe" else ""))
-RunValues(exe Text) Boolean
+RunValues(exe Text)
 	win = Process.OperatingSystem is "Windows"
 	for ("1", "4")
 		env = "STRICT_THREADS=" + value + (win then "&& set STRICT_GPU=0&& " else " STRICT_GPU=0 ")
@@ -137,4 +134,3 @@ RunValues(exe Text) Boolean
 		if res.exitCode is not 0 or res.Output.Trim is not "1024"
 			return Error("ValuesRunFailed: " + res.Output + res.error)
 	logger.Log("Native literal/constructor caches and constant list reuse preserve values on 1 and 4 threads")
-	true

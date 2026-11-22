@@ -19,18 +19,18 @@ Run Number
 	folder = "Compiler/output/ThrottlingCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	if result is Error
-		return result
 	logger.Log("CheckThrottling passed")
 	0
-Checked(folder Text) Boolean
+Checked(folder Text)
 	src = folder + "/ThrottlingCheck.strict"
 	File(src).Write(ProbeLines)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
-	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else CompiledAndRan(folder)
-CompiledAndRan(folder Text) Boolean
+	if built.exitCode is not 0
+		return Error("BuildFailed: " + built.Output + built.error)
+	CompiledAndRan(folder)
+CompiledAndRan(folder Text)
 	cFile = folder + "/check.c"
 	File(cFile).Write(CodeA + CodeB + CodeC + CodeD + CodeE + CodeF + CodeG + CodeH + CodeI + CodeJ)
 	checker = folder + "/check.exe"
@@ -38,4 +38,5 @@ CompiledAndRan(folder Text) Boolean
 	if comp.exitCode is not 0
 		return Error("CompileFailed: " + comp.Output + comp.error)
 	ran = Process.RunTool(checker, "\"" + folder + "/ThrottlingCheck.exe\"", CheckSeconds)
-	ran.exitCode is not 0 then Error("ThrottlingFailed: " + ran.Output + ran.error) else true
+	if ran.exitCode is not 0
+		return Error("ThrottlingFailed: " + ran.Output + ran.error)

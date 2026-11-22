@@ -27,23 +27,27 @@ Run Number
 	folder = "Compiler/output/KeptTokens" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder)
+	Checked(folder)
 	Directory.Delete(folder)
-	result is Error then result else 0
-Checked(folder Text) Boolean
+	0
+Checked(folder Text)
 	src = folder + "/KeptTokens.strict"
 	File(src).Write(ProgramA + ProgramB + ProgramC)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, BuildSeconds)
-	built.exitCode is not 0 then Error("BuildFailed: " + built.Output + built.error) else RanCases(folder)
-RanCases(folder Text) Boolean
+	if built.exitCode is not 0
+		return Error("BuildFailed: " + built.Output + built.error)
+	RanCases(folder)
+RanCases(folder Text)
 	win = Process.OperatingSystem is "Windows"
 	cFile = folder + "/check.c"
 	exe = folder + "/check" + (win then ".exe" else "")
 	head = CHead + CHelpA + CHelpB + CWriteA + (CWriteB + CWriteC + CWriteC2) + CWriteD + CReadA + CReadB + CReadC
 	File(cFile).Write(head + CError + CMainA + CMainB + CMainC + CMainD + CMainE + CMainF + CMainG + CMainH)
 	comp = Process.RunTool("clang", "-O2 \"" + cFile + "\" -o \"" + exe + "\"" + (win then "" else " -lm"), ToolSeconds)
-	comp.exitCode is not 0 then Error("CompileFailed: " + comp.Output + comp.error) else RunTokenCounts(folder, exe, win)
-RunTokenCounts(folder Text, exe Text, win Boolean) Boolean
+	if comp.exitCode is not 0
+		return Error("CompileFailed: " + comp.Output + comp.error)
+	RunTokenCounts(folder, exe, win)
+RunTokenCounts(folder Text, exe Text, win Boolean)
 	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
 	target = "\"" + folder + "/KeptTokens" + (win then ".exe" else "") + "\""
 	for ("96", "20")
@@ -53,4 +57,3 @@ RunTokenCounts(folder Text, exe Text, win Boolean) Boolean
 		logger.Log(ran.Output.Trim)
 		if ran.exitCode is not 0
 			return Error("KeptTokensFailed: " + ran.Output + ran.error)
-	true

@@ -44,14 +44,13 @@ Run Number
 	folder = "Examples/MemoryCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	s1 = CheckJobAndPressure(folder) is Error then Error("JobFailed") else CheckUncollected(folder)
-	err = s1 is Error then s1 else CheckCollections(folder)
+	CheckJobAndPressure(folder)
+	CheckUncollected(folder)
+	CheckCollections(folder)
 	Directory.Delete(folder)
-	if err is Error
-		return err
 	logger.Log("CheckMemory passed")
 	0
-CheckJobAndPressure(folder Text) Boolean
+CheckJobAndPressure(folder Text)
 	exe = Built(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
 	if exe is Error
 		return exe
@@ -62,8 +61,10 @@ CheckJobAndPressure(folder Text) Boolean
 	r1 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + SmallInput, RunSeconds)
 	r2 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + OomInput, RunSeconds)
 	hasOom = "OutOfMemory" is in r2.Output and "AccessViolation" is not in r2.Output
-	"EXIT:1000" is not in r1.Output or not hasOom then Error("JobOomFailed: " + r1.Output) else CheckHeaps(folder)
-CheckHeaps(folder Text) Boolean
+	if "EXIT:1000" is not in r1.Output or not hasOom
+		return Error("JobOomFailed: " + r1.Output)
+	CheckHeaps(folder)
+CheckHeaps(folder Text)
 	p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
 	if p1 is Error
 		return p1
@@ -74,8 +75,9 @@ CheckHeaps(folder Text) Boolean
 	if web.exitCode is not 0 or "total 1924" is not in web.Output
 		return Error("WebPressureFailed: " + web.Output + web.error)
 	ran = RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
-	ran is Error then ran else true
-CheckUncollected(folder Text) Boolean
+	if ran is Error
+		return ran
+CheckUncollected(folder Text)
 	grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
 	u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
 	if u1 is Error
@@ -83,8 +85,12 @@ CheckUncollected(folder Text) Boolean
 	g2 = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownPassed") + GrownPassA + GrownPassB
 	u2 = RunBuilt(folder, "GrownPassed", g2, "", LogEnv, "total 8062000", "Collection: ")
 	pSrc = FilledSrc + PassedSrc
-	u2 is Error then u2 else RunBuilt(folder, "PassedLarge", pSrc, "", LogEnv, "total 2291430000", "Collection: ")
-CheckCollections(folder Text) Boolean
+	if u2 is Error
+		return u2
+	large = RunBuilt(folder, "PassedLarge", pSrc, "", LogEnv, "total 2291430000", "Collection: ")
+	if large is Error
+		return large
+CheckCollections(folder Text)
 	trimOut = RunBuilt(folder, "TrimmedPool", FilledSrc + TrimA + TrimB, "", LogEnv, "total 192", "")
 	if trimOut is Error
 		return trimOut
@@ -92,8 +98,10 @@ CheckCollections(folder Text) Boolean
 	if parts(0).Split("Collection: full").Length < 4 or "Collection: " is in parts(1)
 		return Error("TrimmedPoolWrong: " + trimOut)
 	handed = RunBuilt(folder, "HandedBack", HandA + HandB1 + HandB2, "", "STRICT_GPU=0", "total 1010000", "")
-	handed is Error then handed else CheckChurnAndProducts(folder)
-CheckChurnAndProducts(folder Text) Boolean
+	if handed is Error
+		return handed
+	CheckChurnAndProducts(folder)
+CheckChurnAndProducts(folder Text)
 	churnExe = Built(folder, "Churning", FilledSrc + ChurnSrc, "")
 	cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
 	churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
@@ -102,22 +110,25 @@ CheckChurnAndProducts(folder Text) Boolean
 	if badC or grp(1) to Number + (grp(2) to Number) <= 0 or grp(3) is not "0"
 		return Error("ChurnWrong: " + churn)
 	prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
-	ok = prodOut is Error then prodOut else CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
-	ok is Error then ok else CheckTickersAndFiles(folder)
-CheckedMaxHeap(matches Texts) Boolean
+	if prodOut is Error
+		return prodOut
+	CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
+	CheckTickersAndFiles(folder)
+CheckedMaxHeap(matches Texts)
 	if matches.Length is 0
 		return Error("NoHeapLogged")
 	for matches
 		mb = Text.Combine(Regex("(\\d+)").Groups(value), "") to Number
 		if mb >= MaxHeap
 			return Error("HeapExceededLimit: " + mb)
-	true
-CheckTickersAndFiles(folder Text) Boolean
+CheckTickersAndFiles(folder Text)
 	f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
-	if f is Error or not CheckedFramesEnded(f, true)
+	if f is Error or not HasFramesEnded(f, true)
 		return Error("FrameTickerWrong")
 	w = FrameTicker(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", "100000", "40")
-	w is Error or not CheckedWordsEnded(w) then Error("WordTickerWrong") else CheckLongLines(folder)
+	if w is Error or not HasWordsEnded(w)
+		return Error("WordTickerWrong")
+	CheckLongLines(folder)
 FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts
 	elem = itemType.Substring(0, itemType.Length - 1)
 	hdr = "has size Number\nhas frame Number = 0\nhas kept " + itemType + " = List(" + elem + ")\n"
@@ -131,7 +142,7 @@ FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Tex
 		if value.StartsWith("Collection: ")
 			cols = cols + value
 	cols
-CheckedFramesEnded(cols Texts, needMultiple Boolean) Boolean
+HasFramesEnded(cols Texts, needMultiple Boolean) Boolean
 	mutable seenTrue = false
 	mutable trueCount = 0
 	for cols
@@ -142,14 +153,14 @@ CheckedFramesEnded(cols Texts, needMultiple Boolean) Boolean
 			if seenTrue
 				return false
 	seenTrue and (not needMultiple or trueCount >= MinFrameEnds)
-CheckedWordsEnded(cols Texts) Boolean
+HasWordsEnded(cols Texts) Boolean
 	if cols.Length > MaxWordCollections
 		return false
 	for cols
 		if not value.EndsWith(", frame end")
 			return false
 	true
-CheckLongLines(folder Text) Boolean
+CheckLongLines(folder Text)
 	mutable word = "x"
 	for Doublings
 		word = word + word
@@ -161,14 +172,15 @@ CheckLongLines(folder Text) Boolean
 		return longOut
 	File(folder + "/tool.txt").Write(List(Text) + word.Substring(0, ToolWidth))
 	CheckTools(folder)
-CheckTools(folder Text) Boolean
+CheckTools(folder Text)
 	typed = folder.Replace("/", "\\\\") + "\\\\tool.txt"
 	mutable code = "has logger\nLines(count Number) Texts\n\tToolOutputs(Logger).Lines(1).Length is 1\n"
 	code = code + "\tfor count\n\t\t\"/c type " + typed + "\"\nRun\n\tmutable total = 0\n"
 	code = code + "\tfor Process.RunTools(\"cmd\", Lines(128))\n\t\ttotal = total + value.Output.Length\n"
 	code = code + "\tlogger.Log(\"total \" + total)"
 	ran = RunBuilt(folder, "ToolOutputs", code, "", "STRICT_GPU=0", "total 384000", "")
-	ran is Error then ran else true
+	if ran is Error
+		return ran
 RepeatedLine(line Text, count Number) Texts
 	for count
 		line

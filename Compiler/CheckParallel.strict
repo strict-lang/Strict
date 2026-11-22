@@ -43,13 +43,11 @@ Run Number
 	if Directory.Create(OutputFolder) is Error
 		return Error("DirectoryNotCreated")
 	File(OutputFolder + "/driver.c").Write(DriverSrc.Split("\n"))
-	result = BuiltAndChecked(OutputFolder)
+	BuiltAndChecked(OutputFolder)
 	Directory.Delete(OutputFolder)
-	if result is Error
-		return result
 	logger.Log("CheckParallel passed")
 	0
-BuiltAndChecked(folder Text) Boolean
+BuiltAndChecked(folder Text)
 	if BuiltPoolMlir(folder) is Error
 		return Error("BuiltPoolMlirFailed")
 	oArgs = "\"" + folder + "/pool.mlir\" --symbol-privatize=exclude=" + (ExA + ExB + ExC) + " " + OptFlags
@@ -61,8 +59,10 @@ BuiltAndChecked(folder Text) Boolean
 		return Error("TranslateFailed")
 	cOut = "\"" + folder + "/pool.ll\" \"" + folder + "/driver.c\" " + ClangFlags + " -o \"" + folder + "/check.exe\""
 	cc = Process.RunTool("C:/Program Files/LLVM/bin/clang.exe", cOut, ToolSeconds)
-	cc.exitCode is not 0 then Error("BuildCheckExeFailed: " + cc.Output) else RanModes(folder, folder + "/check.exe")
-BuiltPoolMlir(folder Text) Boolean
+	if cc.exitCode is not 0
+		return Error("BuildCheckExeFailed: " + cc.Output)
+	RanModes(folder, folder + "/check.exe")
+BuiltPoolMlir(folder Text)
 	rt = PatchedRuntime
 	if rt is Error
 		return rt
@@ -74,7 +74,6 @@ BuiltPoolMlir(folder Text) Boolean
 	win = Text.Combine(File("Compiler/NativeRuntimeWindows.mlir").ReadLines, "\n")
 	hdr = "module {\n  llvm.func @printf(!llvm.ptr, ...) -> i32\n" + dec + "\n" + rt + win
 	File(folder + "/pool.mlir").Write((hdr + CheckParallelMlir.All + caches + "\n}").Split("\n"))
-	true
 PatchedRuntime Text
 	raw = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
 	if "func.call @strict_rc_pin_in(" is not in raw.Split("func.func private @strict_rc_pin(")(1).Split("\n  }")(0)
@@ -108,7 +107,7 @@ CachedFn(name Text, compute Text, chk Text, sto Text) Text
 	h3 = "    %cache = llvm.mlir.addressof @" + name + "_cache : !llvm.ptr\n"
 	h4 = "    %set = llvm.mlir.addressof @" + name + "_set : !llvm.ptr\n"
 	h1 + h2 + h3 + h4 + chk + "\n    %computed = llvm.call @" + compute + "() : () -> f64\n" + sto
-RanModes(folder Text, exe Text) Boolean
+RanModes(folder Text, exe Text)
 	freed = "/c set STRICT_YOUNG=0&& " + exe.Replace("/", "\\") + " freed"
 	for "updated memory owned big freed published literal j k xcycle gpu rsame rdifferent scan".Split(" ")
 		isFreed = value is "freed"
@@ -116,16 +115,17 @@ RanModes(folder Text, exe Text) Boolean
 		if res.exitCode is not 0
 			return Error("ModeFailed " + value + ": " + res.Output + res.error)
 	RanPostModes(folder, exe)
-RanPostModes(folder Text, exe Text) Boolean
+RanPostModes(folder Text, exe Text)
 	for ("", "carried", "wake", "await")
 		res = Process.RunTool(exe, value, ShortSeconds)
 		if res.exitCode is not 0
 			return Error("PostModeFailed " + value + ": " + res.Output + res.error)
 	chk = Process.RunTool(exe, "checked", ShortSeconds)
-	ok = chk.exitCode is 0 and "Reference counts checked: 0 too low" is in chk.Output
-	shareOk = CheckedToolShares(folder, exe)
-	ok then (shareOk is Error then shareOk else CheckedPoolFailure(folder)) else Error("Checked")
-CheckedToolShares(folder Text, exe Text) Boolean
+	if chk.exitCode is not 0 or "Reference counts checked: 0 too low" is not in chk.Output
+		return Error("Checked")
+	CheckedToolShares(folder, exe)
+	CheckedPoolFailure(folder)
+CheckedToolShares(folder Text, exe Text)
 	shares = folder + "/ToolShares"
 	for ("", "7")
 		Directory.Delete(shares)
@@ -136,8 +136,7 @@ CheckedToolShares(folder Text, exe Text) Boolean
 			return Error("ToolsShareFailed: " + res.Output)
 		if CheckedBatch(shares, "slow", BatchSlowCount, value) is Error or CheckedBatch(shares, "quick", 2, value) is Error
 			return Error("BadToolBatch")
-	true
-CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
+CheckedBatch(shares Text, kind Text, count Number, expected Text)
 	mutable first = ""
 	for count
 		txt = Text.Combine(File(shares + "/" + kind + value + ".txt").ReadLines, "").Trim
@@ -147,8 +146,7 @@ CheckedBatch(shares Text, kind Text, count Number, expected Text) Boolean
 			first = txt
 		if txt is not first
 			return Error("BatchThreadShareChanged")
-	true
-CheckedPoolFailure(folder Text) Boolean
+CheckedPoolFailure(folder Text)
 	src = folder + "/PoolFailure.strict"
 	File(src).Write((PfA + PfB + PfC).Split("\n"))
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
@@ -158,7 +156,6 @@ CheckedPoolFailure(folder Text) Boolean
 		res = Process.RunTool(folder + "/PoolFailure.exe", "", ShortSeconds)
 		if not res.Output.StartsWith("Error: IndexOutOfRange")
 			return Error("NestedParallelErrorLost: " + res.Output + res.error)
-	true
 DriverSrc Text
 	head = D01 + "\n" + D02 + "\n" + D03 + "\n" + D04 + "\n" + D05 + "\n" + D06 + "\n" + D07 + "\n" + D08 + "\n" + D09
 	mid = D10 + "\n" + D11 + "\n" + D12 + "\n" + D13 + "\n" + D14 + "\n" + D15 + "\n" + D16 + "\n" + D17 + "\n" + D18
