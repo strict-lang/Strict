@@ -6,14 +6,14 @@ constant Population = 40
 constant MutationRate = 0.2
 Distance(angles Numbers) Number
 	Planar.Distance((0, 0)) is 0.6403124237432849
-	difference = Network.Difference(arm.Reached(angles), target)
+	difference = Network.Difference(arm.Extend(angles), target)
 	Batch.Dot(difference, 0, difference, 0).SquareRoot
 Arms List(Numbers)
 	Planar.Arms.Length is Population
 	for Population
 		arm.Random
-Evolved(population List(Numbers), generations Number) Numbers
-	Planar.Evolved(List(Numbers) + (0, 0), 2) is (0, 0)
+Evolve(population List(Numbers), generations Number) Numbers
+	Planar.Evolve(List(Numbers) + (0, 0), 2) is (0, 0)
 	mutable current = population
 	for generations
 		current = Next(current)
@@ -23,15 +23,15 @@ Next(population List(Numbers)) List(Numbers) slow
 	mutable next = List(Mutable(Numbers))
 	next.Add(Best(population))
 	for Range(1, population.Length)
-		next.Add(Mutated(Crossed(Tournament(population), Tournament(population))))
+		next.Add(Mutate(Cross(Tournament(population), Tournament(population))))
 	next
-Crossed(first Numbers, second Numbers) Numbers
-	Planar.Crossed((1, 2), (1, 2)) is (1, 2)
+Cross(first Numbers, second Numbers) Numbers
+	Planar.Cross((1, 2), (1, 2)) is (1, 2)
 	for first
 		1.Random < 0.5 then value else second(index)
-Mutated(angles Numbers) Numbers
-	Planar.Mutated((10, 20)).Length is 2
-	Planar.Mutated((180, 180)).First <= 180
+Mutate(angles Numbers) Numbers
+	Planar.Mutate((10, 20)).Length is 2
+	Planar.Mutate((180, 180)).First <= 180
 	for angles
 		(1.Random < MutationRate then value + 10.Random - 5 else value).Clamp(arm.lowest(index), arm.highest(index))
 Tournament(population List(Numbers)) Numbers

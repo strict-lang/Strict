@@ -16,9 +16,9 @@ Trained(input Numbers, target Number) Perceptron
 	Untrained.Trained((1, 1), 1).bias is Rate
 	Both.Trained((1, 1), 1) is Both
 	step = (target - Output(input)) * Rate
-	Perceptron(Moved(input, step), bias + step)
-Moved(input Numbers, step Number) Numbers
-	Untrained.Moved((1, 0), 0.5) is (0.5, 0)
+	Perceptron(Move(input, step), bias + step)
+Move(input Numbers, step Number) Numbers
+	Untrained.Move((1, 0), 0.5) is (0.5, 0)
 	for weights
 		value + step * input(index)
 Epoch(targets Numbers) Perceptron

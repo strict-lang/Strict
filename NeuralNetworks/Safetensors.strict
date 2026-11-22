@@ -11,28 +11,28 @@ constant Lifted = Layer.Zeros(63) + 1
 constant FarDowns = Layer.Zeros(32768) + Second
 constant FarUps = Layer.Zeros(512) + 1 + Layer.Zeros(1539)
 constant FarScales = Layer.Zeros(512) + 0.5
-constant Lifting = Safetensors.Nibbles.Tuned("b", Safetensors.Lifted, (1, 0, 0, 0), 1)
+constant Lifting = Safetensors.Nibbles.Tune("b", Safetensors.Lifted, (1, 0, 0, 0), 1)
 constant Single = "\"x\":{\"dtype\":\"F32\",\"shape\":[2],\"data_offsets\":[0,8]}"
 constant Second = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 64, 64, 1)
-constant Exact = Safetensors.Bytes.Quantized("a")
+constant Exact = Safetensors.Bytes.Quantize("a")
 constant Firsts = Safetensors.Bytes.Part(Safetensors.Bytes.Values("a.weight"), 0, 128, 1)
 Entry(name Text) Text slow
 	Tiny.Entry("b") is "\"dtype\":\"F32\",\"shape\":[3],\"data_offsets\":[24,36]"
 	Tiny.Entry("missing") is ""
 	Safetensors("NeuralNetworks/tiny.safetensors", 32, "a").Entry("") is Tiny.Entry("a")
 	Nibbles.Entry("a.weight") is "\"dtype\":\"I4\",\"shape\":[4,64],\"data_offsets\":[0,128]"
-	Nibbles.Quantized("a") is Nibbles.Quantized("b")
-	Nibbles.Tuned("a", Lifted, (1, 0, 0, 0), 1)(0)(63).IsNearlyEqual(Lifting(0)(63), 0.05)
+	Nibbles.Quantize("a") is Nibbles.Quantize("b")
+	Nibbles.Tune("a", Lifted, (1, 0, 0, 0), 1)(0)(63).IsNearlyEqual(Lifting(0)(63), 0.05)
 	TensorFile.Entry(path, prefix + name)
-Bracketed(entry Text, key Text) Numbers
-	Tiny.Bracketed(Tiny.Entry("a"), "shape") is (2, 3)
-	Tiny.Bracketed(Tiny.Entry("b"), "data_offsets") is (24, 36)
+Bracket(entry Text, key Text) Numbers
+	Tiny.Bracket(Tiny.Entry("a"), "shape") is (2, 3)
+	Tiny.Bracket(Tiny.Entry("b"), "data_offsets") is (24, 36)
 	start = entry.IndexOf("\"" + key + "\":[") + key.Length + 4
 	for entry.Substring(start, entry.IndexOf("]", start) - start).Split(",")
 		value to Number
 Shape(name Text) Numbers
 	Tiny.Shape("a") is (2, 3)
-	Bracketed(Entry(name), "shape")
+	Bracket(Entry(name), "shape")
 Values(name Text) Numbers
 	Tiny.Values("b") is (0.5, -1.5, 2.25)
 	Tiny.Values("a").Length is 6
@@ -52,38 +52,38 @@ Rows(name Text) List(Numbers)
 	Safetensors("NeuralNetworks/tiny.safetensors", 8).Rows("a").First.First.IsNearlyEqual(0.992126)
 	Safetensors("NeuralNetworks/tiny.safetensors", 17).Rows("a") is ((1, 2, 3), (4, 5, 6))
 	Safetensors(Vision, 17).Rows("visual.pos_embed.weight")(9) is Safetensors(Vision).Rows("visual.pos_embed.weight")(9)
-	TensorFile.Shaped((1, 2, 3, 4, 5, 6), 3) is ((1, 2, 3), (4, 5, 6))
+	TensorFile.Reshape((1, 2, 3, 4, 5, 6), 3) is ((1, 2, 3), (4, 5, 6))
 	TensorFile.Rows(path, Entry(name), bits)
-Quantized(name Text, tokenBits = 8) List(Numbers)
-	Bytes.Quantized("a").Length is 4
-	Bytes.Quantized("a").First(1) is -63
-	Bytes.Quantized("a")(2).First is 2
-	Bytes.Quantized("a", 32) is Bytes.Quantized("a")
-	Fours.Quantized("a")(33)(17).IsNearlyEqual(0.175519, 0.00001)
-	Fours.Quantized("a")(130)(70).IsNearlyEqual(3.259026, 0.00001)
+Quantize(name Text, tokenBits = 8) List(Numbers)
+	Bytes.Quantize("a").Length is 4
+	Bytes.Quantize("a").First(1) is -63
+	Bytes.Quantize("a")(2).First is 2
+	Bytes.Quantize("a", 32) is Bytes.Quantize("a")
+	Fours.Quantize("a")(33)(17).IsNearlyEqual(0.175519, 0.00001)
+	Fours.Quantize("a")(130)(70).IsNearlyEqual(3.259026, 0.00001)
 	weight = Entry(name + ".weight")
 	scales = Entry(name + ".weight_scale")
 	scale = Entry(name + ".weight_scale_2")
 	if scale is ""
-		return TensorFile.Quantized(path, weight, scales, tokenBits)
+		return TensorFile.Quantize(path, weight, scales, tokenBits)
 	TensorFile.Fours(path, weight, scales, scale, Entry(name + ".pre_quant_scale"), "", tokenBits)
 IsFours(name Text) Boolean
 	Fours.IsFours("a")
 	Bytes.IsFours("a") is false
 	Entry(name + ".weight_scale_2") is not ""
-Folded(name Text, rowFactors Text, tokenBits = 8) List(Numbers)
-	Fours.Folded("a", "").Length is Fours.Quantized("a").Length
-	Fours.Folded("a", "", 32)(33)(17).IsNearlyEqual(0.183465, 0.00001)
-	Fours.Folded("a", "", 32)(130)(70).IsNearlyEqual(2.709632, 0.00001)
-	Fours.Folded("a", Fours.Entry("a.pre_quant_scale")) is Error("OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported")
+Fold(name Text, rowFactors Text, tokenBits = 8) List(Numbers)
+	Fours.Fold("a", "").Length is Fours.Quantize("a").Length
+	Fours.Fold("a", "", 32)(33)(17).IsNearlyEqual(0.183465, 0.00001)
+	Fours.Fold("a", "", 32)(130)(70).IsNearlyEqual(2.709632, 0.00001)
+	Fours.Fold("a", Fours.Entry("a.pre_quant_scale")) is Error("OnlyNvfp4MatricesWithSwizzledBlockScalesAreSupported")
 	weight = Entry(name + ".weight")
 	scale = Entry(name + ".weight_scale_2")
 	TensorFile.Fours(path, weight, Entry(name + ".weight_scale"), scale, "", rowFactors, tokenBits)
-Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
-	Bytes.Hosted("a") is Bytes.Quantized("a")
-	Bytes.Hosted("a", List(Number), 3)(3) is Bytes.Quantized("a")(3)
-	Bytes.Hosted("a", 2)(2) is Bytes.Quantized("a")(2)
-	Bytes.Hosted("a", 2)(1).Length is 0
+Host(name Text, picked = List(Number), part = 4096) List(Numbers)
+	Bytes.Host("a") is Bytes.Quantize("a")
+	Bytes.Host("a", List(Number), 3)(3) is Bytes.Quantize("a")(3)
+	Bytes.Host("a", 2)(2) is Bytes.Quantize("a")(2)
+	Bytes.Host("a", 2)(1).Length is 0
 	weight = Entry(name + ".weight")
 	scales = Entry(name + ".weight_scale")
 	size = picked.Length is 0 then part else 1
@@ -92,32 +92,32 @@ Hosted(name Text, picked = List(Number), part = 4096) List(Numbers)
 		isRead = picked.Length is 0 or index is in picked
 		rows = rows + (isRead then TensorFile.HostedPart(path, weight, scales, index * size, size) else (List(Number)))
 	rows
-Tuned(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers) slow
+Tune(name Text, downs Numbers, ups Numbers, scales Numbers) List(Numbers) slow
 	Batch.Wholes.Sums(Batch.Tokens) is Batch.Wholes.Sums(Batch.Tokens)
-	Bytes.Tuned("a", List(Number), List(Number), List(Number)) is Bytes.Quantized("a")
-	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantized("a")(2)
-	Bytes.Tuned("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
-	Bytes.Tuned("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
-	Bytes.Tuned("a", FarDowns, FarUps, FarScales)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
-	Bytes.Tuned("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
-	merged = scales.Length is 0 then Quantized(name) else GpuMemory.Tuned(Quantized(name), downs, ups, scales)
+	Bytes.Tune("a", List(Number), List(Number), List(Number)) is Bytes.Quantize("a")
+	Bytes.Tune("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(2) is Bytes.Quantize("a")(2)
+	Bytes.Tune("a", Second, (1, 0, 0, 0), List(Number) + 0.5)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
+	Bytes.Tune("a", Firsts, (0, 1, 0, 0, 0, 0, 0, 1), (0.5, 0.25))(3)(7).IsNearlyEqual(Exact(3)(7) + Second(7) / 4, 1)
+	Bytes.Tune("a", FarDowns, FarUps, FarScales)(0)(5).IsNearlyEqual(Exact(0)(5) + Second(5) / 2, 1)
+	Bytes.Tune("a", (1, 2), (1, 0, 0, 0), List(Number) + 1) is Error
+	merged = scales.Length is 0 then Quantize(name) else GpuMemory.Tune(Quantize(name), downs, ups, scales)
 	if merged.Length > 0
 		return merged
-	TensorFile.Tuned(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
-Written(name Text, numbers Numbers)
-	Safetensors("NeuralNetworks/written.tmp").Written("x", (1.5, -2, 3)) is not Error
+	TensorFile.Tune(path, Entry(name + ".weight"), Entry(name + ".weight_scale"), downs + ups + scales)
+Write(name Text, numbers Numbers)
+	Safetensors("NeuralNetworks/written.tmp").Write("x", (1.5, -2, 3)) is not Error
 	Safetensors("NeuralNetworks/written.tmp").Values("x") is (1.5, -2, 3)
 	Safetensors("NeuralNetworks/written.tmp").Shape("x")(0) is 3
-	Safetensors("NeuralNetworks/missing/written.tmp").Written("x", (1, 2)) is Error
-	Written(List(Text) + name, List(Numbers) + numbers)
-Written(names Texts, lists List(Numbers))
-	Safetensors("NeuralNetworks/writtenpair.tmp").Written(("x", "y"), ((1.5, -2), List(Number) + 3)) is not Error
+	Safetensors("NeuralNetworks/missing/written.tmp").Write("x", (1, 2)) is Error
+	Write(List(Text) + name, List(Numbers) + numbers)
+Write(names Texts, lists List(Numbers))
+	Safetensors("NeuralNetworks/writtenpair.tmp").Write(("x", "y"), ((1.5, -2), List(Number) + 3)) is not Error
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (1.5, -2)
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("y") is (3)
 	Safetensors("NeuralNetworks/writtenpair.tmp").Shape("y")(0) is 1
-	Safetensors("NeuralNetworks/writtenpair.tmp").Written(List(Text) + "x", List(Numbers) + (7, 8, 9)) is not Error
+	Safetensors("NeuralNetworks/writtenpair.tmp").Write(List(Text) + "x", List(Numbers) + (7, 8, 9)) is not Error
 	Safetensors("NeuralNetworks/writtenpair.tmp").Values("x") is (7, 8, 9)
-	TensorFile.Written(path, Header(names, lists), Combined(lists))
+	TensorFile.Write(path, Header(names, lists), Combine(lists))
 Header(names Texts, lists List(Numbers)) Text
 	Tiny.Header(List(Text) + "x", List(Numbers) + (1, 2)) is "{" + Single + "}"
 	Tiny.Header(("x", "y"), ((1, 2), List(Number) + 3)).EndsWith("\"shape\":[1],\"data_offsets\":[8,12]}}")
@@ -133,8 +133,8 @@ Counts(lists List(Numbers)) Numbers
 	Tiny.Counts(((1, 2), List(Number) + 3)) is (2, 1)
 	for lists
 		value.Length
-Combined(lists List(Numbers)) Numbers
-	Tiny.Combined(((1, 2), List(Number) + 3)) is (1, 2, 3)
+Combine(lists List(Numbers)) Numbers
+	Tiny.Combine(((1, 2), List(Number) + 3)) is (1, 2, 3)
 	mutable combined = List(Number)
 	for lists
 		combined = combined + value

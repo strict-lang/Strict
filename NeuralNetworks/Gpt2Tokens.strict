@@ -14,23 +14,23 @@ constant Tiny = Gpt2Tokens.Parsed("{\"a\": 0, \"b\": 1, \"\\u0120\": 2, \"ab\": 
 Parsed(vocabulary Text, merges Texts) Gpt2Tokens
 	Tiny.tokens is ("a", "b", " ", "ab", " ab")
 	Tiny.ids(" ab") is 4
-	Gpt2Tokens.Parsed(Spaced, ("#version: 0.2", "a b")).Merged("ab") is (2)
+	Gpt2Tokens.Parsed(Spaced, ("#version: 0.2", "a b")).Merge("ab") is (2)
 	ordered = Vocabulary(vocabulary)
 	mutable known = Dictionary(Text, Number)
 	for ordered
 		known(value) = index
-	Gpt2Tokens(ordered, known, Ranked(merges, known, ordered.Length))
+	Gpt2Tokens(ordered, known, Rank(merges, known, ordered.Length))
 Loaded(model Gguf) Gpt2Tokens
-	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).Encoded("ab c") is (4, 5)
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).Encode("ab c") is (4, 5)
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tiny.gguf")).isQwen
 	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tinyqwen4exp.gguf")).isQwen
-	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tinyqwen4exp.gguf")).Encoded("ab<pad>") is (27, 31)
+	Gpt2Tokens.Loaded(Gguf("NeuralNetworks/tinyqwen4exp.gguf")).Encode("ab<pad>") is (27, 31)
 	mutable raw = List(Mutable(Text))
 	mutable known = Dictionary(Text, Number)
 	for model.Value("tokenizer.ggml.tokens").Lines
 		raw.Add(Raw(value))
 		known(raw.Last) = index
-	ranked = Ranked(model.Value("tokenizer.ggml.merges").Lines, known, raw.Length)
+	ranked = Rank(model.Value("tokenizer.ggml.merges").Lines, known, raw.Length)
 	splitting = model.Value("tokenizer.ggml.pre")
 	isQwenLike = splitting is in ("qwen2", "qwen35") or Digits(splitting) > 1
 	Gpt2Tokens(raw, known, ranked, isQwenLike, Controls(model, raw), Digits(splitting))
@@ -47,7 +47,7 @@ Controls(model Gguf, names Texts) Dictionary(Text, Number)
 Folder(folder Text) Gpt2Tokens slow
 	Gpt2Tokens.Folder("NeuralNetworks/missing").tokens.Length is 0
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").tokens is ("a", "b", " ", "ab", " ab")
-	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").Encoded("<s>ab ab") is (5, 3, 4)
+	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").Encode("<s>ab ab") is (5, 3, 4)
 	Gpt2Tokens.Folder("NeuralNetworks/tinytokens").isQwen
 	vocabulary = Text.Combine(File(folder + "/vocab.json").ReadLines, "\n")
 	parsed = Gpt2Tokens.Parsed(vocabulary, File(folder + "/merges.txt").ReadLines)
@@ -66,24 +66,24 @@ Vocabulary(json Text) Texts
 	mutable start = json.IndexOf("\"") + 1
 	mutable ending = json.IndexOf(colon + 0, start)
 	for as long as ending >= 0
-		parsed.Add(Unescaped(json.Substring(start, ending - start)))
+		parsed.Add(Unescape(json.Substring(start, ending - start)))
 		start = json.IndexOf("\"", ending + (colon + (parsed.Length - 1)).Length) + 1
 		ending = json.IndexOf(colon + parsed.Length, start)
 	parsed
-Unescaped(key Text) Text
-	Unescaped("\\u0120a\\\"") is " a\""
-	Unescaped(Mapped + "a") is " a"
+Unescape(key Text) Text
+	Unescape("\\u0120a\\\"") is " a\""
+	Unescape(Mapped + "a") is " a"
 	Raw(key.IndexOf("\\") < 0 then key else Json("\"" + key + "\"") to Text)
-Unmapped(code Number) Number
-	Unmapped(97) is 97
-	Unmapped(288) is 32
-	Unmapped(289) is 127
-	Unmapped(323) is 173
+Unmap(code Number) Number
+	Unmap(97) is 97
+	Unmap(288) is 32
+	Unmap(289) is 127
+	Unmap(323) is 173
 	if code < Byte.Values
 		return code
 	skipped = code - Byte.Values
 	skipped < Printable then skipped else skipped < SoftHyphenIndex then skipped + DeleteOffset else SoftHyphen
-Ranked(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Number, Number)
+Rank(merges Texts, known Dictionary(Text, Number), width Number) Dictionary(Number, Number)
 	Tiny.ranks(1) is 0
 	Tiny.ranks(13) is 1
 	mutable ranked = Dictionary(Number, Number)
@@ -98,23 +98,23 @@ Raw(mapped Text) Text
 	Raw(Json("\"\\u0121\"") to Text)(0).number is Character.Delete
 	mutable raw = List(Number)
 	for mapped
-		raw = raw + Unmapped(value.number)
+		raw = raw + Unmap(value.number)
 	Text.Utf8(raw)
-Decoded(tokenIds Numbers) Text
-	Tiny.Decoded((4, 2, 0)) is " ab a"
+Decode(tokenIds Numbers) Text
+	Tiny.Decode((4, 2, 0)) is " ab a"
 	for tokenIds
 		tokens(value)
-Encoded(text Text) Numbers
-	Tiny.Encoded(" ab a") is (4, 2, 0)
-	Gpt2Tokens(Tiny, specials = Dictionary(("<s>", 5))).Encoded("ab<s> ab") is (3, 5, 4)
+Encode(text Text) Numbers
+	Tiny.Encode(" ab a") is (4, 2, 0)
+	Gpt2Tokens(Tiny, specials = Dictionary(("<s>", 5))).Encode("ab<s> ab") is (3, 5, 4)
 	special = Special(text)
 	if special is not ""
 		at = text.IndexOf(special)
 		rest = text.Substring(at + special.Length, text.Length - at - special.Length)
-		return (Encoded(text.Substring(0, at)) + specials(special)) + Encoded(rest)
+		return (Encode(text.Substring(0, at)) + specials(special)) + Encode(rest)
 	mutable encoded = List(Mutable(Number))
 	for TokenSplitter(isQwen, digits).Words(text)
-		encoded = encoded + Merged(value)
+		encoded = encoded + Merge(value)
 	encoded
 Special(text Text) Text
 	Gpt2Tokens(Tiny, specials = Dictionary(("<s>", 5), ("</s>", 6))).Special("a</s><s>") is "</s>"
@@ -133,16 +133,16 @@ Specials(added Json) Dictionary(Text, Number)
 	for added.Keys
 		found(added.get(value).get("content") to Text) = value to Number
 	found
-Merged(word Text) Numbers
-	Tiny.Merged(" ab") is (4)
-	Tiny.Merged("ba") is (1, 0)
-	Gpt2Tokens.Parsed("{\"\\u00c3\": 0, \"\\u00a9\": 1}", List(Text)).Merged(Text.Utf8((195, 169))) is (0, 1)
+Merge(word Text) Numbers
+	Tiny.Merge(" ab") is (4)
+	Tiny.Merge("ba") is (1, 0)
+	Gpt2Tokens.Parsed("{\"\\u00c3\": 0, \"\\u00a9\": 1}", List(Text)).Merge(Text.Utf8((195, 169))) is (0, 1)
 	mutable symbols = List(Mutable(Number))
 	for word.Bytes
 		symbols.Add(ids(Text.Utf8(value)))
 	mutable best = Best(symbols)
 	for as long as best >= 0
-		symbols = Joined(symbols, best)
+		symbols = Join(symbols, best)
 		best = Best(symbols)
 	symbols
 Best(symbols Numbers) Number
@@ -156,8 +156,8 @@ Best(symbols Numbers) Number
 			best = value - 1
 			lowest = ranks(pair)
 	best
-Joined(symbols Numbers, at Number) Numbers
-	Tiny.Joined((2, 0, 1), 1) is (2, 3)
+Join(symbols Numbers, at Number) Numbers
+	Tiny.Join((2, 0, 1), 1) is (2, 3)
 	merged = ids(tokens(symbols(at)) + tokens(symbols(at + 1)))
 	for symbols
 		if index is not at + 1

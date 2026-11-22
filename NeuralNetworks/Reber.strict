@@ -28,11 +28,11 @@ Targets(steps List(Numbers)) List(Numbers)
 	Simple.Targets(Shortest).Last is (0, 0, 0, 0, 0, 0, 1)
 	Embedded.Targets(Embedded.Walk).Last is (0, 0, 0, 0, 0, 0, 1)
 	for Range(0, steps.Length - 1)
-		Allowed(steps(value).Last)
-Allowed(state Number) Numbers
-	Simple.Allowed(2) is (0, 0, 0, 1, 1, 0, 0)
-	Embedded.Allowed(9) is (0, 1, 0, 0, 0, 0, 0)
-	Embedded.Allowed(17) is (0, 0, 1, 0, 0, 0, 0)
+		Allow(steps(value).Last)
+Allow(state Number) Numbers
+	Simple.Allow(2) is (0, 0, 0, 1, 1, 0, 0)
+	Embedded.Allow(9) is (0, 1, 0, 0, 0, 0, 0)
+	Embedded.Allow(17) is (0, 0, 1, 0, 0, 0, 0)
 	edge = edges(state)
 	for Symbols
 		index is edge(0) or index is edge(2) then 1 else 0

@@ -23,25 +23,25 @@ Words(text Text) Texts
 WordEnd(text Text, start Number) Number
 	Gpt.WordEnd("it's", 2) is 4
 	Gpt.WordEnd("  a", 0) is 1
-	contraction = Contracted(text, start)
+	contraction = Contract(text, start)
 	if contraction > start
 		return contraction
 	first = text(start) is " " and Kind(text, start + 1) > 0 then start + 1 else start
 	kind = Kind(text, first)
-	ending = Stretched(text, first + 1, kind)
+	ending = Stretch(text, first + 1, kind)
 	kind is 0 and Kind(text, ending) > 0 and ending - start > 1 then ending - 1 else ending
 QwenEnd(text Text, start Number) Number
 	Qwen.QwenEnd("(hello", 0) is 6
 	Qwen.QwenEnd(" 42", 0) is 1
 	Qwen.QwenEnd(" !!\n\nx", 0) is 5
-	contraction = Contracted(text, start)
+	contraction = Contract(text, start)
 	if contraction > start
 		return contraction
 	if IsWordStart(text, start)
-		return Stretched(text, start + 1, 1)
-	Kind(text, start) is 2 then Grouped(text, start) else Punctuated(text, start)
-Grouped(text Text, start Number) Number
-	Llama.Grouped("12345", 0) is 3 and Llama.Grouped("12a", 0) is 2 and Qwen.Grouped("12", 0) is 1
+		return Stretch(text, start + 1, 1)
+	Kind(text, start) is 2 then Group(text, start) else Punctuat(text, start)
+Group(text Text, start Number) Number
+	Llama.Group("12345", 0) is 3 and Llama.Group("12a", 0) is 2 and Qwen.Group("12", 0) is 1
 	mutable ending = start + 1
 	for as long as ending - start < digits and Kind(text, ending) is 2
 		ending = ending + 1
@@ -52,36 +52,36 @@ IsWordStart(text Text, start Number) Boolean
 	kind = Kind(text, start)
 	isBreak = text(start) is in ("\r", "\n")
 	kind is 1 or kind is not 2 and isBreak is false and Kind(text, start + 1) is 1
-Contracted(text Text, start Number) Number
-	Gpt.Contracted("it's", 2) is 4
-	Gpt.Contracted("it'S", 2) is 2
-	Qwen.Contracted("we'LL", 2) is 5
+Contract(text Text, start Number) Number
+	Gpt.Contract("it's", 2) is 4
+	Gpt.Contract("it'S", 2) is 2
+	Qwen.Contract("we'LL", 2) is 5
 	for ("'s", "'t", "'re", "'ve", "'m", "'ll", "'d")
 		if text.StartsWith(value, start) or qwen and text.StartsWith(value.Upper, start)
 			return start + value.Length
 	start
-Punctuated(text Text, start Number) Number
-	Qwen.Punctuated(" !!\n\nx", 0) is 5
-	Qwen.Punctuated("  x", 0) is 1
+Punctuat(text Text, start Number) Number
+	Qwen.Punctuat(" !!\n\nx", 0) is 5
+	Qwen.Punctuat("  x", 0) is 1
 	first = text(start) is " " then start + 1 else start
 	if Kind(text, first) is not 3
-		return Spaced(text, start)
-	mutable breaks = Stretched(text, first + 1, 3)
+		return Space(text, start)
+	mutable breaks = Stretch(text, first + 1, 3)
 	for as long as breaks < text.Length and text(breaks) is in ("\r", "\n")
 		breaks = breaks + 1
 	breaks
-Spaced(text Text, start Number) Number
-	Qwen.Spaced("  \n\n  x", 0) is 4
-	Qwen.Spaced("   x", 0) is 2
-	Qwen.Spaced(" 4", 0) is 1
-	ending = Stretched(text, start + 1, 0)
+Space(text Text, start Number) Number
+	Qwen.Space("  \n\n  x", 0) is 4
+	Qwen.Space("   x", 0) is 2
+	Qwen.Space(" 4", 0) is 1
+	ending = Stretch(text, start + 1, 0)
 	mutable lastBreak = -1
 	for Range(start, ending)
 		if text(value) is in ("\r", "\n")
 			lastBreak = value
 	lastBreak >= 0 then lastBreak + 1 else ending < text.Length and ending - start > 1 then ending - 1 else ending
-Stretched(text Text, first Number, kind Number) Number
-	Gpt.Stretched("aab ", 1, 1) is 3
+Stretch(text Text, first Number, kind Number) Number
+	Gpt.Stretch("aab ", 1, 1) is 3
 	mutable ending = first
 	for as long as Kind(text, ending) is kind
 		ending = ending + 1

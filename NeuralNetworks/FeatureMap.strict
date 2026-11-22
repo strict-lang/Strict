@@ -14,9 +14,9 @@ Identity Numbers
 		index < channels then 1 else offsets(index - channels)
 Plus(other FeatureMap) FeatureMap
 	Square.Plus(FeatureMap((1, 1, 1, 1), 2, 1, List(Number) + 3)) is FeatureMap((2, 3, 4, 5), 2, 1, List(Number) + 3)
-	FeatureMap(Summed(other.values), width, channels, Gpt2Block.Added(offsets, other.offsets))
-Summed(other Numbers) BFloat16s
-	Square.Summed((1, 1, 1, 1)) is (2, 3, 4, 5)
+	FeatureMap(Accumulate(other.values), width, channels, Gpt2Block.Add(offsets, other.offsets))
+Accumulate(other Numbers) BFloat16s
+	Square.Accumulate((1, 1, 1, 1)) is (2, 3, 4, 5)
 	for values
 		value + other(index)
 Applied(affine Numbers, activation Activation) FeatureMap

@@ -10,35 +10,35 @@ constant Chosen = (1, 2, 3, 4)
 Loaded(path Text, bits Number) Gpt2Training slow
 	Tiny.columns.Length is 12
 	Tiny.firsts.Length is 10
-	weights = Gpt2.Opened(path, bits)
+	weights = Gpt2.Open(path, bits)
 	loaded = Gpt2.Loaded(path, bits)
-	zeros = Moments.Start.Zeroed(loaded.Vectors)
+	zeros = Moments.Start.Zero(loaded.Vectors)
 	Gpt2Training(loaded, Transposes(weights, loaded.blocks.Length), weights.Columns("wte.weight"), zeros, zeros)
 Transposes(weights Safetensors, count Number) List(Gpt2Block) slow
 	Tiny.Transposes(Gpt2Block.Weights, 1).First.contraction.weights.Length is 48
 	for count
-		Gpt2Pass.Transposed(weights, "h." + index + ".")
+		Gpt2Pass.Transpose(weights, "h." + index + ".")
 Passes(chosen Numbers) List(Gpt2Pass) slow
 	Tiny.Passes(Chosen).Length is 1
-	mutable state = Embedded(chosen)
+	mutable state = Embedd(chosen)
 	mutable passes = List(Mutable(Gpt2Pass))
 	for model.blocks
 		pass = Gpt2Pass.Forwarded(value, state)
 		passes.Add(pass)
 		state = pass.Output
 	passes
-Embedded(chosen Numbers) Numbers slow
-	Tiny.Embedded((1, 2))(13) is Tiny.model.tokens(2)(1) + Tiny.model.positions(1)(1)
+Embedd(chosen Numbers) Numbers slow
+	Tiny.Embedd((1, 2))(13) is Tiny.model.tokens(2)(1) + Tiny.model.positions(1)(1)
 	width = model.gain.Length
 	for chosen.Length * width
 		token = (index / width).Floor
 		model.tokens(chosen(token))(index % width) + model.positions(token)(index % width)
 Hidden(passes List(Gpt2Pass), chosen Numbers) Numbers slow
-	Tiny.Hidden(List(Gpt2Pass), (1, 2)) is Tiny.Embedded((1, 2))
-	passes.Length is 0 then Embedded(chosen) else passes.Last.Output
+	Tiny.Hidden(List(Gpt2Pass), (1, 2)) is Tiny.Embedd((1, 2))
+	passes.Length is 0 then Embedd(chosen) else passes.Last.Output
 Logits(hidden Numbers) Numbers
-	Tiny.Logits(Tiny.Embedded((1, 2))).Length is 10
-	Batch(model.tokens, Gpt2Pass.Zero).Sums(Gpt2Block.Normalized(hidden, model.gain, model.bias))
+	Tiny.Logits(Tiny.Embedd((1, 2))).Length is 10
+	Batch(model.tokens, Gpt2Pass.Zero).Sums(Gpt2Block.Normalize(hidden, model.gain, model.bias))
 Errors(logits Numbers, chosen Numbers) Numbers
 	Tiny.Errors((0, 0, 0, 0, 0, 0, 0, 0, 0, 0), (1, 2)) is (0.2, 0.2, -0.8, 0.2, 0.2, 0, 0, 0, 0, 0)
 	width = model.tokens.Length
@@ -58,10 +58,10 @@ Gradients(chosen Numbers) List(Numbers) slow
 	hidden = Hidden(passes, chosen)
 	finalGradient = Batch(columns, Gpt2Pass.Zero).Sums(Errors(Logits(hidden), chosen))
 	normalization = Normalization(hidden, model.gain)
-	blocks = Backwarded(passes, normalization.Inputs(finalGradient))
+	blocks = Backward(passes, normalization.Inputs(finalGradient))
 	blocks + (normalization.Gains(finalGradient), normalization.Biases(finalGradient))
-Backwarded(passes List(Gpt2Pass), gradient Numbers) List(Numbers)
-	Tiny.Backwarded(List(Gpt2Pass), (1, 2)).Length is 0
+Backward(passes List(Gpt2Pass), gradient Numbers) List(Numbers)
+	Tiny.Backward(List(Gpt2Pass), (1, 2)).Length is 0
 	mutable current = gradient
 	mutable reversed = List(Mutable(List(Numbers)))
 	for passes.Length
@@ -69,18 +69,18 @@ Backwarded(passes List(Gpt2Pass), gradient Numbers) List(Numbers)
 		backward = passes(at).Backward(current, transposed(at))
 		reversed.Add(backward)
 		current = backward.First
-	Flattened(reversed)
-Flattened(reversed List(List(Numbers))) List(Numbers)
-	Tiny.Flattened(List(List(Numbers))).Length is 0
+	Flatten(reversed)
+Flatten(reversed List(List(Numbers))) List(Numbers)
+	Tiny.Flatten(List(List(Numbers))).Length is 0
 	for reversed.Length * 8
 		reversed(reversed.Length - 1 - (index / 8).Floor)(1 + index % 8)
 Trained(chosen Numbers) Gpt2Training slow
-	Perplexity(Tiny.Trained(Chosen).Trained(Chosen).model).Measured(Chosen) < Perplexity(Tiny.model).Measured(Chosen)
+	Perplexity(Tiny.Trained(Chosen).Trained(Chosen).model).Measure(Chosen) < Perplexity(Tiny.model).Measure(Chosen)
 	Tiny.Trained(Chosen).step is 1
 	gradients = Gradients(chosen)
 	next = step + 1
 	corrected = rate * (1 - Moments.SquareBeta ^ next).SquareRoot / (1 - Optimizer.Adam ^ next)
-	averaged = Moments.Start.Averaged(firsts, gradients, Optimizer.Adam, false)
-	squared = Moments.Start.Averaged(seconds, gradients, Moments.SquareBeta, true)
-	changed = model.Changed(Moments.Start.Stepped(model.Vectors, averaged, squared, corrected))
+	averaged = Moments.Start.Average(firsts, gradients, Optimizer.Adam, false)
+	squared = Moments.Start.Average(seconds, gradients, Moments.SquareBeta, true)
+	changed = model.Changed(Moments.Start.Step(model.Vectors, averaged, squared, corrected))
 	Gpt2Training(value, model = changed, firsts = averaged, seconds = squared, step = next)

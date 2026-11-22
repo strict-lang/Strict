@@ -4,8 +4,8 @@ has modulation Numbers
 has starts Numbers
 has part Number
 has epsilon Number
-constant Wide = RowModulated(Filled(5376, 1), Filled(5376, 2), Filled(32256, 0.5), List(Number) + 3, 1, 0.000001)
-constant Plain = RowModulated(Filled(4096, 1), Filled(2048, 2), List(Number), List(Number), 0, 0.000001)
+constant Wide = RowModulated(Fill(5376, 1), Fill(5376, 2), Fill(32256, 0.5), List(Number) + 3, 1, 0.000001)
+constant Plain = RowModulated(Fill(4096, 1), Fill(2048, 2), List(Number), List(Number), 0, 0.000001)
 Modulated BFloat16s
 	RowModulated((3, 4), (1, 2), (0.5, 0, 0, 1), List(Number) + 0, 0, 0.00001).Modulated(1).IsNearlyEqual(4.525483)
 	RowModulated((3, 4), (1, 2), (9, 9, 0.5, 0, 0, 1), List(Number) + 1, 0, 0.00001).Modulated(0).IsNearlyEqual(1.348528)
@@ -13,16 +13,16 @@ Modulated BFloat16s
 	width = weights.Length
 	scales = Qwen3Block.Scales(input, width, epsilon)
 	if modulation.Length is 0
-		return Normalized(scales)
+		return Normalize(scales)
 	for input.Length
 		token = (index / width).Floor
 		at = (starts(token) + part) * width + index % width
 		input(index) * scales(token) * weights(index % width) * (1 + modulation(at + width)) + modulation(at)
-Normalized(scales Numbers) BFloat16s
-	RowModulated((3, 4), (1, 2), List(Number), List(Number), 0, 0.00001).Normalized((0.5, 0.5)) is (1.5, 4)
+Normalize(scales Numbers) BFloat16s
+	RowModulated((3, 4), (1, 2), List(Number), List(Number), 0, 0.00001).Normalize((0.5, 0.5)) is (1.5, 4)
 	for input.Length
 		input(index) * scales((index / weights.Length).Floor) * weights(index % weights.Length)
-Filled(count Number, number Number) Numbers
+Fill(count Number, number Number) Numbers
 	for count
 		number
 GpuCheck Number slow

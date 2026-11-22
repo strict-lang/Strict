@@ -26,8 +26,8 @@ Fitness(text Text) Number
 		if value is Target(index)
 			matches = matches + 1
 	matches
-Mutated(parent Text) Text
-	Weasel.Mutated(Target).Length is Target.Length
+Mutate(parent Text) Text
+	Weasel.Mutate(Target).Length is Target.Length
 	mutable child = ""
 	for parent
 		child = child + (1.Random < MutationRate then Letter else value)
@@ -37,7 +37,7 @@ Fittest(parent Text) Text
 	Weasel.Fitness(Weasel.Fittest("A")) >= Weasel.Fitness("A")
 	mutable best = parent
 	for Offspring
-		child = Mutated(parent)
+		child = Mutate(parent)
 		if Fitness(child) > Fitness(best)
 			best = child
 	best

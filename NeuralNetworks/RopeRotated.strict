@@ -28,7 +28,7 @@ Scales Float32s
 	size = weights.Length
 	for combined.Length / 3 / size
 		first = (index * size / width).Floor * 2 * width + start + index * size
-		Normalization.Scale(Normalization.Squared(combined, first, size), size, epsilon)
+		Normalization.Scale(Normalization.Square(combined, first, size), size, epsilon)
 Ones(count Number, number Number) Numbers
 	for count
 		number

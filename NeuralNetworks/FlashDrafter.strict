@@ -7,7 +7,7 @@ has streams Numbers = List(Number)
 constant Tiny = FlashDrafter.Loaded(Gguf("NeuralNetworks/tinyqwen4expmtp.gguf"))
 constant Model = FlashNext.Tiny.Steps((1, 2), 0)
 constant Prepared = Tiny.Primed(Model, (1, 2, 5))
-constant Joining = Tiny.Joined(Model.source.Picked("token_embd.weight", (5, 6)), Model.streams)
+constant Joining = Tiny.Join(Model.source.Pick("token_embd.weight", (5, 6)), Model.streams)
 constant First = Tiny.Extended(Model, Safetensors.Part(Model.streams, 0, 256, 1), List(Number) + 2, 1)
 constant Halves = First.Extended(Model, Safetensors.Part(Model.streams, 256, 256, 1), List(Number) + 5, 2)
 Loaded(head Gguf) FlashDrafter slow
@@ -20,13 +20,13 @@ Loaded(head Gguf) FlashDrafter slow
 	normed = (head.Values(prefix + "enorm.weight"), head.Values(prefix + "hnorm.weight"))
 	drafting = FlashLayer.Loaded(head, layer)
 	FlashDrafter(drafting, normed(0), normed(1), projected, HyperStreams.Loaded(head, prefix + "hc_head"))
-Joined(embedded Numbers, hidden Numbers) Numbers slow
+Join(embedded Numbers, hidden Numbers) Numbers slow
 	Joining.Length is 1024
 	Joining(128) is Joining(0)
 	Joining(192) is not Joining(64)
 	width = embedNorm.Length
-	entered = Qwen3Block.Normalized(embedded, 0, embedded.Length, embedNorm)
-	grouped = HyperStreams(mixer, norm = hiddenNorm).Normalized(hidden)
+	entered = Qwen3Block.Normalize(embedded, 0, embedded.Length, embedNorm)
+	grouped = HyperStreams(mixer, norm = hiddenNorm).Normalize(hidden)
 	for hidden.Length * 2
 		row = (index / (2 * width)).Floor
 		at = index % (2 * width)
@@ -34,8 +34,8 @@ Joined(embedded Numbers, hidden Numbers) Numbers slow
 Extended(model FlashNext, hidden Numbers, tokens Numbers, start Number) FlashDrafter slow
 	Prepared.streams.Length is 512
 	Halves.streams(44).IsNearlyEqual(Prepared.streams(300), 0.000001)
-	embedded = model.source.Picked("token_embd.weight", tokens)
-	projected = Batch(projection.weights, projection.biases).Sums(Joined(embedded, hidden))
+	embedded = model.source.Pick("token_embd.weight", tokens)
+	projected = Batch(projection.weights, projection.biases).Sums(Join(embedded, hidden))
 	forwarded = block.Forward(projected, model.rope.Rotations(Qwen3.Positions(start, tokens.Length)))
 	FlashDrafter(value, block = forwarded, streams = forwarded.streams)
 Primed(model FlashNext, sequence Numbers) FlashDrafter slow
@@ -51,7 +51,7 @@ Last Numbers slow
 	Safetensors.Part(streams, streams.Length - mixer.norm.Length, mixer.norm.Length, 1)
 Next(model FlashNext) Number slow
 	Prepared.Next(Model) >= 0
-	Greedy.Largest(Batch(model.outputs, List(Number) + 0).Sums(mixer.Mixed(Last)))
+	Greedy.Largest(Batch(model.outputs, List(Number) + 0).Sums(mixer.Mix(Last)))
 Drafts(model FlashNext, position Number, count Number) Numbers slow
 	Prepared.Drafts(Model, 2, 3).Length is 3
 	Prepared.Drafts(Model, 2, 1).First is Prepared.Drafts(Model, 2, 3).First

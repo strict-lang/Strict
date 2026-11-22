@@ -9,11 +9,11 @@ constant Started = Speculation(Qwen3.Tiny.Prefilled((1, 2, 3), 0), (1, 2, 3), Qw
 constant Prompted = Qwen3.TinyHybrid.Prefilled((1, 2, 3), 0)
 constant Verified = Prompted.Steps((5, 4, 1), Qwen3.Positions(3, 3), 1)
 constant Drafting = Speculation(Prompted, (1, 2, 3), Prompted.Next, 3, 0, Drafter.Tiny)
-constant Kept = Speculation(Prompted, (1, 2, 3), 5).Truncated(Verified, 5)
-Generated(count Number) Numbers slow
-	Started.Generated(6) is Generation(Qwen3.Tiny).Generated((1, 2, 3), 6)
-	Started.Generated(1) is (2)
-	Drafting.Generated(6) is Generation(Qwen3.TinyHybrid).Generated((1, 2, 3), 6)
+constant Kept = Speculation(Prompted, (1, 2, 3), 5).Truncate(Verified, 5)
+Generate(count Number) Numbers slow
+	Started.Generate(6) is Generation(Qwen3.Tiny).Generate((1, 2, 3), 6)
+	Started.Generate(1) is (2)
+	Drafting.Generate(6) is Generation(Qwen3.TinyHybrid).Generate((1, 2, 3), 6)
 	Safetensors.Part(Finished(count).context, context.Length, count, 1)
 Finished(count Number) Speculation slow
 	Started.Finished(6).context.Length >= 9
@@ -29,31 +29,31 @@ Advanced Speculation
 	positions = Qwen3.Positions(context.Length, block.Length)
 	verified = draft.Length is 0 then model.Step(next, context.Length) else model.Steps(block, positions, 1)
 	predictions = draft.Length is 0 then List(Number) + verified.Next else verified.Nexts
-	accepted = Greedy.Accepted(draft, predictions)
+	accepted = Greedy.Accept(draft, predictions)
 	kept = Safetensors.Part(block, 0, accepted + 1, 1)
-	truncated = accepted is draft.Length then verified else Truncated(verified, kept)
-	remembered = Remembered(verified, kept, predictions(accepted))
-	Speculation(truncated, context + kept, predictions(accepted), Adapted(draft.Length, accepted), steps + 1, remembered)
+	truncated = accepted is draft.Length then verified else Truncate(verified, kept)
+	remembered = Remember(verified, kept, predictions(accepted))
+	Speculation(truncated, context + kept, predictions(accepted), Adapt(draft.Length, accepted), steps + 1, remembered)
 Drafted Numbers slow
 	Started.Drafted.Length is 0
 	Drafting.Drafted.Length is 3
 	primed = drafter.Primed(model, context + next)
 	drafter.headNorm.Length is 0 then Lookup(context + next) else primed.Drafts(model, context.Length, drafts)
-Remembered(verified Qwen3, kept Numbers, following Number) Drafter slow
-	Started.Remembered(Started.model, List(Number) + 2, 1).headNorm.Length is 0
-	Drafting.Remembered(Verified, (5, 4), 1).blocks.First.keys.Length is 20
+Remember(verified Qwen3, kept Numbers, following Number) Drafter slow
+	Started.Remember(Started.model, List(Number) + 2, 1).headNorm.Length is 0
+	Drafting.Remember(Verified, (5, 4), 1).blocks.First.keys.Length is 20
 	if drafter.headNorm.Length is 0
 		return drafter
 	rows = Safetensors.Part(verified.hidden, 0, kept.Length * drafter.embedNorm.Length, 1)
 	tokens = Safetensors.Part(kept, 1, kept.Length - 1, 1) + following
 	drafter.Primed(model, context + next).Extended(model, rows, tokens, Qwen3.Positions(context.Length + 1, kept.Length))
-Adapted(drafted Number, accepted Number) Number slow
-	Started.Adapted(0, 0) is Started.drafts
-	Started.Adapted(15, 3) is 15
-	Started.Adapted(15, 0) is 7
-	Speculation(Started, drafts = 7).Adapted(7, 7) is 15
-	Speculation(Started, drafts = 3).Adapted(3, 0) is 3
-	Drafting.Adapted(3, 3) is 3
+Adapt(drafted Number, accepted Number) Number slow
+	Started.Adapt(0, 0) is Started.drafts
+	Started.Adapt(15, 3) is 15
+	Started.Adapt(15, 0) is 7
+	Speculation(Started, drafts = 7).Adapt(7, 7) is 15
+	Speculation(Started, drafts = 3).Adapt(3, 0) is 3
+	Drafting.Adapt(3, 3) is 3
 	if drafter.headNorm.Length > 0
 		return drafts
 	longer = (2 * drafts + 1).Clamp(3, Longest)
@@ -82,8 +82,8 @@ IsMatch(tokens Numbers, start Number, length Number) Boolean
 		if tokens(start + index) is not tokens(last + index)
 			return false
 	true
-Truncated(verified Qwen3, kept Numbers) Qwen3 slow
-	Speculation(Started, context = (1)).Truncated(Started.model, 5).blocks.First.keys.Length is 2 * 4
+Truncate(verified Qwen3, kept Numbers) Qwen3 slow
+	Speculation(Started, context = (1)).Truncate(Started.model, 5).blocks.First.keys.Length is 2 * 4
 	Kept.Step(2, 4).Scored.Last.IsNearlyEqual(Prompted.Step(5, 3).Step(2, 4).Scored.Last, 0.002)
 	Kept.hidden.Length is 8
 	length = context.Length + kept.Length

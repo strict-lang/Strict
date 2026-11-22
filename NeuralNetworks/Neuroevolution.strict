@@ -3,7 +3,7 @@ constant Generations = 300
 constant Strength = 0.5
 Run
 	started = Process.Elapsed
-	best = Evolved(Networks, Generations)
+	best = Evolve(Networks, Generations)
 	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	logger.Log(Generations + " generations of " + Population + " networks in " + milliseconds + " ms")
 	logger.Log("XOR error " + Xor.Error(best))
@@ -13,8 +13,8 @@ Networks List(Network)
 	Neuroevolution.Networks.Length is Population
 	for Population
 		Network.Random((2, 3, 1))
-Evolved(population List(Network), generations Number) Network
-	Xor.Error(Neuroevolution.Evolved(List(Network) + Network.Pair, 3)) is Xor.Error(Network.Pair)
+Evolve(population List(Network), generations Number) Network
+	Xor.Error(Neuroevolution.Evolve(List(Network) + Network.Pair, 3)) is Xor.Error(Network.Pair)
 	mutable current = population
 	for generations
 		current = Next(current)
@@ -23,10 +23,10 @@ Next(population List(Network)) List(Network) slow
 	Neuroevolution.Next(Neuroevolution.Networks).Length is Population
 	mutable next = List(Network) + Best(population)
 	for Range(1, population.Length)
-		next = next + Mutated(Tournament(population))
+		next = next + Mutate(Tournament(population))
 	next
-Mutated(network Network) Network
-	Neuroevolution.Mutated(Network.Pair).layers.Length is 2
+Mutate(network Network) Network
+	Neuroevolution.Mutate(Network.Pair).layers.Length is 2
 	mutable layers = List(Mutable(Layer))
 	for network.layers
 		layers.Add(value.Mutated(Strength))

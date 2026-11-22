@@ -11,7 +11,7 @@ constant Sixes = Batch(Blocks.Rows("six"), Layer.Unbiased)
 constant Eights = Batch(Blocks.Rows("eight"), Layer.Unbiased)
 constant Threes = Batch(Blocks.Rows("two"), Layer.Unbiased)
 constant Gates = Batch(((1, 0), (0, 1), (2, 0), (0, 3)), Layer.Unbiased)
-constant Wholes = Batch(Safetensors.Bytes.Quantized("a"), Layer.Unbiased)
+constant Wholes = Batch(Safetensors.Bytes.Quantize("a"), Layer.Unbiased)
 constant Tile = 64
 Sums(input Numbers) Numbers slow
 	(Pair.Sums((1, 1)), Pair.Sums((1, 1, 2, 0))) is ((13, 27), (13, 27, 12, 26))
@@ -26,24 +26,24 @@ Sums(input Numbers) Numbers slow
 	rows = weights.Length
 	for rows * input.Length / width
 		Dot(weights(index % rows), 0, input, (index / rows).Floor * width) + biases(index % biases.Length)
-Grouped(bases Numbers, count Number, input Numbers) Numbers slow
-	Pair.Grouped(List(Number) + 1, 1, (1, 1, 2, 0)) is (7, 6)
-	Pair.Grouped(List(Number) + 0, 2, (1, 1, 2, 0)) is (3, 7, 2, 6)
-	Fours.Grouped(List(Number) + 8, 8, Tokens)(3).IsNearlyEqual(Fours.Sums(Tokens)(11), 0.5)
-	Fours.Grouped((0, 8), 8, Long)(83).IsNearlyEqual(Fours.Sums(Long)(163), 0.5)
-	Fours.Grouped((0, 8), 8, Long)(523).IsNearlyEqual(Fours.Sums(Long)(1051), 0.5)
-	Threes.Grouped((0, 0), 16, Long)(1277).IsNearlyEqual(3.704, 0.2)
+Group(bases Numbers, count Number, input Numbers) Numbers slow
+	Pair.Group(List(Number) + 1, 1, (1, 1, 2, 0)) is (7, 6)
+	Pair.Group(List(Number) + 0, 2, (1, 1, 2, 0)) is (3, 7, 2, 6)
+	Fours.Group(List(Number) + 8, 8, Tokens)(3).IsNearlyEqual(Fours.Sums(Tokens)(11), 0.5)
+	Fours.Group((0, 8), 8, Long)(83).IsNearlyEqual(Fours.Sums(Long)(163), 0.5)
+	Fours.Group((0, 8), 8, Long)(523).IsNearlyEqual(Fours.Sums(Long)(1051), 0.5)
+	Threes.Group((0, 0), 16, Long)(1277).IsNearlyEqual(3.704, 0.2)
 	Batch(Fours.weights + Eights.weights, Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Eights.Sums(Long)(1123), 0.1)
 	Batch(Eights.weights + Fours.weights, Layer.Unbiased).Sums(Long)(2259).IsNearlyEqual(Fours.Sums(Long)(1123), 0.5)
 	width = weights.First.Length
 	for count * input.Length / width
 		Dot(weights(bases((index / count / Tile).Floor) + index % count), 0, input, (index / count).Floor * width)
-Gated(input Numbers) Numbers slow
-	Gates.Gated((1, 1, 2, 0))(1).IsNearlyEqual(2.1931757)
-	Gates.Gated((1, 1, 2, 0))(2).IsNearlyEqual(7.0463766)
-	Wholes.Gated(Tokens)(0).IsNearlyEqual(Wholes.Sums(Tokens)(0) * Wholes.Sums(Tokens)(2), 40)
-	Wholes.Gated(Tokens)(1).IsNearlyEqual(Wholes.Sums(Tokens)(1) * Wholes.Sums(Tokens)(3), 130)
-	Fours.Gated(Tokens)(77).IsNearlyEqual(-85.234, 2)
+Gate(input Numbers) Numbers slow
+	Gates.Gate((1, 1, 2, 0))(1).IsNearlyEqual(2.1931757)
+	Gates.Gate((1, 1, 2, 0))(2).IsNearlyEqual(7.0463766)
+	Wholes.Gate(Tokens)(0).IsNearlyEqual(Wholes.Sums(Tokens)(0) * Wholes.Sums(Tokens)(2), 40)
+	Wholes.Gate(Tokens)(1).IsNearlyEqual(Wholes.Sums(Tokens)(1) * Wholes.Sums(Tokens)(3), 130)
+	Fours.Gate(Tokens)(77).IsNearlyEqual(-85.234, 2)
 	Batch(Blocks.Rows("four") + Eights.weights, Fours.biases).Sums(Long)(2259).IsNearlyEqual(Eights.Sums(Long)(1123), 0.1)
 	Batch(Blocks.Rows("eight") + Fours.weights, Fours.biases).Sums(Long)(2259).IsNearlyEqual(Fours.Sums(Long)(1123), 0.5)
 	width = weights.First.Length

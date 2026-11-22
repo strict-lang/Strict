@@ -4,14 +4,14 @@ constant TopP = 0.95
 constant TailShare = 0.95
 Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32, temperature = 0)
 	if MachineUse.Weights("Qwen3Benchmark", path).IsAdmitted
-		Ran(path, bits, count, repeats, batch, cacheBits, temperature)
-Ran(path Text, bits Number, count Number, repeats Number, batch Number, cacheBits Number, temperature Number)
+		Benchmark(path, bits, count, repeats, batch, cacheBits, temperature)
+Benchmark(path Text, bits Number, count Number, repeats Number, batch Number, cacheBits Number, temperature Number)
 	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	started = Process.Elapsed
 	model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)
 	loaded = Process.Elapsed
-	prompt = Repeated(tokenizer.Encoded(Prompt), repeats)
-	logger.Log(Prompt + tokenizer.Decoded(Sampled(model.Prefilled(prompt, 0), prompt.Length, count, temperature)))
+	prompt = Repeat(tokenizer.Encode(Prompt), repeats)
+	logger.Log(Prompt + tokenizer.Decode(Sample(model.Prefilled(prompt, 0), prompt.Length, count, temperature)))
 	prefill = Fastest(model, prompt)
 	prefilled = model.Prefilled(prompt, 0)
 	first = prefilled.Next
@@ -26,26 +26,26 @@ Fastest(model Qwen3, prompt Numbers) Number slow
 		milliseconds = (Process.Elapsed - before) * 1000 / prompt.Length
 		fastest = first >= 0 and milliseconds < fastest then milliseconds else fastest
 	fastest
-Sampled(model Qwen3, position Number, count Number, temperature Number) Numbers slow
-	Qwen3Benchmark.Sampled(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
+Sample(model Qwen3, position Number, count Number, temperature Number) Numbers slow
+	Qwen3Benchmark.Sample(Qwen3.Tiny.Step(1, 0), 1, 2, 1).Length is 2
 	started = Process.Elapsed
-	tokens = Generation(model, Sampling(temperature, TopK, TopP, PseudoRandom(1))).Continued(position, count)
+	tokens = Generation(model, Sampling(temperature, TopK, TopP, PseudoRandom(1))).Continue(position, count)
 	milliseconds = ((Process.Elapsed - started) * 1000 / count).Round(2)
 	if temperature > 0
 		logger.Log("sampled " + count + " tokens at temperature " + temperature + " in " + milliseconds + " ms per token")
 	tokens
-Repeated(tokens Numbers, repeats Number) Numbers
-	Qwen3Benchmark.Repeated((1, 2), 2) is (1, 2, 1, 2)
+Repeat(tokens Numbers, repeats Number) Numbers
+	Qwen3Benchmark.Repeat((1, 2), 2) is (1, 2, 1, 2)
 	for tokens.Length * repeats
 		tokens(index % tokens.Length)
 Durations(model Qwen3, token Number, start Number, count Number, batch Number) Numbers slow
 	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 1).Length is 2
 	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0).Copies(2), 0, 1, 2, 2).Length is 2
 	mutable current = model
-	mutable chosen = Repeated(List(Number) + token, batch)
+	mutable chosen = Repeat(List(Number) + token, batch)
 	mutable last = Process.Elapsed
 	for count
-		current = current.Steps(chosen, Repeated(List(Number) + (start + index), batch), batch)
+		current = current.Steps(chosen, Repeat(List(Number) + (start + index), batch), batch)
 		chosen = current.Nexts
 		GpuMemory.Finished
 		duration = (Process.Elapsed - last) * 1000

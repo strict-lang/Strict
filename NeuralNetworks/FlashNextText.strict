@@ -4,28 +4,28 @@ constant Probe = FlashNextText
 constant Head = "NeuralNetworks/tinyqwen4expmtp.gguf"
 Run(folder Text, draft = "")
 	if MachineUse.Weights("FlashNextText", folder + "/" + Weights).IsAdmitted
-		Ran(folder, draft)
-Ran(folder Text, draft Text)
+		Generate(folder, draft)
+Generate(folder Text, draft Text)
 	path = folder + "/" + Weights
 	started = Process.Elapsed
 	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
-	prompt = tokenizer.Encoded(Qwen3Text.Prompt)
+	prompt = tokenizer.Encode(Qwen3Text.Prompt)
 	model = FlashNext.Loaded(path, 8)
 	loaded = Process.Elapsed
 	prefilled = model.Steps(prompt, 0)
 	prompted = Process.Elapsed
-	generated = Continued(prefilled, prompt, draft, Count)
+	generated = Continue(prefilled, prompt, draft, Count)
 	finished = Process.Elapsed
-	logger.Log(Qwen3Text.Prompt + tokenizer.Decoded(generated))
-	logger.Log("Qwen3.8-Flash-Next loaded in " + (loaded - started).Round(1) + " s, " + Timed(loaded, prompted, finished))
-Continued(prefilled FlashNext, prompt Numbers, draft Text, count Number) Numbers slow
-	Probe.Continued(FlashNext.Tiny.Steps((1, 2), 0), (1, 2), "", 2) is (19, 13)
-	Probe.Continued(FlashSpeculation.Prompted, (1, 2, 3), Head, 3) is Generation(FlashNext.Tiny).Generated((1, 2, 3), 3)
+	logger.Log(Qwen3Text.Prompt + tokenizer.Decode(generated))
+	logger.Log("Qwen3.8-Flash-Next loaded in " + (loaded - started).Round(1) + " s, " + Report(loaded, prompted, finished))
+Continue(prefilled FlashNext, prompt Numbers, draft Text, count Number) Numbers slow
+	Probe.Continue(FlashNext.Tiny.Steps((1, 2), 0), (1, 2), "", 2) is (19, 13)
+	Probe.Continue(FlashSpeculation.Prompted, (1, 2, 3), Head, 3) is Generation(FlashNext.Tiny).Generate((1, 2, 3), 3)
 	if draft is ""
-		return Generation(prefilled).Continued(prompt.Length, count)
+		return Generation(prefilled).Continue(prompt.Length, count)
 	drafter = FlashDrafter.Loaded(Gguf(draft, 8))
-	FlashSpeculation(prefilled, prompt, Greedy.Largest(prefilled.Scored), drafter).Generated(count)
-Timed(loaded Number, prompted Number, finished Number) Text
-	Probe.Timed(0, 1, 4) is "prompt 1000 ms, 100 ms per token"
+	FlashSpeculation(prefilled, prompt, Greedy.Largest(prefilled.Scored), drafter).Generate(count)
+Report(loaded Number, prompted Number, finished Number) Text
+	Probe.Report(0, 1, 4) is "prompt 1000 ms, 100 ms per token"
 	decoded = ((finished - prompted) * 1000 / Count).Round(1)
 	"prompt " + ((prompted - loaded) * 1000).Round + " ms, " + decoded + " ms per token"

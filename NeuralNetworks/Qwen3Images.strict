@@ -1,10 +1,10 @@
 has model Qwen3
 has vision QwenVision
 constant Language = QwenSafetensors(Safetensors("NeuralNetworks/tinyqwen3vl.safetensors", 32, "model."), 16, 0, 0)
-constant Tiny = Qwen3Images(Qwen3Images.Language.Loaded(5000000), QwenVision.Tiny)
-constant Prompted = Qwen3Images.Tiny.Prefilled(((1, 2), (3, 4, 5)), List(Numbers) + QwenVision.Image, 32, 48)
-constant Twice = Qwen3Images.Tiny.Prefilled(((1, 2), (6, 7), (3, 4, 5)), (QwenVision.Image, QwenVision.Image), 32, 48)
-Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number) Qwen3 slow
+constant Tiny = Qwen3Images(Qwen3Images.Language.Load(5000000), QwenVision.Tiny)
+constant Prompted = Qwen3Images.Tiny.Prefill(((1, 2), (3, 4, 5)), List(Numbers) + QwenVision.Image, 32, 48)
+constant Twice = Qwen3Images.Tiny.Prefill(((1, 2), (6, 7), (3, 4, 5)), (QwenVision.Image, QwenVision.Image), 32, 48)
+Prefill(texts List(Numbers), images List(Numbers), height Number, width Number) Qwen3 slow
 	Prompted.hidden(0).IsNearlyEqual(-6.42568, 0.05)
 	Prompted.hidden(150).IsNearlyEqual(-2.22829, 0.05)
 	Prompted.hidden(300).IsNearlyEqual(-4.96717, 0.05)
@@ -12,33 +12,33 @@ Prefilled(texts List(Numbers), images List(Numbers), height Number, width Number
 	Twice.hidden(700).IsNearlyEqual(-11.63847, 0.05)
 	Twice.hidden(1100).IsNearlyEqual(0.35246, 0.05)
 	Twice.hidden(1200).IsNearlyEqual(-0.01126, 0.05)
-	encoded = Encoded(images, height, width)
+	encoded = Encode(images, height, width)
 	lengths = Lengths(texts)
 	size = encoded.First.First.Length / model.norm.Length
 	rotation = Rotation(lengths, size, vision.Grid(height, width)(1) / 2)
-	model.Forwarded(Embedded(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
-Encoded(images List(Numbers), height Number, width Number) List(List(Numbers)) slow
-	Tiny.Encoded(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
+	model.Forwarded(Embedd(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
+Encode(images List(Numbers), height Number, width Number) List(List(Numbers)) slow
+	Tiny.Encode(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
 	for images
-		vision.Encoded(value, height, width)
+		vision.Encode(value, height, width)
 Lengths(texts List(Numbers)) Numbers
 	Tiny.Lengths(((1, 2), (3, 4, 5))) is (2, 3)
 	for texts
 		value.Length
-Embedded(texts List(Numbers), encoded List(List(Numbers))) Numbers
-	Tiny.Embedded(((1, 2), (3, 4), (5, 6)), (((7, 8), (0, 0)), ((9, 10), (0, 0)))).Length is 388
+Embedd(texts List(Numbers), encoded List(List(Numbers))) Numbers
+	Tiny.Embedd(((1, 2), (3, 4), (5, 6)), (((7, 8), (0, 0)), ((9, 10), (0, 0)))).Length is 388
 	mutable embedded = List(Number)
 	for texts
-		embedded = embedded + Restored(value)
+		embedded = embedded + Restore(value)
 		if index < encoded.Length
 			embedded = embedded + encoded(index).First
 	embedded
 Stacks(encoded List(List(Numbers))) List(Numbers)
 	Tiny.Stacks((((1, 2), (3, 4)), ((5, 6), (7, 8)))) is List(Numbers) + (3, 4, 7, 8)
 	for encoded.First.Length - 1
-		Joined(encoded, index + 1)
-Joined(encoded List(List(Numbers)), layer Number) Numbers
-	Tiny.Joined((((1, 2), (3, 4)), ((5, 6), (7, 8))), 1) is (3, 4, 7, 8)
+		Join(encoded, index + 1)
+Join(encoded List(List(Numbers)), layer Number) Numbers
+	Tiny.Join((((1, 2), (3, 4)), ((5, 6), (7, 8))), 1) is (3, 4, 7, 8)
 	mutable joined = List(Number)
 	for encoded
 		joined = joined + value(layer)
@@ -47,17 +47,17 @@ Rows(lengths Numbers, size Number) Numbers
 	Tiny.Rows((1, 1, 1), 2) is (-1, 0, 1, -1, 2, 3, -1)
 	mutable rows = List(Number)
 	for lengths
-		rows = rows + Counted(-1, value, 0)
+		rows = rows + Enumerate(-1, value, 0)
 		if index < lengths.Length - 1
-			rows = rows + Counted(index * size, size, 1)
+			rows = rows + Enumerate(index * size, size, 1)
 	rows
 Rotation(lengths Numbers, size Number, columns Number) Numbers slow
 	Tiny.Rotation((2, 3), 6, 3).Length is 11 * 32
 	heights = Axis(1, lengths, size, columns)
 	model.Rotations(Axis(0, lengths, size, columns), heights, Axis(2, lengths, size, columns))
-Restored(tokens Numbers) Numbers
-	Tiny.Restored((1, 2)).Length is 128
-	model.basis.Restored(model.Embedded(tokens), model.norm.Length)
+Restore(tokens Numbers) Numbers
+	Tiny.Restore((1, 2)).Length is 128
+	model.basis.Restore(model.Embedd(tokens), model.norm.Length)
 Axis(axis Number, lengths Numbers, size Number, columns Number) Numbers
 	Tiny.Axis(0, (2, 3), 6, 3) is (0, 1, 2, 2, 2, 2, 2, 2, 5, 6, 7)
 	Tiny.Axis(1, (2, 3), 6, 3) is (0, 1, 2, 2, 2, 3, 3, 3, 5, 6, 7)
@@ -65,7 +65,7 @@ Axis(axis Number, lengths Numbers, size Number, columns Number) Numbers
 	mutable next = 0
 	mutable positions = List(Number)
 	for lengths
-		positions = positions + Counted(next, value, 1)
+		positions = positions + Enumerate(next, value, 1)
 		next = next + value
 		if index < lengths.Length - 1
 			positions = positions + Spread(axis, next, size, columns)
@@ -76,7 +76,7 @@ Spread(axis Number, start Number, size Number, columns Number) Numbers
 	Tiny.Spread(2, 2, 4, 2) is (2, 3, 2, 3)
 	for size
 		start + (axis is 1 then (index / columns).Floor else (axis is 2 then index % columns else 0))
-Counted(start Number, count Number, step Number) Numbers
-	(Tiny.Counted(5, 3, 1), Tiny.Counted(-1, 2, 0)) is ((5, 6, 7), (-1, -1))
+Enumerate(start Number, count Number, step Number) Numbers
+	(Tiny.Enumerate(5, 3, 1), Tiny.Enumerate(-1, 2, 0)) is ((5, 6, 7), (-1, -1))
 	for count
 		start + index * step

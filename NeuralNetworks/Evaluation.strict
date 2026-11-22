@@ -9,17 +9,17 @@ Run(path Text)
 	weights = path + "/model.safetensors"
 	gpt2 = isQwen then List(Numbers) else Perplexity(Gpt2.Loaded(weights, BFloat16.Bits)).Reports(tokenizer, texts)
 	reports = isQwen then Perplexity(Qwen3.Loaded(path, 8)).Reports(tokenizer, texts) else gpt2
-	logger.Log(path + " English: " + Described(reports(0)))
-	logger.Log(path + " Strict: " + Described(reports(1)))
+	logger.Log(path + " English: " + Describe(reports(0)))
+	logger.Log(path + " Strict: " + Describe(reports(1)))
 Heldout(count Number) List(Texts) slow
 	Evaluation.Heldout(1)(1).First.StartsWith("has real Number")
-	Texts(Downloaded(Corpus + "heldout.txt", Book), "To Sherlock Holmes", "Math", count)
+	Texts(Download(Corpus + "heldout.txt", Book), "To Sherlock Holmes", "Math", count)
 Calibration(count Number) List(Texts) slow
 	Evaluation.Calibration(1)(0).First.StartsWith("It is a truth")
-	Texts(Downloaded(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
-Downloaded(path Text, address Text) Text slow
-	Evaluation.Downloaded("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
-	Evaluation.Downloaded("NeuralNetworks/corpus/missing-download.txt", "") is Error
+	Texts(Download(Corpus + "calibration.txt", Novel), "It is a truth", "Compiler", count)
+Download(path Text, address Text) Text slow
+	Evaluation.Download("NeuralNetworks/Perplexity.strict", "").StartsWith("has model")
+	Evaluation.Download("NeuralNetworks/corpus/missing-download.txt", "") is Error
 	if File(path).Exists is false
 		partial = path + ".part"
 		download = Process.RunTool("curl", "-sfL --create-dirs -o \"" + partial + "\" \"" + address + "\"")
@@ -48,8 +48,8 @@ Sources(folder Text) Text slow
 	for Directory.Files(folder, "*.strict")
 		joined = joined + Text.Combine(File(value).ReadLines, "\n") + "\n"
 	joined
-Described(report Numbers) Text
-	Evaluation.Described((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
+Describe(report Numbers) Text
+	Evaluation.Describe((6.931471805599453, 10, 20, 0.5)).StartsWith("perplexity 2, 0.5 bits per character")
 	perplexity = (report(0) / report(1)).Exponential.Round(3)
 	constant NatsPerBit = 0.6931471805599453
 	bits = (report(0) / NatsPerBit / report(2)).Round(4)

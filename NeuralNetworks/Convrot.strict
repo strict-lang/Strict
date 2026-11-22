@@ -14,9 +14,9 @@ Rotated BFloat16s
 	third = group > ThirdStep then Stage(second, ThirdStep) else second
 	for values.Length
 		group > FourthStep then Butterfly(third, index, FourthStep) else third(index)
-Applied(rotated Boolean) Numbers
-	Unit.Applied(true) is Unit.Rotated
-	Unit.Applied(false) is Unit.values
+Apply(rotated Boolean) Numbers
+	Unit.Apply(true) is Unit.Rotated
+	Unit.Apply(false) is Unit.values
 	rotated then Rotated else values
 Stage(input Numbers, step Number) BFloat16s
 	Unit.Stage((1, 0, 0, 0), 1) is (0.5, 0.5, 0.5, -0.5)

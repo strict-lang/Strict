@@ -28,16 +28,16 @@ Extended(model Qwen3, rows Numbers, tokens Numbers, positions Numbers) Drafter s
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).blocks.First.keys.Length is 8
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).hidden.Length is 8
 	width = embedNorm.Length
-	embedded = Qwen3Block.Normalized(model.Embedded(tokens), 0, tokens.Length * width, embedNorm)
-	joined = Joined(embedded, Qwen3Block.Normalized(rows, 0, rows.Length, hiddenNorm))
+	embedded = Qwen3Block.Normalize(model.Embedd(tokens), 0, tokens.Length * width, embedNorm)
+	joined = Join(embedded, Qwen3Block.Normalize(rows, 0, rows.Length, hiddenNorm))
 	projected = Batch(projection.weights, projection.biases).Sums(joined)
 	cached = blocks.First.Cached(projected, model.Rotations(positions), model.cacheBits)
 	kept = List(Qwen3Block) + Qwen3Block(cached, queries = List(Number), hybrid = Hybrid.None)
 	output = cached.Output(projected, 1)
 	Drafter(value, blocks = kept, hidden = Safetensors.Part(output, output.Length - width, width, 1))
-Joined(first Numbers, second Numbers) Numbers slow
-	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(8) is 0
-	Tiny.Joined((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(16) is 1
+Join(first Numbers, second Numbers) Numbers slow
+	Tiny.Join((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(8) is 0
+	Tiny.Join((1, 2, 3, 4, 5, 6, 7, 8, 1, 2, 3, 4, 5, 6, 7, 8), Layer.Zeros(16))(16) is 1
 	width = embedNorm.Length
 	doubled = 2 * width
 	for first.Length * 2

@@ -20,19 +20,19 @@ Mixed(normed Numbers, sequences = 1) ShortConvolution
 	Tiny.Mixed((1, 2, 3, 4)).Mixed((1, 1)).output is (5.5, 33)
 	combined = Basis.None.Sums(inputs.weights, inputs.biases, normed)
 	channels = projection.weights.First.Length
-	gated = Gated(combined, channels)
-	mixed = Picked(combined, Convolved(gated, channels, sequences), channels)
+	gated = Gate(combined, channels)
+	mixed = Pick(combined, Convolve(gated, channels, sequences), channels)
 	projected = Basis.None.Sums(projection.weights, projection.biases, mixed)
-	ShortConvolution(value, window = Shifted(gated, channels, sequences), output = projected)
-Gated(combined Numbers, channels Number) Numbers
-	Tiny.Gated((1, 2, 3, 4, 5, 6), 2) is (5, 12)
+	ShortConvolution(value, window = Shift(gated, channels, sequences), output = projected)
+Gate(combined Numbers, channels Number) Numbers
+	Tiny.Gate((1, 2, 3, 4, 5, 6), 2) is (5, 12)
 	offset = 2 * channels
 	for combined.Length / 3
 		start = (index / channels).Floor * 3 * channels + index % channels
 		combined(start) * combined(start + offset)
-Convolved(gated Numbers, channels Number, sequences Number) Numbers
-	Tiny.Convolved((1, 4, 9, 16), 2, 1) is (1, 4, 9.5, 24)
-	ShortConvolution(Tiny, window = (2, 3)).Convolved((1, 1), 2, 1) is (2, 7)
+Convolve(gated Numbers, channels Number, sequences Number) Numbers
+	Tiny.Convolve((1, 4, 9, 16), 2, 1) is (1, 4, 9.5, 24)
+	ShortConvolution(Tiny, window = (2, 3)).Convolve((1, 1), 2, 1) is (2, 7)
 	perSequence = gated.Length / channels / sequences
 	for gated.Length
 		token = (index / channels).Floor
@@ -42,22 +42,22 @@ Convolved(gated Numbers, channels Number, sequences Number) Numbers
 		first = sequence * perSequence
 		mutable sum = 0
 		for width
-			sum = sum + kernel(channel * width + value) * Tapped(gated, first, row + value, sequence, channel, channels)
+			sum = sum + kernel(channel * width + value) * Tap(gated, first, row + value, sequence, channel, channels)
 		sum
-Tapped(gated Numbers, first Number, row Number, sequence Number, channel Number, channels Number) Number
-	Tiny.Tapped((1, 4), 0, -1, 0, 0, 2) is 0
-	ShortConvolution(Tiny, window = (2, 3)).Tapped((1, 4), 0, -1, 0, 1, 2) is 3
-	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Tapped((1, 4, 1, 4), 1, -1, 1, 0, 2) is 4
+Tap(gated Numbers, first Number, row Number, sequence Number, channel Number, channels Number) Number
+	Tiny.Tap((1, 4), 0, -1, 0, 0, 2) is 0
+	ShortConvolution(Tiny, window = (2, 3)).Tap((1, 4), 0, -1, 0, 1, 2) is 3
+	ShortConvolution(Tiny, window = (2, 3, 4, 5)).Tap((1, 4, 1, 4), 1, -1, 1, 0, 2) is 4
 	if row >= 0
 		return gated((first + row) * channels + channel)
 	Earlier(sequence * (width - 1) + width - 1 + row, channel, channels)
-Picked(combined Numbers, convolved Numbers, channels Number) Numbers
-	Tiny.Picked((1, 2, 3, 4, 5, 6), (10, 20), 2) is (30, 80)
+Pick(combined Numbers, convolved Numbers, channels Number) Numbers
+	Tiny.Pick((1, 2, 3, 4, 5, 6), (10, 20), 2) is (30, 80)
 	for convolved.Length
 		combined((index / channels).Floor * 3 * channels + channels + index % channels) * convolved(index)
-Shifted(gated Numbers, channels Number, sequences Number) Numbers
-	Tiny.Shifted((1, 4, 9, 16), 2, 1) is (9, 16)
-	ShortConvolution(Tiny, width = 3).Shifted((1, 4), 2, 1) is (0, 0, 1, 4)
+Shift(gated Numbers, channels Number, sequences Number) Numbers
+	Tiny.Shift((1, 4, 9, 16), 2, 1) is (9, 16)
+	ShortConvolution(Tiny, width = 3).Shift((1, 4), 2, 1) is (0, 0, 1, 4)
 	kept = width - 1
 	perSequence = gated.Length / channels / sequences
 	for sequences * kept * channels
@@ -71,8 +71,8 @@ Earlier(row Number, channel Number, channels Number) Number
 	window.Length is 0 then 0 else window(row * channels + channel)
 Copied(count Number) ShortConvolution
 	ShortConvolution(Tiny, window = (2, 3)).Copied(2).window is (2, 3, 2, 3)
-	ShortConvolution(value, window = Repeated(count))
-Repeated(count Number) Numbers
-	ShortConvolution(Tiny, window = (2, 3)).Repeated(2) is (2, 3, 2, 3)
+	ShortConvolution(value, window = Repeat(count))
+Repeat(count Number) Numbers
+	ShortConvolution(Tiny, window = (2, 3)).Repeat(2) is (2, 3, 2, 3)
 	for count * window.Length
 		window(index % window.Length)

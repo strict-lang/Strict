@@ -5,19 +5,19 @@ constant Count = 24
 Run(folder Text)
 	path = folder + "/" + Weights
 	if File(path).Exists is false
-		Downloaded(path)
+		Download(path)
 	if MachineUse.Weights("Qwen3CoderText", path).IsAdmitted
-		Ran(folder)
-Ran(folder Text)
+		Generate(folder)
+Generate(folder Text)
 	path = folder + "/" + Weights
 	started = Process.Elapsed
 	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	model = Qwen3.Loaded(path, 4)
 	loaded = Process.Elapsed
-	generated = Generation(model).Generated(tokenizer.Encoded(Prompt), Count)
+	generated = Generation(model).Generate(tokenizer.Encode(Prompt), Count)
 	milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
-	logger.Log(Prompt + tokenizer.Decoded(generated))
+	logger.Log(Prompt + tokenizer.Decode(generated))
 	logger.Log("Qwen3-Coder-30B-A3B loaded in " + (loaded - started).Round(1) + " s, " + milliseconds + " ms per token")
-Downloaded(path Text) slow
+Download(path Text) slow
 	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"").HasFailed
 		return Error("DownloadFailed: " + Address + Weights)

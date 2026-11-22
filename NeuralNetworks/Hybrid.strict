@@ -32,7 +32,7 @@ Prepared(input Numbers, sequences = 1) Hybrid
 	mutable stepped = List(Mutable(DeltaBlock))
 	mutable combinations = List(Mutable(Numbers))
 	for layers
-		combined = value.Combined(hidden)
+		combined = value.Combine(hidden)
 		cached = value.Cached(combined, sequences)
 		hidden = cached.Output(hidden)
 		stepped.Add(DeltaBlock(cached, merged = List(Number)))
@@ -43,9 +43,9 @@ Opened(combined Numbers, tokens Number, start Number) Hybrid
 	None.Opened((1, 2, 3, 4), 1, 4).gates.Length is 0
 	width = combined.Length / tokens
 	start is width then value else Hybrid(value, gates = Batch.Columns(combined, width, start, width - start))
-Gated(merged Numbers) Numbers
-	None.Gated((1, 2)) is (1, 2)
-	Hybrid(List(DeltaBlock), gates = (0, 0)).Gated((1, 2)) is (0.5, 1)
+Gate(merged Numbers) Numbers
+	None.Gate((1, 2)) is (1, 2)
+	Hybrid(List(DeltaBlock), gates = (0, 0)).Gate((1, 2)) is (0.5, 1)
 	if gates.Length is 0
 		return merged
 	for merged

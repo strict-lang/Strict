@@ -9,36 +9,36 @@ has expanded Numbers
 has Output Numbers
 constant Rows = Gpt2Block.Weights.Rows("wte.weight")
 constant Tiny = Gpt2Pass.Forwarded(Gpt2Block.Tiny, Rows(0) + Rows(1))
-constant Backwards = Gpt2Pass.Transposed(Gpt2Block.Weights, "h.0.")
+constant Backwards = Gpt2Pass.Transpose(Gpt2Block.Weights, "h.0.")
 constant Gradient = (-0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25, -0.5, -0.25, 0, 0.25)
 constant Zero = List(Number) + 0
 Forwarded(source Gpt2Block, start Numbers) Gpt2Pass slow
 	Tiny.Output(0).IsNearlyEqual(-4.932905037164028)
 	Tiny.Output(12).IsNearlyEqual(5.159402482792729)
-	normedStart = Gpt2Block.Normalized(start, source.attentionGain, source.attentionBias)
+	normedStart = Gpt2Block.Normalize(start, source.attentionGain, source.attentionBias)
 	projections = Batch(source.attention.weights, source.attention.biases).Sums(normedStart)
-	attended = Gpt2Pass.Attended(projections, source.attentionGain.Length).Merged
-	residual = Gpt2Block.Added(start, Batch(source.projection.weights, source.projection.biases).Sums(attended))
-	normedResidual = Gpt2Block.Normalized(residual, source.mlpGain, source.mlpBias)
+	attended = Gpt2Pass.Attend(projections, source.attentionGain.Length).Merged
+	residual = Gpt2Block.Add(start, Batch(source.projection.weights, source.projection.biases).Sums(attended))
+	normedResidual = Gpt2Block.Normalize(residual, source.mlpGain, source.mlpBias)
 	hidden = Batch(source.expansion.weights, source.expansion.biases).Sums(normedResidual)
 	contracted = Batch(source.contraction.weights, source.contraction.biases).Sums(Gpt2Block.Gelu(hidden))
-	output = Gpt2Block.Added(residual, contracted)
+	output = Gpt2Block.Add(residual, contracted)
 	Gpt2Pass(source, start, normedStart, projections, attended, residual, normedResidual, hidden, output)
-Attended(numbers Numbers, width Number) Attention slow
-	Tiny.Attended(Tiny.combined, 12).queries.Length is 24
+Attend(numbers Numbers, width Number) Attention slow
+	Tiny.Attend(Tiny.combined, 12).queries.Length is 24
 	stride = 3 * width
 	queries = Batch.Columns(numbers, stride, 0, width)
 	keys = Batch.Columns(numbers, stride, width, width)
 	size = width / Gpt2Block.Heads
 	Attention(queries, keys, Batch.Columns(numbers, stride, 2 * width, width), Gpt2Block.Heads, Gpt2Block.Heads, size)
-Transposed(weights Safetensors, prefix Text) Gpt2Block
+Transpose(weights Safetensors, prefix Text) Gpt2Block
 	Backwards.expansion.weights.Length is 12
-	attention = Flipped(weights, prefix + "attn.c_attn")
-	projection = Flipped(weights, prefix + "attn.c_proj")
-	expansion = Flipped(weights, prefix + "mlp.c_fc")
-	Gpt2Block(Zero, Zero, attention, projection, Zero, Zero, expansion, Flipped(weights, prefix + "mlp.c_proj"))
-Flipped(weights Safetensors, name Text) Layer slow
-	Tiny.Flipped(Gpt2Block.Weights, "h.0.mlp.c_fc").weights.First.Length is 48
+	attention = Flip(weights, prefix + "attn.c_attn")
+	projection = Flip(weights, prefix + "attn.c_proj")
+	expansion = Flip(weights, prefix + "mlp.c_fc")
+	Gpt2Block(Zero, Zero, attention, projection, Zero, Zero, expansion, Flip(weights, prefix + "mlp.c_proj"))
+Flip(weights Safetensors, name Text) Layer slow
+	Tiny.Flip(Gpt2Block.Weights, "h.0.mlp.c_fc").weights.First.Length is 48
 	Layer(weights.Rows(name + ".weight"), Zero)
 Backward(gradient Numbers, transposed Gpt2Block) List(Numbers) slow
 	Tiny.Backward(Gradient, Backwards)(0)(0).IsNearlyEqual(-4.159665552472472)
@@ -53,10 +53,10 @@ Backward(gradient Numbers, transposed Gpt2Block) List(Numbers) slow
 	(attention(0), attention(1), attention(2), attention(3), attention(4), mlp(1), mlp(2), mlp(3), mlp(4))
 Expanding(gradient Numbers, transposed Gpt2Block) List(Numbers) slow
 	Tiny.Expanding(Gradient, Backwards).Length is 5
-	expandedGradient = Gelued(Batch(transposed.contraction.weights, Zero).Sums(gradient))
+	expandedGradient = Gelue(Batch(transposed.contraction.weights, Zero).Sums(gradient))
 	secondGradient = Batch(transposed.expansion.weights, Zero).Sums(expandedGradient)
 	normalization = Normalization(middle, block.mlpGain)
-	middleGradient = Gpt2Block.Added(gradient, normalization.Inputs(secondGradient))
+	middleGradient = Gpt2Block.Add(gradient, normalization.Inputs(secondGradient))
 	width = block.mlpGain.Length
 	biases = Gpt2Pass.Sums(expandedGradient, expandedGradient.Length / (input.Length / width))
 	norms = (normalization.Gains(secondGradient), normalization.Biases(secondGradient))
@@ -65,24 +65,24 @@ Attending(gradient Numbers, transposed Gpt2Block) List(Numbers)
 	Tiny.Attending(Gradient, Backwards).Length is 5
 	width = block.attentionGain.Length
 	mergedGradient = Batch(transposed.projection.weights, Zero).Sums(gradient)
-	attended = AttentionGradients(Attended(combined, width), mergedGradient)
+	attended = AttentionGradients(Attend(combined, width), mergedGradient)
 	shares = attended.Shares
-	scores = attended.Scored(shares)
-	combinedGradient = Combined(attended.Queries(scores), attended.Keys(scores), attended.Values(shares), width)
+	scores = attended.Score(shares)
+	combinedGradient = Combine(attended.Queries(scores), attended.Keys(scores), attended.Values(shares), width)
 	firstGradient = Batch(transposed.attention.weights, Zero).Sums(combinedGradient)
 	normalization = Normalization(input, block.attentionGain)
-	inputGradient = Gpt2Block.Added(gradient, normalization.Inputs(firstGradient))
+	inputGradient = Gpt2Block.Add(gradient, normalization.Inputs(firstGradient))
 	norms = (normalization.Gains(firstGradient), normalization.Biases(firstGradient))
 	(inputGradient, norms(0), norms(1), Gpt2Pass.Sums(combinedGradient, 3 * width), Gpt2Pass.Sums(gradient, width))
-Combined(queries Numbers, keys Numbers, values Numbers, width Number) Numbers
-	Tiny.Combined((1, 2), (3, 4), (5, 6), 1) is (1, 3, 5, 2, 4, 6)
+Combine(queries Numbers, keys Numbers, values Numbers, width Number) Numbers
+	Tiny.Combine((1, 2), (3, 4), (5, 6), 1) is (1, 3, 5, 2, 4, 6)
 	tripled = 3 * width
 	for 3 * queries.Length
 		at = (index / tripled).Floor * width + index % width
 		part = ((index % tripled) / width).Floor
 		part is 0 then queries(at) else (part is 1 then keys(at) else values(at))
-Gelued(gradient Numbers) Numbers
-	Tiny.Gelued(Tiny.expanded).Length is 96
+Gelue(gradient Numbers) Numbers
+	Tiny.Gelue(Tiny.expanded).Length is 96
 	for gradient
 		value * Slope(expanded(index))
 Slope(number Number) Number

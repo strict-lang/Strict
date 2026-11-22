@@ -3,7 +3,7 @@ has flips Numbers
 has size Number
 constant Radix = 32
 constant Unflipped = List(Number) + 1
-constant Pattern = Sylvester(List(Number), Unflipped, 1024).Repeated(2048)
+constant Pattern = Sylvester(List(Number), Unflipped, 1024).Repeat(2048)
 constant Wide = Sylvester(Pattern, Unflipped, 1024)
 Rotated Numbers slow
 	Sylvester((0, 1, 0, 0, 0, 0, 1, 0), Unflipped, 4).Rotated is (0.5, -0.5, 0.5, -0.5, 0.5, 0.5, -0.5, -0.5)
@@ -37,7 +37,7 @@ Sign(row Number, column Number) Number
 	first = (row % 2) * (column % 2) + ((row / 2).Floor % 2) * ((column / 2).Floor % 2)
 	second = ((row / 4).Floor % 2) * ((column / 4).Floor % 2) + ((row / 8).Floor % 2) * ((column / 8).Floor % 2)
 	1 - 2 * ((first + second + ((row / FifthBit).Floor % 2) * ((column / FifthBit).Floor % 2)) % 2)
-Repeated(count Number) Numbers
-	Wide.Repeated(9) is (-3, -2, -1, 0, 1, 2, 3, -3, -2)
+Repeat(count Number) Numbers
+	Wide.Repeat(9) is (-3, -2, -1, 0, 1, 2, 3, -3, -2)
 	for count
 		index % 7 - 3

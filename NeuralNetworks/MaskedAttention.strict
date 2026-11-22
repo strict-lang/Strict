@@ -5,14 +5,14 @@ Merged Numbers
 	Padded.Merged(2) is 5
 	Padded.Merged(0).IsNearlyEqual(3.6604769013466867)
 	positions = attention.keys.Length / attention.groups / attention.size / attention.sequences
-	shares = Softmax.Shares(Masked(attention.Scores(positions), positions), positions)
+	shares = Softmax.Shares(Mask(attention.Scores(positions), positions), positions)
 	rows = attention.queries.Length / attention.sequences / attention.heads / attention.size
 	for attention.queries.Length
 		row = (index / attention.size).Floor
 		visible = attention.Last(row, positions, rows) + 1
-		Softmax.Weighted(shares, row * positions, visible, attention.values, attention.ValueStart(index), attention.Stride)
-Masked(scores Numbers, positions Number) Numbers
-	Padded.Masked((1, 2, 3, 4), 2) is (1, 2, -1000000000, 4)
+		Softmax.Weight(shares, row * positions, visible, attention.values, attention.ValueStart(index), attention.Stride)
+Mask(scores Numbers, positions Number) Numbers
+	Padded.Mask((1, 2, 3, 4), 2) is (1, 2, -1000000000, 4)
 	tokens = attention.queries.Length / attention.heads / attention.size / attention.sequences
 	for scores
 		index % positions < starts((index / positions / attention.heads / tokens).Floor) then -1000000000 else value

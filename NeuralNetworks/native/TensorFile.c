@@ -856,7 +856,7 @@ STRICT_EXPORT double TensorFile_Columns(double self, double path, double entry, 
 
 /* numbers as rows of width 32 bit floats in one block like the rows of a file (strict_rows): rows a loop builds are an
    object each, H3's LoRA merged adaln rows (4.9 million of 8 numbers) made every collection visit them all */
-STRICT_EXPORT double TensorFile_Shaped(double self, double numbers, double width)
+STRICT_EXPORT double TensorFile_Reshape(double self, double numbers, double width)
 {
 	uint64_t total = strict_count(numbers), columns = width >= 1 ? (uint64_t)width : 0;
 	if (columns == 0 || total % columns != 0)
@@ -913,9 +913,9 @@ static double QuantizedRows(double path, double entry, double scales, double bit
 	return failure ? strict_fail(failure) : result;
 }
 
-/* The rows of TensorFile_Quantized filled on 16 threads of their own while the program goes on (TensorFile_Started):
+/* The rows of TensorFile_Quantize filled on 16 threads of their own while the program goes on (TensorFile_Start):
    H3 merges a LoRA into each of its 200 matrices on the GPU (10 to 36 ms each) and read the next one from the file
-   (26 ms) only after that. One matrix at a time; its rows must not be read before TensorFile_Finished. */
+   (26 ms) only after that. One matrix at a time; its rows must not be read before TensorFile_Finish. */
 enum { FillThreads = 16 };
 typedef struct { Placing placing; Tensor tensor; float* factors; atomic_uint_fast64_t next; uint64_t chunks; int running;
 	double list;
@@ -978,10 +978,10 @@ static int FillJoined(void)
 	return !atomic_load(&filling.placing.failed);
 }
 
-STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales, double tokenBits);
-/* The list of TensorFile_Quantized at once, its rows are filled meanwhile: TensorFile_Finished before anything reads
-   them. Read like TensorFile_Quantized when the rows can not be filled on the side (the web, I4 rows, no header). */
-STRICT_EXPORT double TensorFile_Started(double self, double path, double entry, double scales, double tokenBits)
+STRICT_EXPORT double TensorFile_Quantize(double self, double path, double entry, double scales, double tokenBits);
+/* The list of TensorFile_Quantize at once, its rows are filled meanwhile: TensorFile_Finish before anything reads
+   them. Read like TensorFile_Quantize when the rows can not be filled on the side (the web, I4 rows, no header). */
+STRICT_EXPORT double TensorFile_Start(double self, double path, double entry, double scales, double tokenBits)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
@@ -994,7 +994,7 @@ STRICT_EXPORT double TensorFile_Started(double self, double path, double entry, 
 	const Tensor* tensor = &filling.tensor;
 	if (!start || tensor->isNibbles || !tensor->isSigned || tensor->rank != 2 || scaled.bytes != 4 ||
 		scaled.height * scaled.width != tensor->height)
-		return TensorFile_Quantized(self, path, entry, scales, tokenBits);
+		return TensorFile_Quantize(self, path, entry, scales, tokenBits);
 	filling.factors = Read(path, &scaled, &failure);
 	if (!filling.factors)
 		return strict_fail(failure);
@@ -1031,13 +1031,13 @@ STRICT_EXPORT double TensorFile_Started(double self, double path, double entry, 
 
 /* The count of rows once they are complete (they are when another matrix is being filled: starting that one waited
    for them), 0 when their file could not be read. */
-STRICT_EXPORT double TensorFile_Finished(double self, double rows)
+STRICT_EXPORT double TensorFile_Finish(double self, double rows)
 {
 	int isOther = filling.placing.file && memcmp(&rows, &filling.list, sizeof(double)) != 0;
 	return isOther || FillJoined() ? (double)strict_count(rows) : 0;
 }
 
-STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry, double scales, double tokenBits)
+STRICT_EXPORT double TensorFile_Quantize(double self, double path, double entry, double scales, double tokenBits)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
@@ -1051,7 +1051,7 @@ STRICT_EXPORT double TensorFile_Quantized(double self, double path, double entry
 	return result;
 }
 
-/* count rows from first of TensorFile_Quantized kept on the host also when the file is read from a URL on the web
+/* count rows from first of TensorFile_Quantize kept on the host also when the file is read from a URL on the web
    (there the rows are otherwise only in a WebGPU buffer): for rows the program reads itself, like an embedding table,
    in parts, as words on the wasm stack that are no references kept a 1 GB block of it alive. */
 STRICT_EXPORT double TensorFile_HostedPart(double self, double path, double entry, double scales, double first,
@@ -1205,9 +1205,9 @@ static void TunedChunk(void* context, uint64_t chunk)
 	free(values);
 }
 
-/* The rows of TensorFile_Quantized plus a low rank update: factors are the downs (rank x columns, in the rotated space
+/* The rows of TensorFile_Quantize plus a low rank update: factors are the downs (rank x columns, in the rotated space
    of convrot rows), the ups (rows x rank) and one scale per rank; rows without an update stay as they are in the file. */
-STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, double scales, double factors)
+STRICT_EXPORT double TensorFile_Tune(double self, double path, double entry, double scales, double factors)
 {
 	if (!ThreadReady())
 		return strict_fail("NativeThreadStateFailed");
@@ -1248,7 +1248,7 @@ STRICT_EXPORT double TensorFile_Tuned(double self, double path, double entry, do
 
 /* Writes a new .safetensors file at path: the JSON header (padded to 8 bytes) and numbers as the 32 bit floats of the
    tensors it describes. */
-STRICT_EXPORT double TensorFile_Written(double self, double path, double header, double numbers)
+STRICT_EXPORT double TensorFile_Write(double self, double path, double header, double numbers)
 {
 	uint64_t count = strict_count(numbers), length = strlen(strict_text(header));
 	static const char spaces[8] = "       ";
@@ -1308,7 +1308,7 @@ static void* Prefetching(void* context)
 }
 #endif
 
-STRICT_EXPORT double TensorFile_Prefetched(double self, double path)
+STRICT_EXPORT double TensorFile_Prefetch(double self, double path)
 {
 #ifdef __EMSCRIPTEN__
 	return 0;

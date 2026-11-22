@@ -42,9 +42,9 @@ Exponentials(sums Numbers) Numbers
 Trained(input Numbers, target Numbers, rate Number) Network
 	Pair.Trained((1, 1), List(Number) + 0, 1).Predict((1, 1)).First < Pair.Predict((1, 1)).First
 	activations = Activations(input)
-	Network(Updated(activations, Deltas(activations, target), rate))
-Updated(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer)
-	Single.Updated(Halved, List(Numbers) + (List(Number) + 1), 0.5).First.biases is List(Number) + -0.5
+	Network(Update(activations, Deltas(activations, target), rate))
+Update(activations List(Numbers), deltas List(Numbers), rate Number) List(Layer)
+	Single.Update(Halved, List(Numbers) + (List(Number) + 1), 0.5).First.biases is List(Number) + -0.5
 	for layers
 		value.Updated(activations(index), deltas(index), rate)
 Deltas(activations List(Numbers), target Numbers) List(Numbers)
@@ -56,13 +56,13 @@ Deltas(activations List(Numbers), target Numbers) List(Numbers)
 		next = layers.Length - index
 		layer = layers(next - 1)
 		sums = layer.activation is Activation.Swish then layer.Sums(activations(next - 1)) else activations(next)
-		delta = Derived(layer.activation, sums, activations(next), layers(next).Spread(delta))
+		delta = Derive(layer.activation, sums, activations(next), layers(next).Spread(delta))
 		deltas.Add(delta)
 	deltas.Reverse
-Derived(function Activation, sums Numbers, activation Numbers, errors Numbers) Numbers
-	Single.Derived(Activation.Sigmoid, List(Number) + 0, List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
-	Single.Derived(Activation.Tanh, List(Number) + 0, List(Number) + 0.5, List(Number) + 2) is List(Number) + 1.5
-	Single.Derived(Activation.Swish, List(Number) + 0, List(Number) + 0, List(Number) + 2) is List(Number) + 1
+Derive(function Activation, sums Numbers, activation Numbers, errors Numbers) Numbers
+	Single.Derive(Activation.Sigmoid, List(Number) + 0, List(Number) + 0.5, List(Number) + 2) is List(Number) + 0.5
+	Single.Derive(Activation.Tanh, List(Number) + 0, List(Number) + 0.5, List(Number) + 2) is List(Number) + 1.5
+	Single.Derive(Activation.Swish, List(Number) + 0, List(Number) + 0, List(Number) + 2) is List(Number) + 1
 	for activation
 		errors(index) * function.Derivative(sums(index), value)
 Difference(output Numbers, target Numbers) Numbers

@@ -5,16 +5,16 @@ Run(path Text, steps = 100, length = 256)
 	heldout = evaluation.Heldout(8)
 	dropping = LayerDropping
 	mutable training = Gpt2Training.Loaded(path + "/model.safetensors", BFloat16.Bits)
-	logger.Log(path + " before training: " + dropping.Reported(training.model, tokenizer, heldout))
+	logger.Log(path + " before training: " + dropping.Report(training.model, tokenizer, heldout))
 	windows = Windows(tokenizer, evaluation.Calibration((steps / 2).Ceiling), length)
 	started = Process.Elapsed
 	for steps
 		training = training.Trained(windows(index))
 	seconds = (Process.Elapsed - started).Round(1)
-	logger.Log("after " + steps + " steps in " + seconds + " s: " + dropping.Reported(training.model, tokenizer, heldout))
+	logger.Log("after " + steps + " steps in " + seconds + " s: " + dropping.Report(training.model, tokenizer, heldout))
 Windows(tokenizer Gpt2Tokens, texts List(Texts), length Number) List(Numbers)
 	Tuning.Windows(Gpt2Tokens.Tiny, List(Texts) + ("ab ab", "ab") + ("ab", "ab ab"), 1).Length is 4
 	Tuning.Windows(Gpt2Tokens.Tiny, List(Texts) + ("ab ab", "ab") + ("ab", "ab ab"), 1)(1).Length is 1
 	for 2 * texts.First.Length
-		tokens = tokenizer.Encoded(texts(index % 2)((index / 2).Floor))
+		tokens = tokenizer.Encode(texts(index % 2)((index / 2).Floor))
 		Safetensors.Part(tokens, 0, tokens.Length.Clamp(0, length), 1)

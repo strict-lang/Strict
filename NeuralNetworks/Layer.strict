@@ -37,9 +37,9 @@ Forward(input Numbers) Numbers
 		activation.Output(Batch.Dot(value, 0, input, 0) + biases(index))
 Sums(input Numbers) Numbers
 	Halves.Sums((1, 1)) is List(Number) + 1
-	Fours.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).First.IsNearlyEqual(3134903.8125, 6000)
-	Sixes.Sums(Gpt2Block.Added(Fours.weights.First, Sixes.weights.First)).Last.IsNearlyEqual(-71957.5, 1000)
-	Eights.Sums(Gpt2Block.Added(Eights.weights.First, Eights.weights.Last)).Last.IsNearlyEqual(25678.23355948925, 30)
+	Fours.Sums(Gpt2Block.Add(Fours.weights.First, Sixes.weights.First)).First.IsNearlyEqual(3134903.8125, 6000)
+	Sixes.Sums(Gpt2Block.Add(Fours.weights.First, Sixes.weights.First)).Last.IsNearlyEqual(-71957.5, 1000)
+	Eights.Sums(Gpt2Block.Add(Eights.weights.First, Eights.weights.Last)).Last.IsNearlyEqual(25678.23355948925, 30)
 	Threes.Sums(Gguf("NeuralNetworks/tiny.gguf", 32).Rows("r2").Last).Last.IsNearlyEqual(45.75, 0.01)
 	for weights
 		Batch.Dot(value, 0, input, 0) + biases(index % biases.Length)
@@ -57,9 +57,9 @@ Updated(input Numbers, deltas Numbers, rate Number) Layer
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).weights is List(Numbers) + (0, 0.5)
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).biases is List(Number) + -0.5
 	Halves.Updated((1, 0), List(Number) + 1, 0.5).Updated((1, 0), 0, 0.5).biases is List(Number) + -0.75
-	Layer(Moved(input, deltas, rate), Shifted(deltas, rate), activation, weights, biases)
-Moved(input Numbers, deltas Numbers, rate Number) List(Numbers)
-	Halves.Moved((1, 0), List(Number) + 1, 0.5) is List(Numbers) + (0, 0.5)
+	Layer(Move(input, deltas, rate), Shift(deltas, rate), activation, weights, biases)
+Move(input Numbers, deltas Numbers, rate Number) List(Numbers)
+	Halves.Move((1, 0), List(Number) + 1, 0.5) is List(Numbers) + (0, 0.5)
 	for weights
 		Row(value, index < previousWeights.Length then previousWeights(index) else value, rate * deltas(index), input)
 Row(row Numbers, previous Numbers, scaled Number, input Numbers) Numbers
@@ -67,8 +67,8 @@ Row(row Numbers, previous Numbers, scaled Number, input Numbers) Numbers
 	Halves.Row((1, 1), (0, 1), 0.5, (1, 0)) is (1, 1)
 	for row
 		value - scaled * input(index) + Momentum * (value - previous(index))
-Shifted(deltas Numbers, rate Number) Numbers
-	Halves.Shifted(List(Number) + 1, 0.5) is List(Number) + -0.5
+Shift(deltas Numbers, rate Number) Numbers
+	Halves.Shift(List(Number) + 1, 0.5) is List(Number) + -0.5
 	previous = previousBiases.Length is 0 then biases else previousBiases
 	for biases
 		value - rate * deltas(index) + Momentum * (value - previous(index))

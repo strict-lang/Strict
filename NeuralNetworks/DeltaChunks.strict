@@ -29,18 +29,18 @@ Read DeltaChunks
 		active = index % chunksPerSeq is 0 then memory else state
 		fresh = prepared.Fresh(active, index * chunk)
 		outputs = outputs + prepared.Outputs(fresh, active, index * chunk)
-		state = prepared.Remembered(fresh, active, index * chunk)
+		state = prepared.Remember(fresh, active, index * chunk)
 	DeltaChunks(prepared, memory = state, reads = outputs)
 Stepped(block DeltaBlock) DeltaChunks slow
 	DeltaChunks(4, 2, 2, 16, 1, Layer.Zeros(16), Layer.Zeros(8)).Stepped(DeltaBlock.Tiny).reads is Layer.Zeros(8)
-	updated = DeltaBlock(block, memory = block.Updated(keyed, decayed, block.Read(keyed, 0, 1), 0))
+	updated = DeltaBlock(block, memory = block.Update(keyed, decayed, block.Read(keyed, 0, 1), 0))
 	DeltaChunks(value, memory = updated.memory, reads = updated.Read(keyed, 0, 0))
 Prepared DeltaChunks
 	Probe.Prepared.logs.Length is 6
 	ready = DeltaChunks(value, logs = Logs)
-	lower = ready.Paired(1)
-	inverse = ready.Inverted(ready.Unit(lower), lower, 2)
-	DeltaChunks(ready, attended = ready.Paired(0), corrected = ready.Corrected(inverse))
+	lower = ready.Pair(1)
+	inverse = ready.Invert(ready.Unit(lower), lower, 2)
+	DeltaChunks(ready, attended = ready.Pair(0), corrected = ready.Correct(inverse))
 Position(token Number, head Number, part Number) Number
 	DeltaChunks(Probe, groups = 2).Position(1, 1, 1) is 18
 	DeltaChunks(Probe, groups = 2).Position(1, 1, 2) is 22
@@ -49,7 +49,7 @@ Position(token Number, head Number, part Number) Number
 	(token * (2 * groups + heads) + (part < 2 then part * groups + head % groups else 2 * groups + head)) * size
 Length(start Number) Number
 	Probe.Read.reads(10).IsNearlyEqual(DeltaChunks(Probe, chunk = 4).Read.reads(10))
-	DeltaChunks(Probe, groups = 2).Weighted((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.5
+	DeltaChunks(Probe, groups = 2).Weight((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.5
 	Probe.Length(2) is 1
 	tokens - start < chunk then tokens - start else chunk
 Logs Numbers
@@ -68,9 +68,9 @@ Decay(token Number, other Number, head Number) Number
 	Probe.Prepared.corrected(6) is 0.3032653298563167
 	Probe.Prepared.Decay(1, 0, 0).IsNearlyEqual(0.818730753)
 	(logs(token * heads + head) - logs(other * heads + head)).Exponential
-Paired(part Number) Numbers
-	DeltaChunks(Probe, chunk = 4).Prepared.Paired(1)(8).IsNearlyEqual(0.054214958144196385)
-	Probe.Prepared.Paired(1)(2).IsNearlyEqual(0.589486)
+Pair(part Number) Numbers
+	DeltaChunks(Probe, chunk = 4).Prepared.Pair(1)(8).IsNearlyEqual(0.054214958144196385)
+	Probe.Prepared.Pair(1)(2).IsNearlyEqual(0.589486)
 	Probe.Prepared.attended(3).IsNearlyEqual(0.95)
 	for heads * tokens * chunk
 		token = (index / chunk).Floor % tokens
@@ -88,16 +88,16 @@ Unit(lower Numbers) Numbers
 	Probe.Unit((0, 0, 0.5, 0))(3) is 1
 	for lower
 		(((index / chunk).Floor % tokens) % chunk) is index % chunk then 1 - value else -value
-Inverted(result Numbers, power Numbers, span Number) Numbers
-	DeltaChunks(Probe, chunk = 4).Inverted((1, 2), (3, 4), 3) is (1, 2)
-	Probe.Inverted((1, 0, 2, 1), (1, 0, 2, 1), 1) is (2, 0, 8, 2)
-	Probe.Inverted((1, 2), (3, 4), 2) is (1, 2)
+Invert(result Numbers, power Numbers, span Number) Numbers
+	DeltaChunks(Probe, chunk = 4).Invert((1, 2), (3, 4), 3) is (1, 2)
+	Probe.Invert((1, 0, 2, 1), (1, 0, 2, 1), 1) is (2, 0, 8, 2)
+	Probe.Invert((1, 2), (3, 4), 2) is (1, 2)
 	if span >= chunk or span >= tokens
 		return result
-	squared = Multiplied(power, power, 0)
-	Inverted(Multiplied(result, squared, 1), squared, span * 2)
-Multiplied(left Numbers, right Numbers, kept Number) Numbers
-	Probe.Multiplied((1, 0, 2, 1), (1, 0, 2, 1), 0)(2) is 4
+	squared = Multiply(power, power, 0)
+	Invert(Multiply(result, squared, 1), squared, span * 2)
+Multiply(left Numbers, right Numbers, kept Number) Numbers
+	Probe.Multiply((1, 0, 2, 1), (1, 0, 2, 1), 0)(2) is 4
 	for left
 		row = (index / chunk).Floor
 		token = row % tokens
@@ -107,7 +107,7 @@ Multiplied(left Numbers, right Numbers, kept Number) Numbers
 		for (token % chunk) + 1
 			sum = sum + left(row * chunk + index) * right((base + index) * chunk + column)
 		sum
-Corrected(inverse Numbers) Numbers
+Correct(inverse Numbers) Numbers
 	Probe.Prepared.corrected(14).IsNearlyEqual(0.284474197)
 	Probe.Prepared.corrected(36).IsNearlyEqual(0.491238452)
 	values = heads * tokens * size
@@ -119,9 +119,9 @@ Corrected(inverse Numbers) Numbers
 		last = token - (token % chunk) + chunk > tokens then tokens - 1 else token - (token % chunk) + chunk - 1
 		key = Decay(last, token, head) * keyed(Position(token, head, 1) + (index % size))
 		query = logs(token * heads + head).Exponential * keyed(Position(token, head, 0) + (index % size))
-		part is 0 then query else part is 3 then key else Weighted(inverse, row, part, index % size)
-Weighted(inverse Numbers, row Number, part Number, element Number) Number
-	Probe.Prepared.Weighted((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.125
+		part is 0 then query else part is 3 then key else Weight(inverse, row, part, index % size)
+Weight(inverse Numbers, row Number, part Number, element Number) Number
+	Probe.Prepared.Weight((1, 0, -0.5, 1, 1, 0, 1, 0, 0, 1, 1, 0), 1, 2, 0) is 0.125
 	token = row % tokens
 	head = (row / tokens).Floor
 	start = token - (token % chunk)
@@ -156,8 +156,8 @@ Outputs(fresh Numbers, state Numbers, first Number) Numbers
 		token = (index / (heads * size)).Floor
 		at = (((index / size).Floor % heads) * length + token) * size + (index % size)
 		queries(at) + attending(at)
-Remembered(fresh Numbers, state Numbers, first Number) Numbers
-	Probe.Prepared.Remembered(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(4).IsNearlyEqual(1.466728, 0.003)
+Remember(fresh Numbers, state Numbers, first Number) Numbers
+	Probe.Prepared.Remember(Probe.Prepared.Fresh(Probe.memory, 0), Probe.memory, 0)(4).IsNearlyEqual(1.466728, 0.003)
 	length = Length(first)
 	last = first + length - 1
 	keys = (3 * heads * tokens + first) * size

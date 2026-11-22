@@ -26,8 +26,8 @@ Beginning(model Gguf) Number
 	given = model.Value("tokenizer.ggml.add_bos_token")
 	isAdded = given is "" then model.Value("tokenizer.ggml.pre") is "lfm2" else given is in ("true", "True", "1")
 	isAdded then model.Value("tokenizer.ggml.bos_token_id") to Number else Number.NotFound
-Prompted(tokens Numbers) Numbers
-	Lfm3(Unloaded, bos = 7).Prompted((1, 2)) is (7, 1, 2) and Unloaded.Prompted((1, 2)) is (1, 2)
+Prompt(tokens Numbers) Numbers
+	Lfm3(Unloaded, bos = 7).Prompt((1, 2)) is (7, 1, 2) and Unloaded.Prompt((1, 2)) is (1, 2)
 	bos >= 0 then List(Number) + bos + tokens else tokens
 Layers(model Gguf, heads Number, size Number) List(Lfm3Block) slow
 	sliding = model.Value(model.Value("general.architecture") + ".attention.sliding_window_pattern").Lines
@@ -54,15 +54,15 @@ Forwarded(input Numbers, positions Numbers, sequences = 1) Lfm3 slow
 		current = forwarded.output
 		updated.Add(Lfm3Block(forwarded, output = List(Number)))
 	Lfm3(value, layers = updated, hidden = current)
-Embedded(tokens Numbers) Numbers
-	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedded((1, 0)) is (3, 4, 1, 2)
-	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedded((-1, 0)) is (0, 0, 1, 2)
+Embedd(tokens Numbers) Numbers
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedd((1, 0)) is (3, 4, 1, 2)
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedd((-1, 0)) is (0, 0, 1, 2)
 	width = embedding.First.Length
 	for tokens.Length * width
 		token = tokens((index / width).Floor)
 		token < 0 then 0 else embedding(token)(index % width)
 Prefilled(prompt Numbers) Lfm3 slow
-	first = Forwarded(Embedded(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
+	first = Forwarded(Embedd(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
 	mutable model = first
 	for Range(Batch, prompt.Length.Maximum(Batch))
 		model = model.Step(prompt(value), value)
@@ -70,38 +70,38 @@ Prefilled(prompt Numbers) Lfm3 slow
 PrefilledEach(prompts List(Numbers)) Lfm3 slow
 	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).PrefilledEach(((1), (0, 1))).hidden is (3, 4, 3, 4)
 	lengths = SequenceLength(prompts)
-	longest = lengths.Aligned(1)
+	longest = lengths.Align(1)
 	first = (longest - 1).Minimum(Batch)
-	masked = Lfm3(value, layers = Masked(lengths.Pads(longest)))
+	masked = Lfm3(value, layers = Mask(lengths.Pads(longest)))
 	tokens = lengths.Column(longest, 0, first)
 	positions = lengths.Positions(first, 0)
-	mutable model = first > 0 then masked.Forwarded(Embedded(tokens), positions, prompts.Length) else masked
+	mutable model = first > 0 then masked.Forwarded(Embedd(tokens), positions, prompts.Length) else masked
 	for Range(first, longest)
 		model = model.Steps(lengths.Column(longest, value, 1), lengths.Positions(1, value))
 	model
-Masked(pads Numbers) List(Lfm3Block)
-	Unloaded.Masked(1).Length is 0
+Mask(pads Numbers) List(Lfm3Block)
+	Unloaded.Mask(1).Length is 0
 	for layers
 		Lfm3Block(value, attention = Qwen3Block(value.attention, starts = pads))
 Batch Number
 	Unloaded.Batch is 256 and Lfm3(Unloaded, window = 0).Batch is 256
 	window > 0 then window else 256
 Step(token Number, position Number) Lfm3 slow
-	Forwarded(Embedded(List(Number) + token), List(Number) + position)
+	Forwarded(Embedd(List(Number) + token), List(Number) + position)
 Scored Numbers slow
 	size = norm.Length
-	Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden.Slice(hidden.Length - size, size), norm))
+	Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Norm(hidden.Slice(hidden.Length - size, size), norm))
 Copies(count Number) Lfm3
 	Unloaded.Copies(2).layers.Length is 0
-	Lfm3(value, layers = Copied(count))
-Copied(count Number) List(Lfm3Block)
-	Unloaded.Copied(2).Length is 0
+	Lfm3(value, layers = Copy(count))
+Copy(count Number) List(Lfm3Block)
+	Unloaded.Copy(2).Length is 0
 	for layers
 		value.Copied(count)
 Steps(tokens Numbers, positions Numbers) Lfm3 slow
-	Forwarded(Embedded(tokens), positions, tokens.Length)
+	Forwarded(Embedd(tokens), positions, tokens.Length)
 Nexts Numbers
 	Lfm3(Unloaded, embedding = ((1, 0), (0, 1)), norm = (1, 1), hidden = (3, 1, 1, 2)).Nexts is (0, 1)
-	Greedy.Rows(Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Normed(hidden, norm)), embedding.Length)
+	Greedy.Rows(Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Norm(hidden, norm)), embedding.Length)
 Next Number slow
 	Greedy.Largest(Scored)

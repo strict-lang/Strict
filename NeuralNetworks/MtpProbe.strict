@@ -1,15 +1,15 @@
 Run(path Text, count Number, drafts Number)
 	model = Qwen3(Qwen3.Loaded(path, 4), cacheBits = Number.SingleBits)
-	prompt = Gpt2Tokens.Loaded(Gguf(path)).Encoded(Qwen3Benchmark.Prompt)
+	prompt = Gpt2Tokens.Loaded(Gguf(path)).Encode(Qwen3Benchmark.Prompt)
 	gguf = Gguf(path, 4)
 	drafter = Drafter.Loaded(gguf, gguf.Value("qwen35.attention.head_count") to Number)
 	started = Speculation(model.Prefilled(prompt, 0), prompt, model.Prefilled(prompt, 0).Next, drafts, 0, drafter)
-	logger.Log("warmed up: " + Timed(started, 8))
-	logger.Log(Timed(started, count))
+	logger.Log("warmed up: " + DescribeTimes(started, 8))
+	logger.Log(DescribeTimes(started, count))
 	drafted = Safetensors.Part(started.Finished(count).context, prompt.Length, count, 1)
-	logger.Log(Gpt2Tokens.Loaded(Gguf(path)).Decoded(drafted))
-Timed(started Speculation, count Number) Text slow
-	MtpProbe.Timed(Speculation.Drafting, 2).EndsWith("tokens per step")
+	logger.Log(Gpt2Tokens.Loaded(Gguf(path)).Decode(drafted))
+DescribeTimes(started Speculation, count Number) Text slow
+	MtpProbe.DescribeTimes(Speculation.Drafting, 2).EndsWith("tokens per step")
 	before = Process.Elapsed
 	finished = started.Finished(count)
 	milliseconds = ((Process.Elapsed - before) * 1000 / count).Round(2)

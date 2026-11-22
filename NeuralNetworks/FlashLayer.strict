@@ -8,7 +8,7 @@ has streams Numbers = List(Number)
 has entered Numbers = List(Number)
 constant Flash = HyperStreams.Flash
 constant First = FlashLayer.Loaded(Flash, 0)
-constant Mixed = First.mixing.Mixed(HyperStreams.Embedded)
+constant Mixed = First.mixing.Mix(HyperStreams.Embedded)
 constant Twice = HyperStreams.Embedded + HyperStreams.Embedded.Reverse
 constant Single = First.Forward(HyperStreams.Embedded, List(Number))
 constant Stepped = Single.Forward(HyperStreams.Embedded.Reverse, List(Number))
@@ -22,7 +22,7 @@ Loaded(model Gguf, layer Number) FlashLayer slow
 	feeder = HyperStreams.Loaded(model, prefix + "hc_ffn")
 	attentions = Attentions(model, prefix, routed)
 	mapped = MappedExperts(routed, model, prefix)
-	FlashLayer(mixer, Linears(model, prefix, routed), attentions, feeder, mapped, Shared(model, prefix))
+	FlashLayer(mixer, Linears(model, prefix, routed), attentions, feeder, mapped, Share(model, prefix))
 Linears(model Gguf, prefix Text, routed Experts) List(DeltaBlock) slow
 	First.Linears(Flash, "blk.3.", First.experts.experts).Length is 0
 	if model.Shape(prefix + "ssm_a").Length is 0
@@ -34,7 +34,7 @@ Attentions(model Gguf, prefix Text, routed Experts) List(Qwen3Block) slow
 		return List(Qwen3Block)
 	heads = model.Value(model.Value("general.architecture") + ".attention.head_count") to Number
 	List(Qwen3Block) + Qwen3Block.Attending(model, prefix, heads, routed)
-Shared(model Gguf, prefix Text) List(Layer) slow
+Share(model Gguf, prefix Text) List(Layer) slow
 	First.shared.Last.weights.First.Length is 64
 	gate = Layer(List(Numbers) + model.Values(prefix + "ffn_gate_inp_shexp.weight"), Layer.Unbiased)
 	down = Qwen3Block.Dense(model, prefix, List(Text) + "ffn_down_shexp")
@@ -43,24 +43,24 @@ Forward(input Numbers, rotation Numbers) FlashLayer slow
 	First.Forward(HyperStreams.Embedded, List(Number)).streams(0).IsNearlyEqual(0.311525, 0.000001)
 	First.Forward(HyperStreams.Embedded, List(Number)).streams(5).IsNearlyEqual(-1.372745, 0.000001)
 	Doubled.streams(261).IsNearlyEqual(Stepped.streams(5), 0.002)
-	cached = Cached(mixing.Mixed(input), rotation)
-	combined = mixing.Combined(input, cached.Attended, mixing.Injected(input))
-	FlashLayer(cached, streams = feeding.Combined(combined, Fed(feeding.Mixed(combined)), feeding.Injected(combined)))
+	cached = Cached(mixing.Mix(input), rotation)
+	combined = mixing.Combine(input, cached.Attended, mixing.InjectAll(input))
+	FlashLayer(cached, streams = feeding.Combine(combined, Fed(feeding.Mix(combined)), feeding.InjectAll(combined)))
 Cached(mixed Numbers, rotation Numbers) FlashLayer
 	First.Cached(Mixed, List(Number)).linear.First.merged.Length is 32
 	if attention.Length > 0
 		return FlashLayer(value, attention = List(Qwen3Block) + attention.First.Cached(mixed, rotation, Number.SingleBits))
-	entering = linear.First.Combined(mixed)
+	entering = linear.First.Combine(mixed)
 	FlashLayer(value, linear = List(DeltaBlock) + linear.First.Cached(entering), entered = entering)
 Attended Numbers
 	First.Cached(Mixed, List(Number)).Attended(0).IsNearlyEqual(0.239068, 0.000001)
 	if attention.Length > 0
 		block = attention.First
-		return Batch(block.projection.weights, block.projection.biases).Sums(block.Merged(1))
+		return Batch(block.projection.weights, block.projection.biases).Sums(block.Merge(1))
 	Batch(linear.First.projection.weights, linear.First.projection.biases).Sums(linear.First.merged)
 Fed(mixed Numbers) Numbers slow
-	First.Fed(First.feeding.Mixed(First.Forward(HyperStreams.Embedded, List(Number)).streams))(0) is not 0
-	Gpt2Block.Added(experts.Forward(mixed), experts.experts.Shared(shared, mixed))
+	First.Fed(First.feeding.Mix(First.Forward(HyperStreams.Embedded, List(Number)).streams))(0) is not 0
+	Gpt2Block.Add(experts.Forward(mixed), experts.experts.Share(shared, mixed))
 Truncated(original FlashLayer, count Number, length Number) FlashLayer slow
 	Doubled.Truncated(First, 1, 1).linear.First.memory is Single.linear.First.memory
 	if attention.Length > 0

@@ -6,12 +6,12 @@ Run
 Report(name Text, grammar Reber, strings Number) Text slow
 	ReberPrediction.Report("Reber", Reber.Simple, 5).StartsWith("Reber: trained on ")
 	started = Process.Elapsed
-	trained = Trained(Untrained, grammar, strings)
+	trained = Train(Untrained, grammar, strings)
 	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	correct = Correct(trained, grammar, 100)
 	name + ": trained on " + strings + " strings in " + milliseconds + " ms, " + correct + " of 100 new strings right"
-Trained(network Gru, grammar Reber, count Number) Gru slow
-	ReberPrediction.Trained(Untrained, Reber.Simple, 1).output.weights.Length is 7
+Train(network Gru, grammar Reber, count Number) Gru slow
+	ReberPrediction.Train(Untrained, Reber.Simple, 1).output.weights.Length is 7
 	mutable trained = network
 	for count
 		steps = grammar.Walk
@@ -28,10 +28,10 @@ IsPredicted(network Gru, grammar Reber, steps List(Numbers)) Boolean
 	ReberPrediction.IsPredicted(Untrained, Reber.Simple, Reber.Shortest) is false
 	targets = grammar.Targets(steps)
 	for Recurrent.Outputs(network.output, network.States(grammar.Inputs(steps)))
-		if Rounded(value) is not targets(index)
+		if Round(value) is not targets(index)
 			return false
 	true
-Rounded(outputs Numbers) Numbers
-	ReberPrediction.Rounded((0.2, 0.7)) is (0, 1)
+Round(outputs Numbers) Numbers
+	ReberPrediction.Round((0.2, 0.7)) is (0, 1)
 	for outputs
 		value.Round

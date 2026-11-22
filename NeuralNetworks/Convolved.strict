@@ -14,15 +14,15 @@ Summed Numbers slow
 	Convolved(Square, (2, 1), (0, 0, 0, 0, 1, 0, 0, 0, 0), (2, 2, 1, 1, 5, 1)).Summed(1).IsNearlyEqual(4.96653575, 0.01)
 	Convolved((1, 2, 3, 4), (1, 1, 0, 0), Box + Box, (1, 2, 2, 1, 6, 1)).Summed is (10, 10)
 	Convolved(Square, (1, 0), Center, (4, 4, 1, 1, 6, 2)).Summed(6) is 2
-	Rectifying.Summed(599).IsNearlyEqual(Rectifying.Tapped(14, 39), 0.0001)
-	Large.Summed(599).IsNearlyEqual(Large.Tapped(14, 39), 0.0001)
-	Large.Summed(283).IsNearlyEqual(Large.Tapped(7, 3), 0.0001)
-	Doubling.Summed(2399).IsNearlyEqual(Doubling.Tapped(59, 39), 0.0001)
-	Doubling.Summed(1001).IsNearlyEqual(Doubling.Tapped(25, 1), 0.0001)
+	Rectifying.Summed(599).IsNearlyEqual(Rectifying.Tap(14, 39), 0.0001)
+	Large.Summed(599).IsNearlyEqual(Large.Tap(14, 39), 0.0001)
+	Large.Summed(283).IsNearlyEqual(Large.Tap(7, 3), 0.0001)
+	Doubling.Summed(2399).IsNearlyEqual(Doubling.Tap(59, 39), 0.0001)
+	Doubling.Summed(1001).IsNearlyEqual(Doubling.Tap(25, 1), 0.0001)
 	for shape(0) * shape(1) * shape(3)
-		Tapped((index / shape(3)).Floor, index % shape(3))
-Tapped(pixel Number, output Number) Number
-	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 6, 1)).Tapped(3, 0) is 10
+		Tap((index / shape(3)).Floor, index % shape(3))
+Tap(pixel Number, output Number) Number
+	Convolved(Square, (1, 0), Box, (2, 2, 1, 1, 6, 1)).Tap(3, 0) is 10
 	channels = shape(2)
 	taps = (4 - shape(5)) * (4 - shape(5))
 	first = (Parity(pixel) * shape(3) + output) * taps * channels

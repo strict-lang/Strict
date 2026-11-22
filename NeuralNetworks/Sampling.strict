@@ -15,34 +15,34 @@ Drawn(logits Numbers) Sampling
 		return Sampling(value, token = Greedy.Largest(logits))
 	maxima = Greedy.Maxima(Greedy.Best(logits, Chunk, logits.Length))
 	bound = topK is 0 or topK >= maxima.Length then maxima.Minimum else Threshold(maxima, topK)
-	chunks = Selected(maxima, bound)
+	chunks = Select(maxima, bound)
 	mutable state = random
 	picked = state.Get(0, 1)
-	Sampling(value, random = state, token = Picked(Gathered(logits, chunks), chunks, bound, picked))
-Selected(numbers Numbers, bound Number) Numbers
-	Warm.Selected((3, 1, 2), 2) is (0, 2)
+	Sampling(value, random = state, token = Pick(Gather(logits, chunks), chunks, bound, picked))
+Select(numbers Numbers, bound Number) Numbers
+	Warm.Select((3, 1, 2), 2) is (0, 2)
 	for numbers
 		if value >= bound
 			index
-Kept(numbers Numbers, bound Number) Numbers
-	Warm.Kept((3, 1, 2), 2) is (3, 2)
+Keep(numbers Numbers, bound Number) Numbers
+	Warm.Keep((3, 1, 2), 2) is (3, 2)
 	for numbers
 		if value >= bound
 			value
-Gathered(logits Numbers, chunks Numbers) Numbers
-	Warm.Gathered(Layer.Zeros(128) + (1, 2), List(Number) + 1) is (1, 2)
-	Warm.Gathered(Layer.Zeros(128) + (1, 2), List(Number) + 0) is Layer.Zeros(128)
-	Warm.Gathered((1, 2, 3), List(Number) + 0) is (1, 2, 3)
+Gather(logits Numbers, chunks Numbers) Numbers
+	Warm.Gather(Layer.Zeros(128) + (1, 2), List(Number) + 1) is (1, 2)
+	Warm.Gather(Layer.Zeros(128) + (1, 2), List(Number) + 0) is Layer.Zeros(128)
+	Warm.Gather((1, 2, 3), List(Number) + 0) is (1, 2, 3)
 	short = chunks.Last * Chunk + Chunk - logits.Length
 	for chunks.Length * Chunk - (short > 0 then short else 0)
 		logits(chunks((index / Chunk).Floor) * Chunk + index % Chunk)
-Picked(candidates Numbers, chunks Numbers, bound Number, uniform Number) Number
-	Paired.Picked((1, 3, 2), List(Number) + 0, 1, 0.05) is 1
-	Sampling(1, 0, 0.3, PseudoRandom(5)).Picked((2, 3, 2.9), List(Number) + 0, 2, 0.1) is 1
-	Warm.Picked((0, 0, 0, 1), List(Number) + 2, 0, 0.99) is 259
+Pick(candidates Numbers, chunks Numbers, bound Number, uniform Number) Number
+	Paired.Pick((1, 3, 2), List(Number) + 0, 1, 0.05) is 1
+	Sampling(1, 0, 0.3, PseudoRandom(5)).Pick((2, 3, 2.9), List(Number) + 0, 2, 0.1) is 1
+	Warm.Pick((0, 0, 0, 1), List(Number) + 2, 0, 0.99) is 259
 	lowest = topK > 0 then bound else candidates.Minimum
-	positions = Selected(candidates, lowest)
-	values = Kept(candidates, lowest)
+	positions = Select(candidates, lowest)
+	values = Keep(candidates, lowest)
 	limit = topK > 0 then Threshold(values, topK) else lowest
 	largest = values.Maximum
 	cut = topP >= 1 then limit else Nucleus(values, largest, limit)

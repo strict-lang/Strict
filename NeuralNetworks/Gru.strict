@@ -17,7 +17,7 @@ Random(inputs Number, outputs Number) Gru
 	Gru.Random(7, 3).update.biases.First is Remembering
 	size = inputs + Hidden
 	tanh = Layer.Random(size, Hidden, Activation.Tanh)
-	keeping = Layer(Layer.Halves.Rows(size, Hidden), Filled(Remembering))
+	keeping = Layer(Layer.Halves.Rows(size, Hidden), Fill(Remembering))
 	Gru(keeping, Layer.Random(size, Hidden), tanh, Layer.Random(Hidden, outputs))
 States(inputs List(Numbers)) List(Numbers)
 	Tiny.States(List(Numbers) + One).First is Zero
@@ -58,7 +58,7 @@ HiddenDeltas(inputs List(Numbers), states List(Numbers), outputs List(Numbers)) 
 	for inputs.Length
 		time = inputs.Length - 1 - index
 		gradient = Network.Difference(output.Spread(outputs(time)), future * -1)
-		step = Step(inputs(time), states(time), Clipped(gradient))
+		step = Step(inputs(time), states(time), Clip(gradient))
 		future = step.Slice(4 * size, size)
 		deltas.Add(step)
 	deltas.Reverse
@@ -98,13 +98,13 @@ PreviousDeltas(gates Numbers, gradient Numbers, fromCandidate Numbers, fromGates
 	size = gradient.Length
 	for gradient
 		value * (1 - gates(index)) + fromCandidate(index) * gates(size + index) + fromGates(index) + fromGates(size + index)
-Filled(bias Number) Numbers
+Fill(bias Number) Numbers
 	Tiny.HiddenDeltas(List(Numbers) + One + One, (Zero, One, One), (One, One)).Length is 2
-	Gru.Filled(1).Length is Hidden
+	Gru.Fill(1).Length is Hidden
 	for Hidden
 		bias
-Clipped(gradient Numbers) Numbers
-	Tiny.Clipped((-3, 0.5, 2)) is (-1, 0.5, 1)
+Clip(gradient Numbers) Numbers
+	Tiny.Clip((-3, 0.5, 2)) is (-1, 0.5, 1)
 	for gradient
 		value.Clamp(-1, 1)
 Updated(step Numbers, previous Numbers, delta Numbers, outputDelta Numbers, state Numbers, rate Number) Gru

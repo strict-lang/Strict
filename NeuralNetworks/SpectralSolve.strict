@@ -6,7 +6,7 @@ Solved Numbers
 	SpectralSolve(List(Number) + 0, List(Number) + 1).Solved is Error("Singular spectral fit")
 	mutable rows = Augmented
 	for right.Length
-		rows = Reduced(rows, index)
+		rows = Reduce(rows, index)
 	for right.Length
 		rows(index * (right.Length + 1) + right.Length)
 Augmented Numbers
@@ -14,7 +14,7 @@ Augmented Numbers
 		row = (index / (right.Length + 1)).Floor
 		column = index % (right.Length + 1)
 		column is right.Length then right(row) else matrix(row * right.Length + column)
-Reduced(rows Numbers, pivot Number) Numbers
+Reduce(rows Numbers, pivot Number) Numbers
 	width = right.Length + 1
 	start = pivot * width
 	diagonal = rows(start + pivot)

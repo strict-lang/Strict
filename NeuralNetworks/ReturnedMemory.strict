@@ -11,13 +11,13 @@ Spike Numbers native
 Used(values Numbers) Number
 	ReturnedMemory.Used((1, 2)) is 2
 	values.Length
-Measured(anchor Numbers) Numbers native
-	ReturnedMemory.Measured((1, 2))(1) is Count + 2
+Measure(anchor Numbers) Numbers native
+	ReturnedMemory.Measure((1, 2))(1) is Count + 2
 	(GpuMemory.HostAvailable, Used(Spike) + anchor.Length, GpuMemory.HostAvailable)
 Recovered Boolean native
 	ReturnedMemory.Recovered
 	anchor = Anchor
-	measured = Measured(anchor)
+	measured = Measure(anchor)
 	Process.Collect
 	left = measured(0) - GpuMemory.HostAvailable
 	logger.Log("spike " + (measured(0) - measured(2)).Round + " left " + left.Round + " after " + measured(1) + " numbers")

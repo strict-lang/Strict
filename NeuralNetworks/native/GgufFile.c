@@ -379,7 +379,7 @@ STRICT_EXPORT double GgufFile_Value(double self, double path, double key)
 
 /* GgufFile_Value of a text array with the line feeds, carriage returns and backslashes inside its elements escaped as
    \n, \r and \\ (Gemma's vocabulary has tokens of line feeds), so every line is one element. */
-STRICT_EXPORT double GgufFile_Escaped(double self, double path, double key)
+STRICT_EXPORT double GgufFile_Escape(double self, double path, double key)
 {
 	const char* failure = Loaded(strict_text(path));
 	if (failure)
@@ -1028,7 +1028,7 @@ STRICT_EXPORT double GgufFile_ExpertOutputs(double self, double path, double pre
 
 /* The numbers of the rows (the contiguous dimension) of the tensor name one after the other, decoded like Values, read
    row by row, so a huge table (the n-gram embeddings of Qwen3.8-Flash-Next) is never loaded as a whole. */
-STRICT_EXPORT double GgufFile_Picked(double self, double path, double name, double rows)
+STRICT_EXPORT double GgufFile_Pick(double self, double path, double name, double rows)
 {
 	const char* failure = 0;
 	const Tensor* tensor = Requested(path, name, 0, &failure);

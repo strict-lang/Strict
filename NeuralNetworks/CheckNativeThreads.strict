@@ -41,13 +41,13 @@ Run(arguments Texts) Number
 	folder = "Examples/NativeThreads" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	result = Checked(folder, provider)
+	result = Check(folder, provider)
 	Directory.Delete(folder)
 	if result is Error
 		return result
 	logger.Log("Returned matrices remain thread-owned; overlapping matrix loads pass")
 	0
-Checked(folder Text, provider Text) slow
+Check(folder Text, provider Text) slow
 	isWindows = Process.OperatingSystem is "Windows"
 	dll = "Compiler/output/" + provider + "Threads." + (isWindows then "dll" else "so")
 	cSrc = "NeuralNetworks/native/" + provider + ".c"

@@ -12,7 +12,7 @@ constant Table = "per_layer_token_embd.weight"
 Loaded(model Gguf) Ngrams
 	Ngrams.Loaded(HyperStreams.Flash).vocabularies is (11, 13, 17, 19)
 	Ngrams.Loaded(HyperStreams.Flash).eos is 30
-	HyperStreams.Flash.Picked(Table, Ngrams.Loaded(HyperStreams.Flash).Rows(1, 0))(0).IsNearlyEqual(0.008946, 0.000001)
+	HyperStreams.Flash.Pick(Table, Ngrams.Loaded(HyperStreams.Flash).Rows(1, 0))(0).IsNearlyEqual(0.008946, 0.000001)
 	architecture = model.Value("general.architecture")
 	sizes = Numbers(model.Value(architecture + ".ple.head_vocab_sizes"))
 	factors = Numbers(model.Value(architecture + ".ple.layer_multipliers"))
@@ -31,13 +31,13 @@ Product(token Number, multiplier Number) Numbers
 	Flash.Product(248000, 23703573157769) is (1368691712, 1780461248)
 	low = token * (multiplier % Half)
 	((token * (multiplier / Half).Floor + (low / Half).Floor) % Half, low % Half)
-Xored(left Numbers, right Numbers) Numbers
-	Flash.Xored((12, 3), (10, 5)) is (6, 6)
+Xore(left Numbers, right Numbers) Numbers
+	Flash.Xore((12, 3), (10, 5)) is (6, 6)
 	(left(0) xor right(0), left(1) xor right(1))
-Mixed(context Numbers, order Number) Numbers
-	Flash.Mixed((9, 7, 5), 3) is (26270, 2655732705)
-	pair = Xored(Product(context(0), multipliers(0)), Product(context(1), multipliers(1)))
-	order is 2 then pair else Xored(pair, Product(context(2), multipliers(2)))
+Mix(context Numbers, order Number) Numbers
+	Flash.Mix((9, 7, 5), 3) is (26270, 2655732705)
+	pair = Xore(Product(context(0), multipliers(0)), Product(context(1), multipliers(1)))
+	order is 2 then pair else Xore(pair, Product(context(2), multipliers(2)))
 Remainder(mixed Numbers, divisor Number) Number
 	Flash.Remainder((1, 5), 3) is 0
 	Flash.Remainder((26270, 2655732705), 20000081) is 9633156
@@ -47,8 +47,8 @@ Rows(tokens Numbers, position Number) Numbers
 	Flash.Rows((5, 7, 9), 2)(15) is 301899296
 	Flash.Rows((Eos, 151643, 248000), 2)(7) is 148391202
 	Flash.Rows((Eos, 151643, 248000), 2)(12) is 247353072
-	pair = Mixed(Context(tokens, position), 2)
-	triple = Mixed(Context(tokens, position), 3)
+	pair = Mix(Context(tokens, position), 2)
+	triple = Mix(Context(tokens, position), 3)
 	for vocabularies
 		Remainder(index < vocabularies.Length / 2 then pair else triple, value) + vocabularies.Slice(0, index).Sum
 Gate(key Numbers, query Numbers) Number
@@ -58,13 +58,13 @@ Gate(key Numbers, query Numbers) Number
 	score = Batch.Dot(key, 0, query, 0) / key.Length.SquareRoot
 	root = (score.Absolute < 0.000001 then 0.000001 else score.Absolute).SquareRoot
 	score is 0 then 0.5 else Activation.Sigmoid.Output(score < 0 then -root else root)
-Convolved(taps List(Numbers), weights List(Numbers)) Numbers
-	Flash.Convolved(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(0).IsNearlyEqual(0.7310585786300049)
-	Flash.Convolved(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(1).IsNearlyEqual(1.7615941559557646)
+Convolve(taps List(Numbers), weights List(Numbers)) Numbers
+	Flash.Convolve(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(0).IsNearlyEqual(0.7310585786300049)
+	Flash.Convolve(Window, ((0.5, 1, 1, 0.25), (1, 1, 1, 1)))(1).IsNearlyEqual(1.7615941559557646)
 	for taps.First
 		Activation.Swish.Output(Batch.Dot(weights(index), 0, Tap(taps, index), 0))
-Shifted(history List(Numbers), row Numbers) List(Numbers)
-	Flash.Shifted(((1, 1), (2, 2), (3, 3)), (4, 4)) is ((2, 2), (3, 3), (4, 4))
+Shift(history List(Numbers), row Numbers) List(Numbers)
+	Flash.Shift(((1, 1), (2, 2), (3, 3)), (4, 4)) is ((2, 2), (3, 3), (4, 4))
 	history.Slice(1, history.Length - 1) + row
 Taps(history List(Numbers)) List(Numbers)
 	Flash.Taps(((0), (1), (2), (3), (4), (5), (6), (7), (8), (9))) is ((0), (3), (6), (9))

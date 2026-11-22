@@ -8,11 +8,11 @@ Shapes(features Number, classes Number) List(Numbers)
 	Curve.Shapes(4, 3).Last is (4, 8, 3)
 	for Widths
 		(features, value, classes)
-Reported(data Dataset, name Text, features Number, classes Number, epochs Number) Text
-	Curve.Reported(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
+Report(data Dataset, name Text, features Number, classes Number, epochs Number) Text
+	Curve.Report(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
 	mutable report = ""
 	for Shapes(features, classes)
-		report = report + data.Evaluated(name + " width " + value(1), value, epochs) + "\n"
+		report = report + data.Evaluat(name + " width " + value(1), value, epochs) + "\n"
 	report
 Lengths(data Dataset) Text
 	Curve.Lengths(Dataset.Pairs) is "4 4"
@@ -28,13 +28,13 @@ IsAligned(data Dataset, features Number) Boolean
 		if value.Length is not features
 			matched = false
 	matched
-Tried(data Dataset, name Text, features Number, classes Number, epochs Number) Text
-	Curve.Tried(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
-	Curve.Tried(Dataset.Pairs, "Pairs", 3, 2, 0) is "Pairs lengths 4 4"
-	IsAligned(data, features) then Reported(data, name, features, classes, epochs) else name + " lengths " + Lengths(data)
+Try(data Dataset, name Text, features Number, classes Number, epochs Number) Text
+	Curve.Try(Dataset.Pairs, "Pairs", 4, 2, 0).StartsWith("Pairs width 1 test accuracy ")
+	Curve.Try(Dataset.Pairs, "Pairs", 3, 2, 0) is "Pairs lengths 4 4"
+	IsAligned(data, features) then Report(data, name, features, classes, epochs) else name + " lengths " + Lengths(data)
 Run
-	logger.Log(Reported(Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3), "Iris", 4, 3, Passes))
-	logger.Log(Reported(Csv(File(Sugar).ReadLines).Classified(2), "Diabetes", Diabetes.Features, 2, Passes))
-	logger.Log(Tried(Dataset.Images("NeuralNetworks/images", 2), "Digits", Gray28, 2, Passes))
-	logger.Log(Tried(Dataset.Images("../Mnist/mnist", 4), "Mnist16", Gray16, 4, Passes))
-	logger.Log(Tried(Dataset.Images("../Mnist/mnist28", 6), "Mnist28", Gray28, 6, Passes))
+	logger.Log(Report(Csv(File("NeuralNetworks/iris.csv").ReadLines).Classify(3), "Iris", 4, 3, Passes))
+	logger.Log(Report(Csv(File(Sugar).ReadLines).Classify(2), "Diabetes", Diabetes.Features, 2, Passes))
+	logger.Log(Try(Dataset.Images("NeuralNetworks/images", 2), "Digits", Gray28, 2, Passes))
+	logger.Log(Try(Dataset.Images("../Mnist/mnist", 4), "Mnist16", Gray16, 4, Passes))
+	logger.Log(Try(Dataset.Images("../Mnist/mnist28", 6), "Mnist28", Gray28, 6, Passes))

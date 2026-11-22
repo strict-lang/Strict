@@ -18,9 +18,9 @@ Gathered(inputs Number, outputs Number) Draw
 		current = current.Taken(inputs)
 		built.Add(current.row)
 	Draw(current.random, rows = built)
-Stacked(sizes Numbers) Network
-	Draw(PseudoRandom(1)).Stacked((2, 3, 1)).layers.Length is 2
-	Draw(PseudoRandom(1)).Stacked((2, 1)) is Draw(PseudoRandom(1)).Stacked((2, 1))
+Stack(sizes Numbers) Network
+	Draw(PseudoRandom(1)).Stack((2, 3, 1)).layers.Length is 2
+	Draw(PseudoRandom(1)).Stack((2, 1)) is Draw(PseudoRandom(1)).Stack((2, 1))
 	mutable current = value
 	mutable layers = List(Mutable(Layer))
 	for Range(1, sizes.Length)

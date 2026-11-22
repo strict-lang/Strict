@@ -47,9 +47,9 @@ Rows(logits Numbers, vocabulary Number) Numbers
 	third = Best(Maxima(second), Chunk, (groups / Chunk).Ceiling)
 	for logits.Length / vocabulary
 		best(2 * second(2 * third(2 * index + 1) + 1) + 1) - index * vocabulary
-Accepted(draft Numbers, predictions Numbers) Number
-	Greedy.Accepted((4, 5, 6), (4, 5, 7, 9)) is 2
-	Greedy.Accepted((4, 5), (3, 5, 1)) is 0
+Accept(draft Numbers, predictions Numbers) Number
+	Greedy.Accept((4, 5, 6), (4, 5, 7, 9)) is 2
+	Greedy.Accept((4, 5), (3, 5, 1)) is 0
 	mutable count = 0
 	for draft
 		count = count is index and value is predictions(index) then count + 1 else count

@@ -20,17 +20,17 @@ Loaded(file Safetensors, prefix Text, headCount Number) QwenVisionBlock
 Forward(patches Numbers, rotations Numbers) Numbers slow
 	Tiny.Forward(QwenVision.Reference.Values("reference.embedded"), QwenVision.Tiny.Rotations((4, 6))).Length is 768
 	width = firstNorm.Length
-	combined = attention.Sums(Gpt2Block.Normalized(patches, firstNorm, firstShift, 0.000001))
-	queries = Rotated(Batch.Columns(combined, 3 * width, 0, width), rotations, width / heads)
-	keys = Rotated(Batch.Columns(combined, 3 * width, width, width), rotations, width / heads)
+	combined = attention.Sums(Gpt2Block.Normalize(patches, firstNorm, firstShift, 0.000001))
+	queries = Rotate(Batch.Columns(combined, 3 * width, 0, width), rotations, width / heads)
+	keys = Rotate(Batch.Columns(combined, 3 * width, width, width), rotations, width / heads)
 	values = Batch.Columns(combined, 3 * width, 2 * width, width)
 	merged = Attention(queries, keys, values, heads, heads, width / heads, causal = false).Merged
-	attended = Gpt2Block.Added(patches, projection.Sums(merged))
-	normed = Gpt2Block.Normalized(attended, secondNorm, secondShift, 0.000001)
-	Gpt2Block.Added(attended, contraction.Sums(Gpt2Block.Gelu(expansion.Sums(normed))))
-Rotated(values Numbers, rotations Numbers, size Number) Numbers
-	Tiny.Rotated((1, 2, 3, 4), (1, 1, 1, 1, 0, 0, 0, 0), 4) is (1, 2, 3, 4)
-	Tiny.Rotated((1, 2, 3, 4), (0, 0, 0, 0, 1, 1, 1, 1), 4) is (-3, -4, 1, 2)
+	attended = Gpt2Block.Add(patches, projection.Sums(merged))
+	normed = Gpt2Block.Normalize(attended, secondNorm, secondShift, 0.000001)
+	Gpt2Block.Add(attended, contraction.Sums(Gpt2Block.Gelu(expansion.Sums(normed))))
+Rotate(values Numbers, rotations Numbers, size Number) Numbers
+	Tiny.Rotate((1, 2, 3, 4), (1, 1, 1, 1, 0, 0, 0, 0), 4) is (1, 2, 3, 4)
+	Tiny.Rotate((1, 2, 3, 4), (0, 0, 0, 0, 1, 1, 1, 1), 4) is (-3, -4, 1, 2)
 	width = values.Length / (rotations.Length / 2 / size)
 	for values
 		at = index % size

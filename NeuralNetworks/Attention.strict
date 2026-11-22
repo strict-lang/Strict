@@ -29,7 +29,7 @@ Merged Numbers slow
 	rows = queries.Length / sequences / heads / size
 	for queries.Length
 		row = (index / size).Floor
-		Softmax.Weighted(shares, row * positions, Last(row, positions, rows) + 1, values, ValueStart(index), Stride)
+		Softmax.Weight(shares, row * positions, Last(row, positions, rows) + 1, values, ValueStart(index), Stride)
 Stride Number slow
 	Attention(Prompted, values = Prompt, valueOffset = 7168, valueStride = 128).Merged(4095).IsNearlyEqual(0.061657, 0.005)
 	Attention(Prompt, Prompt, Prompt, 1, 1, 128, 1, false, 0, 0, true).Merged(10239).IsNearlyEqual(-0.24048, 0.01)
@@ -48,7 +48,7 @@ Scores(positions Number) Numbers slow
 	tokens = queries.Length / heads / size / sequences
 	if tokens * sequences * heads * positions > LargestScores
 		return Unfitting(tokens, positions)
-	tokens < TiledTokens then Direct(positions, tokens) else Tiled(positions, tokens)
+	tokens < TiledTokens then Direct(positions, tokens) else Tile(positions, tokens)
 Unfitting(tokens Number, positions Number) Error
 	(Single.Unfitting(104303, 104303) to Text).StartsWith("Error: AttentionNeedsGpu: 104303 tokens, 104303 positions")
 	(Single.Unfitting(1, 3000000000) to Text).IndexOf(FitHint) > 0
@@ -56,28 +56,28 @@ Unfitting(tokens Number, positions Number) Error
 	sizes = tokens + " tokens, " + positions + " positions and " + heads + " heads"
 	needed = " did not fit into the free GPU memory, on the CPU their scores need " + gigabytes + " GB. "
 	Error("AttentionNeedsGpu: " + sizes + needed + FitHint)
-Tiled(positions Number, tokens Number) Numbers slow
-	Prompted.Tiled(24, 16)(1000).IsNearlyEqual(-0.1641102558437736, 0.0001)
-	Prompted.Tiled(24, 16)(23) is -125000000
+Tile(positions Number, tokens Number) Numbers slow
+	Prompted.Tile(24, 16)(1000).IsNearlyEqual(-0.1641102558437736, 0.0001)
+	Prompted.Tile(24, 16)(23) is -125000000
 	shared = heads / groups
 	shape = (sequences * groups, tokens * shared, size, positions)
 	strides = (0, tokens * shared * size, size, 1, 0, size, 1, sequences * groups * size)
-	scores = Products(Grouped(tokens), keys, shape, strides).Multiplied
+	scores = Products(Group(tokens), keys, shape, strides).Multiplied
 	for tokens * sequences * heads * positions
 		row = (index / positions).Floor
-		score = scores(Placed(row, tokens) * positions + index % positions)
+		score = scores(Place(row, tokens) * positions + index % positions)
 		Visible(score, index % positions, Last(row, positions, tokens)) / size.SquareRoot
-Placed(row Number, tokens Number) Number slow
-	Prompted.Placed(1, 16) is 1
-	Prompted.Placed(4, 16) is 2
-	Prompted.Placed(2, 16) is 32
+Place(row Number, tokens Number) Number slow
+	Prompted.Place(1, 16) is 1
+	Prompted.Place(4, 16) is 2
+	Prompted.Place(2, 16) is 32
 	shared = heads / groups
 	head = row % heads
 	block = (row / heads / tokens).Floor * groups + (head / shared).Floor
 	(block * tokens + (row / heads).Floor % tokens) * shared + head % shared
-Grouped(tokens Number) Numbers slow
-	Prompted.Grouped(16)(128) is Prompted.queries(256)
-	Prompted.Grouped(16)(2048) is Prompted.queries(128)
+Group(tokens Number) Numbers slow
+	Prompted.Group(16)(128) is Prompted.queries(256)
+	Prompted.Group(16)(2048) is Prompted.queries(128)
 	shared = heads / groups
 	for queries.Length
 		row = (index / size).Floor

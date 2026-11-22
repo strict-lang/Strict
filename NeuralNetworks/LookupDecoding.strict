@@ -6,15 +6,15 @@ Run(path Text, count = 200, bits = 4)
 	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	model = Qwen3.Loaded(path, bits)
 	code = Text.Combine(File("Math/Vector2.strict").ReadLines, "\n")
-	copying = tokenizer.Encoded(code + "\n\n" + code.Substring(0, CopiedCharacters))
-	logger.Log(path + " warming up: " + Compared(model, tokenizer.Encoded(Story), WarmupTokens))
-	logger.Log(path + " copying code: " + Compared(model, copying, count))
-	logger.Log(path + " writing prose: " + Compared(model, tokenizer.Encoded(Story), count))
+	copying = tokenizer.Encode(code + "\n\n" + code.Substring(0, CopiedCharacters))
+	logger.Log(path + " warming up: " + Compare(model, tokenizer.Encode(Story), WarmupTokens))
+	logger.Log(path + " copying code: " + Compare(model, copying, count))
+	logger.Log(path + " writing prose: " + Compare(model, tokenizer.Encode(Story), count))
 	for VerifiedTokens
-		verified = Verified(model.Prefilled(copying, 0), copying.Length, value)
+		verified = Verify(model.Prefilled(copying, 0), copying.Length, value)
 		logger.Log("verifying " + value + " tokens after " + copying.Length + ": " + verified + " ms")
-Verified(prefilled Qwen3, start Number, count Number) Number slow
-	LookupDecoding.Verified(Qwen3.Tiny.Prefilled((1, 2), 0), 2, 2) > 0
+Verify(prefilled Qwen3, start Number, count Number) Number slow
+	LookupDecoding.Verify(Qwen3.Tiny.Prefilled((1, 2), 0), 2, 2) > 0
 	block = Safetensors.Part((1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2, 1, 2), 0, count, 1)
 	mutable current = prefilled
 	mutable fastest = 1000
@@ -24,15 +24,15 @@ Verified(prefilled Qwen3, start Number, count Number) Number slow
 		current = current.Nexts.First >= 0 then current else prefilled
 		fastest = (Process.Elapsed - started).Clamp(0, fastest)
 	(fastest * 1000).Round(2)
-Compared(model Qwen3, prompt Numbers, count Number) Text slow
-	LookupDecoding.Compared(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
+Compare(model Qwen3, prompt Numbers, count Number) Text slow
+	LookupDecoding.Compare(Qwen3.Tiny, (1, 2, 3), 6).StartsWith("same tokens")
 	prefilled = model.Prefilled(prompt, 0)
 	next = prefilled.Next
 	again = model.Prefilled(prompt, 0)
 	started = again.Next >= 0 then Process.Elapsed else 0
 	finished = Speculation(prefilled, prompt, next).Finished(count)
 	middle = Process.Elapsed
-	plain = Generation(again).Continued(prompt.Length, count)
+	plain = Generation(again).Continue(prompt.Length, count)
 	ended = Process.Elapsed
 	drafted = Safetensors.Part(finished.context, prompt.Length, count, 1)
 	speed = (count / (middle - started)).Round(1) + " instead of " + (count / (ended - middle)).Round(1) + " tokens/s"

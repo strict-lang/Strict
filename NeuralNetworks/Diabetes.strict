@@ -1,4 +1,4 @@
 constant Features = 19
 Run
-	dataset = Csv(File("NeuralNetworks/diabetes.csv").ReadLines).Classified(2)
-	logger.Log(dataset.Evaluated("Diabetes", (Features, 10, 2), Dataset.Epochs))
+	dataset = Csv(File("NeuralNetworks/diabetes.csv").ReadLines).Classify(2)
+	logger.Log(dataset.Evaluat("Diabetes", (Features, 10, 2), Dataset.Epochs))

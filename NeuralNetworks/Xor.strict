@@ -1,21 +1,21 @@
 constant Inputs = ((0, 0), (0, 1), (1, 0), (1, 1))
 constant Targets = (0, 1, 1, 0)
-constant Epoch = Descent(Network.Pair).Epoch(Inputs, Smallest.Wrapped(Targets), 1)
+constant Epoch = Descent(Network.Pair).Epoch(Inputs, Smallest.Wrap(Targets), 1)
 Run
-	untrained = Draw(PseudoRandom(1)).Stacked((2, 3, 1))
+	untrained = Draw(PseudoRandom(1)).Stack((2, 3, 1))
 	started = Process.Elapsed
-	network = Trained(untrained, Smallest.Long, Smallest.Rate)
+	network = Train(untrained, Smallest.Long, Smallest.Rate)
 	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	logger.Log("Error before training " + Error(untrained) + ", after " + Error(network) + " in " + milliseconds + " ms")
 	for Inputs
 		logger.Log(value to Text + " gives " + network.Predict(value).First)
 	logger.Log("separated " + Smallest.IsSeparated(network, Targets) + " after " + Smallest.Long + " steps")
 	logger.Log("exists " + (Smallest.Sought(Targets) to Text))
-Trained(network Network, steps Number, rate = 1) Network slow
-	Xor.Trained(Network.Pair, 1, 1).layers.Last.weights is Epoch.layers.Last.weights
-	Xor.Error(Xor.Trained(Network.Pair, 4, 1)) < Xor.Error(Network.Pair)
+Train(network Network, steps Number, rate = 1) Network slow
+	Xor.Train(Network.Pair, 1, 1).layers.Last.weights is Epoch.layers.Last.weights
+	Xor.Error(Xor.Train(Network.Pair, 4, 1)) < Xor.Error(Network.Pair)
 	mutable trained = network
-	wrapped = Smallest.Wrapped(Targets)
+	wrapped = Smallest.Wrap(Targets)
 	for steps
 		trained = Descent(trained).Epoch(Inputs, wrapped, rate)
 	trained

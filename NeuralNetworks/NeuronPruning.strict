@@ -8,34 +8,34 @@ Run(path Text)
 	model = Gpt2.Loaded(path + "/model.safetensors", BFloat16.Bits)
 	activity = Activity(model).Measured(tokenizer, calibrating(0) + calibrating(1))
 	heldout = evaluation.Heldout(8)
-	logger.Log(path + " with all MLP neurons: " + LayerDropping.Reported(model, tokenizer, heldout))
+	logger.Log(path + " with all MLP neurons: " + LayerDropping.Report(model, tokenizer, heldout))
 	for Fractions
-		pruned = Pruned(model, activity, value)
-		logger.Log("without " + value * 100 + "% of them: " + LayerDropping.Reported(pruned, tokenizer, heldout))
-Pruned(model Gpt2, activity Activity, fraction Number) Gpt2 slow
-	Pruning.Pruned(Gpt2.Tiny, Measured, 0.5).blocks.First.expansion.biases.Length is 24
+		pruned = Prune(model, activity, value)
+		logger.Log("without " + value * 100 + "% of them: " + LayerDropping.Report(pruned, tokenizer, heldout))
+Prune(model Gpt2, activity Activity, fraction Number) Gpt2 slow
+	Pruning.Prune(Gpt2.Tiny, Measured, 0.5).blocks.First.expansion.biases.Length is 24
 	mutable blocks = List(Mutable(Gpt2Block))
 	for model.blocks
 		scores = activity.Scores(index)
-		blocks.Add(Narrowed(value, Kept(scores, (scores.Length * (1 - fraction)).Round), activity.Means(index)))
+		blocks.Add(Narrow(value, Keep(scores, (scores.Length * (1 - fraction)).Round), activity.Means(index)))
 	Gpt2(model, blocks = blocks)
-Narrowed(block Gpt2Block, kept Numbers, means Numbers) Gpt2Block slow
-	Pruning.Narrowed(Gpt2Block.Tiny, (0, 2), Layer.Halves.Zeros(48)).contraction.weights.First.Length is 2
-	expansion = Layer(Dataset.Picked(block.expansion.weights, kept), Dataset.Picked(block.expansion.biases, kept))
+Narrow(block Gpt2Block, kept Numbers, means Numbers) Gpt2Block slow
+	Pruning.Narrow(Gpt2Block.Tiny, (0, 2), Layer.Halves.Zeros(48)).contraction.weights.First.Length is 2
+	expansion = Layer(Dataset.Pick(block.expansion.weights, kept), Dataset.Pick(block.expansion.biases, kept))
 	columns = Columns(block.contraction.weights, kept)
-	contraction = Layer(columns, Compensated(block.contraction, columns, means, kept))
+	contraction = Layer(columns, Compensate(block.contraction, columns, means, kept))
 	Gpt2Block(block, expansion = expansion, contraction = contraction)
-Compensated(layer Layer, columns List(Numbers), means Numbers, kept Numbers) Numbers
-	Pruning.Compensated(Layer(((1, 2, 3), (4, 5, 6)), (0, 1)), ((1, 3), (4, 6)), (5, 7, 9), (0, 2)) is (14, 36)
-	picked = Dataset.Picked(means, kept)
+Compensate(layer Layer, columns List(Numbers), means Numbers, kept Numbers) Numbers
+	Pruning.Compensate(Layer(((1, 2, 3), (4, 5, 6)), (0, 1)), ((1, 3), (4, 6)), (5, 7, 9), (0, 2)) is (14, 36)
+	picked = Dataset.Pick(means, kept)
 	for layer.weights
 		layer.biases(index) + Batch.Dot(value, 0, means, 0) - Batch.Dot(columns(index), 0, picked, 0)
 Columns(rows List(Numbers), kept Numbers) List(Numbers)
 	Pruning.Columns(((1, 2, 3), (4, 5, 6)), (0, 2)) is ((1, 3), (4, 6))
 	for rows
-		Dataset.Picked(value, kept)
-Kept(scores Numbers, count Number) Numbers
-	Pruning.Kept((3, 1, 2, 5), 2) is (0, 3)
+		Dataset.Pick(value, kept)
+Keep(scores Numbers, count Number) Numbers
+	Pruning.Keep((3, 1, 2, 5), 2) is (0, 3)
 	threshold = Threshold(scores, count)
 	for scores
 		if value >= threshold

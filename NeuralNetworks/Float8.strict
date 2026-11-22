@@ -12,8 +12,8 @@ from(unrounded Number)
 	Float8(1 / 0) is 448
 	step = 2 ^ ((unrounded.Absolute.Logarithm / 2.Logarithm).Floor.Clamp(-6, 8) - 3)
 	(unrounded.Clamp(-Largest, Largest) / step).Counted("Even") * step
-Packed(numbers Numbers) Float8s
-	Float8.Packed((0.5, 1.125, -3.25)) is (0.5, 1.125, -3.25)
-	Float8.Packed(List(Number) + 0.3).First.number is 0.3125
+Pack(numbers Numbers) Float8s
+	Float8.Pack((0.5, 1.125, -3.25)) is (0.5, 1.125, -3.25)
+	Float8.Pack(List(Number) + 0.3).First.number is 0.3125
 	for numbers
 		Float8(value)

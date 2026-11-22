@@ -5,7 +5,7 @@ Run
 Report(name Text, reach Reach, generations Number) Text slow
 	ArmEvolution.Report("Planar arm", Reach.Planar, 1).StartsWith("Planar arm: joint angles (")
 	started = Process.Elapsed
-	best = reach.Evolved(reach.Arms, generations)
+	best = reach.Evolve(reach.Arms, generations)
 	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)
 	millimeters = (reach.Distance(best) * 1000).Round(2)
 	reached = " reach " + (reach.target to Text) + " within " + millimeters + " mm"

@@ -29,8 +29,8 @@ Positions(starts Numbers) Numbers
 		position = starts(value) + placed(value)
 		placed(value) = placed(value) + 1
 		position
-Ordered(positions Numbers, rows Number) Numbers
-	Sample.Ordered((4, 0, 5, 2), 6) is (1, -1, 3, -1, 0, 2)
+Order(positions Numbers, rows Number) Numbers
+	Sample.Order((4, 0, 5, 2), 6) is (1, -1, 3, -1, 0, 2)
 	mutable pairs = Layer.Zeros(rows)
 	for positions.Length
 		pairs(positions(index)) = index + 1
@@ -49,13 +49,13 @@ Bases(starts Numbers, rows Number, count Number) Numbers
 		for experts - 1
 			expert = starts(index + 1) <= row then index + 1 else expert
 		expert * count
-Gathered(input Numbers, ordered Numbers) Numbers
-	Sample.Gathered((1, 2, 3, 4), (1, -1, 3)) is (1, 2, 1, 2, 3, 4)
+Gather(input Numbers, ordered Numbers) Numbers
+	Sample.Gather((1, 2, 3, 4), (1, -1, 3)) is (1, 2, 1, 2, 3, 4)
 	width = input.Length * used / chosen.Length
 	for ordered.Length * width
 		pair = ordered((index / width).Floor)
 		input(((pair < 0 then 0 else pair) / used).Floor * width + index % width)
-Unsorted(rows Numbers, positions Numbers, width Number) Numbers
-	Sample.Unsorted((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), (4, 0, 5, 2), 2) is (9, 10, 1, 2, 11, 12, 5, 6)
+Unsort(rows Numbers, positions Numbers, width Number) Numbers
+	Sample.Unsort((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), (4, 0, 5, 2), 2) is (9, 10, 1, 2, 11, 12, 5, 6)
 	for chosen.Length * width
 		rows(positions((index / width).Floor) * width + index % width)

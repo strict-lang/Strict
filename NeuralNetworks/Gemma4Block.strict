@@ -31,9 +31,9 @@ Normings(model Gguf, prefix Text) List(Numbers) slow
 	Tiny.Normings(Model, "blk.2.")(2).Length is 8
 	for Norms
 		gains = model.Values(prefix + value + ".weight")
-		index is 1 then Scaled(gains, gains.Length.SquareRoot) else gains
-Scaled(numbers Numbers, factor Number) Numbers
-	Tiny.Scaled((1, 2), 3) is (3, 6)
+		index is 1 then Scale(gains, gains.Length.SquareRoot) else gains
+Scale(numbers Numbers, factor Number) Numbers
+	Tiny.Scale((1, 2), 3) is (3, 6)
 	for numbers
 		value * factor
 Projections(model Gguf, prefix Text) List(Layer) slow
@@ -59,15 +59,15 @@ Cached(input Numbers, rotation Numbers) Gemma4Block slow
 	combined = Sums(1, input)
 	keyed = Batch.Columns(combined, 2 * stride, 0, stride)
 	valued = Batch.Columns(combined, 2 * stride, stride, stride)
-	turned = Qwen3Block.Rotated(keyed, 0, keyed.Length, norms(2), rotation)
-	Gemma4Block(value, keys = keys + turned, values = values + Qwen3Block.Normalized(valued, 0, valued.Length, Ones))
+	turned = Qwen3Block.Rotate(keyed, 0, keyed.Length, norms(2), rotation)
+	Gemma4Block(value, keys = keys + turned, values = values + Qwen3Block.Normalize(valued, 0, valued.Length, Ones))
 Queries(input Numbers, rotation Numbers) Numbers slow
 	Tiny.Queries(Probe, Turns).Length is 32
 	combined = Sums(0, input)
-	Qwen3Block.Rotated(combined, 0, combined.Length, norms(1), rotation)
-Attended(queries Numbers, cache Gemma4Block, sequences Number) Numbers slow
-	Tiny.Attended(Tiny.Queries(Probe, Turns), Kept, 1).Length is 32
-	Gemma4Block(Tiny, window = 1).Attended(Tiny.Queries(Probe, Turns), Kept, 1).Length is 32
+	Qwen3Block.Rotate(combined, 0, combined.Length, norms(1), rotation)
+Attend(queries Numbers, cache Gemma4Block, sequences Number) Numbers slow
+	Tiny.Attend(Tiny.Queries(Probe, Turns), Kept, 1).Length is 32
+	Gemma4Block(Tiny, window = 1).Attend(Tiny.Queries(Probe, Turns), Kept, 1).Length is 32
 	width = heads * norms(1).Length
 	positions = cache.keys.Length / groups / norms(1).Length / sequences
 	tokens = queries.Length / width / sequences
@@ -91,36 +91,36 @@ Slid(queries Numbers, cache Gemma4Block, visible Number, sequences Number) Numbe
 	Attention(queries, seen, valued, heads, groups, norms(1).Length, sequences).Merged
 Output(input Numbers, queries Numbers, cache Gemma4Block, added Numbers, layer = 0, sequences = 1) Numbers slow
 	Tiny.Output(Probe, Tiny.Queries(Probe, Turns), Kept, Range(0, 48)).Length is 32
-	mixed = Mixed(Sums(2, Attended(queries, cache, sequences)), norms(3), input, 1)
-	full = Mixed(Sums(4, Gated(Sums(3, Qwen3Block.Normalized(mixed, 0, mixed.Length, norms(4))))), norms(5), mixed, 1)
+	mixed = Mix(Sums(2, Attend(queries, cache, sequences)), norms(3), input, 1)
+	full = Mix(Sums(4, Gate(Sums(3, Qwen3Block.Normalize(mixed, 0, mixed.Length, norms(4))))), norms(5), mixed, 1)
 	stride = added.Length / (input.Length / norms(0).Length)
-	Mixed(Sums(6, Entering(Sums(5, full), added, stride, layer)), norms(6), full, scale)
+	Mix(Sums(6, Entering(Sums(5, full), added, stride, layer)), norms(6), full, scale)
 Copies(count Number) Gemma4Block
 	(Kept.Copies(2).keys.Length, Kept.Copies(2).values.Length) is (32, 32)
 	stride = groups * norms(1).Length
-	Gemma4Block(value, keys = Gemma4.Repeated(keys, stride, count), values = Gemma4.Repeated(values, stride, count))
-Gated(expanded Numbers) Numbers
-	Tiny.Gated(Layer.Zeros(64)) is Layer.Zeros(32)
+	Gemma4Block(value, keys = Gemma4.Repeat(keys, stride, count), values = Gemma4.Repeat(values, stride, count))
+Gate(expanded Numbers) Numbers
+	Tiny.Gate(Layer.Zeros(64)) is Layer.Zeros(32)
 	size = layers(4).weights.First.Length
 	for expanded.Length / 2
 		start = (index / size).Floor * 2 * size + index % size
-		Smoothed(expanded(start)) * expanded(start + size)
+		Smooth(expanded(start)) * expanded(start + size)
 Entering(gates Numbers, added Numbers, stride Number, layer Number) Numbers
 	Tiny.Entering((0, 1, 1, 1), Range(0, 24), 24, 1).Last.IsNearlyEqual(5.8883439342)
 	size = layers(5).weights.Length
 	offset = layer * size
 	for gates
-		Smoothed(value) * added((index / size).Floor * stride + offset + index % size)
-Smoothed(number Number) Number
-	Tiny.Smoothed(1).IsNearlyEqual(0.8411919906082768)
+		Smooth(value) * added((index / size).Floor * stride + offset + index % size)
+Smooth(number Number) Number
+	Tiny.Smooth(1).IsNearlyEqual(0.8411919906082768)
 	inner = Activation.GeluScale * (number + Activation.GeluCubic * number * number * number)
 	0.5 * number * (1 + Activation.Tanh.Output(inner))
 Sums(at Number, input Numbers) Numbers slow
 	Tiny.Sums(0, Probe).Length is 32
 	Batch(layers(at).weights, Layer.Unbiased).Sums(input)
-Mixed(input Numbers, weights Numbers, residual Numbers, factor Number) Numbers
-	Tiny.Mixed((3, 4), (1, 2), (1, 1), 2).First.IsNearlyEqual(3.697056)
-	Tiny.Mixed((3, 4, 0, 1), (1, 2), (0, 0, 0, 0), 1).Last.IsNearlyEqual(2.828424)
+Mix(input Numbers, weights Numbers, residual Numbers, factor Number) Numbers
+	Tiny.Mix((3, 4), (1, 2), (1, 1), 2).First.IsNearlyEqual(3.697056)
+	Tiny.Mix((3, 4, 0, 1), (1, 2), (0, 0, 0, 0), 1).Last.IsNearlyEqual(2.828424)
 	size = weights.Length
 	scales = Qwen3Block.Scales(input, size, Epsilon)
 	for input

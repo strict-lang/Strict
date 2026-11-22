@@ -16,8 +16,8 @@ Order(position Number) Number
 	if position < pairs
 		return position
 	position < half then position + pairs else (position < half + pairs then position - half + pairs else position)
-Permuted(rows List(Numbers)) List(Numbers)
-	Partial.Permuted(((0), (1), (2), (3))) is ((0), (2), (1), (3))
+Permute(rows List(Numbers)) List(Numbers)
+	Partial.Permute(((0), (1), (2), (3))) is ((0), (2), (1), (3))
 	for rows.Length
 		rows((index / size).Floor * size + Order(index % size))
 Norm(values Numbers) Numbers
@@ -27,13 +27,13 @@ Norm(values Numbers) Numbers
 Queries(rows List(Numbers)) List(Numbers)
 	HeadRows(2, 2, 1).Queries(((1), (2), (3), (4))) is ((1), (2))
 	Partial.Queries(((0), (1), (2), (3))) is ((0), (2), (1), (3))
-	Permuted(rows.Length is 2 * heads * size then Picked(rows, 0) else rows)
+	Permute(rows.Length is 2 * heads * size then Pick(rows, 0) else rows)
 Gates(rows List(Numbers)) List(Numbers)
 	HeadRows(2, 2, 1).Gates(((1), (2), (3), (4))) is ((3), (4))
 	Partial.Gates(((0), (1), (2), (3))).Length is 0
-	rows.Length is 2 * heads * size then Picked(rows, 1) else List(Numbers)
-Picked(rows List(Numbers), part Number) List(Numbers)
-	HeadRows(1, 1, 2).Picked(((1), (2), (3), (4)), 1) is ((2), (4))
+	rows.Length is 2 * heads * size then Pick(rows, 1) else List(Numbers)
+Pick(rows List(Numbers), part Number) List(Numbers)
+	HeadRows(1, 1, 2).Pick(((1), (2), (3), (4)), 1) is ((2), (4))
 	offset = part * size
 	for heads * size
 		rows((index / size).Floor * 2 * size + offset + index % size)

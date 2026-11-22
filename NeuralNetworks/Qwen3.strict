@@ -55,7 +55,7 @@ Rotations(positions Numbers, heights = List(Number), widths = List(Number)) Numb
 	for positions.Length * 4 * half
 		at = index % (4 * half)
 		pair = at % half
-		position = Placed(pair, (index / (4 * half)).Floor, positions, heights, widths)
+		position = Place(pair, (index / (4 * half)).Floor, positions, heights, widths)
 		angle = Radians(pair < pairs then position * theta ^ (-pair / pairs) else 0) to Degrees
 		at < 2 * half then angle.Cos else (at < 3 * half then -angle.Sin else angle.Sin)
 Step(token Number, position Number) Qwen3 slow
@@ -91,26 +91,26 @@ PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) nat
 	TinyHybrid.PrefilledBatch(Uneven).Last.Last.IsNearlyEqual(TinyHybrid.Prefilled((1, 2, 3), 0).hidden.Last, 0.0001)
 	if prompts.Length < 2
 		return prompts.Length is 0 then List(Numbers) else List(Numbers) + Prefilled(prompts.First, start).hidden
-	seqLen = SequenceLength(prompts).Aligned(blocks.First.hybrid.layers.Length > 0 then 16 else 1)
+	seqLen = SequenceLength(prompts).Align(blocks.First.hybrid.layers.Length > 0 then 16 else 1)
 	perBatch = (chunk / blocks.First.experts.used / seqLen).Floor.Clamp(1, prompts.Length)
 	mutable results = List(Mutable(Numbers))
 	for (prompts.Length / perBatch).Ceiling
 		first = index * perBatch
 		count = (prompts.Length - first).Clamp(0, perBatch)
-		batched = Batched(prompts.Slice(first, count), seqLen, start)
+		batched = RunBatch(prompts.Slice(first, count), seqLen, start)
 		for count
 			results.Add(batched.Slice(index * seqLen * norm.Length, prompts(first + index).Length * norm.Length))
 	results
-Batched(prompts List(Numbers), length Number, start Number) Numbers
-	Tiny.Batched(Uneven, 3, 0).Length is 2 * 3 * Tiny.norm.Length
+RunBatch(prompts List(Numbers), length Number, start Number) Numbers
+	Tiny.RunBatch(Uneven, 3, 0).Length is 2 * 3 * Tiny.norm.Length
 	part = SequenceLength(prompts)
-	Steps(part.Padded(length), part.Positions(length, start), prompts.Length).hidden
+	Steps(part.Padd(length), part.Positions(length, start), prompts.Length).hidden
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
-	Forwarded(basis.Restored(Embedded(chosen), norm.Length), Rotations(positions), sequences, List(Numbers), List(Number))
+	Forwarded(basis.Restore(Embedd(chosen), norm.Length), Rotations(positions), sequences, List(Numbers), List(Number))
 Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numbers), rows Numbers) Qwen3
-	Tiny.Forwarded(Tiny.Embedded((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
+	Tiny.Forwarded(Tiny.Embedd((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
 	mutable current = input
 	mutable updated = List(Mutable(Qwen3Block))
 	completion = Completion(progress, blocks.Length, Process.Elapsed)
@@ -118,34 +118,34 @@ Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numb
 		prepared = value.hybrid.Prepared(current, sequences)
 		cached = Qwen3Block(value, hybrid = prepared).Cached(prepared.entered, rotation, cacheBits, sequences)
 		output = cached.Output(prepared.entered, sequences)
-		current = index < deepstack.Length then Stacked(output, deepstack(index), rows) else output
+		current = index < deepstack.Length then Stack(output, deepstack(index), rows) else output
 		updated.Add(Qwen3Block(cached, queries = List(Number), hybrid = Hybrid(prepared.layers, inputs = prepared.inputs)))
 		completion.Report(index + 1)
 	Qwen3(value, blocks = updated, hidden = current)
-Stacked(numbers Numbers, features Numbers, rows Numbers) Numbers
-	Qwen3(Tiny, norm = (1, 1)).Stacked((1, 2, 3, 4, 5, 6), (10, 20), (-1, 0, -1)) is (1, 2, 13, 24, 5, 6)
+Stack(numbers Numbers, features Numbers, rows Numbers) Numbers
+	Qwen3(Tiny, norm = (1, 1)).Stack((1, 2, 3, 4, 5, 6), (10, 20), (-1, 0, -1)) is (1, 2, 13, 24, 5, 6)
 	width = norm.Length
 	for numbers
 		row = rows((index / width).Floor)
 		row < 0 then value else value + features(row * width + index % width)
-Placed(pair Number, row Number, positions Numbers, heights Numbers, widths Numbers) Number
-	(Tiny.Placed(1, 0, 5, 6, 7), Tiny.Placed(2, 0, 5, 6, 7), Tiny.Placed(3, 0, 5, 6, 7)) is (6, 7, 5)
-	(Tiny.Placed(1, 0, 5, List(Number), List(Number)), Tiny.Placed(61, 0, 5, 6, 7)) is (5, 5)
+Place(pair Number, row Number, positions Numbers, heights Numbers, widths Numbers) Number
+	(Tiny.Place(1, 0, 5, 6, 7), Tiny.Place(2, 0, 5, 6, 7), Tiny.Place(3, 0, 5, 6, 7)) is (6, 7, 5)
+	(Tiny.Place(1, 0, 5, List(Number), List(Number)), Tiny.Place(61, 0, 5, 6, 7)) is (5, 5)
 	axis = heights.Length is 0 or pair >= Interleaved then 0 else pair % 3
 	axis is 0 then positions(row) else (axis is 1 then heights(row) else widths(row))
 Scored Numbers
 	Tiny.Step(1, 0).Scored.Length is 6
-	basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalized(hidden, hidden.Length - norm.Length, norm.Length, norm))
+	basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalize(hidden, hidden.Length - norm.Length, norm.Length, norm))
 Next Number
 	Tiny.Step(1, 0).Next is 0
 	Greedy.Largest(Scored)
 Nexts Numbers
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Prompted.Step(3, 2).Next, Prompted.Step(4, 2).Next)
-	logits = basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalized(hidden, 0, hidden.Length, norm))
+	logits = basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalize(hidden, 0, hidden.Length, norm))
 	Greedy.Rows(logits, outputs.Length)
-Embedded(chosen Numbers) Numbers
-	Tiny.Embedded((1, 2)).Length is 16
-	Tiny.Embedded((1, 2))(8) is Tiny.tokens(2).First
+Embedd(chosen Numbers) Numbers
+	Tiny.Embedd((1, 2)).Length is 16
+	Tiny.Embedd((1, 2))(8) is Tiny.tokens(2).First
 	width = norm.Length
 	for chosen.Length * width
 		tokens(chosen((index / width).Floor))(index % width)

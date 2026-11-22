@@ -1,2 +1,2 @@
 Run
-	logger.Log(Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3).Evaluated("Iris", (4, 8, 3), Dataset.Epochs))
+	logger.Log(Csv(File("NeuralNetworks/iris.csv").ReadLines).Classify(3).Evaluat("Iris", (4, 8, 3), Dataset.Epochs))

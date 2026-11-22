@@ -22,15 +22,15 @@ Next(previous Numbers, step Numbers) Numbers
 	recurring = recurrent.Sums(previous)
 	for input.Sums(step)
 		Activation.Sigmoid.Output(value + recurring(index))
-Predicted(inputs List(Numbers)) List(Numbers)
-	Tiny.Predicted(List(Numbers) + (0, 0)) is List(Numbers) + (List(Number) + 0.6224593312018546)
+Predict(inputs List(Numbers)) List(Numbers)
+	Tiny.Predict(List(Numbers) + (0, 0)) is List(Numbers) + (List(Number) + 0.6224593312018546)
 	Outputs(output, States(inputs))
 Outputs(layer Layer, states List(Numbers)) List(Numbers)
 	Recurrent.Outputs(Layer.Halves, ((0, 0), (2, 0))) is List(Numbers) + (List(Number) + 0.7310585786300049)
 	for Range(1, states.Length)
 		layer.Forward(states(value))
 Trained(inputs List(Numbers), targets List(Numbers), rate Number) Recurrent
-	Tiny.Trained(Step, List(Numbers) + Zero, 2).Predicted(Step).First.First < 0.5
+	Tiny.Trained(Step, List(Numbers) + Zero, 2).Predict(Step).First.First < 0.5
 	states = States(inputs)
 	outputs = OutputDeltas(output, states, targets)
 	hiddens = HiddenDeltas(states, outputs)

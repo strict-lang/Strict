@@ -1,6 +1,6 @@
 Run
 	constant Trees = 25
-	data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classified(3)
+	data = Csv(File("NeuralNetworks/iris.csv").ReadLines).Classify(3)
 	training = data.Training
 	testing = data.Testing
 	neighbors = NearestNeighbors(training.inputs, training.Labels)

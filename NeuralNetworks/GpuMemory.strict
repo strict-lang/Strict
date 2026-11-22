@@ -21,10 +21,10 @@ HostTotal Number
 Stamped Number
 	GpuMemory.Stamped >= -1
 	Number.NotFound
-Elapsed(first Number, last Number) Number
-	GpuMemory.Elapsed(-1, -1) is -1
+Elapse(first Number, last Number) Number
+	GpuMemory.Elapse(-1, -1) is -1
 	first < 0 or last < 0 then Number.NotFound else last - first
-Tuned(rows List(Numbers), downs Numbers, ups Numbers, scales Numbers) List(Numbers)
-	GpuMemory.Tuned(Safetensors.Bytes.Quantized("a"), List(Number), List(Number), List(Number)).Length is 4
-	GpuMemory.Tuned(Safetensors.Bytes.Quantized("a"), (1, 0), (1, 0), List(Number) + 1).Length is 0
+Tune(rows List(Numbers), downs Numbers, ups Numbers, scales Numbers) List(Numbers)
+	GpuMemory.Tune(Safetensors.Bytes.Quantize("a"), List(Number), List(Number), List(Number)).Length is 4
+	GpuMemory.Tune(Safetensors.Bytes.Quantize("a"), (1, 0), (1, 0), List(Number) + 1).Length is 0
 	downs.Length is 0 and ups.Length is 0 and scales.Length is 0 then rows else List(Numbers)

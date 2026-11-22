@@ -12,7 +12,7 @@ constant Tiny = Experts.Loaded(Model, "blk.0.")
 constant Sigmoids = Experts(Tiny, isSigmoid = true, selectionBias = (0, 0, 5, 0))
 constant Single = Experts.Dense(Tiny.expansions.First, Tiny.contractions.First)
 constant Probe = (0.5, -1, 1.5, 2, -0.25, 0.75, 1, -2)
-constant Gating = Tiny.Gated(Tiny.Expanded((1, 3), Probe), 4)
+constant Gating = Tiny.Gate(Tiny.Expand((1, 3), Probe), 4)
 constant Pairs = (1, 3, 0, 1)
 constant Twice = Probe + Probe.Reverse
 constant Sharing = Single.expansions + Single.contractions + Layer(List(Numbers) + Probe.Reverse, Layer.Unbiased)
@@ -22,10 +22,9 @@ Loaded(model Gguf, prefix Text) Experts slow
 	Tiny.used is 2
 	routed = Routed(model, prefix)
 	count = routed.router.weights.Length
-	joined = Flattened(Joined(model, prefix, count))
+	joined = Flatten(Join(model, prefix, count))
 	contracting = model.Rows(prefix + "ffn_down_exps.weight")
-	stacked = Stacked(joined, count)
-	loaded = Experts(routed.router, stacked, Stacked(contracting, count), routed.used, joined, contracting)
+	loaded = Experts(routed.router, Stack(joined, count), Stack(contracting, count), routed.used, joined, contracting)
 	Experts(loaded, isSigmoid = routed.isSigmoid, selectionBias = routed.selectionBias)
 Routed(model Gguf, prefix Text) Experts slow
 	Experts.Routed(Model, "blk.0.").router is Tiny.router
@@ -40,22 +39,22 @@ Routed(model Gguf, prefix Text) Experts slow
 Dense(expansion Layer, contraction Layer) Experts
 	Experts.Dense(Tiny.expansions.First, Tiny.contractions.First).Forward(Probe) is Tiny.Expert(0, Probe)
 	Experts(Layer.None, List(Layer) + expansion, List(Layer) + contraction, 1)
-Stacked(rows List(Numbers), count Number) List(Layer)
-	Tiny.Stacked(((1, 2), (3, 4), (5, 6), (7, 8)), 2).Last.weights is ((5, 6), (7, 8))
+Stack(rows List(Numbers), count Number) List(Layer)
+	Tiny.Stack(((1, 2), (3, 4), (5, 6), (7, 8)), 2).Last.weights is ((5, 6), (7, 8))
 	size = rows.Length / count
 	zeros = Layer.Zeros(size)
 	for count
 		Layer(rows.Slice(index * size, size), zeros)
-Joined(model Gguf, prefix Text, count Number) List(Layer)
-	Tiny.Joined(Model, "blk.0.", 4).First.weights.Length is 8
-	gates = Stacked(model.Rows(prefix + "ffn_gate_exps.weight"), count)
-	ups = Stacked(model.Rows(prefix + "ffn_up_exps.weight"), count)
+Join(model Gguf, prefix Text, count Number) List(Layer)
+	Tiny.Join(Model, "blk.0.", 4).First.weights.Length is 8
+	gates = Stack(model.Rows(prefix + "ffn_gate_exps.weight"), count)
+	ups = Stack(model.Rows(prefix + "ffn_up_exps.weight"), count)
 	zeros = gates.First.biases + ups.First.biases
 	for gates
 		Layer(value.weights + ups(index).weights, zeros)
-Flattened(layers List(Layer)) List(Numbers)
-	Tiny.Flattened(Tiny.contractions).Length is 32
-	Tiny.Flattened(Tiny.expansions)(8) is Tiny.expansions(1).weights.First
+Flatten(layers List(Layer)) List(Numbers)
+	Tiny.Flatten(Tiny.contractions).Length is 32
+	Tiny.Flatten(Tiny.expansions)(8) is Tiny.expansions(1).weights.First
 	mutable rows = List(Numbers)
 	for layers
 		rows = rows + value.weights
@@ -68,71 +67,71 @@ Forward(input Numbers) Numbers
 	if router.weights.Length is 0
 		return Expert(0, input)
 	scores = Batch(router.weights, router.biases).Sums(input)
-	chosen = Routing(Selected(scores), router.weights.Length).Chosen(used)
+	chosen = Routing(Select(scores), router.weights.Length).Chosen(used)
 	if chosen.Length >= Grouping.Fewest
-		return Mixed(scores, chosen, Grouped(chosen, input))
+		return Mix(scores, chosen, Group(chosen, input))
 	size = expansions.First.weights.Length / 2
-	Mixed(scores, chosen, Contracted(chosen, Gated(Expanded(chosen, input), size), size))
-Added(input Numbers, residual Numbers) Numbers
-	Tiny.Added(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001)
-	Single.Added(Probe, Probe) is Gpt2Block.Added(Probe, Tiny.Expert(0, Probe))
+	Mix(scores, chosen, Contract(chosen, Gate(Expand(chosen, input), size), size))
+Add(input Numbers, residual Numbers) Numbers
+	Tiny.Add(Probe, Probe).First.IsNearlyEqual(0.9825967035647183, 0.000001)
+	Single.Add(Probe, Probe) is Gpt2Block.Add(Probe, Tiny.Expert(0, Probe))
 	if router.weights.Length > 0
-		return Gpt2Block.Added(residual, Forward(input))
+		return Gpt2Block.Add(residual, Forward(input))
 	expanded = basis.Sums(expansions.First.weights, expansions.First.biases, input)
-	basis.Sums(contractions.First.weights, residual, Gated(expanded, expansions.First.weights.Length / 2))
-Shared(layers List(Layer), input Numbers) Numbers
-	Tiny.Shared(Sharing, Probe).First.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).First, 0.000001)
-	Tiny.Shared(Sharing, Probe).Last.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).Last, 0.000001)
-	Tiny.Shared(Sharing, Twice)(9).IsNearlyEqual(Tiny.Shared(Sharing, Probe.Reverse)(1), 0.000001)
+	basis.Sums(contractions.First.weights, residual, Gate(expanded, expansions.First.weights.Length / 2))
+Share(layers List(Layer), input Numbers) Numbers
+	Tiny.Share(Sharing, Probe).First.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).First, 0.000001)
+	Tiny.Share(Sharing, Probe).Last.IsNearlyEqual(0.060086650174007626 * Tiny.Expert(0, Probe).Last, 0.000001)
+	Tiny.Share(Sharing, Twice)(9).IsNearlyEqual(Tiny.Share(Sharing, Probe.Reverse)(1), 0.000001)
 	tokens = input.Length / layers.First.weights.First.Length
 	expanded = Batch(layers.First.weights, layers.First.biases).Sums(input)
-	contracted = Batch(layers(1).weights, layers(1).biases).Sums(Gated(expanded, expanded.Length / tokens / 2))
+	contracted = Batch(layers(1).weights, layers(1).biases).Sums(Gate(expanded, expanded.Length / tokens / 2))
 	scales = Batch(layers.Last.weights, layers.Last.biases).Sums(input)
 	for contracted
 		value * Activation.Sigmoid.Output(scales((index / (contracted.Length / tokens)).Floor))
-Expanded(chosen Numbers, input Numbers) Numbers
-	Tiny.Expanded((1, 3), Probe).Length is 16
-	Tiny.Expanded((1, 3), Probe).Last is Tiny.expansions(3).Sums(Probe).Last
+Expand(chosen Numbers, input Numbers) Numbers
+	Tiny.Expand((1, 3), Probe).Length is 16
+	Tiny.Expand((1, 3), Probe).Last is Tiny.expansions(3).Sums(Probe).Last
 	size = expansions.First.weights.Length
 	hidden = contractions.First.weights.Length
 	for chosen.Length * size
 		slot = (index / size).Floor
 		Batch.Dot(gateUps(chosen(slot) * size + index % size), 0, input, (slot / used).Floor * hidden)
-Contracted(chosen Numbers, gated Numbers, size Number) Numbers
-	Tiny.Contracted((1, 3), Gating, 4).Last.IsNearlyEqual(Tiny.Expert(3, Probe).Last)
+Contract(chosen Numbers, gated Numbers, size Number) Numbers
+	Tiny.Contract((1, 3), Gating, 4).Last.IsNearlyEqual(Tiny.Expert(3, Probe).Last)
 	hidden = contractions.First.weights.Length
 	for chosen.Length * hidden
 		expert = (index / hidden).Floor
 		Batch.Dot(downs(chosen(expert) * hidden + index % hidden), 0, gated, expert * size)
-Grouped(chosen Numbers, input Numbers) Numbers slow
-	Tiny.Grouped(Pairs, Twice) is Tiny.Contracted(Pairs, Tiny.Gated(Tiny.Expanded(Pairs, Twice), 4), 4)
+Group(chosen Numbers, input Numbers) Numbers slow
+	Tiny.Group(Pairs, Twice) is Tiny.Contract(Pairs, Tiny.Gate(Tiny.Expand(Pairs, Twice), 4), 4)
 	grouping = Grouping(chosen, router.weights.Length, used, Batch.Tile)
 	starts = grouping.Starts
 	rows = grouping.Rows
 	positions = grouping.Positions(starts)
 	size = expansions.First.weights.Length
 	hidden = contractions.First.weights.Length
-	gathered = grouping.Gathered(input, grouping.Ordered(positions, rows))
-	gated = Gated(Batch(gateUps, List(Number) + 0).Grouped(grouping.Bases(starts, rows, size), size, gathered), size / 2)
-	contracted = Batch(downs, List(Number) + 0).Grouped(grouping.Bases(starts, rows, hidden), hidden, gated)
-	grouping.Unsorted(contracted, positions, hidden)
-Mixed(scores Numbers, chosen Numbers, contracted Numbers) Numbers
-	Tiny.Mixed((0, 1, 0, 1), (1, 3), (2, 2, 4, 4)) is (3, 3)
-	Tiny.Mixed((0, 1, 0, 1, 1, 0, 0, 0), (1, 3, 0, 1), (2, 2, 4, 4, 1, 1, 3, 3)).Last.IsNearlyEqual(1.537883)
+	gathered = grouping.Gather(input, grouping.Order(positions, rows))
+	gated = Gate(Batch(gateUps, List(Number) + 0).Group(grouping.Bases(starts, rows, size), size, gathered), size / 2)
+	contracted = Batch(downs, List(Number) + 0).Group(grouping.Bases(starts, rows, hidden), hidden, gated)
+	grouping.Unsort(contracted, positions, hidden)
+Mix(scores Numbers, chosen Numbers, contracted Numbers) Numbers
+	Tiny.Mix((0, 1, 0, 1), (1, 3), (2, 2, 4, 4)) is (3, 3)
+	Tiny.Mix((0, 1, 0, 1, 1, 0, 0, 0), (1, 3, 0, 1), (2, 2, 4, 4, 1, 1, 3, 3)).Last.IsNearlyEqual(1.537883)
 	hidden = contracted.Length / chosen.Length
 	experts = scores.Length * used / chosen.Length
 	for chosen.Length / used * hidden
-		Blended(scores, chosen, contracted, (index / hidden).Floor, index % hidden, experts)
-Selected(scores Numbers) Numbers
-	Routing(Sigmoids.Selected((0, 1, 0, 2)), 4).Chosen(2) is (2, 3)
-	Tiny.Selected((0, 1)) is (0, 1)
+		Blend(scores, chosen, contracted, (index / hidden).Floor, index % hidden, experts)
+Select(scores Numbers) Numbers
+	Routing(Sigmoids.Select((0, 1, 0, 2)), 4).Chosen(2) is (2, 3)
+	Tiny.Select((0, 1)) is (0, 1)
 	if isSigmoid is false
 		return scores
 	for scores
 		1 / (1 + (-value).Exponential) + (selectionBias.Length > 0 then selectionBias(index % selectionBias.Length) else 0)
-Blended(scores Numbers, chosen Numbers, contracted Numbers, token Number, output Number, experts Number) Number
-	Tiny.Blended((0, 1, 0, 1), (1, 3), (2, 2, 4, 4), 0, 1, 4) is 3
-	Sigmoids.Blended((0, 1, 0, 2), (3, 1), (4, 4, 2, 2), 0, 0, 4).IsNearlyEqual(3.0929, 0.0001)
+Blend(scores Numbers, chosen Numbers, contracted Numbers, token Number, output Number, experts Number) Number
+	Tiny.Blend((0, 1, 0, 1), (1, 3), (2, 2, 4, 4), 0, 1, 4) is 3
+	Sigmoids.Blend((0, 1, 0, 2), (3, 1), (4, 4, 2, 2), 0, 0, 4).IsNearlyEqual(3.0929, 0.0001)
 	hidden = contracted.Length / chosen.Length
 	top = scores(token * experts + chosen(token * used))
 	mutable total = 0
@@ -146,10 +145,10 @@ Blended(scores Numbers, chosen Numbers, contracted Numbers, token Number, output
 Expert(chosen Number, input Numbers) Numbers
 	Tiny.Expert(0, Probe).Length is 8
 	expanded = expansions(chosen).Sums(input)
-	contractions(chosen).Sums(Gated(expanded, expanded.Length / 2))
-Gated(expanded Numbers, size Number) Numbers
-	Tiny.Gated((0, 1), 1) is List(Number) + 0
-	Tiny.Gated((1, 2, 1, 3), 1).Last.IsNearlyEqual(2.193176)
+	contractions(chosen).Sums(Gate(expanded, expanded.Length / 2))
+Gate(expanded Numbers, size Number) Numbers
+	Tiny.Gate((0, 1), 1) is List(Number) + 0
+	Tiny.Gate((1, 2, 1, 3), 1).Last.IsNearlyEqual(2.193176)
 	for expanded.Length / 2
 		first = (index / size).Floor * 2 * size + index % size
 		expanded(first) / (1 + (-expanded(first)).Exponential) * expanded(first + size)

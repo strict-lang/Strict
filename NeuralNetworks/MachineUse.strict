@@ -54,7 +54,7 @@ IsAdmitted Boolean slow
 	Gpu.Require(program)
 	reply = Coordinator(coordinator).Resolve(Needed)
 	if reply.StartsWith("refused")
-		Explained(reply)
+		Explain(reply)
 		return false
 	reply is "" then HasRoom else true
 HasRoom Boolean slow
@@ -64,11 +64,11 @@ HasRoom Boolean slow
 		logger.Log(problem)
 		logger.Log("Running anyway (--force), this can be very slow while other programs hold the memory")
 	if problem is "" or isForced
-		Noted(device(0))
+		Note(device(0))
 		return true
-	Explained
+	Explain
 	false
-Explained(reply = "") slow
+Explain(reply = "") slow
 	device = Device
 	parts = reply.Split("\t")
 	given = parts.Length > 2 then "Not enough memory for " + program + ": " + parts(2) else ""
@@ -87,8 +87,8 @@ Problem(hostFree Number, hostTotal Number, deviceFree Number, deviceTotal Number
 	Sample.Problem(0, 0, 0, 0) is ""
 	Sample.Problem(30 * Gigabyte, 64 * Gigabyte, 20 * Gigabyte, 24 * Gigabyte, true).StartsWith("Not enough")
 	isShort = IsShort(ram, hostFree, hostTotal, HostShare) or IsShort(vram, deviceFree, deviceTotal, VideoShare)
-	needs = Sized(Usable(ram, hostTotal, HostShare)) + " RAM and " + Sized(Usable(vram, deviceTotal, VideoShare))
-	frees = Sized(hostFree) + " of " + Sized(hostTotal) + " RAM and " + Sized(deviceFree) + " of " + Sized(deviceTotal)
+	needs = Show(Usable(ram, hostTotal, HostShare)) + " RAM and " + Show(Usable(vram, deviceTotal, VideoShare))
+	frees = Show(hostFree) + " of " + Show(hostTotal) + " RAM and " + Show(deviceFree) + " of " + Show(deviceTotal)
 	text = "Not enough free memory for " + program + ", it needs " + needs + " VRAM, " + frees
 	isShort or isShown then text + " VRAM are free" else ""
 IsShort(needed Number, free Number, total Number, share Number) Boolean
@@ -104,29 +104,29 @@ Usable(needed Number, total Number, share Number) Number
 	Sample.Usable(6 * Gigabyte, 0, VideoShare) is 6 * Gigabyte
 	usable = total - total / share
 	total is 0 or needed < usable then needed else usable
-Noted(deviceTotal Number)
-	Sample.Noted(0) is not Error
+Note(deviceTotal Number)
+	Sample.Note(0) is not Error
 	if deviceTotal > 0 and deviceTotal < vram
-		logger.Log("The GPU has " + Sized(deviceTotal) + " of VRAM, less than the " + Sized(vram) + Slower)
-Sized(bytes Number) Text
-	Sample.Sized(24 * Gigabyte) is "24 GB"
-	Sample.Sized(Gigabyte * 2.5) is "2.5 GB"
+		logger.Log("The GPU has " + Show(deviceTotal) + " of VRAM, less than the " + Show(vram) + Slower)
+Show(bytes Number) Text
+	Sample.Show(24 * Gigabyte) is "24 GB"
+	Sample.Show(Gigabyte * 2.5) is "2.5 GB"
 	(bytes / Gigabyte).Round(1) + " GB"
 Device Numbers slow
 	Sample.Device.Length is 3
 	result = Process.RunTool("nvidia-smi", Query)
 	parts = result.Output.Split("\n").First.Split(",")
-	result.HasFailed or parts.Length < 3 then (0, 0, 0) else Measured(parts)
-Measured(parts Texts) Numbers
-	Sample.Measured(("24564", " 24049", " 3")) is (24564 * Mebibyte, 24049 * Mebibyte, 3)
+	result.HasFailed or parts.Length < 3 then (0, 0, 0) else Measure(parts)
+Measure(parts Texts) Numbers
+	Sample.Measure(("24564", " 24049", " 3")) is (24564 * Mebibyte, 24049 * Mebibyte, 3)
 	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte, parts(2).Trim to Number)
 Users Texts slow
 	if Process.OperatingSystem is not "Windows"
 		return List(Text) + "  (see the task manager or nvidia-smi)"
-	users = Listed(Process.RunTool("powershell", Listing).Output.Split("\n")) - ""
+	users = Collect(Process.RunTool("powershell", Listing).Output.Split("\n")) - ""
 	users.Length is 0 then List(Text) + "  (none found, see the task manager)" else users
-Listed(lines Texts) Texts
-	Sample.Listed(("", "5|python.exe|32212254720|0|False")).Last is "  python (pid 5): 30 GB RAM, 0 GB VRAM"
+Collect(lines Texts) Texts
+	Sample.Collect(("", "5|python.exe|32212254720|0|False")).Last is "  python (pid 5): 30 GB RAM, 0 GB VRAM"
 	for lines
 		User(value)
 User(line Text) Text
@@ -139,6 +139,6 @@ User(line Text) Text
 		return ""
 	name = parts(1).Replace(".exe", "")
 	isBackend = name is in Programs and parts(4) is "True"
-	usage = ": " + Sized(parts(2) to Number) + " RAM, " + Sized(parts(3) to Number) + " VRAM"
+	usage = ": " + Show(parts(2) to Number) + " RAM, " + Show(parts(3) to Number) + " VRAM"
 	stop = isBackend then ", type '" + name + " stop' to free them" else ""
 	"  " + name + (isBackend then " backend" else "") + " (pid " + parts(0) + ")" + usage + stop

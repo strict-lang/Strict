@@ -5,7 +5,7 @@ constant Characters = 200000
 constant Order = 5
 constant GeneratedCharacters = 400
 Run
-	text = evaluation.Downloaded(Downloaded, Address).Substring(0, Characters)
+	text = evaluation.Download(Downloaded, Address).Substring(0, Characters)
 	started = Process.Elapsed
 	generated = Markov(text, Order).Generate(text.Substring(0, Order), GeneratedCharacters)
 	milliseconds = ((Process.Elapsed - started) * 1000).Round(1)

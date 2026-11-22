@@ -2699,7 +2699,7 @@
   // strict_gpu_tuned: a block of 256 threads per 16 packed rows of 8 bit numbers (rows, one every stride bytes, the scales
   // per 32 at scaleOffset) adds ups (rank numbers per row, bfloat16 for upBits 17, times the scale of their rank part) times
   // downs (rank x width) to every row with an update not 0, then requantizes it to its largest magnitude / 127 with
-  // stochastic rounding like TensorFile_Tuned. A thread sums the 16 rows of its columns at once, so downs are read once
+  // stochastic rounding like TensorFile_Tune. A thread sums the 16 rows of its columns at once, so downs are read once
   // per 16 rows (the ups of the rows by rank part in shared, a rank above 512 staged again per 512 for every column step).
   // Block b takes the rows from 16 b on in steps of 16 grid rows and keeps the updated numbers of its 16 rows in its part
   // of scratch (16 x width 32 bit floats) from finding their largest magnitudes until writing them: computing them twice

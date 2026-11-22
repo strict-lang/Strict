@@ -8,26 +8,26 @@ Run(arguments Texts)
 		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + Name + "\" \"" + Address + Name + "\"").HasFailed
 			return Error("DownloadFailed: " + Address + Name)
 	if MachineUse.Weights("NemotronText", Folder + Name).IsAdmitted
-		Ran(arguments)
-Ran(files Texts) slow
+		Generate(arguments)
+Generate(files Texts) slow
 	started = Process.Elapsed
 	tokenizer = GemmaTokens.Loaded(Gguf(Folder + Name))
 	model = Gemma4.Loaded(Folder + Name)
 	logger.Log("Nemotron 3.5 Bolt E4B loaded in " + ((Process.Elapsed - started) * 1000).Round + " ms")
 	if files.Length is 0
-		logger.Log(Prompt + Answered(tokenizer, model, Prompt))
+		logger.Log(Prompt + Respond(tokenizer, model, Prompt))
 	for files
-		logger.Log(Answered(tokenizer, model, File(value).Exists then Text.Utf8(File(value).ReadBytes) else Chat(value)))
-Answered(tokenizer GemmaTokens, model Gemma4, prompt Text) Text
+		logger.Log(Respond(tokenizer, model, File(value).Exists then Text.Utf8(File(value).ReadBytes) else Chat(value)))
+Respond(tokenizer GemmaTokens, model Gemma4, prompt Text) Text
 	began = Process.Elapsed
-	generated = Generation(model).Generated(tokenizer.Encoded(prompt), Count)
+	generated = Generation(model).Generate(tokenizer.Encode(prompt), Count)
 	logger.Log((generated to Text) + " in " + ((Process.Elapsed - began) * 1000).Round + " ms")
-	tokenizer.Decoded(Kept(generated, (tokenizer.ids("<eos>"), tokenizer.ids("<turn|>"))))
+	tokenizer.Decode(Keep(generated, (tokenizer.ids("<eos>"), tokenizer.ids("<turn|>"))))
 Chat(question Text) Text
 	NemotronText.Chat("Hi?") is "<|turn>user\nHi?<turn|>\n<|turn>model\n"
 	"<|turn>user\n" + question + "<turn|>\n<|turn>model\n"
-Kept(generated Numbers, stops Numbers) Numbers
-	NemotronText.Kept((5, 6, 7, 6), (7, 9)) is (5, 6)
+Keep(generated Numbers, stops Numbers) Numbers
+	NemotronText.Keep((5, 6, 7, 6), (7, 9)) is (5, 6)
 	mutable kept = List(Mutable(Number))
 	for generated
 		if value is in stops

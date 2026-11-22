@@ -1,20 +1,20 @@
 has lines Texts
 constant Sample = Csv(("variety", "5.1,3.5,1.4,.2,0", "7,3.2,4.7,1.4,1"))
-Classified(classes Number) Dataset
-	Sample.Classified(2).inputs is ((0, 1, 0, 0), (1, 0, 1, 1))
-	Sample.Classified(2).targets is ((1, 0), (0, 1))
+Classify(classes Number) Dataset
+	Sample.Classify(2).inputs is ((0, 1, 0, 0), (1, 0, 1, 1))
+	Sample.Classify(2).targets is ((1, 0), (0, 1))
 	rows = Rows
-	Dataset(Scaled(rows), Targets(rows, classes))
+	Dataset(Scale(rows), Targets(rows, classes))
 Rows List(Numbers)
 	Sample.Rows.Length is 2
 	for Range(1, lines.Length)
-		Parsed(lines(value))
-Parsed(line Text) Numbers
-	Sample.Parsed("5.1,3.5,1.4,.2,0") is (5.1, 3.5, 1.4, 0.2, 0)
+		Parse(lines(value))
+Parse(line Text) Numbers
+	Sample.Parse("5.1,3.5,1.4,.2,0") is (5.1, 3.5, 1.4, 0.2, 0)
 	for line.Split(",")
 		value to Number
-Scaled(rows List(Numbers)) List(Numbers)
-	Sample.Scaled(((1, 5, 0), (3, 5, 1))) is ((0, 0), (1, 0))
+Scale(rows List(Numbers)) List(Numbers)
+	Sample.Scale(((1, 5, 0), (3, 5, 1))) is ((0, 0), (1, 0))
 	lows = Extremes(rows, false)
 	highs = Extremes(rows, true)
 	for rows

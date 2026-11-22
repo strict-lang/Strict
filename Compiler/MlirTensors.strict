@@ -17,7 +17,7 @@ constant Rotated = ("Hadamard", "Sylvester", "HeadRotated", "RopeRotated", "Situ
 constant Modulations = (TokenModulations, RowModulations)
 constant Modulated = ("TokenModulated", "RowModulated")
 constant ValueCollected = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 1, "forResult"), InstructionEntry.Jump(InstructionType.LoopEnd, 3))
-constant SoftmaxCalls = (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weighted", "Strict/Number"), List(Number), -1))
+constant SoftmaxCalls = (InstructionEntry.Invoke(0, ("Strict/Softmax", "Shares", "Strict/List(Number)"), List(Number), -1), InstructionEntry.Invoke(1, ("Strict/Softmax", "Weight", "Strict/Number"), List(Number), -1))
 constant QueriesLoop = (MlirLoops.Emptied, InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "queries"), InstructionEntry.LoopBegin(0, -1))
 constant Merging = MethodEntry("Merged", List(MemberEntry), "Strict/List(Number)", SoftmaxCalls + QueriesLoop + ValueCollected)
 constant QueryKeys = (MemberEntry("queries", "Strict/List(Number)", List(InstructionEntry), false), MemberEntry("keys", "Strict/List(Number)", List(InstructionEntry), false))
@@ -46,7 +46,7 @@ Kind Text
 	stored = MlirInstances(function, 0).StoredNames(function.type)
 	if function.method.parameters.Length > 0
 		return IsSoftmax then "Softmax" else ""
-	isAttention = IsInvoked("Softmax.Shares") and IsInvoked("Softmax.Weighted")
+	isAttention = IsInvoked("Softmax.Shares") and IsInvoked("Softmax.Weight")
 	stored is Attentions and isAttention then "Attention" else Named(stored)
 Named(stored Texts) Text
 	Multiplying.Named(Productions) is "Products"

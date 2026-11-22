@@ -26707,7 +26707,7 @@
     return %zero : f64
   }
   // `GpuMemory.Tuned`: rows of 8 bit numbers with one scale each (TensorFile.Quantized) plus the low rank update of
-  // TensorFile_Tuned (downs rank x width in the rotated space of the rows, ups height x rank, a scale per rank) merged
+  // TensorFile_Tune (downs rank x width in the rotated space of the rows, ups height x rank, a scale per rank) merged
   // by strict_device_tuned, the updated rows change in place; 0.0 when the GPU can not (rows not all 8 bit of one width,
   // factors not 64, 32 or 16 bit or not fitting the rows, STRICT_GPU=0 or no GPU, checked in this order
   // so a merge that can not run on the GPU never opens it)

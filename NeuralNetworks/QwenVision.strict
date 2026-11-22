@@ -9,8 +9,8 @@ constant Model = Safetensors("NeuralNetworks/tinyqwenvision.safetensors", 32, "v
 constant Reference = Safetensors("NeuralNetworks/tinyqwenvision.safetensors", 32)
 constant Tiny = QwenVision.Loaded(Model, 2, (0, 1, 2))
 constant Image = QwenVision.Reference.Values("reference.image")
-constant Outputs = QwenVision.Tiny.Encoded(QwenVision.Image, 32, 48)
-constant Pixels = QwenVision.Tiny.Patched(QwenVision.Tiny.Resized(QwenVision.Image, 32, 48, (4, 6)), (4, 6))
+constant Outputs = QwenVision.Tiny.Encode(QwenVision.Image, 32, 48)
+constant Pixels = QwenVision.Tiny.Patch(QwenVision.Tiny.Resize(QwenVision.Image, 32, 48, (4, 6)), (4, 6))
 constant MaxPixels = 12845056
 constant MinPixels = 3136
 Loaded(file Safetensors, heads Number, layers Numbers) QwenVision slow
@@ -38,24 +38,23 @@ Split(values Numbers, count Number) List(Numbers)
 	Tiny.Split((1, 2, 3, 4), 2) is ((1, 2), (3, 4))
 	for count
 		values.Slice(index * values.Length / count, values.Length / count)
-Encoded(image Numbers, height Number, width Number) List(Numbers) slow
+Encode(image Numbers, height Number, width Number) List(Numbers) slow
 	Outputs.First(5).IsNearlyEqual(Reference.Values("reference.merged")(5), 0.001)
 	Outputs.Last(100).IsNearlyEqual(Reference.Values("reference.deepstack")(868), 0.001)
 	grid = Grid(height, width)
 	rotations = Rotations(grid)
-	pixels = Patched(Resized(image, height, width, grid), grid)
-	mutable patches = Gpt2Block.Added(embedding.Sums(pixels), Interpolated(grid))
+	mutable patches = Gpt2Block.Add(embedding.Sums(Patch(Resize(image, height, width, grid), grid)), Interpolate(grid))
 	mutable features = List(Numbers)
 	for blocks
 		patches = value.Forward(patches, rotations)
 		if index is in indexes
-			features = features + deepstacks(indexes.Index(index)).Merged(patches)
-	(List(Numbers) + merger.Merged(patches)) + features
+			features = features + deepstacks(indexes.Index(index)).Merge(patches)
+	(List(Numbers) + merger.Merge(patches)) + features
 Grid(height Number, width Number) Numbers
 	(Tiny.Grid(32, 48), Tiny.Grid(64, 72)) is ((4, 6), (4, 4))
 	factor = 2 * patchSize
-	rows = Rounded(height / factor) * factor
-	columns = Rounded(width / factor) * factor
+	rows = Round(height / factor) * factor
+	columns = Round(width / factor) * factor
 	if rows * columns > MaxPixels
 		shrink = (height * width / MaxPixels).SquareRoot
 		shrunk = ((height / shrink / factor).Floor * factor, (width / shrink / factor).Floor * factor)
@@ -64,12 +63,12 @@ Grid(height Number, width Number) Numbers
 		grow = (MinPixels / (height * width)).SquareRoot
 		return ((height * grow / factor).Ceiling * 2, (width * grow / factor).Ceiling * 2)
 	(rows / patchSize, columns / patchSize)
-Rounded(number Number) Number
-	(Tiny.Rounded(22.5), Tiny.Rounded(23.5), Tiny.Rounded(2.6)) is (22, 24, 3)
+Round(number Number) Number
+	(Tiny.Round(22.5), Tiny.Round(23.5), Tiny.Round(2.6)) is (22, 24, 3)
 	floor = number.Floor
 	number - floor is 0.5 then (floor % 2 is 0 then floor else floor + 1) else number.Round
-Resized(image Numbers, height Number, width Number, grid Numbers) Numbers slow
-	Tiny.Resized((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), 2, 2, (1, 1)).Length is 768
+Resize(image Numbers, height Number, width Number, grid Numbers) Numbers slow
+	Tiny.Resize((1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), 2, 2, (1, 1)).Length is 768
 	rows = grid(0) * patchSize
 	columns = grid(1) * patchSize
 	if rows is height and columns is width
@@ -77,12 +76,12 @@ Resized(image Numbers, height Number, width Number, grid Numbers) Numbers slow
 	for 3 * rows * columns
 		row = Source((index / columns).Floor % rows, height, rows)
 		column = Source(index % columns, width, columns)
-		Blended(image, (index / (rows * columns)).Floor * height * width, 1, row, column, height, width)
+		Blend(image, (index / (rows * columns)).Floor * height * width, 1, row, column, height, width)
 Source(target Number, size Number, count Number) Number
 	(Tiny.Source(0, 2, 4), Tiny.Source(3, 2, 4)) is (0, 1.25)
 	((target + 0.5) * size / count - 0.5).Maximum(0)
-Blended(values Numbers, start Number, step Number, row Number, column Number, height Number, width Number) Number
-	Tiny.Blended((1, 2, 3, 4), 0, 1, 0.5, 0.5, 2, 2) is 2.5
+Blend(values Numbers, start Number, step Number, row Number, column Number, height Number, width Number) Number
+	Tiny.Blend((1, 2, 3, 4), 0, 1, 0.5, 0.5, 2, 2) is 2.5
 	top = row.Floor
 	left = column.Floor
 	bottom = top + 1 < height then top + 1 else top
@@ -93,7 +92,7 @@ Blended(values Numbers, start Number, step Number, row Number, column Number, he
 	upper = (1 - fraction) * values(first + left * step) + fraction * values(first + right * step)
 	lower = (1 - fraction) * values(second + left * step) + fraction * values(second + right * step)
 	(1 - row + top) * upper + (row - top) * lower
-Patched(pixels Numbers, grid Numbers) Numbers slow
+Patch(pixels Numbers, grid Numbers) Numbers slow
 	Pixels(100).IsNearlyEqual(Reference.Values("reference.pixels")(100), 0.0001)
 	Pixels(30000).IsNearlyEqual(Reference.Values("reference.pixels")(30000), 0.0001)
 	size = 6 * patchSize * patchSize
@@ -110,16 +109,16 @@ Row(patch Number, columns Number) Number
 Column(patch Number, columns Number) Number
 	(Tiny.Column(5, 4), Tiny.Column(10, 4)) is (3, 0)
 	((patch / 4).Floor % (columns / 2)) * 2 + patch % 2
-Interpolated(grid Numbers) Numbers slow
-	Tiny.Interpolated((4, 6)).Length is 768
+Interpolate(grid Numbers) Numbers slow
+	Tiny.Interpolate((4, 6)).Length is 768
 	hidden = embedding.biases.Length
 	side = (table.Length / hidden).SquareRoot
 	for grid(0) * grid(1) * hidden
 		patch = (index / hidden).Floor
-		row = Located(Row(patch, grid(1)), grid(0), side)
-		Blended(table, index % hidden, hidden, row, Located(Column(patch, grid(1)), grid(1), side), side, side)
-Located(position Number, count Number, side Number) Number
-	(Tiny.Located(0, 1, 4), Tiny.Located(2, 3, 4), Tiny.Located(1, 4, 4)) is (0, 3, 1)
+		row = Locate(Row(patch, grid(1)), grid(0), side)
+		Blend(table, index % hidden, hidden, row, Locate(Column(patch, grid(1)), grid(1), side), side, side)
+Locate(position Number, count Number, side Number) Number
+	(Tiny.Locate(0, 1, 4), Tiny.Locate(2, 3, 4), Tiny.Locate(1, 4, 4)) is (0, 3, 1)
 	step = count is 1 then 0 else (side - 1) / (count - 1)
 	position < count / 2 then position * step else side - 1 - (count - 1 - position) * step
 Rotations(grid Numbers) Numbers slow

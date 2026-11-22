@@ -3,12 +3,12 @@ Entry(path Text, name Text) Text
 Floats(path Text, entry Text, bits Number) Numbers
 Rows(path Text, entry Text, bits Number) List(Numbers)
 Columns(path Text, entry Text, bits Number) List(Numbers)
-Shaped(numbers Numbers, width Number) List(Numbers)
-Quantized(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
+Reshape(numbers Numbers, width Number) List(Numbers)
+Quantize(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
 HostedPart(path Text, entry Text, scales Text, first Number, count Number) List(Numbers)
 Fours(path Text, entry Text, scales Text, scale Text, inputs Text, rowFactors Text, tokenBits Number) List(Numbers)
-Tuned(path Text, entry Text, scales Text, factors Numbers) List(Numbers)
-Written(path Text, header Text, numbers Numbers)
-Started(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
-Finished(rows List(Numbers)) Number
-Prefetched(path Text) Number
+Tune(path Text, entry Text, scales Text, factors Numbers) List(Numbers)
+Write(path Text, header Text, numbers Numbers)
+Start(path Text, entry Text, scales Text, tokenBits Number) List(Numbers)
+Finish(rows List(Numbers)) Number
+Prefetch(path Text) Number

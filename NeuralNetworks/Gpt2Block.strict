@@ -29,24 +29,24 @@ Dense(weights Safetensors, name Text) Layer slow
 Cached(input Numbers) Gpt2Block slow
 	Tiny.Cached(Embedded).keys.Length is 12
 	Tiny.Cached(Embedded).Cached(Embedded).values.Length is 24
-	combined = attention.Sums(Normalized(input, attentionGain, attentionBias))
+	combined = attention.Sums(Normalize(input, attentionGain, attentionBias))
 	size = combined.Length / 3
 	keyed = Safetensors.Part(combined, size, size, 1)
 	valued = Safetensors.Part(combined, 2 * size, size, 1)
 	Gpt2Block(value, keys = keys + keyed, values = values + valued, queries = Safetensors.Part(combined, 0, size, 1))
 Output(input Numbers) Numbers slow
 	Tiny.Cached(Embedded).Output(Embedded).Length is 12
-	attended = Attended(input)
-	Contracted(attended, Activated(attended))
-Attended(input Numbers) Numbers
-	Tiny.Cached(Embedded).Attended(Embedded).Length is 12
-	Added(input, projection.Sums(Attention(queries, keys, values, Heads, Heads, queries.Length / Heads, 1).Merged))
-Activated(attended Numbers) Numbers
-	Tiny.Activated(Embedded).Length is 48
-	Gelu(expansion.Sums(Normalized(attended, mlpGain, mlpBias)))
-Contracted(attended Numbers, activated Numbers) Numbers
-	Tiny.Contracted(Embedded, Tiny.Activated(Embedded)).Length is 12
-	Added(attended, contraction.Sums(activated))
+	attended = Attend(input)
+	Contract(attended, Activate(attended))
+Attend(input Numbers) Numbers
+	Tiny.Cached(Embedded).Attend(Embedded).Length is 12
+	Add(input, projection.Sums(Attention(queries, keys, values, Heads, Heads, queries.Length / Heads, 1).Merged))
+Activate(attended Numbers) Numbers
+	Tiny.Activate(Embedded).Length is 48
+	Gelu(expansion.Sums(Normalize(attended, mlpGain, mlpBias)))
+Contract(attended Numbers, activated Numbers) Numbers
+	Tiny.Contract(Embedded, Tiny.Activate(Embedded)).Length is 12
+	Add(attended, contraction.Sums(activated))
 Vectors List(Numbers)
 	Tiny.Vectors.Length is 8
 	Tiny.Vectors(2).Length is 36
@@ -60,16 +60,16 @@ Changed(vectors List(Numbers), first Number) Gpt2Block
 	contract = Layer(contraction.weights, vectors(first + 7))
 	second = (vectors(first + 4), vectors(first + 5))
 	Gpt2Block(vectors(first), vectors(first + 1), combine, project, second(0), second(1), expand, contract)
-Normalized(input Numbers, gain Numbers, bias Numbers, epsilon = 0.00001) Numbers
-	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902)
-	Tiny.Normalized((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902)
+Normalize(input Numbers, gain Numbers, bias Numbers, epsilon = 0.00001) Numbers
+	Tiny.Normalize((1, 2, 3), (1, 1, 1), (0, 0, 1)).First.IsNearlyEqual(-1.2247356859083902)
+	Tiny.Normalize((1, 2, 3), (1, 1, 1), (0, 0, 1)).Last.IsNearlyEqual(2.2247356859083902)
 	size = gain.Length
-	centered = Centered(input, size)
+	centered = Center(input, size)
 	for centered.Length
-		scale = Normalization.Scale(Normalization.Squared(centered, (index / size).Floor * size, size), size, epsilon)
+		scale = Normalization.Scale(Normalization.Square(centered, (index / size).Floor * size, size), size, epsilon)
 		gain(index % size) * centered(index) * scale + bias(index % size)
-Centered(input Numbers, size Number) Numbers
-	Tiny.Centered((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)
+Center(input Numbers, size Number) Numbers
+	Tiny.Center((1, 2, 4, 8), 2) is (-0.5, 0.5, -2, 2)
 	for input.Length
 		input(index) - Mean(input, (index / size).Floor * size, size)
 Mean(input Numbers with value.Bits is 32, first Number, size Number) Number
@@ -83,7 +83,7 @@ Gelu(input Numbers) Numbers
 	for input
 		inner = Activation.GeluScale * (value + Activation.GeluCubic * value * value * value)
 		0.5 * value * (1 + Activation.Tanh.Output(inner))
-Added(left Numbers, right Numbers) Numbers
-	Tiny.Added((1, 2), (3, 4)) is (4, 6)
+Add(left Numbers, right Numbers) Numbers
+	Tiny.Add((1, 2), (3, 4)) is (4, 6)
 	for left
 		value + right(index)

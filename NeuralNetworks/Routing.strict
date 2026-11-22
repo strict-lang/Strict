@@ -6,11 +6,11 @@ Chosen(used Number) Numbers
 	Sample.Chosen(2) is (1, 3)
 	Pair.Chosen(2) is (1, 3, 0, 2)
 	for scores.Length / experts * used
-		Picked((index / used).Floor * experts, index % used)
-Picked(first Number, slot Number) Number
-	Sample.Picked(0, 0) is 1
-	Pair.Picked(4, 1) is 2
-	Routing((0.2, 0.2), 2).Picked(0, 1) is 1
+		Pick((index / used).Floor * experts, index % used)
+Pick(first Number, slot Number) Number
+	Sample.Pick(0, 0) is 1
+	Pair.Pick(4, 1) is 2
+	Routing((0.2, 0.2), 2).Pick(0, 1) is 1
 	mutable previous = -1
 	mutable limit = 1 / 0
 	for slot + 1
