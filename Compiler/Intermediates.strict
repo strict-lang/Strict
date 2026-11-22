@@ -5,6 +5,9 @@ constant Endings = CrossEndings + LinuxEndings + RuntimeEndings
 constant Swapped = PtxCache("Compiler/output/Swapped")
 constant Held = PtxCache("./Compiler/output/Held")
 constant Renewing = Held.base + ".new.exe"
+constant Rooted = "Compiler/output/Rooted"
+constant SourceFolders = ("Compiler", "Bytecode", "Expressions", "Runtime", "")
+constant Guarded = ("Expressions", "Compiler")
 constant IsWindows = Process.OperatingSystem is "Windows"
 constant Kept = "Compiler\\output\\Held.old.exe"
 constant Holding = "/c copy /y %SystemRoot%\\System32\\PING.EXE " + Kept + " >nul & start \"\" /b " + Kept + " -n 3 127.0.0.1 >nul"
@@ -58,14 +61,26 @@ Unrunnable(executable Text, target Text) Text
 	ran.exitCode is 0 then "" else target + " does not run (version exit " + ran.exitCode + "), " + executable + " stays"
 Unchecked(executable Text, target Text) Text slow
 	Intermediates.Unchecked("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
-	Intermediates.Unchecked("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
-	if Path(executable).FileName.RemoveExtension.text is not "strict"
+	Intermediates.Unchecked("Compiler/output/Missing/strict.exe", "Compiler/output/missing.new.exe") is ""
+	Directory.Create(Rooted) is not Error and Directory.Create(Rooted + "/Compiler") is not Error
+	File(Rooted + "/Compiler/A.strict").Write("has a Number") is not Error
+	Intermediates.Unchecked(Rooted + "/strict.exe", "Compiler/output/missing.new.exe").Length > 0
+	isStrict = Path(executable).FileName.RemoveExtension.text is "strict"
+	if (isStrict then IsCompilerChanged(executable) else false) is false
 		return ""
-	for ("Expressions", "Compiler")
-		checked = Process.RunTool(target, "check " + value)
-		if checked.exitCode is not 0
-			return target + " fails strict check " + value + " (exit " + checked.exitCode + "), " + executable + " stays"
+	for Process.RunTools(target, ("check " + Guarded(0), "check " + Guarded(1)))
+		if value.exitCode is not 0
+			return target + " fails strict check " + Guarded(index) + " (exit " + value.exitCode + "), " + executable + " stays"
 	""
+IsCompilerChanged(executable Text) Boolean slow
+	Intermediates.IsCompilerChanged("Compiler/output/Missing/strict.exe") is false
+	Intermediates.IsCompilerChanged("./missing.exe")
+	built = File(executable).Modified
+	root = Path(executable).PathOnly.text
+	for folder, file in SourceFolders, Directory.Files(folder is "" then root else root + "/" + folder, "*.strict")
+		if File(file).Modified > built
+			return true
+	false
 Free(executable Text) Text
 	Intermediates.Free("Compiler/output/Missing/A.exe") is "Compiler/output/Missing/A.old.exe"
 	IsWindows is false or Process.Find(Process.Variable("ComSpec")).Started(Holding) is 0
