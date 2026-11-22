@@ -38,6 +38,7 @@ Verb(name Text) Text
 	Hosting.Verb("Named") is "Name" and Hosting.Verb("Declared") is "Declare" and Hosting.Verb("Parsed") is "Parse"
 	Hosting.Verb("Edited") is "Edit" and Hosting.Verb("Opened") is "Open" and Hosting.Verb("Lowered") is "Lower"
 	Hosting.Verb("Counted") is "Count" and Hosting.Verb("Started") is "Start" and Hosting.Verb("Passed") is "Pass"
+	Hosting.Verb("Quoted") is "Quote" and Hosting.Verb("Unquoted") is "Unquote"
 	at = Irregular.Index(name)
 	if at >= 0 and at % 2 is 0
 		return Irregular(at + 1)
@@ -59,4 +60,6 @@ IsSingleVowel(stem Text) Boolean
 	vowel = stem(stem.Length - 2) to Text
 	before = stem.Length > 2 then stem(stem.Length - 3) to Text else "a"
 	last = stem(stem.Length - 1) to Text
-	"aiou".IndexOf(vowel) >= 0 and "aeiou".IndexOf(before) < 0 and "wxy".IndexOf(last) < 0 and vowel + last is not "it"
+	isQu = stem.Length > 3 then before is "u" and (stem(stem.Length - 4) to Text).Lower is "q" else false
+	isLone = "aeiou".IndexOf(before) < 0 then true else isQu
+	"aiou".IndexOf(vowel) >= 0 and isLone and "wxy".IndexOf(last) < 0 and vowel + last is not "it"
