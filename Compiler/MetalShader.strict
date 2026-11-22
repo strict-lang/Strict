@@ -15,14 +15,14 @@ Functions List(MetalFunction)
 		if value is "}" and start >= 0
 			functions.Add(MetalFunction(lines.Slice(start, index - start + 1)))
 	functions
-Translated(functions List(MetalFunction)) Texts
-	Sample.Translated(Sample.Functions)(2) is ""
+Translate(functions List(MetalFunction)) Texts
+	Sample.Translate(Sample.Functions)(2) is ""
 	for functions
 		Text.Combine(value.Source, "\n")
-Kept(names Texts, functions List(MetalFunction)) Texts
-	Sample.Kept(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
+Keep(names Texts, functions List(MetalFunction)) Texts
+	Sample.Keep(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
 	kept = Supporting(names, functions)
-	kept.Length is names.Length then names else Kept(kept, functions)
+	kept.Length is names.Length then names else Keep(kept, functions)
 Supporting(names Texts, functions List(MetalFunction)) Texts
 	Sample.Supporting(("twice", "K", "L"), Sample.Functions) is ("twice", "K")
 	for functions
@@ -32,11 +32,11 @@ Source(prelude Texts) Texts
 	Sample.Source(List(Text)).First is "// parameters K 1"
 	Sample.Source(List(Text)).Last.StartsWith("kernel void K(")
 	functions = Functions
-	translated = Translated(functions)
-	kept = Kept(Translatable(translated, functions), functions)
+	translated = Translate(functions)
+	kept = Keep(Translatable(translated, functions), functions)
 	prelude + Markers(functions, kept) + Prototypes(functions, kept) + Bodies(translated, functions, kept)
 Translatable(translated Texts, functions List(MetalFunction)) Texts
-	Sample.Translatable(Sample.Translated(Sample.Functions), Sample.Functions) is ("twice", "K", "L")
+	Sample.Translatable(Sample.Translate(Sample.Functions), Sample.Functions) is ("twice", "K", "L")
 	for functions
 		if translated(index) is not ""
 			value.Name
@@ -51,7 +51,7 @@ Prototypes(functions List(MetalFunction), kept Texts) Texts
 		if value.IsKernel is false and value.Name is in kept
 			value.Signature + ";"
 Bodies(translated Texts, functions List(MetalFunction), kept Texts) Texts
-	Sample.Bodies(Sample.Translated(Sample.Functions), Sample.Functions, "K").Length is 1
+	Sample.Bodies(Sample.Translate(Sample.Functions), Sample.Functions, "K").Length is 1
 	for functions
 		if value.Name is in kept
 			translated(index)

@@ -43,7 +43,7 @@ Parameters Texts
 IsList(parameter Number) Boolean
 	Summing.IsList(0)
 	Twice.IsList(0) is false
-	MlirLayout(callee).Represented(TypeEntry.ShortName(callee.method.parameters(parameter).typeName)) is "List(Number)"
+	MlirLayout(callee).Represent(TypeEntry.ShortName(callee.method.parameters(parameter).typeName)) is "List(Number)"
 Arguments Texts
 	Twice.Arguments is ("%failed", "%lane", "%lanes", "%d4i", "%d4p0")
 	Heads.Arguments.Last is "%d4m1_b"
@@ -65,9 +65,9 @@ Types Text
 	for callee.method.parameters
 		types = IsList(index) then types + MlirTyped.Types else types + numbers
 	Text.Combine(types + MlirDeviceMembers(callee).Types(function.Float), ", ")
-Loaded(entry InstructionEntry) Texts
-	Twice.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
-	Filling.Loaded(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
+Load(entry InstructionEntry) Texts
+	Twice.Load(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
+	Filling.Load(Twicing).Last is "    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64"
 	mutable lines = Instance(entry, Temp("i"))
 	for PayloadDecoder(entry).Arguments
 		lines = lines + Argument(index, "%r" + value)
@@ -81,7 +81,7 @@ Instance(entry InstructionEntry, name Text) Texts
 	exact = MlirExact(function, at)
 	if register < 0
 		return (List(Text) + MlirTyped(function.Float).Constant(name, "0.0")) + exact.Whole(name, "0")
-	(List(Text) + function.Load(name, "%r" + register)) + exact.Loaded(name, "%r" + register)
+	(List(Text) + function.Load(name, "%r" + register)) + exact.LoadExact(name, "%r" + register)
 IsFilled(entry InstructionEntry) Boolean
 	Twice.IsFilled(Twicing)
 	Filling.IsFilled(Twicing)
@@ -92,9 +92,9 @@ IsFilled(entry InstructionEntry) Boolean
 		if MlirDefaults(function).IsWhole(parameters(value)) is false
 			return false
 	given <= parameters.Length
-Filled(entry InstructionEntry) Texts
-	Twice.Filled(Twicing).Length is 0
-	Filling.Filled(Twicing) is ("    %d4p1 = arith.constant 3.0 : f64")
+Fill(entry InstructionEntry) Texts
+	Twice.Fill(Twicing).Length is 0
+	Filling.Fill(Twicing) is ("    %d4p1 = arith.constant 3.0 : f64")
 	mutable lines = List(Mutable(Text))
 	for Range(PayloadDecoder(entry).ArgumentCount, callee.method.parameters.Length)
 		name = Temp("p" + value)
@@ -119,19 +119,19 @@ Native(entry InstructionEntry) Texts
 	if entry.texts(1) is not in Natives
 		return MlirTokenLaunch(function, function.method.LoopBeginOf(at)).Read(at)
 	if entry.texts(1) is in Approximations
-		return Approximated(entry)
+		return Approximate(entry)
 	if entry.texts(1) is "from"
-		return Made(entry)
+		return Make(entry)
 	target = "%r" + entry.payload(0)
-	exact = MlirRational(MlirExact(function, at)).Floored("%r" + Register(entry), target)
-	(Loaded(entry) + MlirTyped(function.Float).Floored(Temp(""), Temp("i")) + function.Store(Temp(""), target)) + exact
-Made(entry InstructionEntry) Texts
-	Flooring.Made(Making).Length is 2
-	Flooring.Made(Rounding)(1) is "    %d1r = func.call @strict_device_float8_rounded(%d1) : (f64) -> f64"
+	exact = MlirRational(MlirExact(function, at)).Floor("%r" + Register(entry), target)
+	(Load(entry) + MlirTyped(function.Float).Floor(Temp(""), Temp("i")) + function.Store(Temp(""), target)) + exact
+Make(entry InstructionEntry) Texts
+	Flooring.Make(Making).Length is 2
+	Flooring.Make(Rounding)(1) is "    %d1r = func.call @strict_device_float8_rounded(%d1) : (f64) -> f64"
 	source = "%r" + PayloadDecoder(entry).Arguments.First
 	target = "%r" + entry.payload(0)
 	if IsRounding(entry) is false
-		return function.Copied(source, target, Temp("")) + MlirExact(function, at).Copied(source, target)
+		return function.Copy(source, target, Temp("")) + MlirExact(function, at).Copy(source, target)
 	typed = MlirTyped(function.Float)
 	types = " : (" + typed.type + ") -> " + typed.type
 	call = " = func.call @strict_device_float8_rounded" + typed.Suffix + "(" + Temp("") + ")" + types
@@ -143,19 +143,19 @@ IsRounding(entry InstructionEntry) Boolean
 	if entry.kind is not InstructionType.Invoke
 		return false
 	entry.texts(1) is "from" and TypeEntry.ShortName(entry.texts(0)) is "Float8"
-Approximated(entry InstructionEntry) Texts
-	Text.Combine(Flooring.Approximated(Logarithmic)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
-	Text.Combine(Flooring.Approximated(Sining)).IndexOf("@strict_device_sine(%failed, %d1i)") > 0
+Approximate(entry InstructionEntry) Texts
+	Text.Combine(Flooring.Approximate(Logarithmic)).IndexOf("@strict_device_logarithm(%failed, %d1i)") > 0
+	Text.Combine(Flooring.Approximate(Sining)).IndexOf("@strict_device_sine(%failed, %d1i)") > 0
 	typed = MlirTyped(function.Float)
 	symbol = "@strict_device_" + Symbols(Approximations.Index(entry.texts(1)))
 	call = " = func.call " + symbol + typed.Suffix + "(%failed, " + Temp("i") + ")"
 	logarithm = "    " + Temp("") + call + " : (!llvm.ptr, " + typed.type + ") -> " + typed.type
-	(Loaded(entry) + logarithm) + MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(0))
+	(Load(entry) + logarithm) + MlirFeeding(function, at).Store(Temp(""), "%r" + entry.payload(0))
 Argument(parameter Number, register Text) Texts
 	Twice.Argument(0, "%r1") is ("    %d4p0 = llvm.load %r1 : !llvm.ptr -> f64")
 	Summing.Argument(0, "%r1").Last is "    %d5p0_b = llvm.load %r1_b : !llvm.ptr -> i64"
 	if IsList(parameter) is false
-		exact = MlirExact(function, at).Loaded(Temp("p" + parameter), register)
+		exact = MlirExact(function, at).LoadExact(Temp("p" + parameter), register)
 		return (List(Text) + function.Load(Temp("p" + parameter), register)) + exact
 	for MlirTyped.Parts
 		MlirTyped(MlirTyped.Types(index)).Load(Temp("p" + parameter + value), register + value)

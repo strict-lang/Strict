@@ -47,23 +47,23 @@ Kind Text
 	if function.method.parameters.Length > 0
 		return IsSoftmax then "Softmax" else ""
 	isAttention = IsInvoked("Softmax.Shares") and IsInvoked("Softmax.Weight")
-	stored is Attentions and isAttention then "Attention" else Named(stored)
-Named(stored Texts) Text
-	Multiplying.Named(Productions) is "Products"
-	Multiplying.Named(Convolutions) is ""
-	Rotating.Named(Hadamards) is "Hadamard" and Rotating.Named(Sylvesters) is "Sylvester"
-	Rotating.Named(Convolutions) is "" and Rotating.Named(Productions) is "" and Multiplying.Named(Hadamards) is ""
+	stored is Attentions and isAttention then "Attention" else Detect(stored)
+Detect(stored Texts) Text
+	Multiplying.Detect(Productions) is "Products"
+	Multiplying.Detect(Convolutions) is ""
+	Rotating.Detect(Hadamards) is "Hadamard" and Rotating.Detect(Sylvesters) is "Sylvester"
+	Rotating.Detect(Convolutions) is "" and Rotating.Detect(Productions) is "" and Multiplying.Detect(Hadamards) is ""
 	name = function.method.Name
 	if name is "Rotated" or name is "Modulated"
-		return name is "Rotated" then Listed(stored, Rotations, Rotated) else Listed(stored, Modulations, Modulated)
+		return name is "Rotated" then Describe(stored, Rotations, Rotated) else Describe(stored, Modulations, Modulated)
 	if stored is Convolutions and name is "Summed"
 		return "Convolution"
 	stored is Productions and name is "Multiplied" then "Products" else ""
-Listed(stored Texts, members List(Texts), kinds Texts) Text
-	Rotating.Listed(RopeRotations, Rotations, Rotated) is "RopeRotated"
-	Rotating.Listed(HeadRotations, Rotations, Rotated) is "HeadRotated"
-	Rotating.Listed(RowModulations, Modulations, Modulated) is "RowModulated"
-	Rotating.Listed(Productions, Rotations, Rotated) is ""
+Describe(stored Texts, members List(Texts), kinds Texts) Text
+	Rotating.Describe(RopeRotations, Rotations, Rotated) is "RopeRotated"
+	Rotating.Describe(HeadRotations, Rotations, Rotated) is "HeadRotated"
+	Rotating.Describe(RowModulations, Modulations, Modulated) is "RowModulated"
+	Rotating.Describe(Productions, Rotations, Rotated) is ""
 	for members
 		if value is stored
 			return kinds(index)
@@ -96,15 +96,15 @@ Prologue Texts
 	MlirTensors(MlirGpu.Layering.function).Prologue.Length is 0
 	Softmaxing.Prologue(3).EndsWith("@strict_gpu_softmax(%tensorPtx, %tensor0, %tensor1) : (!llvm.ptr, f64, f64) -> f64")
 	kind = Kind
-	kind is "" or IsComputed is false then List(Text) else Loads(kind) + Called(kind)
+	kind is "" or IsComputed is false then List(Text) else Loads(kind) + Call(kind)
 Loads(kind Text) Texts
 	Attending.Loads("Attention").First is "    %tensor0 = llvm.load %v_queries : !llvm.ptr -> f64"
 	for Members(kind)
 		function.Load("%tensor" + index, "%v_" + value)
-Called(kind Text) Texts
-	Multiplying.Called("Products")(1).EndsWith("%tensor3) : (!llvm.ptr, f64, f64, f64, f64) -> f64")
-	Multiplying.Called("Softmax")(0) is "    %tensorPtx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr"
-	Multiplying.Called("Hadamard")(1).StartsWith("    %tensored = func.call @strict_gpu_hadamard(%tensorPtx, %tensor0, ")
+Call(kind Text) Texts
+	Multiplying.Call("Products")(1).EndsWith("%tensor3) : (!llvm.ptr, f64, f64, f64, f64) -> f64")
+	Multiplying.Call("Softmax")(0) is "    %tensorPtx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr"
+	Multiplying.Call("Hadamard")(1).StartsWith("    %tensored = func.call @strict_gpu_hadamard(%tensorPtx, %tensor0, ")
 	count = Members(kind).Length
 	mutable arguments = "%tensorPtx"
 	mutable types = "!llvm.ptr"
@@ -123,9 +123,9 @@ Members(kind Text) Texts
 	kind is "Softmax" then ("scores", "width") else Stored(Kinds.Index(kind))
 Marker(kind Text) Text
 	Attending.Marker("Products") is "@strict_gpu_products("
-	Attending.Members("Softmax") is ("scores", "width") and Multiplying.Named(Sylvesters) is ""
-	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Convolutions) is "Convolution"
-	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Named(Productions) is ""
+	Attending.Members("Softmax") is ("scores", "width") and Multiplying.Detect(Sylvesters) is ""
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Detect(Convolutions) is "Convolution"
+	MlirTensors(MlirFunction(List(TypeEntry), Multiplied, GpuLayerSamples.Summed)).Detect(Productions) is ""
 	"@strict_gpu_" + kind.Lower + "("
 Used(program Text) Texts
 	Attending.Used("x @strict_gpu_products(y") is ("Products")
@@ -138,13 +138,13 @@ Used(program Text) Texts
 	for Kinds
 		if program.IndexOf(Marker(value)) >= 0 or convolving and value is "Products"
 			value
-Drifted(folder Text) Texts
-	Attending.Drifted("NeuralNetworks").Length is 0
+Drift(folder Text) Texts
+	Attending.Drift("NeuralNetworks").Length is 0
 	for Typed
-		if Declared(folder + "/" + value + ".strict") is not Stored(Kinds.Index(value))
+		if Declare(folder + "/" + value + ".strict") is not Stored(Kinds.Index(value))
 			value
-Declared(path Text) Texts
-	Attending.Declared("NeuralNetworks/SituRotated.strict") is SituRotations
+Declare(path Text) Texts
+	Attending.Declare("NeuralNetworks/SituRotated.strict") is SituRotations
 	for File(path).ReadLines
 		if value.StartsWith("has ")
 			value.Split(" ")(1)

@@ -62,7 +62,7 @@ Values Texts
 	for free
 		lines = lines + Value(index, value)
 		mask = MlirDevice(function, position).IsList(value) then mask + 2 ^ index else mask
-	lines + Counted(free.Length, mask, Rows(free), MlirDots(function, position).Mask(free))
+	lines + EmitCount(free.Length, mask, Rows(free), MlirDots(function, position).Mask(free))
 Rows(free Texts) Number
 	MlirGpu(MlirDeviceRows.Picking, 2).Rows(("weights", "input")) is 1
 	MlirGpu(MlirDeviceRows.Picking, 2).Values is Stored
@@ -80,14 +80,14 @@ Value(at Number, name Text) Texts
 		return MlirKernelBody(function, position).Value(at, name)
 	loaded = Temp("gv" + at)
 	slot = "    " + Temp("gx" + at) + " = llvm.getelementptr " + Temp("ga") + "[" + at + Indexing
-	flat = MlirDeviceRecords(function, position).Flattened(loaded, MlirKinds(function).VariableKind(position, name))
+	flat = MlirDeviceRecords(function, position).Flatten(loaded, MlirKinds(function).VariableKind(position, name))
 	stored = function.Store(flat.Length > 0 then loaded + "r" else loaded, Temp("gx" + at))
 	(List(Text) + function.Load(loaded, "%v_" + name) + slot) + flat + stored
-Counted(count Number, mask Number, rows Number, dots Number) Texts
-	Doubling.Counted(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 0 : i64"
-	MlirGpu(MlirDoubles.Tabling.function, 2).Counted(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 64 : i64"
+EmitCount(count Number, mask Number, rows Number, dots Number) Texts
+	Doubling.EmitCount(2, 3, 1, 2).Last is "    %t2gpf = arith.constant 0 : i64"
+	MlirGpu(MlirDoubles.Tabling.function, 2).EmitCount(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 64 : i64"
 	constant reading = MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirCost.Reading)
-	MlirGpu(reading, 2).Counted(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 2816 : i64"
+	MlirGpu(reading, 2).EmitCount(0, 0, 0, 0).Last is "    %t2gpf = arith.constant 2816 : i64"
 	constant names = ("gw", "gm", "gr", "go", "gj", "gpf")
 	guards = MlirGuards(MlirFunction(function, Float = "f32", Guarded = position), position).Mask
 	format = MlirDoubles(function, position).Format + Byte.Values * MlirCost(function, position).Shift
@@ -127,9 +127,9 @@ Module(functions List(MlirFunction)) Text
 		return ""
 	header = (Marker, "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
 	Text.Combine(header + kernels + Functions(callees) + "}", "\n")
-Exported(device Text) Texts
-	MlirGpu.Exported(MlirDevice.DoublingHeader + "\n  llvm.func @Rows_Twice_1_device(") is ("Rows_Doubled_1_gpu2")
-	MlirGpu.Exported("x nvvm.kernel (\n  llvm.func @Twice(") is List(Text)
+Export(device Text) Texts
+	MlirGpu.Export(MlirDevice.DoublingHeader + "\n  llvm.func @Rows_Twice_1_device(") is ("Rows_Doubled_1_gpu2")
+	MlirGpu.Export("x nvvm.kernel (\n  llvm.func @Twice(") is List(Text)
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines(1).EndsWith("cuda\"} {")
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines(2) is MlirDevice.DoublingHeader
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).Lines.Last is "}"
@@ -176,7 +176,7 @@ Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(M
 		entry = inspected.method.instructions(callAt)
 		isRounding = MlirDeviceCalls(inspected, callAt, inspected).IsRounding(entry)
 		if depth < 3 and entry.kind is InstructionType.Invoke and isRounding is false
-			for MlirModule(inspected.types, "").Called(inspected, callAt)
+			for MlirModule(inspected.types, "").Call(inspected, callAt)
 				sub = MlirCalleeGuards(inspected, callAt).WithWhole(value)
 				found = found + sub + Devices(sub, 0, sub.method.instructions.Length, depth + 1)
 	found

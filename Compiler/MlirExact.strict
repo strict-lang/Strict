@@ -19,15 +19,15 @@ Exact(number Text, type Text, name Text) Texts
 	Single.Exact("%a", "f32", "%b").Last is "    %b_q = arith.extui %bs : i1 to i64"
 	Single.Exact("%a", "f64", "%b").First is "    %bb = llvm.bitcast %a : f64 to i64"
 	if type is "f64"
-		return MlirBits(name).Converted(number)
+		return MlirBits(name).Convert(number)
 	whole = " = llvm.call_intrinsic \"llvm.fptosi.sat.i32.f32\"(" + number + ") : (f32) -> i32"
 	back = "    " + name + "w = arith.sitofp " + name + "i : i32 to f32"
 	same = "    " + name + "s = arith.cmpf oeq, " + name + "w, " + number + " : f32"
 	widened = "    " + name + "_e = arith.extsi " + name + "i : i32 to i64"
 	("    " + name + "i" + whole, back, same, widened, "    " + name + "_q = arith.extui " + name + "s : i1 to i64")
-Converted(number Text, type Text, slot Text) Texts
-	Single.Converted("%a", "f64", "%v_b").Last is "    llvm.store %a_v_b_q, %v_b_q : i64, !llvm.ptr"
-	Double.Converted("%a", "f64", "%r1").Length is 0
+Convert(number Text, type Text, slot Text) Texts
+	Single.Convert("%a", "f64", "%v_b").Last is "    llvm.store %a_v_b_q, %v_b_q : i64, !llvm.ptr"
+	Double.Convert("%a", "f64", "%r1").Length is 0
 	if Parts.Length is 0
 		return List(Text)
 	name = number.Replace("#", "_") + slot.Replace("%", "_")
@@ -37,9 +37,9 @@ Set(numerator Text, denominator Text, slot Text) Texts
 	Double.Set("%n", "%d", "%r1").Length is 0
 	stored = (MlirTyped.Integer.Store(numerator, slot + "_e"), MlirTyped.Integer.Store(denominator, slot + "_q"))
 	Parts.Length is 0 then List(Text) else stored
-Loaded(name Text, slot Text) Texts
-	Single.Loaded("%a", "%r1").Last is "    %a_q = llvm.load %r1_q : !llvm.ptr -> i64"
-	Double.Loaded("%a", "%r1").Length is 0
+LoadExact(name Text, slot Text) Texts
+	Single.LoadExact("%a", "%r1").Last is "    %a_q = llvm.load %r1_q : !llvm.ptr -> i64"
+	Double.LoadExact("%a", "%r1").Length is 0
 	for Parts
 		MlirTyped.Integer.Load(name + value, slot + value)
 Whole(name Text, number Text) Texts
@@ -47,10 +47,10 @@ Whole(name Text, number Text) Texts
 	Double.Whole("%h", "0").Length is 0
 	parts = (MlirTyped.Integer.Constant(name + "_e", number), MlirTyped.Integer.Constant(name + "_q", "1"))
 	Parts.Length is 0 then List(Text) else parts
-Copied(source Text, target Text) Texts
-	Single.Copied("%v_a", "%r1").Last is "    llvm.store %x2c_q, %r1_q : i64, !llvm.ptr"
-	Double.Copied("%v_a", "%r1").Length is 0
-	Loaded(Temp("c"), source) + Set(Temp("c_e"), Temp("c_q"), target)
+Copy(source Text, target Text) Texts
+	Single.Copy("%v_a", "%r1").Last is "    llvm.store %x2c_q, %r1_q : i64, !llvm.ptr"
+	Double.Copy("%v_a", "%r1").Length is 0
+	LoadExact(Temp("c"), source) + Set(Temp("c_e"), Temp("c_q"), target)
 Names(name Text) Texts
 	Single.Names("%a") is ("%a", "%a_e", "%a_q")
 	Double.Names("%a") is ("%a")
@@ -96,7 +96,7 @@ ReducedPosition(slot Text, target Text, loaded Text) Texts
 	narrow = "    " + target + "n = arith.fptosi " + target + "f : f32 to i32"
 	whole = "    " + target + "j = arith.extsi " + target + "n : i32 to i64"
 	valid = "    " + target + "v = arith.cmpi eq, " + target + "_q, %one : i64"
-	prefix = (loaded, narrow, whole) + Loaded(target, slot) + valid
+	prefix = (loaded, narrow, whole) + LoadExact(target, slot) + valid
 	prefix + MlirRational(MlirExact(function, at)).Whole(target, target + "j")
 Integer(name Text, operation Text) Text
 	Single.Integer("n", "arith.addi %a, %b") is "    %x2n = arith.addi %a, %b : i64"

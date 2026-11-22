@@ -30,10 +30,10 @@ IsGated Boolean
 	up = Up
 	if written < 0 or up < 0
 		return false
-	product = Traced(function.method.instructions(written).payload(0), written)
+	product = Trace(function.method.instructions(written).payload(0), written)
 	entry = function.method.instructions(product < 0 then position else product)
-	isUp = entry.kind is InstructionType.Multiply and Traced(entry.payload(2), product) is up
-	product >= 0 and isUp and IsActivated(Traced(entry.payload(1), product))
+	isUp = entry.kind is InstructionType.Multiply and Trace(entry.payload(2), product) is up
+	product >= 0 and isUp and IsActivated(Trace(entry.payload(1), product))
 Up Number
 	Gating.Up is 38
 	Summing.Up is -1
@@ -52,13 +52,13 @@ IsUp(at Number, call Number) Boolean
 		return false
 	arguments = PayloadDecoder(function.method.instructions(at)).Arguments
 	names = tokens.Names(call)
-	isRow = Shifted(arguments(0), at) is (names(0), names(3))
+	isRow = Shift(arguments(0), at) is (names(0), names(3))
 	isStart = tokens.Start(arguments(3), at) is (names(3), names(2))
 	isInput = tokens.Variable(arguments(2), at) is names(1)
 	isRow and isStart and isInput and tokens.IsConstant(arguments(1), at, 0)
-Shifted(register Number, before Number) Texts
-	Gating.Shifted(26, 38) is ("weights", "rows")
-	Gating.Shifted(4, 15).Length is 0
+Shift(register Number, before Number) Texts
+	Gating.Shift(26, 38) is ("weights", "rows")
+	Gating.Shift(4, 15).Length is 0
 	groups = MlirGroups(function, position)
 	read = groups.Writer(register, before)
 	entry = function.method.instructions(read < 0 then position else read)
@@ -67,7 +67,7 @@ Shifted(register Number, before Number) Texts
 	if sum < 0 or added.kind is not InstructionType.Add
 		return List(Text)
 	tokens = MlirTokens(function, position)
-	rows = tokens.Indexed(groups.Writer(added.payload(1), sum), InstructionType.Modulo)
+	rows = tokens.EmitIndex(groups.Writer(added.payload(1), sum), InstructionType.Modulo)
 	rows is not "" and tokens.Variable(added.payload(2), sum) is rows then (entry.texts(0), rows) else List(Text)
 IsActivated(at Number) Boolean
 	Gating.IsActivated(24)
@@ -75,14 +75,14 @@ IsActivated(at Number) Boolean
 	entry = function.method.instructions(at < 0 then position else at)
 	if at < 0 or entry.kind is not InstructionType.Divide
 		return false
-	IsGate(entry.payload(1), at) and IsDecayed(Traced(entry.payload(2), at))
+	IsGate(entry.payload(1), at) and IsDecayed(Trace(entry.payload(2), at))
 IsDecayed(at Number) Boolean
 	Gating.IsDecayed(23)
 	Gating.IsDecayed(21) is false
 	entry = function.method.instructions(at < 0 then position else at)
 	if at < 0 or entry.kind is not InstructionType.Add
 		return false
-	MlirTokens(function, position).IsConstant(entry.payload(1), at, 1) and IsExponential(Traced(entry.payload(2), at))
+	MlirTokens(function, position).IsConstant(entry.payload(1), at, 1) and IsExponential(Trace(entry.payload(2), at))
 IsExponential(at Number) Boolean
 	Gating.IsExponential(22)
 	Inlining.IsExponential(25)
@@ -94,7 +94,7 @@ IsExponential(at Number) Boolean
 	tokens = MlirTokens(function, position)
 	isBase = isPower then tokens.IsConstant(entry.payload(1), at, Euler) else entry.texts(1) is "Exponential"
 	instance = isPower then entry.payload(2) else MlirDeviceCalls(function, at, function).Register(entry)
-	isBase and IsNegated(Traced(instance, at))
+	isBase and IsNegated(Trace(instance, at))
 IsNegated(at Number) Boolean
 	Gating.IsNegated(21)
 	Gating.IsNegated(23) is false
@@ -106,7 +106,7 @@ IsGate(register Number, before Number) Boolean
 	Gating.IsGate(14, 24)
 	Gating.IsGate(15, 23) is false
 	call = MlirTokens(function, position).Call
-	call >= 0 and Traced(register, before) is call
+	call >= 0 and Trace(register, before) is call
 Operand Text
 	Gating.Operand is "%t2ggated"
 	Summing.Operand is "%zero"
@@ -115,19 +115,19 @@ Loaded Texts
 	Gating.Loaded is ("    %t2ggated = arith.constant 1.0 : f64")
 	Summing.Loaded.Length is 0
 	IsGated then List(Text) + ("    " + Operand + " = arith.constant 1.0 : f64") else List(Text)
-Traced(register Number, before Number) Number
-	Gating.Traced(14, 24) is 15
-	Inlining.Traced(41, 25) is 21
-	Gating.Traced(15, 23) is 18
+Trace(register Number, before Number) Number
+	Gating.Trace(14, 24) is 15
+	Inlining.Trace(41, 25) is 21
+	Gating.Trace(15, 23) is 18
 	writer = MlirGroups(function, position).Writer(register, before)
 	entry = function.method.instructions(writer)
 	if writer < 0 or entry.kind is not InstructionType.LoadVariableToRegister
 		return writer
-	store = Stored(entry.texts, writer)
-	store < 0 then writer else Traced(function.method.instructions(store).payload(0), store)
-Stored(name Texts, before Number) Number
-	Gating.Stored(List(Text) + "gate", 17) is 16
-	Gating.Stored(List(Text) + "gate", 16) is -1
+	store = Store(entry.texts, writer)
+	store < 0 then writer else Trace(function.method.instructions(store).payload(0), store)
+Store(name Texts, before Number) Number
+	Gating.Store(List(Text) + "gate", 17) is 16
+	Gating.Store(List(Text) + "gate", 16) is -1
 	for before - position - 1
 		candidate = before - 1 - index
 		entry = function.method.instructions(candidate)

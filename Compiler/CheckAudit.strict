@@ -21,14 +21,14 @@ Run(arguments Texts) Number
 	folder = "Examples/AuditCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	RanSelected(folder, arguments)
+	RanSelect(folder, arguments)
 	Directory.Delete(folder)
 	0
-RanSelected(folder Text, arguments Texts)
+RanSelect(folder Text, arguments Texts)
 	for ("locks", "replace", "discovery", "linking", "values")
 		if arguments.Length is 0 or value is in arguments
-			RanNamed(folder, value)
-RanNamed(folder Text, name Text)
+			RanName(folder, value)
+RanName(folder Text, name Text)
 	if name is "locks"
 		return CheckLocks(folder)
 	if name is "replace"

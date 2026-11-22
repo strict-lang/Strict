@@ -3,14 +3,14 @@ constant Lowered = "Compiler/obj/Seed.opt.mlir"
 constant ToolSeconds = 270
 Run(arguments Texts) Number
 	if arguments.Length is 0
-		Written
+		Write
 	else
-		NativeCompiler.Built(arguments.Slice(1, arguments.Length - 1), List(Text), List(TypeEntry))
+		NativeCompiler.Build(arguments.Slice(1, arguments.Length - 1), List(Text), List(TypeEntry))
 	0
-Written
+Write
 	if Process.Variable("STRICT_GPU") is not "0"
 		return Error("SeedNeedsStrictGpuZero")
-	tool = Toolchain(Platform.Current, ".").Located("mlir-opt")
+	tool = Toolchain(Platform.Current, ".").Locate("mlir-opt")
 	shrunk = Process.RunTool(tool, "Compiler/obj/Seed.mlir" + Passes + Lowered, ToolSeconds)
 	if shrunk.exitCode is not 0
 		return Error("SeedNotShrunk: " + shrunk.Output + shrunk.error)

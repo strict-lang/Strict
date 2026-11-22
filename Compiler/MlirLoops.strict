@@ -37,7 +37,7 @@ Begin Texts
 	indexes = (function.Load(Temp("x"), "%v_index"), function.Load(Temp("y"), "%v_value"))
 	saved = bounds + MlirGrouped(function, position).Unset + indexes + Outered
 	begun = saved + MlirGpu(function, position).Launched + MlirKernel(function, position).Versioned + Presized
-	tail = MlirRangeLoop(function, position).Opened("^loop" + position)
+	tail = MlirRangeLoop(function, position).Open("^loop" + position)
 	looped = isRange then MlirRangeLoop(function, position).Value else Current
 	begun + MlirParallel(function, position).Forked + Items + MlirWholeLoop(function, position).Versioned + tail + looped
 Current Texts
@@ -51,7 +51,7 @@ Current Texts
 		return indexed + function.Store(Temp("c"), "%v_value")
 	if MlirBytes(function, position).IsValued is false
 		return indexed
-	character = MlirMemory(function, position).Called(Temp("g"), "strict_text_at", (Temp("v"), Temp("c")))
+	character = MlirMemory(function, position).Call(Temp("g"), "strict_text_at", (Temp("v"), Temp("c")))
 	indexed + (collection is "Text" then List(Text) + character else Read) + function.Store(Temp("g"), "%v_value")
 Read Texts
 	Listing.Read.Last is "    %t1g = func.call @strict_steady_item(%t1h, %t1ea, %t1v) : (!llvm.ptr, i64, f64) -> f64"
@@ -64,7 +64,7 @@ Read Texts
 	at = "    " + Temp("ea") + " = arith.fptosi " + Temp("c") + " : f64 to i64"
 	call = "    " + Temp("g") + " = func.call @strict_steady_item(" + Temp("h") + ", " + Temp("ea") + ", " + Temp("v")
 	widths = MlirWidths(function, position, "f64", "ki", MlirParameters.ReadScope)
-	loaded = widths.Loaded(Temp("g"), Temp("ep"), Temp("h"), MlirFastLoop.Iterated)
+	loaded = widths.Load(Temp("g"), Temp("ep"), Temp("h"), MlirFastLoop.Iterated)
 	MlirDeferred(function, position).IsItemized(isChunk) then loaded else (at, call + ") : (!llvm.ptr, i64, f64) -> f64")
 Element Text
 	Listing.Element.StartsWith("    %t1g = func.call @strict_hoisted_item(%t1h, %t1c, %t1hv, %t1v)")
@@ -82,7 +82,7 @@ Collection Text
 	entry = function.method.instructions(position)
 	if entry.payload(1) is 1
 		return ""
-	kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(position, entry.payload(0)))
+	kind = MlirLayout(function).Represent(MlirKinds(function).KindOf(position, entry.payload(0)))
 	kind is "Text" or kind.StartsWith("List(") then kind else ""
 Wanted Texts
 	Doubling.Wanted is ("    %t2gd = func.call @strict_gpu_wanted(%t2gc) : (i64) -> i1")
@@ -117,7 +117,7 @@ CountBounds(entry InstructionEntry) Texts
 	if Collection is ""
 		return (start, loaded, whole, signed, count, step)
 	constant counter = Collection is "Text" then "strict_text_length" else "strict_list_length"
-	(start, loaded, MlirMemory(function, position).Called(Temp("n"), counter, List(Text) + Temp("v")), step)
+	(start, loaded, MlirMemory(function, position).Call(Temp("n"), counter, List(Text) + Temp("v")), step)
 Items Texts
 	Listing.Items.First.IndexOf("@strict_list_hoisted(%t1v)") > 0
 	MlirLoops(Listing.function, 1, true).Items.First.IndexOf("@strict_list_items(%t1v)") > 0
@@ -130,7 +130,7 @@ Items Texts
 		return List(Text)
 	version = "    " + Temp("hv") + " = func.call @strict_list_version() : () -> i64"
 	itemizer = MlirDeferred(function, position).IsItemized(isChunk) then "items" else "hoisted"
-	MlirBytes(function, position).Hoisted(Temp("h"), Temp("v"), itemizer) + version
+	MlirBytes(function, position).Hoist(Temp("h"), Temp("v"), itemizer) + version
 Outered Texts
 	Counting.Outered.Length is 0
 	Nested.Outered.Last is "    llvm.store %t0y, %v_outer : f64, !llvm.ptr"
@@ -154,7 +154,7 @@ IsCollecting Boolean
 IsSpelling Boolean
 	Spelling.IsSpelling
 	method = function.method
-	stored = MlirKinds(function).Stored(position, "forResult")
+	stored = MlirKinds(function).Store(position, "forResult")
 	start = stored > 0 then method.instructions(stored - 1) else method.instructions(position)
 	isEmptied = start.kind is InstructionType.LoadConstantToRegister and Text.Combine(start.texts) is ""
 	isText = isEmptied and MlirKinds(function).VariableKind(position, "forResult") is "Text"
@@ -174,11 +174,11 @@ Presized Texts
 		return List(Text)
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
 	reset = function.Store("%zero", "%spelled" + position)
-	text = (MlirMemory(function, position).Called(Temp("r"), "strict_text_new", List(Text) + Temp("a")), reset)
-	created = IsSpelling then text else MlirListDestined(function, position).Created(Temp("r"), Temp("a"))
+	text = (MlirMemory(function, position).Call(Temp("r"), "strict_text_new", List(Text) + Temp("a")), reset)
+	created = IsSpelling then text else MlirListDestined(function, position).Creat(Temp("r"), Temp("a"))
 	(List(Text) + capacity) + created + function.Store(Temp("r"), "%v_forResult")
-Restored(begin Number) Texts
-	MlirLoops(Nested.function, 2).Restored(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"
+Restore(begin Number) Texts
+	MlirLoops(Nested.function, 2).Restore(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"
 	names = function.Named
 	mutable lines = List(Mutable(Text))
 	if "outer" is in names
@@ -191,17 +191,17 @@ End Texts
 	begin = function.method.LoopBeginOf(position)
 	if function.method.instructions(begin).payload(1) is 1
 		ranged = MlirRangeLoop(function, position)
-		return ranged.Closed(begin) + ranged.Finished(begin)
+		return ranged.Close(begin) + ranged.Finish(begin)
 	load = "    " + Temp("k") + " = llvm.load %loop" + begin + " : !llvm.ptr -> f64"
 	one = "    " + Temp("u") + " = arith.constant 1.0 : f64"
 	next = "    " + Temp("w") + " = arith.addf " + Temp("k") + ", " + Temp("u") + " : f64"
 	store = "    llvm.store " + Temp("w") + ", %loop" + begin + " : f64, !llvm.ptr"
 	restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
-	tail = Stepped((load, one, next, store), begin) + ("  ^loop" + begin + "exit:")
-	tail + restore + Restored(begin) + MlirKernel(function, begin).Joined
-Stepped(steps Texts, begin Number) Texts
+	tail = Step((load, one, next, store), begin) + ("  ^loop" + begin + "exit:")
+	tail + restore + Restore(begin) + MlirKernel(function, begin).Joined
+Step(steps Texts, begin Number) Texts
 	MlirLoops(Returned, 2).End.First is "  ^loop0exit:"
-	MlirLoops(Counting.function, 1).Stepped(List(Text) + "a", 0) is ("a", "    cf.br ^loop0")
+	MlirLoops(Counting.function, 1).Step(List(Text) + "a", 0) is ("a", "    cf.br ^loop0")
 	function.method.instructions(position - 1).kind is InstructionType.Return then List(Text) else steps + Back(begin)
 Back(begin Number) Texts
 	MlirLoops(Counting.function, 1).Back(0).Length is 1

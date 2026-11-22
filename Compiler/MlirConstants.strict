@@ -83,7 +83,7 @@ TextGlobal(text Text, symbol Text) Text
 	MlirConstants(MlirTexts.Joined, 0).TextGlobal("b", "_1").IndexOf("@cShape_Run_0_0_1(\"\\01\\00") > 0
 	MlirConstants(MlirTexts.Joined, 0, "@dA_b").TextGlobal("b", "_1").IndexOf("@dA_b_1(") > 0
 	bytes = ByteEncoder.Empty.UnicodeBytes(text)
-	name = Base + symbol + "(\"" + Lengths(bytes) + Escaped(text, false) + "\\00\")"
+	name = Base + symbol + "(\"" + Lengths(bytes) + Escape(text, false) + "\\00\")"
 	"  llvm.mlir.global internal constant " + name + " : !llvm.array<" + (bytes.Length + Framing) + " x i8>"
 Lengths(bytes Numbers) Text
 	MlirConstants(MlirTexts.Joined, 0).Lengths((97, 195, 164)) is Word(3) + Word(2)
@@ -105,7 +105,7 @@ Literal(text Text, slot Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 1).Literal("b", "%s", "").First.StartsWith("unsupported")
 	MlirConstants(MlirTexts.Joined, 1, "@dA_b").Literal("b", "%s", "d0").First.IndexOf(" @dA_b ") > 0
 	if text is not "" and named is "" and IsConstant is false
-		return List(Text) + MlirStatements(function, position).Unsupported("Text constant")
+		return List(Text) + MlirStatements(function, position).Unsupport("Text constant")
 	Address(text, "", suffix) + function.Store(MlirMemory(function, position).Temp(suffix + "xf"), slot)
 Address(text Text, symbol Text, suffix Text) Texts
 	MlirConstants(MlirTexts.Joined, 0).Address("a", "_2", "e").First.IndexOf("@cShape_Run_0_0_2 ") > 0
@@ -119,9 +119,9 @@ Base Text
 	MlirConstants(MlirTexts.Joined, 0).Base is "@cShape_Run_0_0"
 	MlirConstants(MlirTexts.Joined, 0, "@dA_b").Base is "@dA_b"
 	named is "" then "@c" + function.Symbol + "_" + position else named
-Escaped(text Text, isFormat Boolean) Text
-	MlirConstants(MlirTexts.Joined, 0).Escaped("a\"%", true) is "a\\22%%"
-	MlirConstants(MlirTexts.Joined, 0).Escaped("a%", false) is "a%"
+Escape(text Text, isFormat Boolean) Text
+	MlirConstants(MlirTexts.Joined, 0).Escape("a\"%", true) is "a\\22%%"
+	MlirConstants(MlirTexts.Joined, 0).Escape("a%", false) is "a%"
 	percent = isFormat then "%%" else "%"
 	mutable pieces = List(Mutable(Text))
 	for ByteEncoder.Empty.UnicodeBytes(text)

@@ -8,10 +8,10 @@ constant ConvertedIntegers = ExponentBits + MantissaBits + ImplicitBit + ("    %
 constant ShiftedBits = ("    %n63 = arith.constant 63 : i64", "    %nt = arith.minui %nr, %n63 : i64", "    %nf = arith.shrui %ni, %nt : i64")
 constant ConvertedMagnitude = ShiftedBits + ("    %nn = arith.cmpi slt, %nb, %n0 : i64", "    %nc = arith.subi %n0, %nf : i64", "    %n_e = arith.select %nn, %nc, %nf : i64")
 constant ConvertedExact = ("    %nh = arith.shli %n1, %nt : i64", "    %ny = arith.subi %nh, %n1 : i64", "    %nj = arith.andi %ni, %ny : i64", "    %nw = arith.cmpi eq, %nj, %n0 : i64", "    %n_q = arith.extui %nw : i1 to i64")
-Converted(number Text) Texts
-	Converting.Converted("%v") is ConvertedFields + ConvertedIntegers + ConvertedMagnitude + ConvertedExact
-	Converting.Converted("%v").First is "    %nb = llvm.bitcast %v : f64 to i64"
-	Converting.Converted("%v").Last is "    %n_q = arith.extui %nw : i1 to i64"
+Convert(number Text) Texts
+	Converting.Convert("%v") is ConvertedFields + ConvertedIntegers + ConvertedMagnitude + ConvertedExact
+	Converting.Convert("%v").First is "    %nb = llvm.bitcast %v : f64 to i64"
+	Converting.Convert("%v").Last is "    %n_q = arith.extui %nw : i1 to i64"
 	fields = (Line("b", "llvm.bitcast " + number + " : f64 to i64"), Constant("0", "0"), Constant("1", "1"))
 	fields + Integers + Magnitude + Exact
 Integers Texts
@@ -21,7 +21,7 @@ Integers Texts
 	exponent = (Constant("52", "52"), Constant("k1", "2047"), Operation("x", "shrui", "b", "52"))
 	masked = (Operation("k", "andi", "x", "k1"), Constant("mm", "4503599627370495"), Operation("m", "andi", "b", "mm"))
 	present = (Constant("iu", "4503599627370496"), Operation("iz", "cmpi ne,", "k", "0"))
-	implicit = Line("ii", "arith.select " + Named("iz") + ", " + Named("iu") + ", " + Named("0") + " : i64")
+	implicit = Line("ii", "arith.select " + Tag("iz") + ", " + Tag("iu") + ", " + Tag("0") + " : i64")
 	combined = (implicit, Operation("i", "ori", "m", "ii"), Constant("rr", "1075"), Operation("r", "subi", "rr", "k"))
 	exponent + masked + present + combined
 Magnitude Texts
@@ -29,22 +29,22 @@ Magnitude Texts
 	Converting.Magnitude.Last is "    %n_e = arith.select %nn, %nc, %nf : i64"
 	shifted = (Constant("63", "63"), Operation("t", "minui", "r", "63"), Operation("f", "shrui", "i", "t"))
 	negative = (Operation("n", "cmpi slt,", "b", "0"), Operation("c", "subi", "0", "f"))
-	shifted + negative + Line("_e", "arith.select " + Named("n") + ", " + Named("c") + ", " + Named("f") + " : i64")
+	shifted + negative + Line("_e", "arith.select " + Tag("n") + ", " + Tag("c") + ", " + Tag("f") + " : i64")
 Exact Texts
 	Converting.Exact is ConvertedExact
 	Converting.Exact(1) is "    %ny = arith.subi %nh, %n1 : i64"
 	Converting.Exact.Last is "    %n_q = arith.extui %nw : i1 to i64"
 	lost = (Operation("h", "shli", "1", "t"), Operation("y", "subi", "h", "1"), Operation("j", "andi", "i", "y"))
-	lost + Operation("w", "cmpi eq,", "j", "0") + Line("_q", "arith.extui " + Named("w") + " : i1 to i64")
+	lost + Operation("w", "cmpi eq,", "j", "0") + Line("_q", "arith.extui " + Tag("w") + " : i1 to i64")
 Operation(result Text, operation Text, left Text, right Text) Text
 	Converting.Operation("k", "andi", "x", "k1") is "    %nk = arith.andi %nx, %nk1 : i64"
-	Line(result, "arith." + operation + " " + Named(left) + ", " + Named(right) + " : i64")
+	Line(result, "arith." + operation + " " + Tag(left) + ", " + Tag(right) + " : i64")
 Constant(result Text, number Text) Text
 	Converting.Constant("52", "52") is "    %n52 = arith.constant 52 : i64"
 	Line(result, "arith.constant " + number + " : i64")
 Line(result Text, operation Text) Text
 	Converting.Line("e", "arith.addi %a, %b : i64") is "    %ne = arith.addi %a, %b : i64"
-	"    " + Named(result) + " = " + operation
-Named(suffix Text) Text
-	Converting.Named("b") is "%nb"
+	"    " + Tag(result) + " = " + operation
+Tag(suffix Text) Text
+	Converting.Tag("b") is "%nb"
 	name + suffix

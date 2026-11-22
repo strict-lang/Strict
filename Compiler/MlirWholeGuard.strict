@@ -10,7 +10,7 @@ Guarded Texts
 		lines = lines + (index < names.Length then Guard(value, index) else Present("%b_" + value, index))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		lines = lines + Bound(value)
-	lines + Joined(Conditions)
+	lines + Join(Conditions)
 Started Texts
 	Row.Started.Last is "    %t6whz = arith.constant 0 : i64"
 	(Line("whlimit", "arith.constant 4503599627370496.0 : f64"), Line("whz", "arith.constant 0 : i64"))
@@ -18,9 +18,9 @@ Guard(name Text, number Number) Texts
 	Row.Guard("middle", 0).Last is "    %t6wh0 = arith.fptosi %t6wh0f : f64 to i64"
 	loaded = Temp("wh" + number + "f")
 	converted = Line("wh" + number, "arith.fptosi " + loaded + " : f64 to i64")
-	List(Text) + function.Load(loaded, "%v_" + name) + Checked(loaded, Temp("wh" + number), Temp("whlimit")) + converted
-Checked(number Text, prefix Text, limit Text) Texts
-	Row.Checked("%x", "%p", "%l").Last is "    %po = arith.andi %pe, %ps : i1"
+	List(Text) + function.Load(loaded, "%v_" + name) + Check(loaded, Temp("wh" + number), Temp("whlimit")) + converted
+Check(number Text, prefix Text, limit Text) Texts
+	Row.Check("%x", "%p", "%l").Last is "    %po = arith.andi %pe, %ps : i1"
 	whole = "    " + prefix + "t = llvm.intr.trunc(" + number + ") : (f64) -> f64"
 	equal = "    " + prefix + "e = arith.cmpf oeq, " + prefix + "t, " + number + " : f64"
 	magnitude = "    " + prefix + "a = llvm.intr.fabs(" + number + ") : (f64) -> f64"
@@ -38,7 +38,7 @@ Bound(at Number) Texts
 	if HasBound(at) is false
 		return List(Text)
 	isStored = function.method.instructions(at).kind is InstructionType.StoreRegisterToVariable
-	measured = isStored then Accumulated(at) else List(Text) + Measured(at)
+	measured = isStored then Accumulate(at) else List(Text) + Measure(at)
 	measured + ("    %t" + at + "wk = arith.cmpf olt, %t" + at + "wb, " + Temp("whlimit") + " : f64")
 HasBound(at Number) Boolean
 	Row.HasBound(18)
@@ -46,9 +46,9 @@ HasBound(at Number) Boolean
 	entry = function.method.instructions(at)
 	isStored = entry.kind is InstructionType.StoreRegisterToVariable
 	isStored or MlirWhole(function, position).IsBounded(LoadReuse(function.method.instructions).Write(entry), at + 1)
-Measured(at Number) Text
-	Row.Measured(10) is "    %t10wb = llvm.intr.fabs(%t6wh1f) : (f64) -> f64"
-	Row.Measured(12) is "    %t12wb = arith.constant 0x4010000000000000 : f64"
+Measure(at Number) Text
+	Row.Measure(10) is "    %t10wb = llvm.intr.fabs(%t6wh1f) : (f64) -> f64"
+	Row.Measure(12) is "    %t12wb = arith.constant 0x4010000000000000 : f64"
 	entry = function.method.instructions(at)
 	bound = "    %t" + at + "wb = "
 	if entry.kind is InstructionType.LoadConstantToRegister
@@ -66,8 +66,8 @@ Grown(at Number) Text
 	left = "%t" + whole.Writer(entry.payload(1), at) + "wb"
 	right = "%t" + whole.Writer(entry.payload(2), at) + "wb"
 	(entry.kind is InstructionType.Multiply then "arith.mulf " else "arith.addf ") + left + ", " + right + " : f64"
-Accumulated(at Number) Texts
-	Row.Accumulated(18)(2) is "    %t18wm = arith.mulf %t18wc, %t15wb : f64"
+Accumulate(at Number) Texts
+	Row.Accumulate(18)(2) is "    %t18wm = arith.mulf %t18wc, %t15wb : f64"
 	whole = MlirWhole(function, position)
 	term = "%t" + whole.Writer(function.method.instructions(at - 1).payload(2), at - 1) + "wb"
 	carried = MlirSingle(function, position).Carried.Index(function.method.instructions(at).texts(0))
@@ -87,10 +87,10 @@ Conditions Texts
 		if HasBound(value)
 			conditions = conditions + ("%t" + value + "wk")
 	conditions
-Joined(conditions Texts) Texts
-	Row.Joined(("%a", "%b"))(1) is "    %t6whj0 = arith.andi %t6whj, %a : i1"
-	Row.Joined(("%a", "%b")).Last is "    %t6whok = arith.andi %t6whj0, %b : i1"
-	Row.Joined(List(Text)).Last is "    %t6whok = arith.constant true"
+Join(conditions Texts) Texts
+	Row.Join(("%a", "%b"))(1) is "    %t6whj0 = arith.andi %t6whj, %a : i1"
+	Row.Join(("%a", "%b")).Last is "    %t6whok = arith.andi %t6whj0, %b : i1"
+	Row.Join(List(Text)).Last is "    %t6whok = arith.constant true"
 	if conditions.Length is 0
 		return List(Text) + Line("whok", "arith.constant true")
 	mutable lines = List(Text) + Line("whj", "arith.constant true")

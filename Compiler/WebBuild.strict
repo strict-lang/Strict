@@ -9,37 +9,37 @@ constant Lowering = " -mllvm -combiner-global-alias-analysis=false -mllvm -enabl
 constant LinkLowering = " -Wl,-mllvm,-combiner-global-alias-analysis=false -Wl,-mllvm,-enable-emscripten-sjlj -Wl,-mllvm,-disable-lsr"
 constant Thin = " -Wl,--lto-O2 -Wl,--thinlto-jobs=all" + LinkLowering + " -Wl,--thinlto-cache-policy=" + Toolchain.LtoCachePolicy
 constant Sizes = ("malloc", "calloc", "realloc", "memcpy", "memset", "strlen", "strncmp", "strftime", "fread", "fwrite", "fseek", "ftell", "strtol", "snprintf")
-Linked(base Text, executable Text) Text
-	Missing.Linked("Compiler/output/missing", "missing.html").StartsWith("mlir-opt failed")
-	compiled = Compiled(base)
+Link(base Text, executable Text) Text
+	Missing.Link("Compiler/output/missing", "missing.html").StartsWith("mlir-opt failed")
+	compiled = Compile(base)
 	if compiled is not ""
 		return compiled
 	folder = Release(base).Parent
-	sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preloaded(folder + "/Content")
-	page = " --shell-file " + tools.Quoted(Shell(base))
-	Release(base).Created(Path(executable).PathOnly.text)
-	inputs = tools.PartObjects(base + ".web") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
-	output = " -o " + tools.Quoted(executable) + Options + Thinned(base) + " -O1"
-	linked = ToolRunner(tools.Located("emcc")).Execute(inputs + output)
-	linked.HasFailed then "emcc failed: " + linked.error else Optimized(executable)
-Thinned(base Text) Text
+	sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preload(folder + "/Content")
+	page = " --shell-file " + tools.Quote(Shell(base))
+	Release(base).Creat(Path(executable).PathOnly.text)
+	inputs = tools.PartObjects(base + ".web") + sources + Mirror(folder, base) + Script(base) + page + Runtime
+	output = " -o " + tools.Quote(executable) + Options + ThinLink(base) + " -O1"
+	linked = ToolRunner(tools.Locate("emcc")).Execute(inputs + output)
+	linked.HasFailed then "emcc failed: " + linked.error else Optimize(executable)
+ThinLink(base Text) Text
 	Options.IndexOf("--closure 1") >= 0 and Options.IndexOf("--profiling-funcs") is -1
-	Missing.Thinned("a").EndsWith(" -Wl,--thinlto-cache-dir=\"a.web.lto\"")
-	Missing.Thinned("a").StartsWith(Thin)
-	Thin + " -Wl,--thinlto-cache-dir=" + tools.Quoted(base + ".web.lto")
-Compiled(base Text) Text
-	Missing.Compiled("Compiler/output/missing").StartsWith("mlir-opt failed")
+	Missing.ThinLink("a").EndsWith(" -Wl,--thinlto-cache-dir=\"a.web.lto\"")
+	Missing.ThinLink("a").StartsWith(Thin)
+	Thin + " -Wl,--thinlto-cache-dir=" + tools.Quote(base + ".web.lto")
+Compile(base Text) Text
+	Missing.Compile("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if File(base + ".mlir").Exists is false
-		return tools.Lowered(base)
-	lowered = MlirParts(MlirSplit(File(base + ".mlir").ReadLines)).Laid.Lowered(base + ".web", tools)
+		return tools.Lower(base)
+	lowered = MlirParts(MlirSplit(File(base + ".mlir").ReadLines)).Laid.Lower(base + ".web", tools)
 	lowered is not "" then lowered else tools.PartsCompiled(base + ".web") then "" else "clang failed for " + base
-Optimized(executable Text) Text
-	Missing.Optimized("Compiler/output/missing.html").StartsWith("wasm-opt failed")
-	wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
+Optimize(executable Text) Text
+	Missing.Optimize("Compiler/output/missing.html").StartsWith("wasm-opt failed")
+	wasm = tools.Quote(executable.Replace(".html", ".wasm"))
 	optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
-	optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
-	optimized.HasFailed then "wasm-opt failed: " + optimized.error else Iconed(executable)
-Iconed(executable Text) Text
+	optimized = ToolRunner(tools.Locate("wasm-opt")).Execute(optimizing)
+	optimized.HasFailed then "wasm-opt failed: " + optimized.error else Icone(executable)
+Icone(executable Text) Text
 	page = Text.Combine(File(executable).ReadLines, "\n")
 	source = executable.Replace("/Release/Web/", "/obj/").Replace(".html", "")
 	own = Release(source).Icon is not TypeSource.Root + "/Strict.ico"
@@ -52,29 +52,29 @@ Favicons(page Text, icon Text) Text
 	Missing.Favicons("rel=\"icon\"</head>", "a.ico") is "rel=\"icon\"</head>"
 	linked = "rel=icon" is in page or "rel=\"icon\"" is in page
 	linked then page else page.Replace("</head>", "<link rel=\"icon\" href=\"" + icon + "\"></head>")
-Sized(mlir Text) Text
-	WebBuild.Sized("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
-	WebBuild.Sized("  llvm.func @free(!llvm.ptr)" + MlirParameters.ReadScope) is "  llvm.func @free(!llvm.ptr)"
-	WebBuild.Sized("  a\n  b") is "  a\n  b"
-	WebBuild.Sized(MlirEntry.CollectorStart.First).IndexOf("\"llvm.stacksave.p0\"()") > 0
+Patch(mlir Text) Text
+	WebBuild.Patch("  llvm.func @malloc(i64) -> !llvm.ptr\n  llvm.call @malloc(%b)") is "  llvm.call @strict_c_malloc(%b)"
+	WebBuild.Patch("  llvm.func @free(!llvm.ptr)" + MlirParameters.ReadScope) is "  llvm.func @free(!llvm.ptr)"
+	WebBuild.Patch("  a\n  b") is "  a\n  b"
+	WebBuild.Patch(MlirEntry.CollectorStart.First).IndexOf("\"llvm.stacksave.p0\"()") > 0
 	mutable kept = List(Mutable(Text))
 	for mlir.Lines
-		if Declared(value) is not in Sizes
+		if Declare(value) is not in Sizes
 			kept.Add(value.Replace(MlirParameters.ReadScope, "").Replace(MlirParameters.WriteScope, ""))
 	mutable sized = Text.Combine(kept, "\n")
 	for Sizes
 		sized = sized.Replace("@" + value + "(", "@strict_c_" + value + "(")
 	sized.Replace("\"llvm.addressofreturnaddress.p0\"()", "\"llvm.stacksave.p0\"()")
-Declared(line Text) Text
-	WebBuild.Declared("  llvm.func @malloc(i64) -> !llvm.ptr") is "malloc"
-	WebBuild.Declared("    %a = llvm.call @malloc(%b)") is ""
+Declare(line Text) Text
+	WebBuild.Declare("  llvm.func @malloc(i64) -> !llvm.ptr") is "malloc"
+	WebBuild.Declare("    %a = llvm.call @malloc(%b)") is ""
 	constant start = MlirGpu.FunctionStart
 	line.StartsWith(start) then line.Substring(start.Length, line.IndexOf("(") - start.Length) else ""
-Preloaded(content Text) Text
-	Missing.Preloaded("Compiler/output/missing") is ""
-	Missing.Preloaded("Compiler") is " --preload-file \"Compiler@/Content\""
-	Release("Missing/App").Created("Compiler/output/EmptyApp/Content/Inner") is not Error
-	Missing.Preloaded("Compiler/output/EmptyApp/Content") is ""
+Preload(content Text) Text
+	Missing.Preload("Compiler/output/missing") is ""
+	Missing.Preload("Compiler") is " --preload-file \"Compiler@/Content\""
+	Release("Missing/App").Creat("Compiler/output/EmptyApp/Content/Inner") is not Error
+	Missing.Preload("Compiler/output/EmptyApp/Content") is ""
 	HasFiles(content) then " --preload-file \"" + content + "@/Content\"" else ""
 HasFiles(folder Text) Boolean
 	Missing.HasFiles("Compiler")
@@ -87,20 +87,20 @@ HasFiles(folder Text) Boolean
 		if HasFiles(value)
 			return true
 	false
-Mirrored(folder Text, base Text) Text
-	Missing.Mirrored(".", "Compiler/output/missing") is ""
-	Missing.Mirrored("./Compiler", "Compiler/output/missing") is ""
-	Missing.Mirrored("./Compiler/output/EmptyApp", "Compiler/output/missing") is ""
+Mirror(folder Text, base Text) Text
+	Missing.Mirror(".", "Compiler/output/missing") is ""
+	Missing.Mirror("./Compiler", "Compiler/output/missing") is ""
+	Missing.Mirror("./Compiler/output/EmptyApp", "Compiler/output/missing") is ""
 	if folder is "." or HasFiles(folder + "/Content") is false
 		return ""
 	path = "/" + (folder.StartsWith("./") then folder.Substring(2) else folder)
 	linked = "FS.symlink(\"/Content\", \"" + path + "/Content\")"
 	File(base + ".pre.js").Write("(Module.preRun ||= []).push(() => { FS.mkdirTree(\"" + path + "\"); " + linked + " })")
 	" --pre-js \"" + base + ".pre.js\""
-Shaded(program Text, base Text, isWritten Boolean) Text
-	WebBuild.Shaded("module {\n}", "Compiler/output/Unshaded", true) is "module {\n}"
-	WebBuild.Shaded("module {\n}\n" + WgslShader.Marker + "\nx", "Compiler/output/Shaded", true) is "module {\n}"
-	Missing.Scripted("Compiler/output/Shaded") is " --pre-js \"Compiler/output/Shaded.shaders.js\""
+BuildShaders(program Text, base Text, isWritten Boolean) Text
+	WebBuild.BuildShaders("module {\n}", "Compiler/output/Unshaded", true) is "module {\n}"
+	WebBuild.BuildShaders("module {\n}\n" + WgslShader.Marker + "\nx", "Compiler/output/Shaded", true) is "module {\n}"
+	Missing.Script("Compiler/output/Shaded") is " --pre-js \"Compiler/output/Shaded.shaders.js\""
 	marker = program.IndexOf("\n" + WgslShader.Marker + "\n")
 	if marker < 0
 		return program
@@ -114,10 +114,10 @@ Shell(base Text) Text
 	File(shell).Exists then shell else tools.root + "/Compiler/WebShell.html"
 Runtime Text
 	Missing.Runtime is " --js-library \"C:/s/Compiler/WebRuntime.js\" --pre-js \"C:/s/Compiler/NativeRuntimeWgsl.js\""
-	library = " --js-library " + tools.Quoted(tools.root + "/Compiler/WebRuntime.js")
-	library + " --pre-js " + tools.Quoted(tools.root + "/Compiler/NativeRuntimeWgsl.js")
-Scripted(base Text) Text
-	Missing.Scripted("Compiler/output/missing") is ""
+	library = " --js-library " + tools.Quote(tools.root + "/Compiler/WebRuntime.js")
+	library + " --pre-js " + tools.Quote(tools.root + "/Compiler/NativeRuntimeWgsl.js")
+Script(base Text) Text
+	Missing.Script("Compiler/output/missing") is ""
 	File(base + ".shaders.js").Exists then " --pre-js \"" + base + ".shaders.js\"" else ""
 InstallLines Texts
 	Missing.InstallLines.First is "git clone --depth 1 https://github.com/emscripten-core/emsdk.git C:/s/Tools/emsdk"

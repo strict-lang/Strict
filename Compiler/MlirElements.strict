@@ -10,10 +10,10 @@ constant Returning = Moving.Slice(0, 4) + Reading + InstructionEntry.Return(1)
 constant Later = MlirElements(MlirFunction((MlirDestined.Maker, MlirFlats.Summing), MlirDestined.Maker, MethodEntry("Later", List(MemberEntry) + Items, "None", Returning)), 2)
 constant Moved = MlirElements(MlirFunction((MlirDestined.Maker, MlirFlats.Summing), MlirDestined.Maker, MethodEntry("Moved", List(MemberEntry) + Items, "None", Moving)), 2)
 constant Kept = MlirElements(MlirFunction((MlirDestined.Maker, MlirFlats.Summing), MlirDestined.Maker, MethodEntry("Kept", List(MemberEntry) + Items, "None", Keeping)), 3)
-Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
-	Text.Combine(Moved.Destined(Remaking, Moving(3), List(Text) + "call")).IndexOf("destine_list_element(") > 0
-	Kept.Destined(Remaking, Keeping(4), List(Text) + "call") is ("call")
-	Moved.Destined(Remaking, Moving(4), List(Text) + "call") is ("call")
+Destine(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
+	Text.Combine(Moved.Destine(Remaking, Moving(3), List(Text) + "call")).IndexOf("destine_list_element(") > 0
+	Kept.Destine(Remaking, Keeping(4), List(Text) + "call") is ("call")
+	Moved.Destine(Remaking, Moving(4), List(Text) + "call") is ("call")
 	returned = FlatResult
 	if (returned is "" then false else MlirStructs(function, position).IsTarget(entry, next, returned)) is false
 		return compiled
@@ -43,7 +43,7 @@ Index(text Text, temp Text) Text
 FlatResult Text
 	Moved.FlatResult is "Tripling"
 	MlirElements(Moved.function, 0).FlatResult is ""
-	callees = MlirModule(function.types, "").Called(function, position)
+	callees = MlirModule(function.types, "").Call(function, position)
 	isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
 	isFlat then TypeEntry.ShortName(callees.First.method.returnType) else ""
 IsStored(at Number, register Number) Boolean

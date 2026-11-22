@@ -2,9 +2,9 @@ has function MlirFunction
 has position Number
 constant Launch = MlirKernelLaunch(MlirWholeKernel.Kernel.function, 5)
 constant Sharing = "(!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, (!llvm.ptr, i64, i64) -> f64, !llvm.ptr, f64) -> f64"
-Ran(operands Text) Texts
-	Launch.Ran("(x)").Last.EndsWith("%t5pf, %t5pc, %t5pk) : " + Sharing)
-	MlirKernelLaunch(MlirParallel.Doubling.function, 2).Ran("(x)").First.EndsWith("= func.call @strict_parallel(x)")
+EmitLaunch(operands Text) Texts
+	Launch.EmitLaunch("(x)").Last.EndsWith("%t5pf, %t5pc, %t5pk) : " + Sharing)
+	MlirKernelLaunch(MlirParallel.Doubling.function, 2).EmitLaunch("(x)").First.EndsWith("= func.call @strict_parallel(x)")
 	temp = "%t" + position
 	if MlirWholeKernel(function, position).IsKernel is false
 		return List(Text) + ("    " + temp + "pr = func.call @strict_parallel" + operands)

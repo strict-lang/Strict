@@ -17,10 +17,10 @@ constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=na
 constant NoImports = " -Wl,/mllvm:-import-instr-limit=0"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
-Located(name Text) Text
-	OnWindows.Located("noSuchStrictTool") is ""
-	Toolchain(Platform.MacOS, "/s").Located("clang") is ""
-	Toolchain(Platform.Current, ".", isWeb = true).Located("emcc").StartsWith("./") is false
+Locate(name Text) Text
+	OnWindows.Locate("noSuchStrictTool") is ""
+	Toolchain(Platform.MacOS, "/s").Locate("clang") is ""
+	Toolchain(Platform.Current, ".", isWeb = true).Locate("emcc").StartsWith("./") is false
 	if platform is not Platform.MacOS and Process.Find(name).IsAvailable
 		return name
 	for Folders
@@ -55,7 +55,7 @@ Executable(base Text) Text
 Missing(names Texts) Texts
 	OnLinux.Missing("noSuchStrictTool") is ("noSuchStrictTool")
 	for names
-		if Located(value) is ""
+		if Locate(value) is ""
 			value
 InstallLines(missing Texts) Texts
 	OnLinux.InstallLines("clang").Length is 2
@@ -95,27 +95,27 @@ Installing(missing Texts) Text
 	where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
 	problem = started.HasFailed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
-Built(base Text, executable Text) Text
-	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
-	lowered = BuildProfile.Lowered(value, base)
+Build(base Text, executable Text) Text
+	OnWindows.Build("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
+	lowered = BuildProfile.Lower(value, base)
 	if lowered is not ""
 		return lowered
-	system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Linked(platform)
+	system = platform is Platform.Windows then " -Wl,-Brepro -Wl,/STACK:67108864" else MacOSTools.Link(platform)
 	files = NativeSources(natives).Objects(platform, root, cpu)
 	resource = files.StartsWith("clang") then files else NativeSources(natives).Resource(base, platform, root)
 	if resource.StartsWith("llvm-rc failed") or resource.StartsWith("clang failed")
 		return resource
-	linking = Inputs(base) + files + resource + " -o " + Quoted(executable) + Optimized.Replace("native", cpu) + system
-	linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
+	linking = Inputs(base) + files + resource + " -o " + Quote(executable) + Optimized.Replace("native", cpu) + system
+	linked = ToolRunner(Locate("clang")).Execute(linking, "Linking")
 	linked.HasFailed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text) Text
 	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
 	if (platform is Platform.Windows and File(base + ".ll").Exists is false) is false
-		return Quoted(base + ".ll") + (platform is Platform.Windows then Direct else "")
+		return Quote(base + ".ll") + (platform is Platform.Windows then Direct else "")
 	if PartsCompiled(base) is false
-		return Quoted(base + ".ll")
+		return Quote(base + ".ll")
 	parts = PartObjects(base)
-	cache = " -Xlinker " + Quoted("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
+	cache = " -Xlinker " + Quote("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
 	parts + Thin.Replace("native", cpu) + Importing(base) + cache + " -Wno-unused-command-line-argument"
 Importing(base Text) Text
 	OnWindows.Importing("a/obj/Tests.test") is NoImports
@@ -129,16 +129,16 @@ Bitcode(part Text) Text
 	Toolchain(OnWindows, isWeb = true).Bitcode("p").EndsWith(WebBuild.Lowering + Optimization)
 	native = target + Optimized.Replace("native", cpu)
 	flags = isWeb then WebBuild.Target + WebBuild.Lowering + Optimization else native
-	"-c -flto=thin -x ir " + Quoted(part) + " -o " + Quoted(part + ".o") + flags
+	"-c -flto=thin -x ir " + Quote(part) + " -o " + Quote(part + ".o") + flags
 PartsCompiled(base Text) Boolean
-	PtxCache("Compiler/output/Broken-0").Saved("", "not llvm") is not Error
+	PtxCache("Compiler/output/Broken-0").Save("", "not llvm") is not Error
 	OnWindows.PartsCompiled("Compiler/output/Broken") is false
 	mutable compiling = List(Mutable(Text))
 	for Parts
 		part = base + "-" + value
 		if File(part).Exists and File(part + ".o").Exists is false
 			compiling.Add(Bitcode(part))
-	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + compiling.Length + " jobs)")
+	for ToolRunner(Locate("clang")).ExecuteAll(compiling, "Host clang (" + compiling.Length + " jobs)")
 		if value.HasFailed
 			Logger.Log("clang failed (exit " + value.exitCode + "): " + value.Output + value.error)
 			return false
@@ -148,7 +148,7 @@ PartObjects(base Text) Text
 	mutable parts = ""
 	for Parts
 		if File(base + "-" + value + ".o").Exists
-			parts = parts + " " + Quoted(base + "-" + value + ".o")
+			parts = parts + " " + Quote(base + "-" + value + ".o")
 	parts
 WslPath(path Text) Text
 	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
@@ -157,19 +157,19 @@ WslPath(path Text) Text
 	OnWindows.WslPath("") is ""
 	slashed = path.Replace("\\", "/")
 	slashed.IndexOf(":") is 1 then "/mnt/" + slashed(0).Lower + slashed.Substring(2) else slashed
-Lowered(base Text, kept = "", parts = 1) Text
-	OnWindows.Lowered("Compiler/output/missing").StartsWith("mlir-opt failed")
+Lower(base Text, kept = "", parts = 1) Text
+	OnWindows.Lower("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if parts > 1 and File(base + ".mlir").Exists
 		split = MlirSplit(File(base + ".mlir").ReadLines)
-		return MlirParts(split).Laid.Lowered(base, Toolchain(platform, root, natives, isWeb, cpu))
+		return MlirParts(split).Laid.Lower(base, Toolchain(platform, root, natives, isWeb, cpu))
 	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	lowering = Quoted(base + ".mlir") + privatized + MlirSplit.Single + base + ".llvm.mlir\""
-	lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
+	lowering = Quote(base + ".mlir") + privatized + MlirSplit.Single + base + ".llvm.mlir\""
+	lowered = ToolRunner(Locate("mlir-opt")).Execute(lowering)
 	if lowered.HasFailed
 		return "mlir-opt failed (exit " + lowered.exitCode + "): " + lowered.error
-	translation = MlirSplit.Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
-	translated = ToolRunner(Located("mlir-translate")).Execute(translation)
+	translation = MlirSplit.Translating + Quote(base + ".llvm.mlir") + " -o " + Quote(base + ".ll")
+	translated = ToolRunner(Locate("mlir-translate")).Execute(translation)
 	translated.HasFailed then "mlir-translate failed: " + translated.error else ""
-Quoted(path Text) Text
-	OnWindows.Quoted("a b") is "\"a b\""
+Quote(path Text) Text
+	OnWindows.Quote("a b") is "\"a b\""
 	"\"" + path + "\""

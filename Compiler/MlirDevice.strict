@@ -93,11 +93,11 @@ Function Texts
 	Twice.Function(1) is "    %one = arith.constant 1 : i64"
 	"    llvm.store %p1, %v_number : f64, !llvm.ptr" is in Twice.Function
 	MlirDevice(MlirDeviceMembers.WholeHead.function, 0).Function.First.IndexOf("_devicex_heads(%failed: !llvm.ptr") > 0
-	typed = MlirDeviceCalls(function, 0, function).Parameters + MlirDeviceMembers(function).Typed(function.Float)
+	typed = MlirDeviceCalls(function, 0, function).Parameters + MlirDeviceMembers(function).EmitTypes(function.Float)
 	symbol = function.Symbol + "_device" + MlirTyped(function.Float).Suffix + function.Variant
 	returned = MlirExact(function, 0).Returned
 	header = "  func.func private @" + symbol + "(" + Text.Combine(typed, ", ") + ") -> " + returned + " {"
-	(List(Text) + header) + Slots + Entry + Emitted(0, function.method.instructions.Length) + "  }"
+	(List(Text) + header) + Slots + Entry + Emit(0, function.method.instructions.Length) + "  }"
 Slots Texts
 	Doubling.Slots.Last is "    %loop2 = llvm.addrspacecast %loop2.private : !llvm.ptr<5> to !llvm.ptr"
 	Gated.Slots.Index("    %v_gate_d = llvm.addrspacecast %v_gate_d.private : !llvm.ptr<5> to !llvm.ptr") > 0
@@ -133,7 +133,7 @@ Entry Texts
 		number = "%p" + (index + 1)
 		stored = StoredParameter(number, "%v_" + value.Name, value.Name, exact)
 		lines = calls.IsList(index) then lines + Stores(number, "%v_" + value.Name) else lines + stored
-	lines + MlirDeviceMembers(function).Stored(function.Float)
+	lines + MlirDeviceMembers(function).Store(function.Float)
 StoredParameter(number Text, slot Text, name Text, exact MlirExact) Texts
 	Doubling.StoredParameter("%p0", "%v_value", "value", MlirExact(Doubling.function, 0)).Length is 1
 	denom = name is in function.Whole then "%one" else number + "_q"
@@ -163,10 +163,10 @@ Started Texts
 	Doubling.Started.Last is "    llvm.store %element, %v_value : f64, !llvm.ptr"
 	Layering.Started.Last is "    llvm.store %rowed#1, %v_value_b : i64, !llvm.ptr"
 	loops = MlirDeviceLoops(function, position)
-	index = (MlirGrouped(function, position).Body + loops.Counted + loops.Indexes) + loops.Indexed("%v_index")
+	index = (MlirGrouped(function, position).Body + loops.Counted + loops.Indexes) + loops.EmitIndex("%v_index")
 	collection = MlirLoops(function, position).Collection
 	if collection is ""
-		return index + loops.Indexed("%v_value")
+		return index + loops.EmitIndex("%v_value")
 	if collection is not "List(Number)"
 		return index + Rowed
 	read = MlirTyped(function.Float).Read("%element", "(%source, %bits, %at, %count)")
@@ -181,12 +181,12 @@ Rowed Texts
 	constant row = "    %rowed:3 = func.call @strict_device_row(%source, %at)" + MlirDeviceRows.Types
 	view = (MlirTyped.Pointer.Store("%rowed#0", "%v_value_d"), MlirTyped.Integer.Store("%columns", "%v_value_n"))
 	(List(Text) + row) + view + MlirTyped.Integer.Store("%rowed#1", "%v_value_b")
-Emitted(first Number, limit Number) Texts
-	Doubling.Emitted(3, 4).Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
-	MlirDevice(MlirDeviceDot.Summed, 0).Emitted(3, 12).Length is 0
+Emit(first Number, limit Number) Texts
+	Doubling.Emit(3, 4).Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
+	MlirDevice(MlirDeviceDot.Summed, 0).Emit(3, 12).Length is 0
 	mutable lines = List(Mutable(Text))
 	for Range(first, limit)
 		if MlirDeviceDot(function, value).IsCovered is false
-			emitted = MlirGrouped(function, value).Remembered(MlirDeviceStatements(function, value).Emitted)
+			emitted = MlirGrouped(function, value).Remember(MlirDeviceStatements(function, value).Emitted)
 			lines = lines + MlirDeviceStatements(function, value).Labeled + emitted
 	lines

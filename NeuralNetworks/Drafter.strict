@@ -28,7 +28,7 @@ Extended(model Qwen3, rows Numbers, tokens Numbers, positions Numbers) Drafter s
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).blocks.First.keys.Length is 8
 	Tiny.Extended(Stepped, Stepped.hidden + Stepped.hidden, (2, 3), (1, 2)).hidden.Length is 8
 	width = embedNorm.Length
-	embedded = Qwen3Block.Normalize(model.Embedd(tokens), 0, tokens.Length * width, embedNorm)
+	embedded = Qwen3Block.Normalize(model.Embed(tokens), 0, tokens.Length * width, embedNorm)
 	joined = Join(embedded, Qwen3Block.Normalize(rows, 0, rows.Length, hiddenNorm))
 	projected = Batch(projection.weights, projection.biases).Sums(joined)
 	cached = blocks.First.Cached(projected, model.Rotations(positions), model.cacheBits)

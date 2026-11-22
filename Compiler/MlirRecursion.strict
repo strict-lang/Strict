@@ -36,15 +36,15 @@ Order(edges List(Numbers)) Numbers
 	mutable order = List(Number)
 	for Range(0, entries)
 		if value is not in order
-			order = Finished(value, List(Number), order, edges)
+			order = Finish(value, List(Number), order, edges)
 	order
-Finished(node Number, path Numbers, order Numbers, edges List(Numbers)) Numbers
-	Looping.Finished(0, List(Number), List(Number), Looping.Edges) is (1, 0)
+Finish(node Number, path Numbers, order Numbers, edges List(Numbers)) Numbers
+	Looping.Finish(0, List(Number), List(Number), Looping.Edges) is (1, 0)
 	onPath = path + node
 	mutable done = order
 	for edges(node)
 		if value is not in done and value is not in onPath
-			done = Finished(value, onPath, done, edges)
+			done = Finish(value, onPath, done, edges)
 	done + node
 IsBack(callees Numbers, rank Number, order Numbers) Boolean
 	Looping.IsBack(1, 0, (1, 0))

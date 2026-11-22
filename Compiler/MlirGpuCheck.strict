@@ -81,7 +81,7 @@ IsValued(inspected MlirFunction, at Number, depth Number) Boolean
 IsNumbered(inspected MlirFunction, kind Text) Boolean
 	Doubling.IsNumbered(MlirLayout.Wrapping.function, "Angle")
 	Doubling.IsNumbered(MlirLayout.Wrapping.function, "Text") is false
-	MlirLayout(inspected).Represented(kind) is in Values
+	MlirLayout(inspected).Represent(kind) is in Values
 IsList(inspected MlirFunction, at Number, name Text) Boolean
 	Layering.IsList(Layering.function, 8, "biases")
 	Doubling.IsList(Doubling.function, 3, "value") is false

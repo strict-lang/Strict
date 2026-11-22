@@ -42,10 +42,10 @@ Calls Texts
 	Kernel.Calls is ("Attention_Last_3_devices", "strict_device_byte_read")
 	for lines
 		if value.IndexOf("call.uni ") >= 0
-			Called(value)
-Called(line Text) Text
-	Kernel.Called("\tcall.uni (retval0), A_B_1_devices, (param0);") is "A_B_1_devices"
-	Kernel.Called("\tcall.uni strict_x, (param0);") is "strict_x"
+			Call(value)
+Call(line Text) Text
+	Kernel.Call("\tcall.uni (retval0), A_B_1_devices, (param0);") is "A_B_1_devices"
+	Kernel.Call("\tcall.uni strict_x, (param0);") is "strict_x"
 	rest = line.Substring(line.IndexOf("call.uni ") + 9)
 	target = rest.Substring(rest.StartsWith("(") then rest.IndexOf("), ") + 3 else 0)
 	target.Substring(0, target.IndexOf(","))

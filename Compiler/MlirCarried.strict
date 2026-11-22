@@ -110,7 +110,7 @@ IsHeld(local Text, allowed Texts, depth Number) Boolean
 IsKeepingCall(at Number, allowed Texts, depth Number) Boolean
 	Carrying.IsKeepingCall(5, Kept, 0) and Leaking.IsKeepingCall(5, Kept, 0) is false
 	Carrying.IsKeepingCall(2, Kept, 0) is false
-	callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Call(function, at)
 	if callees.Length is 0 or depth > 6
 		return false
 	callee = MlirCarried(callees.First, false)
@@ -139,10 +139,10 @@ Typed Texts
 	Returning.Typed is ("outer")
 	MlirCarried(MlirFunction(Types, MlirInstances.Outer, Same)).Typed is ("value", "outer")
 	returned = TypeEntry.ShortName(function.method.returnType)
-	(TypeEntry.ShortName(function.type.Name) is returned then ("value") else List(Text)) + Named(returned)
-Named(returned Text) Texts
-	Returning.Named("Outer") is ("outer")
-	Returning.Named("Shape").Length is 0
+	(TypeEntry.ShortName(function.type.Name) is returned then ("value") else List(Text)) + NameCarry(returned)
+NameCarry(returned Text) Texts
+	Returning.NameCarry("Outer") is ("outer")
+	Returning.NameCarry("Shape").Length is 0
 	for function.method.parameters
 		if TypeEntry.ShortName(value.typeName) is returned
 			value.Name

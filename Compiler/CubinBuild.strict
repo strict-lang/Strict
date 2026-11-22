@@ -12,16 +12,16 @@ Fatbin(base Text) Text
 	File("Compiler/output/missing.fatbin").Exists is false
 	PtxCache(Cubin).HasWritten(List(Text) + Tiny, ".ptx")
 	Local.Fatbin(Cubin) is ""
-	File(Cubin + ".fatbin").Exists is (Local.tools.Located("ptxas") is not "")
-	ptxas = IsOutdated(base) and isShipped then tools.Located("ptxas") else ""
+	File(Cubin + ".fatbin").Exists is (Local.tools.Locate("ptxas") is not "")
+	ptxas = IsOutdated(base) and isShipped then tools.Locate("ptxas") else ""
 	if ptxas is "" or File(base + ".ptx").Exists is false
 		return ""
 	stem = base + "." + 1000000000.Random.Floor
 	failures = Cubins(ptxas, base, stem)
-	packed = Packed(stem, base)
+	packed = Pack(stem, base)
 	failures.Length > 0 then failures.First else packed
 IsOutdated(base Text) Boolean
-	PtxCache(Outdating).Saved((".fatbin", ".ptx"), ("old", "// newer")) is not Error
+	PtxCache(Outdating).Save((".fatbin", ".ptx"), ("old", "// newer")) is not Error
 	CubinBuild(Local.tools, false).Fatbin(Outdating) is ""
 	File(Outdating + ".fatbin").Exists is false
 	ptx = File(base + ".ptx")
@@ -32,24 +32,24 @@ IsOutdated(base Text) Boolean
 	true
 Cubins(ptxas Text, base Text, stem Text) Texts
 	Local.Cubins("ptxas", "Compiler/output/missing", "Compiler/output/missing").First.StartsWith("ptxas failed")
-	PtxCache(Emptied).Saved((".ptx", ".older.ptx"), (Tiny, "")) is not Error
-	(Local.Cubins("ptxas", Emptied, Emptied).Length is 0) is (Local.tools.Located("ptxas") is not "")
+	PtxCache(Emptied).Save((".ptx", ".older.ptx"), (Tiny, "")) is not Error
+	(Local.Cubins("ptxas", Emptied, Emptied).Length is 0) is (Local.tools.Locate("ptxas") is not "")
 	constant splitting = " --split-compile 8 "
 	mutable arguments = List(Mutable(Text))
 	for Architectures
 		source = value is "sm_75" and File(base + ".older.ptx").Length > 0 then ".older.ptx" else ".ptx"
-		output = tools.Quoted(stem + "." + value + ".cubin")
-		arguments.Add("-arch=" + value + splitting + tools.Quoted(base + source) + " -o " + output)
+		output = tools.Quote(stem + "." + value + ".cubin")
+		arguments.Add("-arch=" + value + splitting + tools.Quote(base + source) + " -o " + output)
 	for ToolRunner(ptxas).ExecuteAll(arguments, "GPU cubins " + Path(base).FileName.text)
 		if value.HasFailed
 			"ptxas failed: " + value.error
-Packed(stem Text, base Text) Text
-	Local.Packed("Compiler/output/missing", "Compiler/output/missing").StartsWith("fatbinary failed")
-	PtxCache(Broken).Saved((".ptx", ".older.ptx"), (Tiny, "broken")) is not Error
-	Local.Fatbin(Broken).StartsWith("ptxas failed") or Local.tools.Located("ptxas") is ""
+Pack(stem Text, base Text) Text
+	Local.Pack("Compiler/output/missing", "Compiler/output/missing").StartsWith("fatbinary failed")
+	PtxCache(Broken).Save((".ptx", ".older.ptx"), (Tiny, "broken")) is not Error
+	Local.Fatbin(Broken).StartsWith("ptxas failed") or Local.tools.Locate("ptxas") is ""
 	Directory.Files("Compiler/output", "Broken.*.cubin").Length is 0
-	arguments = "--compress-all --create=" + tools.Quoted(stem + ".fatbin") + Images(stem)
-	packed = ToolRunner(tools.Located("fatbinary")).Execute(arguments)
+	arguments = "--compress-all --create=" + tools.Quote(stem + ".fatbin") + Images(stem)
+	packed = ToolRunner(tools.Locate("fatbinary")).Execute(arguments)
 	for Architectures
 		File(stem + "." + value + ".cubin").Delete
 	if packed.HasFailed
@@ -60,12 +60,12 @@ Images(stem Text) Text
 	Local.Images("a").EndsWith(" --image3=kind=elf,sm=120,file=\"a.sm_120.cubin\"")
 	mutable images = ""
 	for Architectures
-		cubin = tools.Quoted(stem + "." + value + ".cubin")
+		cubin = tools.Quote(stem + "." + value + ".cubin")
 		images = images + " --image3=kind=elf,sm=" + value.Substring(3) + ",file=" + cubin
 	images
-Shipped(source Text, target Text) Text
-	PtxCache("Compiler/output/Shipped").Saved(".fatbin", "stale") is not Error
-	Local.Shipped("Compiler/output/missing", "Compiler/output/Shipped") is ""
+Ship(source Text, target Text) Text
+	PtxCache("Compiler/output/Shipped").Save(".fatbin", "stale") is not Error
+	Local.Ship("Compiler/output/missing", "Compiler/output/Shipped") is ""
 	File("Compiler/output/Shipped.fatbin").Exists is false
 	failed = Fatbin(source)
 	binary = File(source + ".fatbin")

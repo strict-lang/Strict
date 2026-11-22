@@ -17,14 +17,14 @@ IsInstance(typeName Text) Boolean
 	short = TypeEntry.ShortName(typeName)
 	if MlirLayout(function).IsStruct(short) is false
 		return false
-	for MlirInstances(function, 0).Stored(function.TypeOf(short))
+	for MlirInstances(function, 0).Store(function.TypeOf(short))
 		if Kind(value.typeName) is ""
 			return false
 	true
 MemberKind(typeName Text, member Text) Text
 	Sized.MemberKind("Grid", "width") is "i"
 	Sized.MemberKind("Grid", "cells") is "d"
-	for MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
+	for MlirInstances(function, 0).Store(function.TypeOf(typeName, true))
 		if value.Name is member
 			return Kind(value.typeName)
 	""
@@ -67,9 +67,9 @@ Used(at Number, name Text, isSelf Boolean) Texts
 		return List(Text) + entry.texts(0)
 	if entry.kind is InstructionType.FieldLoad and IsFrom(entry.payload(1), at, name)
 		return List(Text) + entry.texts(0)
-	entry.kind is InstructionType.Invoke then Passed(entry, at, name) else List(Text)
-Passed(entry InstructionEntry, at Number, name Text) Texts
-	Sized.Passed(Sizing.instructions(5), 5, "grid") is ("width")
+	entry.kind is InstructionType.Invoke then Pass(entry, at, name) else List(Text)
+Pass(entry InstructionEntry, at Number, name Text) Texts
+	Sized.Pass(Sizing.instructions(5), 5, "grid") is ("width")
 	reads = LoadReuse(function.method.instructions).InvokeReads(entry)
 	callee = MlirWholeFunction(function).Callee(entry)
 	mutable names = List(Mutable(Text))

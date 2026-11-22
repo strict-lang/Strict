@@ -20,24 +20,24 @@ Transposes(weights Safetensors, count Number) List(Gpt2Block) slow
 		Gpt2Pass.Transpose(weights, "h." + index + ".")
 Passes(chosen Numbers) List(Gpt2Pass) slow
 	Tiny.Passes(Chosen).Length is 1
-	mutable state = Embedd(chosen)
+	mutable state = Embed(chosen)
 	mutable passes = List(Mutable(Gpt2Pass))
 	for model.blocks
 		pass = Gpt2Pass.Forwarded(value, state)
 		passes.Add(pass)
 		state = pass.Output
 	passes
-Embedd(chosen Numbers) Numbers slow
-	Tiny.Embedd((1, 2))(13) is Tiny.model.tokens(2)(1) + Tiny.model.positions(1)(1)
+Embed(chosen Numbers) Numbers slow
+	Tiny.Embed((1, 2))(13) is Tiny.model.tokens(2)(1) + Tiny.model.positions(1)(1)
 	width = model.gain.Length
 	for chosen.Length * width
 		token = (index / width).Floor
 		model.tokens(chosen(token))(index % width) + model.positions(token)(index % width)
 Hidden(passes List(Gpt2Pass), chosen Numbers) Numbers slow
-	Tiny.Hidden(List(Gpt2Pass), (1, 2)) is Tiny.Embedd((1, 2))
-	passes.Length is 0 then Embedd(chosen) else passes.Last.Output
+	Tiny.Hidden(List(Gpt2Pass), (1, 2)) is Tiny.Embed((1, 2))
+	passes.Length is 0 then Embed(chosen) else passes.Last.Output
 Logits(hidden Numbers) Numbers
-	Tiny.Logits(Tiny.Embedd((1, 2))).Length is 10
+	Tiny.Logits(Tiny.Embed((1, 2))).Length is 10
 	Batch(model.tokens, Gpt2Pass.Zero).Sums(Gpt2Block.Normalize(hidden, model.gain, model.bias))
 Errors(logits Numbers, chosen Numbers) Numbers
 	Tiny.Errors((0, 0, 0, 0, 0, 0, 0, 0, 0, 0), (1, 2)) is (0.2, 0.2, -0.8, 0.2, 0.2, 0, 0, 0, 0, 0)

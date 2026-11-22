@@ -47,7 +47,7 @@ Function(type TypeEntry) Texts
 	name = MlirEquality(function, 0).Symbol(TypeEntry.ShortName(type.Name))
 	mutable lines = List(Text) + ("  func.func private @strict_automatic_" + name + "(%value: f64) -> f64 {") + Prologue
 	mutable count = 0
-	for MlirInstances(function, 0).Stored(type)
+	for MlirInstances(function, 0).Store(type)
 		member = Member(type, value, index, count)
 		if member.Length > 0
 			lines = lines + member
@@ -66,35 +66,35 @@ Member(owner TypeEntry, member MemberEntry, slot Number, count Number) Texts
 	loaded = memory.Temp("m" + slot + "v")
 	text = conversion is "" then loaded else "%x" + slot
 	read = MlirEmbedded(function).Read(memory, owner, member, "%p", "m" + slot)
-	read + Converted(text, kind, loaded) + Added(count, text, loaded, kind)
+	read + Convert(text, kind, loaded) + Add(count, text, loaded, kind)
 IsSkipped(kind Text) Boolean
 	Sample.IsSkipped("Logger")
 	Sample.IsSkipped("Dictionary(Number, Missing)")
 	Sample.IsSkipped("Dictionary(Text, Number)") is false
-	pair = MlirLayout(function).Paired(kind)
+	pair = MlirLayout(function).Pair(kind)
 	"skip" is in (pair.Length is 0 then List(Text) + Conversion(kind) else (Converter(pair(0)), Converter(pair(1))))
-Added(count Number, text Text, loaded Text, kind Text) Text
-	Sample.Added(0, "%x0", "%v", "Number") is "    %l1 = func.call @strict_list_add(%l0, %x0) : (f64, f64) -> f64"
-	Sample.Added(1, "%x1", "%v", "Shape").IndexOf("@strict_list_add_set(%l1, %x1, %v)") > 0
+Add(count Number, text Text, loaded Text, kind Text) Text
+	Sample.Add(0, "%x0", "%v", "Number") is "    %l1 = func.call @strict_list_add(%l0, %x0) : (f64, f64) -> f64"
+	Sample.Add(1, "%x1", "%v", "Shape").IndexOf("@strict_list_add_set(%l1, %x1, %v)") > 0
 	target = "    %l" + (count + 1) + " = func.call @"
-	if MlirLayout(function).Represented(kind) is in ("Number", "Boolean", "Character")
+	if MlirLayout(function).Represent(kind) is in ("Number", "Boolean", "Character")
 		return target + "strict_list_add(%l" + count + ", " + text + ") : (f64, f64) -> f64"
 	target + "strict_list_add_set(%l" + count + ", " + text + ", " + loaded + ") : (f64, f64, f64) -> f64"
-Converted(target Text, kind Text, loaded Text) Texts
-	Sample.Converted("%x", "Text", "%v").Length is 0
-	Sample.Converted("%x", "Number", "%v").First.IndexOf("@strict_number_text(%v)") > 0
-	if MlirLayout(function).Paired(kind).Length > 0
+Convert(target Text, kind Text, loaded Text) Texts
+	Sample.Convert("%x", "Text", "%v").Length is 0
+	Sample.Convert("%x", "Number", "%v").First.IndexOf("@strict_number_text(%v)") > 0
+	if MlirLayout(function).Pair(kind).Length > 0
 		return Pairs(target, kind, loaded)
 	conversion = Conversion(kind)
-	call = MlirMemory(function, 0).Called(target, conversion, List(Text) + loaded)
+	call = MlirMemory(function, 0).Call(target, conversion, List(Text) + loaded)
 	conversion is "" then List(Text) else List(Text) + call
 Pairs(target Text, kind Text, loaded Text) Texts
 	Sample.Pairs("%x", "List(Text, Shape)", "%v").Last.IndexOf("@strict_pair_text(%v, %xk, %xv)") > 0
 	Sample.Pairs("%x", "Dictionary(Text, Number)", "%v").Last.IndexOf("@strict_pairs_text(") > 0
 	layout = MlirLayout(function)
-	pair = layout.Paired(kind)
+	pair = layout.Pair(kind)
 	memory = MlirMemory(function, 0)
-	runtime = MethodBodies.Pair(layout.Represented(kind)).Length > 0 then "strict_pair_text(" else "strict_pairs_text("
+	runtime = MethodBodies.Pair(layout.Represent(kind)).Length > 0 then "strict_pair_text(" else "strict_pairs_text("
 	call = "    " + target + " = func.call @" + runtime + loaded + ", " + target + "k, " + target + "v)"
 	key = memory.Constant(target + "k", Converter(pair(0)), Converting)
 	(key, memory.Constant(target + "v", Converter(pair(1)), Converting), call + PairSignature)
@@ -109,7 +109,7 @@ ElementConversion(kind Text) Text
 	Sample.ElementConversion("List(List(Text))") is "strict_list_text_lists_text"
 	MlirAutomatic(MlirPairs.Sample.function).ElementConversion("List(Pairing)") is "strict_list_text_two"
 	Sample.ElementConversion("List(Boolean)") is "strict_list_text_boolean"
-	inner = Conversion(MlirLayout(function).Represented(MlirKinds(function).ElementKind(kind)))
+	inner = Conversion(MlirLayout(function).Represent(MlirKinds(function).ElementKind(kind)))
 	if inner is in ("strict_list_text_text", "strict_list_text_number")
 		return inner.Replace("strict_list_text_", "strict_list_text_lists_")
 	if inner is in ("strict_two_text", "strict_boolean_text", "strict_character_text")
@@ -121,14 +121,14 @@ Conversion(kind Text) Text
 	Sample.Conversion("Shape") is "strict_automatic_Shape"
 	Sample.Conversion("Logger") is "skip"
 	Sample.Conversion("Float32") is "strict_number_text"
-	represented = MlirLayout(function).Represented(kind)
+	represented = MlirLayout(function).Represent(kind)
 	if represented is "Text"
 		return ""
 	helper = MlirTexts(function, 0).Helper(represented)
 	if helper is not ""
 		return helper
-	represented.StartsWith("List(") then ElementConversion(represented) else Structured(represented)
-Structured(kind Text) Text
-	Sample.Structured("Shape") is "strict_automatic_Shape"
+	represented.StartsWith("List(") then ElementConversion(represented) else Structure(represented)
+Structure(kind Text) Text
+	Sample.Structure("Shape") is "strict_automatic_Shape"
 	equality = MlirEquality(function, 0)
 	equality.IsKnown(kind) then "strict_automatic_" + equality.Symbol(kind) else "skip"

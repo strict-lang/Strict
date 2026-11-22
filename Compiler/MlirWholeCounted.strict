@@ -23,18 +23,18 @@ constant Exiting = EndIncremented + LoopRestored
 constant ClosingIncremented = ("    %t13k = llvm.load %loop6 : !llvm.ptr -> i64", "    %t13o = arith.constant 1 : i64", "    %t13w = arith.addi %t13k, %t13o : i64", "    llvm.store %t13w, %loop6 : i64, !llvm.ptr")
 constant OuterRestored = ("    llvm.store %t6z, %v_outer : i64, !llvm.ptr")
 constant Closed = ClosingIncremented + LoopRestored + OuterRestored
-Emitted(entry InstructionEntry) Texts
-	Begin.Emitted(MlirWhole.Rows(6)).Length is 17
-	MlirWholeCounted(MlirWholeStatements.Row.At(16)).Emitted(MlirWhole.Rows(16)) is ("    cf.br ^bb17")
-	End.Emitted(MlirWhole.Rows(19)) is Exiting
-	Begin.Emitted(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
+Emit(entry InstructionEntry) Texts
+	Begin.Emit(MlirWhole.Rows(6)).Length is 17
+	MlirWholeCounted(MlirWholeStatements.Row.At(16)).Emit(MlirWhole.Rows(16)) is ("    cf.br ^bb17")
+	End.Emit(MlirWhole.Rows(19)) is Exiting
+	Begin.Emit(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
 	if entry.kind is InstructionType.LoopBegin
 		return Begun(entry)
 	if entry.kind is InstructionType.LoopEnd
 		return Ended
 	if entry.kind is InstructionType.CheckError
 		return List(Text) + ("    cf.br ^bb" + (statements.position + 1))
-	MlirStatements(statements.function, statements.position).Jumped(entry)
+	MlirStatements(statements.function, statements.position).Jump(entry)
 Begun(entry InstructionEntry) Texts
 	Begin.Begun(MlirWhole.Rows(6))(8) is "  ^loop6:"
 	Text.Combine(Inner.Begun(MlirWholeFunction.Pairing(6))).IndexOf("llvm.store %t6y, %v_outer : i64, !llvm.ptr") > 0
@@ -65,11 +65,11 @@ Saved Texts
 	mutable lines = List(Mutable(Text))
 	for ("index", "value", "outer")
 		if value is in names
-			lines = lines + values.Loaded(statements.Temp(Kept(value)), "%v_" + value, statements.Variable(value), "i")
+			lines = lines + values.Load(statements.Temp(Keep(value)), "%v_" + value, statements.Variable(value), "i")
 	isOuter = "outer" is in names and "value" is in names
-	isOuter then lines + values.Stored(statements.Temp("y"), "i", "%v_outer", statements.Variable("outer")) else lines
-Kept(name Text) Text
-	Begin.Kept("outer") is "z"
+	isOuter then lines + values.Store(statements.Temp("y"), "i", "%v_outer", statements.Variable("outer")) else lines
+Keep(name Text) Text
+	Begin.Keep("outer") is "z"
 	name is "index" then "x" else (name is "value" then "y" else "z")
 Checked Texts
 	Begin.Checked.Last is "    llvm.store %t6c, %v_index : i64, !llvm.ptr"
@@ -79,8 +79,8 @@ Checked Texts
 	compared = statements.Operation("m", "arith.cmpi slt,", "k", "n")
 	branch = "    cf.cond_br " + statements.Temp("m") + ", " + label + "body, " + label + "exit"
 	current = (statements.Operation("o", "arith.muli", "k", "s"), statements.Operation("c", "arith.addi", "b", "o"))
-	valued = values.Stored(statements.Temp("c"), "i", "%v_value", statements.Variable("value"))
-	indexed = values.Stored(statements.Temp("c"), "i", "%v_index", statements.Variable("index"))
+	valued = values.Store(statements.Temp("c"), "i", "%v_value", statements.Variable("value"))
+	indexed = values.Store(statements.Temp("c"), "i", "%v_index", statements.Variable("index"))
 	(loaded, compared, branch, "  " + label + "body:") + current + valued + indexed
 Ended Texts
 	"  ^loop6exit:" is in End.Ended
@@ -93,15 +93,15 @@ Ended Texts
 	added = statements.Operation("w", "arith.addi", "k", "o")
 	stored = "    llvm.store " + statements.Temp("w") + ", " + counter + " : i64, !llvm.ptr"
 	one = values.Line("o", "arith.constant 1 : i64")
-	stepped = MlirLoops(statements.function, statements.position).Stepped((loaded, one, added, stored), begin)
-	stepped + ("  ^loop" + begin + "exit:") + Restored(begin)
-Restored(begin Number) Texts
-	End.Restored(6).Length is 2
+	stepped = MlirLoops(statements.function, statements.position).Step((loaded, one, added, stored), begin)
+	stepped + ("  ^loop" + begin + "exit:") + Restore(begin)
+Restore(begin Number) Texts
+	End.Restore(6).Length is 2
 	Closing.Ended is Closed
 	names = statements.function.VariableNames
 	values = MlirWholeValues(statements.position)
 	mutable lines = List(Mutable(Text))
 	for ("index", "value", "outer")
 		if value is in names
-			lines = lines + values.Stored("%t" + begin + Kept(value), "i", "%v_" + value, statements.Variable(value))
+			lines = lines + values.Store("%t" + begin + Keep(value), "i", "%v_" + value, statements.Variable(value))
 	lines

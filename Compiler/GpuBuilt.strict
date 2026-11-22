@@ -1,27 +1,27 @@
 has base Text
 has builder DeviceBuild
 constant Sample = GpuBuilt("Compiler/output/Parted", DeviceBuild.Missing)
-Indexed(device Text, kept Text, isTiling Boolean) Texts slow
+IndexPtx(device Text, kept Text, isTiling Boolean) Texts slow
 	stamp = "" + HashCode(PtxCache(base).Fingerprint("", isTiling, builder, "")).number
-	PtxLibraries.Of(base).Indexed(Built(device, kept, isTiling, stamp))
-Built(device Text, kept Text, isTiling Boolean, stamp Text) Texts slow
+	PtxLibraries.Of(base).IndexTexts(Build(device, kept, isTiling, stamp))
+Build(device Text, kept Text, isTiling Boolean, stamp Text) Texts slow
 	module = GpuModule(device.Split("\n"))
 	parts = GpuParts(module.Functions, kept.Split(","))
 	types = parts.Types
 	targets = isTiling then ("sm_80", "sm_75") else List(Text) + "sm_75"
 	Directory.Create(Path(base).PathOnly.text + "/ptx")
 	Directory.Create(Path(base).PathOnly.text + "/ptx/built")
-	failure = Compiled(types, parts.Texts(module, stamp), targets)
-	failure is "" then Joined(types, targets) else List(Text) + failure
-Compiled(types Texts, texts Texts, targets Texts) Text slow
+	failure = Compile(types, parts.Texts(module, stamp), targets)
+	failure is "" then Join(types, targets) else List(Text) + failure
+Compile(types Texts, texts Texts, targets Texts) Text slow
 	stale = Stale(types, texts, targets)
 	for stale
 		File(Slot(types(value)) + ".mlir").Write(texts(value))
-	failure = Lowered(Slots(types, stale), targets)
+	failure = Lower(Slots(types, stale), targets)
 	for stale
-		Finished(Slot(types(value)), failure is "" then Key(texts(value)) else "")
+		Finish(Slot(types(value)), failure is "" then Key(texts(value)) else "")
 	failure
-Finished(slot Text, key Text) slow
+Finish(slot Text, key Text) slow
 	for (".mlir", ".llvm.mlir", ".ll")
 		File(slot + value).Delete
 	File(slot + ".key").Write(key)
@@ -44,37 +44,37 @@ Slots(types Texts, stale Numbers) Texts
 	Sample.Slots(("A", "B"), List(Number) + 1) is List(Text) + "Compiler/output/ptx/built/Parted.B"
 	for stale
 		Slot(types(value))
-Lowered(slots Texts, targets Texts) Text slow
-	Sample.Lowered(List(Text), List(Text) + "sm_75") is ""
-	optimized = MlirParts.Ran("mlir-opt", Optimizing(slots), builder.tools)
-	translated = optimized is "" then MlirParts.Ran("mlir-translate", Translating(slots), builder.tools) else optimized
-	translated is "" then MlirParts.Ran("clang", Compiling(Shared(slots), targets), builder.tools) else translated
-Shared(slots Texts) Texts slow
+Lower(slots Texts, targets Texts) Text slow
+	Sample.Lower(List(Text), List(Text) + "sm_75") is ""
+	optimized = MlirParts.RunTool("mlir-opt", Optimizing(slots), builder.tools)
+	translated = optimized is "" then MlirParts.RunTool("mlir-translate", Translating(slots), builder.tools) else optimized
+	translated is "" then MlirParts.RunTool("clang", Compiling(Share(slots), targets), builder.tools) else translated
+Share(slots Texts) Texts slow
 	for slots
 		File(value + ".ll").Write(PtxCache(value).Read(".ll").Replace("define internal ", "define linkonce_odr "))
 	slots
 Optimizing(slots Texts) Texts
 	Sample.Optimizing(List(Text) + "a").First.StartsWith("\"a.mlir\" --symbol-dce")
 	for slots
-		Quoted(value + ".mlir") + MlirSplit.Passes + " -o " + Quoted(value + ".llvm.mlir")
+		Quote(value + ".mlir") + MlirSplit.Passes + " -o " + Quote(value + ".llvm.mlir")
 Translating(slots Texts) Texts
 	Sample.Translating(List(Text) + "a").First.EndsWith("\"a.llvm.mlir\" -o \"a.ll\"")
 	for slots
-		MlirSplit.Translating + Quoted(value + ".llvm.mlir") + " -o " + Quoted(value + ".ll")
+		MlirSplit.Translating + Quote(value + ".llvm.mlir") + " -o " + Quote(value + ".ll")
 Compiling(slots Texts, targets Texts) Texts
 	Sample.Compiling(("a", "b"), ("sm_80", "sm_75")).Length is 4
 	mutable arguments = List(Text)
 	for slots
-		arguments = arguments + Targeted(value, targets)
+		arguments = arguments + Target(value, targets)
 	arguments
-Targeted(slot Text, targets Texts) Texts
-	Sample.Targeted("a", List(Text) + "sm_75").First.EndsWith("-march=sm_75 \"a.ll\" -o \"a.sm_75.ptx\"")
+Target(slot Text, targets Texts) Texts
+	Sample.Target("a", List(Text) + "sm_75").First.EndsWith("-march=sm_75 \"a.ll\" -o \"a.sm_75.ptx\"")
 	for targets
-		DeviceBuild.Nvptx + value + " " + Quoted(slot + ".ll") + " -o " + Quoted(slot + "." + value + ".ptx")
-Quoted(path Text) Text
-	Sample.Quoted("a b") is "\"a b\""
-	builder.tools.Quoted(path)
-Joined(types Texts, targets Texts) Texts slow
+		DeviceBuild.Nvptx + value + " " + Quote(slot + ".ll") + " -o " + Quote(slot + "." + value + ".ptx")
+Quote(path Text) Text
+	Sample.Quote("a b") is "\"a b\""
+	builder.tools.Quote(path)
+Join(types Texts, targets Texts) Texts slow
 	for targets
 		Text.Combine(Read(types, value), "\n")
 Read(types Texts, target Text) Texts slow

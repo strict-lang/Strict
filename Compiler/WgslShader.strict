@@ -98,12 +98,12 @@ Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Halved.function).IndexOf("Halving_Halved_") > 0
 	mutable lines = List(Text)
 	for functions
-		lines = lines + Shaded(value)
+		lines = lines + EmitShader(value)
 	lines = lines - ""
 	lines.Length is 0 then "" else Marker + "\n" + Text.Combine(lines, "\n")
-Shaded(inspected MlirFunction) Texts
-	WgslShader.Shaded(Scaled.function).First.IndexOf("[\"Scaling_Scaled_1_gpu2s\"] = \"@group(0)") > 0
-	WgslShader.Shaded(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2s\"] = [0];")
+EmitShader(inspected MlirFunction) Texts
+	WgslShader.EmitShader(Scaled.function).First.IndexOf("[\"Scaling_Scaled_1_gpu2s\"] = \"@group(0)") > 0
+	WgslShader.EmitShader(Scaled.function).First.EndsWith("strictSingles\"] ||= {})[\"Scaling_Scaled_1_gpu2s\"] = [0];")
 	for inspected.method.instructions
 		if value.kind is InstructionType.LoopBegin
 			shader = WgslShader(inspected, index)

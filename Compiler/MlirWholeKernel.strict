@@ -37,7 +37,7 @@ IsKernel Boolean
 	MlirWholeKernel(MlirParallel.Doubling.function, 2).IsKernel is false
 	MlirWholeKernel(Kernel.function, 0).IsKernel is false
 	isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
-	if isBegin is false or Call < 0 or MlirLayout(function).Packed(position) is not MlirDoubles.LanesFormat
+	if isBegin is false or Call < 0 or MlirLayout(function).Pack(position) is not MlirDoubles.LanesFormat
 		return false
 	callee = Callee
 	isWhole = MlirWholeFunction(callee).IsWhole and MlirWholeFlat(callee).IsFlat

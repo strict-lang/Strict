@@ -22,12 +22,12 @@ IsRanged Boolean
 	opened = function.method.instructions(begin)
 	covers = function.method.LoopEndOf(begin) >= position
 	opened.kind is InstructionType.LoopBegin and covers and opened.payload(1) is 1
-Opened(label Text) Texts
-	Text.Combine(MlirRangeLoop(MlirLoops.Counting.function, 0).Opened("^loop0")).IndexOf("cmpf olt") > 0
-	Text.Combine(Ranging.Opened("^loop3")).IndexOf("i32") > 0
-	function.method.instructions(position).payload(1) is 1 then Chunked(label) else Headed(label, false, "f64")
-Chunked(label Text) Texts
-	Text.Combine(Ranging.Chunked("^loop3")).IndexOf("2147483647") > 0
+Open(label Text) Texts
+	Text.Combine(MlirRangeLoop(MlirLoops.Counting.function, 0).Open("^loop0")).IndexOf("cmpf olt") > 0
+	Text.Combine(Ranging.Open("^loop3")).IndexOf("i32") > 0
+	function.method.instructions(position).payload(1) is 1 then Chunk(label) else Head(label, false, "f64")
+Chunk(label Text) Texts
+	Text.Combine(Ranging.Chunk("^loop3")).IndexOf("2147483647") > 0
 	cap = "    " + Temp("mx") + " = arith.constant 2147483647 : i64"
 	zero = "    " + Temp("iz") + " = arith.constant 0 : i32"
 	raw = "    " + Temp("bi") + " = arith.fptosi " + Temp("b") + " : f64 to i64"
@@ -54,7 +54,7 @@ Slice(label Text) Texts
 	check = "    " + Temp("m") + " = arith.cmpi slt, " + Temp("k") + ", " + Temp("ck") + " : i32"
 	branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "lat"
 	(fit, wide, narrow, kept, reset, enter, "  " + label + ":", load, step, check, branch, "  " + label + "body:")
-Headed(label Text, isRange Boolean, kind Text) Texts
+Head(label Text, isRange Boolean, kind Text) Texts
 	zero = isRange then Temp("iz") else "%zero"
 	limit = isRange then Temp("ni") else Temp("n")
 	math = isRange then "cmpi slt" else "cmpf olt"
@@ -70,19 +70,19 @@ Value Texts
 	off = "    " + Temp("of") + " = arith.mulf " + Temp("kf") + ", " + Temp("s") + Flags + " : f64"
 	sum = "    " + Temp("c") + " = arith.addf " + Temp("bv") + ", " + Temp("of") + Flags + " : f64"
 	(cast, base, off, sum, function.Store(Temp("c"), "%v_index")) + function.Store(Temp("c"), "%v_value")
-Closed(begin Number) Texts
+Close(begin Number) Texts
 	loop = "%loop" + begin
 	load = "    " + Temp("k") + " = llvm.load " + loop + " : !llvm.ptr -> i32"
 	one = "    " + Temp("u") + " = arith.constant 1 : i32"
 	next = "    " + Temp("w") + " = arith.addi " + Temp("k") + ", " + Temp("u") + " : i32"
 	store = "    llvm.store " + Temp("w") + ", " + loop + " : i32, !llvm.ptr"
-	MlirLoops(function, position).Stepped((load, one, next, store), begin) + Latch(begin)
+	MlirLoops(function, position).Step((load, one, next, store), begin) + Latch(begin)
 Latch(begin Number) Texts
 	label = "^loop" + begin
-	moved = Advanced(begin)
+	moved = Advance(begin)
 	back = List(Text) + ("    cf.br " + label + "outer")
 	(List(Text) + ("  " + label + "lat:")) + moved + back
-Advanced(begin Number) Texts
+Advance(begin Number) Texts
 	chunk = "    " + Temp("ch") + " = llvm.load %chunk" + begin + " : !llvm.ptr -> i32"
 	cast = "    " + Temp("cf") + " = arith.sitofp " + Temp("ch") + " : i32 to f64"
 	adv = "    " + Temp("ad") + " = arith.mulf " + Temp("cf") + ", %t" + begin + "s" + Flags + " : f64"
@@ -100,7 +100,7 @@ Limit Text
 Temp(suffix Text) Text
 	Ranging.Temp("k") is "%t3k"
 	"%t" + position + suffix
-Finished(begin Number) Texts
+Finish(begin Number) Texts
 	exit = List(Text) + ("  ^loop" + begin + "exit:")
 	restore = (function.Store("%t" + begin + "x", "%v_index"), function.Store("%t" + begin + "y", "%v_value"))
-	exit + restore + MlirLoops(function, begin).Restored(begin) + MlirKernel(function, begin).Joined
+	exit + restore + MlirLoops(function, begin).Restore(begin) + MlirKernel(function, begin).Joined

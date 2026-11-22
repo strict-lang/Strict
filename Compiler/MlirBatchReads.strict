@@ -2,24 +2,24 @@ constant Storing = "    func.call @strict_device_cached_stored(%result, %batchFi
 has function MlirFunction
 has position Number
 Slots Texts
-	mutable lines = Allocated("%batchOutput", "f32")
+	mutable lines = Allocate("%batchOutput", "f32")
 	for MlirBatchCheck(function, position).Reads
-		lines = lines + Allocated("%indices" + value, "i64") + Allocated("%cached" + value, "f32")
+		lines = lines + Allocate("%indices" + value, "i64") + Allocate("%cached" + value, "f32")
 	lines
-Allocated(name Text, kind Text) Texts
+Allocate(name Text, kind Text) Texts
 	allocated = "    " + name + "Private = llvm.alloca %batchSize x " + kind
 	constant typed = " : (i64) -> !llvm.ptr<5>"
 	(allocated + typed, "    " + name + " = llvm.addrspacecast " + name + "Private : !llvm.ptr<5> to !llvm.ptr")
-Prefetched(at Number) Texts
+Prefetch(at Number) Texts
 	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.IndexCall
-		return Saved(at)
+		return Save(at)
 	feeding = MlirFeeding(function, at)
 	written = LoadReuse(function.method.instructions).Write(entry)
 	stored = entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 	needed = stored then feeding.IsLoaded(at, entry.texts.Last) else feeding.IsFeeding(at, written)
 	needed then MlirDeviceStatements(function, at).Emitted else List(Text)
-Saved(at Number) Texts
+Save(at Number) Texts
 	entry = function.method.instructions(at)
 	temp = "%d" + at
 	indexed = MlirExact(function, at).Position("%r" + entry.payload(1), temp + "position")
@@ -40,16 +40,16 @@ LoadedRead(at Number) Texts
 	call = "    func.call @strict_device_cached_four(%failed, " + temp + "Data, " + temp + "Bits, "
 	arguments = temp + "Count, %indices" + at + ", %cached" + at + ", %batchActive)"
 	(data, bits, count, call + arguments + " : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr, i64) -> ()")
-Computed(at Number) Texts
-	MlirBatchReads(MlirBatched.Single.function, 2).Computed(6).Length is 0
-	MlirBatchReads(MlirBatched.Single.function, 2).Computed(8).Length > 0
+Compute(at Number) Texts
+	MlirBatchReads(MlirBatched.Single.function, 2).Compute(6).Length is 0
+	MlirBatchReads(MlirBatched.Single.function, 2).Compute(8).Length > 0
 	entry = function.method.instructions(at)
 	if function.Float is "f64"
 		return MlirDeviceStatements(function, at).Emitted
 	if entry.kind is InstructionType.IndexCall
-		return Cached(at)
+		return Cache(at)
 	if entry.kind is InstructionType.InvokeWriteToList
-		return Collected(at)
+		return Collect(at)
 	IsComputed(at, entry) then MlirDeviceStatements(function, at).Emitted else List(Text)
 IsComputed(at Number, entry InstructionEntry) Boolean
 	feeding = MlirFeeding(function, at)
@@ -57,14 +57,14 @@ IsComputed(at Number, entry InstructionEntry) Boolean
 		return feeding.IsFloatedVariable(at, entry.texts.Last)
 	written = LoadReuse(function.method.instructions).Write(entry)
 	written < 0 or feeding.IsFloated(at, written)
-Cached(at Number) Texts
+Cache(at Number) Texts
 	temp = "%d" + at
 	pointer = "    " + temp + "Pointer = llvm.getelementptr %cached" + at + "[%batchIndex]"
 	constant typed = " : (!llvm.ptr, i64) -> !llvm.ptr, f32"
 	read = function.Load(temp + "Value", temp + "Pointer")
 	target = "%r" + function.method.instructions(at).payload(0)
-	(pointer + typed, read) + MlirFeeding(function, at).Stored(temp + "Value", target)
-Collected(at Number) Texts
+	(pointer + typed, read) + MlirFeeding(function, at).Store(temp + "Value", target)
+Collect(at Number) Texts
 	temp = "%d" + at
 	pointer = "    " + temp + "Pointer = llvm.getelementptr %batchOutput[%batchIndex]"
 	constant typed = " : (!llvm.ptr, i64) -> !llvm.ptr, f32"
@@ -72,10 +72,10 @@ Collected(at Number) Texts
 	(pointer + typed, read, function.Store(temp + "Value", temp + "Pointer"))
 Stored Texts
 	List(Text) + Storing + " : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()"
-LinearPrefetched(at Number) Texts
-	emitted = Prefetched(at)
-	function.method.instructions(at).kind is not InstructionType.IndexCall then emitted else emitted + Filled(at)
-Filled(at Number) Texts
+LinearPrefetch(at Number) Texts
+	emitted = Prefetch(at)
+	function.method.instructions(at).kind is not InstructionType.IndexCall then emitted else emitted + Fill(at)
+Fill(at Number) Texts
 	mutable lines = List(Mutable(Text))
 	for 3
 		prefix = "%d" + at + "Next" + index

@@ -32,10 +32,10 @@ Run Number
 	folder = "Compiler/output/HadamardCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	0
-Checked(folder Text)
+Check(folder Text)
 	body = ModuleLines("Device") + ModuleLines("Nvidia") + ModuleLines("Hadamard")
 	File(folder + "/hadamard.mlir").Write(MlirHeader + body + List(Text) + "}")
 	CompiledPtx(folder)

@@ -12,7 +12,7 @@ IsWritten(at Number) Boolean
 		return MlirWholeValues(at).IsWhole(number) and number.number >= 0
 	entry.kind is InstructionType.Invoke then IsCalled(at, entry) else IsCalculated(at, entry)
 IsVariable(at Number, name Text) Boolean
-	stored = MlirKinds(function).Stored(at, name)
+	stored = MlirKinds(function).Store(at, name)
 	if stored > position
 		return IsNonnegative(stored, function.method.instructions(stored).payload(0))
 	name is in ("index", "value") or name is in MlirBatchLinear(function, position).Parameters

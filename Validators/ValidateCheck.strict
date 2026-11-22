@@ -5,14 +5,14 @@ Run(folder Text, root Text) Number
 	mutable issues = 0
 	for Parts(folder)
 		issues = issues + Validate(value, root, mutations)
-	BuildProfile.Reported("Check validation", started)
+	BuildProfile.Report("Check validation", started)
 	before = Process.Elapsed
 	issues = issues + ProjectRules(root).Check(folder)
-	BuildProfile.Reported("Check project rules", before)
+	BuildProfile.Report("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
 	tested = Process.Elapsed
 	failed = issues is 0 then Folders.TestFolder(folder, root) else 0
-	BuildProfile.Reported("Check tests", tested)
+	BuildProfile.Report("Check tests", tested)
 	issues + failed
 Validate(folder Text, root Text, mutations Texts) Number slow
 	Directory.Create(EmptyPart) is not Error and ValidateCheck.Validate(EmptyPart, ".", List(Text)) is 0

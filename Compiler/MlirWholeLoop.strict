@@ -32,7 +32,7 @@ Counted Texts
 	Row.Counted.Last is "    %t6cs = arith.addi %t6ki, %t6whz : i64"
 	guard = MlirWholeGuard(function, position)
 	label = "^loop" + position + "whole"
-	header = "  " + label + "(" + Temp("ki") + ": i64" + MlirSingle(function, position).Repeated("u", ": i64") + "):"
+	header = "  " + label + "(" + Temp("ki") + ": i64" + MlirSingle(function, position).Repeat("u", ": i64") + "):"
 	check = guard.Line("whm", "arith.cmpi slt, " + Temp("ki") + ", " + Temp("whn") + " : i64")
 	started = (guard.Line("whn", "arith.fptosi " + Temp("n") + " : f64 to i64"), Entered, header, check)
 	counter = "arith.addi " + Temp("ki") + ", " + Temp("whz") + " : i64"
@@ -45,7 +45,7 @@ Entered Text
 	mutable initial = ""
 	for single.Carried
 		initial = initial + ", " + Temp("wh" + (first + index))
-	arguments = "(" + Temp("whz") + initial + " : i64" + single.Repeated("", "i64") + ")"
+	arguments = "(" + Temp("whz") + initial + " : i64" + single.Repeat("", "i64") + ")"
 	"    cf.cond_br " + Temp("whok") + ", ^loop" + position + "whole" + arguments + ", ^loop" + position + "generic"
 Looped Texts
 	Row.Looped.Last is "    cf.br ^loop6whole(%t6whnext, %t17s : i64, i64)"
@@ -58,7 +58,7 @@ Looped Texts
 	for single.Carried
 		carried = carried + ", " + single.Variable(value, end)
 	next = "    " + Temp("whnext") + " = arith.addi " + Temp("ki") + ", " + Temp("whone") + " : i64"
-	types = " : i64" + single.Repeated("", "i64") + ")"
+	types = " : i64" + single.Repeat("", "i64") + ")"
 	lines + next + ("    cf.br ^loop" + position + "whole(" + Temp("whnext") + carried + types)
 Statement(at Number) Texts
 	Row.Statement(12) is ("    %t12s = arith.constant 4 : i64")
@@ -67,10 +67,10 @@ Statement(at Number) Texts
 	if entry.kind is InstructionType.IndexCall
 		return Read(at)
 	isLoad = entry.kind is in (InstructionType.LoadConstantToRegister, InstructionType.LoadVariableToRegister)
-	isLoad then Loaded(entry, at) else Operated(entry, at)
-Loaded(entry InstructionEntry, at Number) Texts
-	Row.Loaded(MlirWhole.Rows(8), 8) is ("    %t8s = arith.addi %t6wh0, %t6whz : i64")
-	Row.Loaded(MlirWhole.Rows(9), 9).Length is 0
+	isLoad then Load(entry, at) else Operate(entry, at)
+Load(entry InstructionEntry, at Number) Texts
+	Row.Load(MlirWhole.Rows(8), 8) is ("    %t8s = arith.addi %t6wh0, %t6whz : i64")
+	Row.Load(MlirWhole.Rows(9), 9).Length is 0
 	result = "%t" + at + "s"
 	if entry.kind is InstructionType.LoadConstantToRegister
 		return List(Text) + ("    " + result + " = arith.constant " + PayloadDecoder(entry).Value(1).number + " : i64")
@@ -78,10 +78,10 @@ Loaded(entry InstructionEntry, at Number) Texts
 		return List(Text)
 	input = Temp("wh" + MlirWhole(function, position).Inputs.Index(entry.texts(0)))
 	List(Text) + ("    " + result + " = arith.addi " + input + ", " + Temp("whz") + " : i64")
-Operated(entry InstructionEntry, at Number) Texts
-	Row.Operated(MlirWhole.Rows(13), 13) is ("    %t13s = arith.muli %t11s, %t12s : i64")
-	Row.Operated(MlirWhole.Rows(11), 11) is ("    %t11s = arith.subi %t6gs, %t10s : i64")
-	Row.Operated(MlirWhole.Rows(18), 18).Length is 0
+Operate(entry InstructionEntry, at Number) Texts
+	Row.Operate(MlirWhole.Rows(13), 13) is ("    %t13s = arith.muli %t11s, %t12s : i64")
+	Row.Operate(MlirWhole.Rows(11), 11) is ("    %t11s = arith.subi %t6gs, %t10s : i64")
+	Row.Operate(MlirWhole.Rows(18), 18).Length is 0
 	if (entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)) is false
 		return List(Text)
 	single = MlirSingle(function, position)
@@ -101,21 +101,21 @@ Read(at Number) Texts
 	widened = "    %t" + at + "s = arith.extui %t" + at + "whb : i8 to i64"
 	byte = (read + "b = llvm.load %t" + at + "whp : !llvm.ptr -> i8", widened)
 	checked = (read + "l = arith.fptosi %n_" + name + " : f64 to i64", inside, branch, "  ^bb" + at + "wholefailed:")
-	checked + Failed(at, offset) + ("  ^bb" + at + "whole:", slot) + byte
-Failed(at Number, offset Text) Texts
-	Row.Failed(15, "%t14s").Last is "    llvm.unreachable"
+	checked + Fail(at, offset) + ("  ^bb" + at + "whole:", slot) + byte
+Fail(at Number, offset Text) Texts
+	Row.Fail(15, "%t14s").Last is "    llvm.unreachable"
 	converted = "    %t" + at + "whf = arith.sitofp " + offset + " : i64 to f64"
 	stored = function.Store("%t" + at + "whf", "%r" + function.method.instructions(at).payload(1))
-	generic = MlirKernel(function, position).Renamed(function.Emitted(at) + function.Emitted(at + 1), "w")
+	generic = MlirKernel(function, position).Rename(function.Emit(at) + function.Emit(at + 1), "w")
 	(converted, stored) + generic + ("  ^fwbb" + (at + 2) + ":", "    llvm.unreachable")
 Exited Texts
 	Row.Looped is Computed + Checking + Failing + Reading + Stepped
 	Row.Exited(0) is "  ^loop6wholeexit:"
 	Row.Exited.Last is "    cf.br ^loop6exit"
 	Row.Exited(2) is "    llvm.store %t6whw0, %v_sum : f64, !llvm.ptr"
-	(List(Text) + ("  ^loop" + position + "wholeexit:")) + Widened(Temp("whw")) + ("    cf.br ^loop" + position + "exit")
-Widened(prefix Text) Texts
-	Row.Widened("%w").First is "    %w0 = arith.sitofp %t6u0 : i64 to f64"
+	(List(Text) + ("  ^loop" + position + "wholeexit:")) + Widen(Temp("whw")) + ("    cf.br ^loop" + position + "exit")
+Widen(prefix Text) Texts
+	Row.Widen("%w").First is "    %w0 = arith.sitofp %t6u0 : i64 to f64"
 	mutable lines = List(Mutable(Text))
 	for MlirSingle(function, position).Carried
 		lines = lines + ("    " + prefix + index + " = arith.sitofp " + Temp("u" + index) + " : i64 to f64")

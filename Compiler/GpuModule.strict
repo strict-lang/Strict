@@ -17,9 +17,9 @@ Functions List(GpuFunction)
 	Sample.Functions.Last.text is GpuFunction.Device.text
 	closes = Closes
 	for Starts
-		GpuFunction(Named(lines(value)), lines(value), Text.Combine(lines.Slice(value, closes(index) - value + 1), "\n"))
-Named(header Text) Text
-	Sample.Named(GpuFunction.DeviceHead) is "C_D_2_devices"
+		GpuFunction(FindName(lines(value)), lines(value), Text.Combine(lines.Slice(value, closes(index) - value + 1), "\n"))
+FindName(header Text) Text
+	Sample.FindName(GpuFunction.DeviceHead) is "C_D_2_devices"
 	start = header.IndexOf("@") + 1
 	header.Substring(start, header.IndexOf("(") - start)
 Head Texts

@@ -27,9 +27,9 @@ IsNested(typeName Text, depth Number) Boolean
 	layout = MlirLayout(function)
 	if depth > 8 or layout.IsStruct(typeName) is false
 		return false
-	stored = MlirInstances(function, 0).Stored(function.TypeOf(typeName, true))
+	stored = MlirInstances(function, 0).Store(function.TypeOf(typeName, true))
 	for stored
-		isNumber = layout.Represented(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
+		isNumber = layout.Represent(TypeEntry.ShortName(value.typeName)) is in ("Number", "Pair")
 		if isNumber is false and IsNested(value.typeName, depth + 1) is false
 			return false
 	stored.Length > 0
@@ -37,11 +37,11 @@ Slots(typeName Text) Number
 	Sample.Slots("Strict/Shape") is 1
 	Sample.Slots("Strict/Outer") is 2
 	Sample.Slots("Strict/Boxed") is 3
-	Text.Combine(Building.Constructed(Making, "Strict/Boxed")).IndexOf("constant 24 : i64") > 0
-	Text.Combine(Initializing.Returned(2)).IndexOf("constant 24 : i64") > 0
+	Text.Combine(Building.Construct(Making, "Strict/Boxed")).IndexOf("constant 24 : i64") > 0
+	Text.Combine(Initializing.EmitReturn(2)).IndexOf("constant 24 : i64") > 0
 	owner = function.TypeOf(typeName, true)
 	mutable count = 0
-	for MlirInstances(function, 0).Stored(owner)
+	for MlirInstances(function, 0).Store(owner)
 		count = count + Width(owner, value)
 	count
 Offset(owner TypeEntry, name Text) Number
@@ -50,7 +50,7 @@ Offset(owner TypeEntry, name Text) Number
 	Sample.Offset(Boxed, "missing") is -1
 	Building.MemberValue(Making, Boxed, Weight, 1)(0).IndexOf("%t3op[2]") > 0
 	mutable offset = 0
-	for MlirInstances(function, 0).Stored(owner)
+	for MlirInstances(function, 0).Store(owner)
 		if value.Name is name
 			return offset
 		offset = offset + Width(owner, value)
@@ -62,11 +62,11 @@ Width(owner TypeEntry, member MemberEntry) Number
 IsInline(owner TypeEntry, member MemberEntry) Boolean
 	Sample.IsInline(Boxed, Boxed.members.First)
 	Sample.IsInline(Boxed, Boxed.members.Last) is false
-	Text.Combine(Initializing.Returned(2)).IndexOf("@memcpy(") > 0
+	Text.Combine(Initializing.EmitReturn(2)).IndexOf("@memcpy(") > 0
 	IsNumbers(owner.Name) and IsNumbers(member.typeName)
-Listed(element Text, result Text, capacity Text) Texts
-	Sample.Listed("Strict/Boxed", "%r", "%a").Last.StartsWith("    %r = func.call @strict_record_list_new(%a, %rc)")
-	Text.Combine(MlirListDestined(MlirStructs.Collector.function, 2).Created("%r", "%a")).IndexOf("_record_list_new(") > 0
+EmitList(element Text, result Text, capacity Text) Texts
+	Sample.EmitList("Strict/Boxed", "%r", "%a").Last.StartsWith("    %r = func.call @strict_record_list_new(%a, %rc)")
+	Text.Combine(MlirListDestined(MlirStructs.Collector.function, 2).Creat("%r", "%a")).IndexOf("_record_list_new(") > 0
 	counted = "    " + result + "c = arith.constant " + Slots(element) + ".0 : f64"
 	call = " = func.call @strict_record_list_new(" + capacity + ", " + result + "c) : (f64, f64) -> f64"
 	(counted, "    " + result + call)
@@ -77,7 +77,7 @@ StackSlots(at Number) Number
 	entry = function.method.instructions(at)
 	if entry.kind is not InstructionType.Invoke or IsCopied(at, entry.payload(0)) is false
 		return 0
-	callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Call(function, at)
 	returned = callees.Length > 0 then callees.First.method.returnType else ""
 	isConsumed = callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(1) else false
 	isConsumed and IsNumbers(returned) then Slots(returned) else 0
@@ -92,7 +92,7 @@ IsCopied(at Number, register Number) Boolean
 	slot = membered.Slot(built, register)
 	if slot < 0
 		return false
-	IsInline(owner, MlirInstances(function, 0).Stored(owner)(slot)) and membered.Reader(built, register) < 0
+	IsInline(owner, MlirInstances(function, 0).Store(owner)(slot)) and membered.Reader(built, register) < 0
 Stacks Texts
 	Wrapper.Stacks.Last is "    %stack1 = llvm.alloca %stack1n x f64 : (i64) -> !llvm.ptr"
 	MlirEmbedded(MlirStructs.Forwarder.function).Stacks.Length is 0
@@ -105,10 +105,10 @@ Stacks Texts
 			counted = "    " + name + "n = arith.constant " + slots + " : i64"
 			lines = lines + (counted, "    " + name + " = llvm.alloca " + name + "n x f64 : (i64) -> !llvm.ptr")
 	lines
-Stacked(at Number, compiled Texts) Texts
-	Wrapper.Stacked(1, List(Text) + "call")(1) is Stacking.Destine("sd")
-	Wrapper.Stacked(2, List(Text) + "call") is ("call")
-	Text.Combine(Stacking.Collected(MlirStructs.Calling, List(Text) + "call", "Shape")).IndexOf("(%t1sd)") > 0
+Stack(at Number, compiled Texts) Texts
+	Wrapper.Stack(1, List(Text) + "call")(1) is Stacking.Destine("sd")
+	Wrapper.Stack(2, List(Text) + "call") is ("call")
+	Text.Combine(Stacking.Collect(MlirStructs.Calling, List(Text) + "call", "Shape")).IndexOf("(%t1sd)") > 0
 	if StackSlots(at) is 0
 		return compiled
 	bits = "    %t" + at + "sd = func.call @strict_bits(%stack" + at + ") : (!llvm.ptr) -> f64"
@@ -119,28 +119,27 @@ Read(memory MlirMemory, owner TypeEntry, member MemberEntry, base Text, suffix T
 	Text.Combine(MlirInstances(Boxer, 0).Unpacked).IndexOf("%t-1selfp[2]") > 0
 	Text.Combine(MlirAutomatic(Boxer).Function(Boxed)).IndexOf("%p[2]") > 0
 	offset = Offset(owner, member.Name)
-	IsInline(owner, member) then memory.Addressed(base, offset, suffix) else memory.Loaded(base, offset, suffix)
-Copied(source Text, destination Text, typeName Text) Texts
-	Sample.Copied("%a", "%s", "Strict/Outer")(1) is "    %an = arith.constant 16 : i64"
-	Sample.Copied("%a", "%s", "Strict/Outer").Last.StartsWith("    %am = llvm.call @memcpy(%s, %ap, %an) : (!llvm.ptr")
+	IsInline(owner, member) then memory.Address(base, offset, suffix) else memory.Load(base, offset, suffix)
+Copy(source Text, destination Text, typeName Text) Texts
+	Sample.Copy("%a", "%s", "Strict/Outer")(1) is "    %an = arith.constant 16 : i64"
+	Sample.Copy("%a", "%s", "Strict/Outer").Last.StartsWith("    %am = llvm.call @memcpy(%s, %ap, %an) : (!llvm.ptr")
 	pointer = "    " + source + "p = func.call @strict_ptr(" + source + ") : (f64) -> !llvm.ptr"
 	bytes = "    " + source + "n = arith.constant " + Slots(typeName) * 8 + " : i64"
 	copy = " = llvm.call @memcpy(" + destination + ", " + source + "p, " + source + "n)"
 	(pointer, bytes, "    " + source + "m" + copy + " : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr")
-Placed(owner TypeEntry, member MemberEntry, source Text, slot Text) Texts
-	Sample.Placed(Boxed, Boxed.members.First, "%a", "%s").Last.IndexOf("@memcpy(%s, %ap, %an)") > 0
-	Sample.Placed(Boxed, Boxed.members.Last, "%a", "%s").Last is MlirInstances.Counting.Replace("%s", "%s")
+Place(owner TypeEntry, member MemberEntry, source Text, slot Text) Texts
+	Sample.Place(Boxed, Boxed.members.First, "%a", "%s").Last.IndexOf("@memcpy(%s, %ap, %an)") > 0
+	Sample.Place(Boxed, Boxed.members.Last, "%a", "%s").Last is MlirInstances.Counting.Replace("%s", "%s")
 	Text.Combine(MlirOwned(Boxer, 7).Put(Boxed, Boxed.members.First, 2)).IndexOf("@memcpy(%t7r0") > 0
 	counted = (function.Store(source, slot), MlirInstances.Counting.Replace("%s", slot))
-	IsInline(owner, member) then Copied(source, slot, member.typeName) else counted
-Inlined(instances MlirInstances, type TypeEntry, base Text, prefix Text, creating Texts) Texts
-	Text.Combine(Sample.Inlined(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("%b[2]") > 0
-	Text.Combine(Sample.Inlined(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("@strict_alloc(") is -1
+	IsInline(owner, member) then Copy(source, slot, member.typeName) else counted
+Inline(instances MlirInstances, type TypeEntry, base Text, prefix Text, creating Texts) Texts
+	Text.Combine(Sample.Inline(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("%b[2]") > 0
+	Text.Combine(Sample.Inline(MlirInstances(Boxer, 0), Boxed, "%b", "x", List(Text))).IndexOf("@strict_alloc(") is -1
 	memory = MlirMemory(function, instances.position)
 	mutable lines = List(Text)
-	for instances.Stored(type)
+	for instances.Store(type)
 		slot = prefix + "s" + index
 		address = memory.Slot(base, Offset(type, value.Name), slot)
-		initialized = instances.Initialized(type, value, memory.Temp(slot), prefix + index, creating + type.Name)
-		lines = lines + address + initialized
+		lines = lines + address + instances.Initialize(type, value, memory.Temp(slot), prefix + index, creating + type.Name)
 	lines

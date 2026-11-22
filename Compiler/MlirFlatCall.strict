@@ -7,20 +7,20 @@ constant Calling = MlirFlatCall(MlirWholeStatements(Sized, 5, "iiiii", "o-", "ii
 Called Texts
 	Calling.Called.Last is "    llvm.store %t5c, %r4 : i64, !llvm.ptr"
 	Calling.Called(2).EndsWith("@Grid_Fits_1_whole_flat(%failed, %t5a0, %t5a1_width) : (!llvm.ptr, i64, i64) -> i64")
-	native = MlirWholeNative(statements).Emitted(entry)
+	native = MlirWholeNative(statements).Emit(entry)
 	if native.Length > 0
 		return native
 	callee = MlirWholeFunction(statements.function).Callee(entry)
 	call = Call(statements.Temp("c"), MlirWholeFlat(callee), Arguments(callee))
-	Loaded(callee) + call + statements.Store("c", MlirWholeTypes(callee).Returned, entry.payload(0))
-Loaded(callee MlirFunction) Texts
-	Calling.Loaded(Fits).Last is "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
+	Load(callee) + call + statements.Store("c", MlirWholeTypes(callee).Returned, entry.payload(0))
+Load(callee MlirFunction) Texts
+	Calling.Load(Fits).Last is "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
 	kinds = MlirWholeFunction(callee).Kinds
 	mutable lines = List(Mutable(Text))
 	for LoadReuse(statements.function.method.instructions).InvokeReads(entry)
 		register = entry.payload(value)
 		plain = statements.Load("a" + index, register, kinds(index))
-		lines = lines + (kinds(index) is "o" then Expanded(register, callee, index) else plain)
+		lines = lines + (kinds(index) is "o" then Expand(register, callee, index) else plain)
 	lines
 Arguments(callee MlirFunction) Texts
 	Calling.Arguments(Fits) is ("%t5a0", "%t5a1_width")
@@ -37,18 +37,18 @@ Call(result Text, flat MlirWholeFlat, names Texts, failed = "%failed") Text
 	Calling.Call("%r", MlirWholeFlat.Fits, ("%a", "%b"), "%failed").EndsWith(FitsCall)
 	mutable types = List(Mutable(Text)) + "!llvm.ptr"
 	for flat.Kinds
-		types.Add(MlirWholeValues(0).Typed(value))
-	returned = MlirWholeValues(0).Typed(MlirWholeTypes(flat.function).Returned)
+		types.Add(MlirWholeValues(0).MapType(value))
+	returned = MlirWholeValues(0).MapType(MlirWholeTypes(flat.function).Returned)
 	signature = " : (" + Text.Combine(types, ", ") + ") -> " + returned
 	arguments = Text.Combine((List(Text) + failed) + names, ", ")
 	"    " + result + " = func.call @" + flat.Symbol + "(" + arguments + ")" + signature
-Expanded(register Number, callee MlirFunction, input Number) Texts
-	Calling.Expanded(2, Fits, 1) is List(Text) + "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
+Expand(register Number, callee MlirFunction, input Number) Texts
+	Calling.Expand(2, Fits, 1) is List(Text) + "    %t5a1_width = llvm.load %v_grid_width : !llvm.ptr -> i64"
 	name = MlirWholeFlat(statements.function).Source(register, statements.position)
 	flat = MlirWholeFlat(callee)
 	mutable lines = List(Mutable(Text))
 	for MlirWholeInstance(callee).Members(input)
 		kind = MlirWholeInstance(callee).MemberKind(flat.Owner(input), value)
 		temp = statements.Temp("a" + input + "_" + value)
-		lines = lines + MlirWholeValues(statements.position).Loaded(temp, "%v_" + name + "_" + value, kind, kind)
+		lines = lines + MlirWholeValues(statements.position).Load(temp, "%v_" + name + "_" + value, kind, kind)
 	lines

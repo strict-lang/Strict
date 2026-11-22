@@ -13,7 +13,7 @@ IsCall(at Number, depth Number) Boolean
 		return MlirLayout(function).IsStruct(entry.texts(0)) or isBuilt
 	if MlirNatives(function, at).Helper(entry.texts(0), entry.texts(1), arguments.Length) is in MlirNatives.Destining
 		return true
-	callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Call(function, at)
 	depth < 4 and callees.Length > 0 and MlirFresh(callees.First).IsMethod(depth + 1, IsOwn(at, depth))
 IsOwn(at Number, depth Number) Boolean
 	Checked.IsOwn(3, 0)
@@ -37,7 +37,7 @@ IsReturn(at Number, depth Number, isOwn Boolean) Boolean
 	loaded = writer + 1 is at or isChecked then steps(writer) else steps(at)
 	if loaded.kind is InstructionType.LoadVariableToRegister and IsLocal(loaded.texts(0), at, depth, isOwn)
 		return true
-	kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(at, register))
+	kind = MlirLayout(function).Represent(MlirKinds(function).KindOf(at, register))
 	kind is in Scalars or MlirOwned(function, 0).IsFresh(function, at, register, depth)
 IsLocal(name Text, at Number, depth Number, isOwn Boolean) Boolean
 	Itself.IsLocal("value", 1, 0, true)

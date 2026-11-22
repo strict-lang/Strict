@@ -89,7 +89,7 @@ Kind(at Number) Text
 	Row.Kind(11) is ""
 	if at < 0 or function.method.instructions(at).kind is not InstructionType.LoadVariableToRegister
 		return ""
-	MlirLayout(function).Represented(MlirKinds(function).VariableKind(at, function.method.instructions(at).texts(0)))
+	MlirLayout(function).Represent(MlirKinds(function).VariableKind(at, function.method.instructions(at).texts(0)))
 Inputs Texts
 	Row.Inputs is ("middle", "radius")
 	carried = MlirSingle(function, position).Carried

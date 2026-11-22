@@ -43,7 +43,7 @@ Adding(at Number) Number
 	Norming.Adding(11) is 1
 	Norming.Adding(7) is 0
 	Wrapping.Adding(11) is 1
-	callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Call(function, at)
 	if callees.Length is not 1
 		return 0
 	callee = callees.First
@@ -61,15 +61,15 @@ Wraps(callee MlirFunction) Boolean
 		if value.kind is InstructionType.LoopBegin
 			return false
 		if value.kind is InstructionType.Invoke
-			for MlirModule(callee.types, "").Called(callee, index)
+			for MlirModule(callee.types, "").Call(callee, index)
 				sums = MlirDeviceSums(value, 0).IsSummed(value, 0, value.method.instructions.Length, false) then sums + 1 else sums
 	sums is 1
 Size(at Number) Text
 	Ranging.Size(11) is ""
-	Norming.Calculated(InstructionEntry.Binary(InstructionType.Divide, (3, 3, 4)), 6) is ""
-	Norming.Calculated(InstructionEntry.Binary(InstructionType.Divide, (2, 2, 4)), 6) is "!"
-	Norming.Calculated(InstructionEntry.Binary(InstructionType.Multiply, (2, 3, 4)), 6) is "!"
-	Norming.Calculated(InstructionEntry.Binary(InstructionType.Divide, (2, 9, 4)), 5) is "!"
+	Norming.Calculate(InstructionEntry.Binary(InstructionType.Divide, (3, 3, 4)), 6) is ""
+	Norming.Calculate(InstructionEntry.Binary(InstructionType.Divide, (2, 2, 4)), 6) is "!"
+	Norming.Calculate(InstructionEntry.Binary(InstructionType.Multiply, (2, 3, 4)), 6) is "!"
+	Norming.Calculate(InstructionEntry.Binary(InstructionType.Divide, (2, 9, 4)), 5) is "!"
 	Aligning.Call is 11 and Ranging.Call is -1
 	Norming.Size(11) is "size"
 	Norming.Size(7) is ""
@@ -79,7 +79,7 @@ Arguments(entry InstructionEntry, at Number) Text
 	Norming.Arguments(Normed.instructions(11), 11) is "size"
 	mutable grouping = ""
 	for PayloadDecoder(entry).Arguments
-		grouping = Combined(grouping, Grouping(value, at))
+		grouping = Combine(grouping, Grouping(value, at))
 	grouping
 Grouping(register Number, before Number) Text
 	Norming.Grouping(7, 11) is "size"
@@ -90,28 +90,28 @@ Grouping(register Number, before Number) Text
 	if writer < 0 or entry.kind is InstructionType.LoadConstantToRegister
 		return ""
 	if entry.kind is InstructionType.LoadVariableToRegister
-		return Loaded(entry.texts(0), writer)
+		return Load(entry.texts(0), writer)
 	kind = entry.kind
 	isBinary = kind > InstructionType.StoreSeparator and kind < InstructionType.BinaryOperatorsSeparator
-	kind is InstructionType.Invoke then Invoked(entry, writer) else isBinary then Calculated(entry, writer) else "!"
-Invoked(entry InstructionEntry, at Number) Text
-	Norming.Invoked(InstructionEntry.Invoke(5, ("Strict/Number", "Ceiling", "Strict/Number"), List(Number), 8), 11) is ""
-	Norming.Invoked(Normed.instructions(7), 7) is "size"
-	Norming.Invoked(Normed.instructions(11), 11) is "!"
+	kind is InstructionType.Invoke then Invoke(entry, writer) else isBinary then Calculate(entry, writer) else "!"
+Invoke(entry InstructionEntry, at Number) Text
+	Norming.Invoke(InstructionEntry.Invoke(5, ("Strict/Number", "Ceiling", "Strict/Number"), List(Number), 8), 11) is ""
+	Norming.Invoke(Normed.instructions(7), 7) is "size"
+	Norming.Invoke(Normed.instructions(11), 11) is "!"
 	register = MlirDeviceCalls(function, at, function).Register(entry)
 	instance = register < 0 then "" else Grouping(register, at)
-	entry.texts(1) is "Floor" then Floored(instance) else Combined(instance, Arguments(entry, at)) is "" then "" else "!"
+	entry.texts(1) is "Floor" then Floor(instance) else Combine(instance, Arguments(entry, at)) is "" then "" else "!"
 Writer(register Number, before Number) Number
-	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Subtract, (2, 4, 7)), 7) is "size"
-	Ranging.Aligned(AlignedCode(9), 9) is ""
+	Aligning.Align(InstructionEntry.Binary(InstructionType.Subtract, (2, 4, 7)), 7) is "size"
+	Ranging.Align(AlignedCode(9), 9) is ""
 	Norming.Writer(7, 11) is 9
 	Norming.Writer(0, 5) is -1
 	LoadReuse(function.method.instructions).Writer(register, before, position)
-Loaded(name Text, at Number) Text
-	Aligning.Loaded("within", 9) is "!" and Aligning.Loaded("other", 9) is ""
+Load(name Text, at Number) Text
+	Aligning.Load("within", 9) is "!" and Aligning.Load("other", 9) is ""
 	Norming.Grouping(9, 11) is ""
-	Norming.Loaded("index", 4) is "!"
-	Norming.Loaded("size", 5) is ""
+	Norming.Load("index", 4) is "!"
+	Norming.Load("size", 5) is ""
 	if name is in ("index", "value")
 		return "!"
 	for at - position - 1
@@ -119,22 +119,22 @@ Loaded(name Text, at Number) Text
 		if earlier.kind is InstructionType.StoreRegisterToVariable and earlier.texts(0) is name
 			return Grouping(earlier.payload(0), at - 1 - index)
 	""
-Calculated(entry InstructionEntry, at Number) Text
-	Norming.Calculated(Normed.instructions(6), 6) is "?size"
-	Norming.Calculated(Normed.instructions(9), 9) is "size"
+Calculate(entry InstructionEntry, at Number) Text
+	Norming.Calculate(Normed.instructions(6), 6) is "?size"
+	Norming.Calculate(Normed.instructions(9), 9) is "size"
 	left = Grouping(entry.payload(1), at)
 	right = Grouping(entry.payload(2), at)
 	divisor = Writer(entry.payload(2), at)
 	named = function.method.instructions(divisor)
 	isNamed = divisor >= 0 and named.kind is InstructionType.LoadVariableToRegister
 	isGrouping = entry.kind is InstructionType.Divide and left is "!" and right is "" and isNamed
-	aligned = Aligned(entry, at)
-	aligned is not "" then aligned else (isGrouping then "?" + named.texts(0) else Combined(left, right))
-Aligned(entry InstructionEntry, at Number) Text
-	Aligning.Aligned(AlignedCode(9), 9) is "size"
+	aligned = Align(entry, at)
+	aligned is not "" then aligned else (isGrouping then "?" + named.texts(0) else Combine(left, right))
+Align(entry InstructionEntry, at Number) Text
+	Aligning.Align(AlignedCode(9), 9) is "size"
 	if entry.kind is not InstructionType.Subtract or IsIndex(entry.payload(1), at) is false
 		return ""
-	writer = Resolved(entry.payload(2), at)
+	writer = Resolve(entry.payload(2), at)
 	remainder = function.method.instructions(writer)
 	if writer < 0 or remainder.kind is not InstructionType.Modulo or IsIndex(remainder.payload(1), writer) is false
 		return ""
@@ -142,9 +142,9 @@ Aligned(entry InstructionEntry, at Number) Text
 	named = function.method.instructions(divisor)
 	isNamed = divisor >= 0 and named.kind is InstructionType.LoadVariableToRegister
 	isNamed and Grouping(remainder.payload(2), writer) is "" then named.texts(0) else ""
-Resolved(register Number, before Number) Number
-	Aligning.Resolved(6, 9) is 6 and Aligning.Resolved(3, 9) is 5
-	Aligning.Resolved(4, 7) is 6 and Aligning.Resolved(9, 9) is -1
+Resolve(register Number, before Number) Number
+	Aligning.Resolve(6, 9) is 6 and Aligning.Resolve(3, 9) is 5
+	Aligning.Resolve(4, 7) is 6 and Aligning.Resolve(9, 9) is -1
 	writer = Writer(register, before)
 	entry = function.method.instructions(writer)
 	if writer < 0 or entry.kind is not InstructionType.LoadVariableToRegister
@@ -153,29 +153,29 @@ Resolved(register Number, before Number) Number
 		at = writer - 1 - index
 		stored = function.method.instructions(at)
 		if stored.kind is InstructionType.StoreRegisterToVariable and stored.texts(0) is entry.texts(0)
-			return Resolved(stored.payload(0), at)
+			return Resolve(stored.payload(0), at)
 	writer
 IsIndex(register Number, before Number) Boolean
 	Aligning.IsIndex(2, 9) is true and Ranging.IsIndex(2, 9) is false
 	Aligning.IsIndex(3, 9) is false and Aligning.IsIndex(9, 4) is false
 	Aligning.IsIndex(4, 7) is false
-	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Add, (2, 6, 7)), 9) is ""
-	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Subtract, (3, 6, 7)), 9) is ""
-	Aligning.Aligned(InstructionEntry.Binary(InstructionType.Subtract, (2, 3, 7)), 9) is ""
+	Aligning.Align(InstructionEntry.Binary(InstructionType.Add, (2, 6, 7)), 9) is ""
+	Aligning.Align(InstructionEntry.Binary(InstructionType.Subtract, (3, 6, 7)), 9) is ""
+	Aligning.Align(InstructionEntry.Binary(InstructionType.Subtract, (2, 3, 7)), 9) is ""
 	if function.method.instructions(position).payload(1) is 1
 		return false
 	writer = Writer(register, before)
 	entry = function.method.instructions(writer)
 	writer >= 0 and entry.kind is InstructionType.LoadVariableToRegister and entry.texts(0) is "index"
-Combined(left Text, right Text) Text
-	Norming.Combined("", "?size") is "!" and Norming.Combined("size", "size") is "size"
-	Norming.Combined("size", "") is "size"
-	Norming.Combined("", "size") is "size"
-	Norming.Combined("size", "count") is "!"
-	Norming.Combined("?size", "") is "!"
+Combine(left Text, right Text) Text
+	Norming.Combine("", "?size") is "!" and Norming.Combine("size", "size") is "size"
+	Norming.Combine("size", "") is "size"
+	Norming.Combine("", "size") is "size"
+	Norming.Combine("size", "count") is "!"
+	Norming.Combine("?size", "") is "!"
 	isOpen = left.StartsWith("!") or left.StartsWith("?") or right.StartsWith("!") or right.StartsWith("?")
 	isOpen or left is not "" and right is not "" and left is not right then "!" else left is "" then right else left
-Floored(grouping Text) Text
-	Norming.Floored("?size") is "size"
-	Norming.Floored("!") is "!"
+Floor(grouping Text) Text
+	Norming.Floor("?size") is "size"
+	Norming.Floor("!") is "!"
 	grouping.StartsWith("?") then grouping.Substring(1) else grouping

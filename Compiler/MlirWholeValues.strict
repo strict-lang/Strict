@@ -1,47 +1,47 @@
 has position Number
 constant Sample = MlirWholeValues(3)
 constant FlaggedCall = "    %r = func.call @F(%f, %a0, %a1) : (!llvm.ptr, !llvm.ptr, i64) -> i64"
-Typed(type Text) Text
-	Sample.Typed("f") is "f64"
-	Sample.Typed("p") is "!llvm.ptr"
-	Sample.Typed("d") is "!llvm.ptr"
-	Sample.Typed("-") is "i64"
+MapType(type Text) Text
+	Sample.MapType("f") is "f64"
+	Sample.MapType("p") is "!llvm.ptr"
+	Sample.MapType("d") is "!llvm.ptr"
+	Sample.MapType("-") is "i64"
 	type is "f" then "f64" else (type is in ("p", "d", "o", "t") then "!llvm.ptr" else "i64")
-Converted(source Text, given Text, wanted Text, result Text) Text
-	Sample.Converted("%a", "i", "f", "%b") is "    %b = arith.sitofp %a : i64 to f64"
-	Sample.Converted("%a", "f", "i", "%b") is "    %b = arith.fptosi %a : f64 to i64"
-	operation = Typed(given) is "i64" then " = arith.sitofp " else " = arith.fptosi "
-	"    " + result + operation + source + " : " + Typed(given) + " to " + Typed(wanted)
-Loaded(name Text, slot Text, given Text, wanted Text) Texts
-	Sample.Loaded("%a", "%r1", "i", "-") is ("    %a = llvm.load %r1 : !llvm.ptr -> i64")
-	Sample.Loaded("%a", "%r1", "i", "f").Last is "    %a = arith.sitofp %al : i64 to f64"
-	if Typed(given) is Typed(wanted)
-		return List(Text) + ("    " + name + " = llvm.load " + slot + " : !llvm.ptr -> " + Typed(given))
-	loaded = "    " + name + "l = llvm.load " + slot + " : !llvm.ptr -> " + Typed(given)
-	(loaded, Converted(name + "l", given, wanted, name))
-Stored(source Text, given Text, slot Text, wanted Text) Texts
-	Sample.Stored("%a", "i", "%r1", "i") is ("    llvm.store %a, %r1 : i64, !llvm.ptr")
-	Sample.Stored("%a", "i", "%r1", "f").First is "    %as = arith.sitofp %a : i64 to f64"
-	if Typed(given) is Typed(wanted)
-		return List(Text) + ("    llvm.store " + source + ", " + slot + " : " + Typed(wanted) + ", !llvm.ptr")
-	stored = "    llvm.store " + source + "s, " + slot + " : " + Typed(wanted) + ", !llvm.ptr"
-	(Converted(source, given, wanted, source + "s"), stored)
+Convert(source Text, given Text, wanted Text, result Text) Text
+	Sample.Convert("%a", "i", "f", "%b") is "    %b = arith.sitofp %a : i64 to f64"
+	Sample.Convert("%a", "f", "i", "%b") is "    %b = arith.fptosi %a : f64 to i64"
+	operation = MapType(given) is "i64" then " = arith.sitofp " else " = arith.fptosi "
+	"    " + result + operation + source + " : " + MapType(given) + " to " + MapType(wanted)
+Load(name Text, slot Text, given Text, wanted Text) Texts
+	Sample.Load("%a", "%r1", "i", "-") is ("    %a = llvm.load %r1 : !llvm.ptr -> i64")
+	Sample.Load("%a", "%r1", "i", "f").Last is "    %a = arith.sitofp %al : i64 to f64"
+	if MapType(given) is MapType(wanted)
+		return List(Text) + ("    " + name + " = llvm.load " + slot + " : !llvm.ptr -> " + MapType(given))
+	loaded = "    " + name + "l = llvm.load " + slot + " : !llvm.ptr -> " + MapType(given)
+	(loaded, Convert(name + "l", given, wanted, name))
+Store(source Text, given Text, slot Text, wanted Text) Texts
+	Sample.Store("%a", "i", "%r1", "i") is ("    llvm.store %a, %r1 : i64, !llvm.ptr")
+	Sample.Store("%a", "i", "%r1", "f").First is "    %as = arith.sitofp %a : i64 to f64"
+	if MapType(given) is MapType(wanted)
+		return List(Text) + ("    llvm.store " + source + ", " + slot + " : " + MapType(wanted) + ", !llvm.ptr")
+	stored = "    llvm.store " + source + "s, " + slot + " : " + MapType(wanted) + ", !llvm.ptr"
+	(Convert(source, given, wanted, source + "s"), stored)
 Constant(literal Runtime/VmValue, slot Text, wanted Text) Texts
 	Sample.Constant(VmValue.OfNumber(4), "%r0", "i").Last is "    llvm.store %t3k, %r0 : i64, !llvm.ptr"
 	Sample.Constant(VmValue.OfNumber(0.5), "%r0", "f").Last is "    llvm.store %t3c, %r0 : f64, !llvm.ptr"
 	number = "    %t" + position + "c = arith.constant " + MlirStatements.Copy.Hex(literal.number) + " : f64"
-	if Typed(wanted) is "f64"
+	if MapType(wanted) is "f64"
 		return (number, "    llvm.store %t" + position + "c, " + slot + " : f64, !llvm.ptr")
-	converted = Converted("%t" + position + "c", "f", "i", "%t" + position + "k")
+	converted = Convert("%t" + position + "c", "f", "i", "%t" + position + "k")
 	(number, converted, "    llvm.store %t" + position + "k, " + slot + " : i64, !llvm.ptr")
-Called(result Text, symbol Text, prefix Text, kinds Texts, returned Text, failed = "%failed") Text
-	Sample.Called("%r", "F", "%a", ("p", "i"), "i", "%f") is FlaggedCall
+Call(result Text, symbol Text, prefix Text, kinds Texts, returned Text, failed = "%failed") Text
+	Sample.Call("%r", "F", "%a", ("p", "i"), "i", "%f") is FlaggedCall
 	mutable names = List(Mutable(Text)) + failed
 	mutable types = List(Mutable(Text)) + "!llvm.ptr"
 	for kinds
 		names.Add(prefix + index)
-		types.Add(Typed(value))
-	signature = "(" + Text.Combine(types, ", ") + ") -> " + Typed(returned)
+		types.Add(MapType(value))
+	signature = "(" + Text.Combine(types, ", ") + ") -> " + MapType(returned)
 	"    " + result + " = func.call @" + symbol + "(" + Text.Combine(names, ", ") + ") : " + signature
 Line(suffix Text, operation Text) Text
 	Sample.Line("z", "arith.constant 0 : i64") is "    %t3z = arith.constant 0 : i64"
@@ -51,10 +51,10 @@ IsWhole(literal Runtime/VmValue) Boolean
 	Sample.IsWhole(VmValue.OfNumber(0.5)) is false
 	number = literal.number
 	literal.kind is "Boolean" or number.Floor is number and number.Absolute < MlirWhole.Limit
-Marked(types Text, at Number, type Text) Text
-	Sample.Marked("iii", 1, "f") is "ifi"
-	Sample.Marked("-p-", 1, "i") is "-x-"
-	Sample.Marked("-f-", 1, "i") is "-f-"
+Mark(types Text, at Number, type Text) Text
+	Sample.Mark("iii", 1, "f") is "ifi"
+	Sample.Mark("-p-", 1, "i") is "-x-"
+	Sample.Mark("-f-", 1, "i") is "-f-"
 	if at < 0
 		return types
 	old = types(at) to Text
@@ -66,7 +66,7 @@ IsPointer(type Text) Boolean
 	Sample.IsPointer("o")
 	Sample.IsPointer("i") is false
 	type is in ("p", "d", "o", "t")
-Written(types Text, at Number, type Text) Text
-	Sample.Written("i-", 1, "d") is "i-"
-	Sample.Written("i-", 1, "i") is "ii"
-	IsPointer(type) then types else Marked(types, at, type)
+Write(types Text, at Number, type Text) Text
+	Sample.Write("i-", 1, "d") is "i-"
+	Sample.Write("i-", 1, "i") is "ii"
+	IsPointer(type) then types else Mark(types, at, type)

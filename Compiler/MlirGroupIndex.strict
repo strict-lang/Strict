@@ -29,7 +29,7 @@ Matches(at Number, kind Number) Boolean
 	named and IsDivisor(divisor.texts(0), at) and groups.IsIndex(entry.payload(1), at)
 IsDivisor(name Text, at Number) Boolean
 	size = MlirGroups(function, function.Guarded).Size(function.Group)
-	name is size and MlirKinds(function).Stored(at, name) <= function.Guarded
+	name is size and MlirKinds(function).Store(at, name) <= function.Guarded
 Remainder Texts
 	Aligning.Remainder.First is "    %groupRemainder6 = arith.subi %at, %groupStart : i64"
 	if Matches(position, InstructionType.Modulo) is false

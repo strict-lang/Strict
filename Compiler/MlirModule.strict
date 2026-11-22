@@ -21,14 +21,14 @@ Text Text
 	NoRun.Text.StartsWith("unsupported:")
 	started = Process.Elapsed
 	reachable = Linked
-	BuildProfile.Reported("Emission / reachability (" + reachable.functions.Length + " functions)", started)
+	BuildProfile.Report("Emission / reachability (" + reachable.functions.Length + " functions)", started)
 	edges = reachable.Edges
 	functions = Safe(reachable.functions, edges)
 	problem = Problem(functions)
 	if problem is not ""
 		return problem
-	counted = countedFiles.Length is 0 then functions else MlirLines.Counted(functions, Mains, countedFiles)
-	Combined(Declared(counted, functions, edges), functions, counted)
+	counted = countedFiles.Length is 0 then functions else MlirLines.Instrument(functions, Mains, countedFiles)
+	Combine(Declare(counted, functions, edges), functions, counted)
 Problem(functions List(MlirFunction)) Text
 	Counters.Problem(Counters.Functions) is ""
 	NoRun.Problem(NoRun.Functions).StartsWith("unsupported: no Tests method")
@@ -39,40 +39,40 @@ Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
 	started = Process.Elapsed
 	functions = MlirSafety(reachable, edges).Marked
-	BuildProfile.Reported("Emission / safety", started)
+	BuildProfile.Report("Emission / safety", started)
 	functions
-Declared(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts
-	Counters.Declared(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
+Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts
+	Counters.Declare(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	started = Process.Elapsed
 	recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
-	BuildProfile.Reported("Emission / recursion", started)
+	BuildProfile.Report("Emission / recursion", started)
 	lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
-	emitted = BuildProfile.Emitted(value, texts, functions, recursive)
+	emitted = BuildProfile.Emit(value, texts, functions, recursive)
 	before = Process.Elapsed
 	result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
-	BuildProfile.Reported("Emission / helpers", before)
+	BuildProfile.Report("Emission / helpers", before)
 	result
-Emitted(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
-	Counters.Emitted(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
-	EmissionCache(value, functions, recursive).Emitted(texts)
+Emit(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
+	Counters.Emit(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
+	EmissionCache(value, functions, recursive).Emit(texts)
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
 	Counters.Emission(MlirWhole.Row.function, NoFunctions, List(Text)).IndexOf("alwaysinline") > 0
 	text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
-	emitted = MlirEntry.Optimized(function.method, text)
+	emitted = MlirEntry.Optimize(function.method, text)
 	whole = MlirWholeBody(function, functions).Lines
 	whole.Length is 0 then emitted else emitted + "\n" + outer.Text.Combine(whole, "\n")
-Combined(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
-	Counters.Combined(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
+Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
+	Counters.Combine(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	Scaled.Text.IndexOf(WgslShader.Marker) < Shaded.Text.IndexOf(WgslShader.Marker)
 	table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	started = Process.Elapsed
 	device = MlirGpu.Module(functions)
-	BuildProfile.Reported("Emission / GPU kernels", started)
+	BuildProfile.Report("Emission / GPU kernels", started)
 	before = Process.Elapsed
 	main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
-	BuildProfile.Reported("Emission / globals and assembly", before)
+	BuildProfile.Report("Emission / globals and assembly", before)
 	outer.Text.Combine((host, device, platform is Platform.Web then WgslShader.Scripts(functions) else "") - "", "\n")
 Functions List(MlirFunction)
 	Counters.Functions.Length is 1
@@ -141,10 +141,10 @@ Callees(function MlirFunction) List(MlirFunction)
 	Counters.Callees(Counters.Functions.First).Length is 0
 	mutable callees = List(Mutable(MlirFunction))
 	for function.method.instructions
-		callees = callees + Called(function, index)
+		callees = callees + Call(function, index)
 	callees
-Called(function MlirFunction, position Number) List(MlirFunction)
-	Counters.Called(Counters.Functions.First, 0).Length is 0
+Call(function MlirFunction, position Number) List(MlirFunction)
+	Counters.Call(Counters.Functions.First, 0).Length is 0
 	entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
 		return List(MlirFunction)

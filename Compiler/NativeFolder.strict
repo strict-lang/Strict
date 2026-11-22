@@ -12,15 +12,15 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	NativeFolder.Module("Examples/NativeAdd", ".", false, false).types.First.Name.EndsWith("Adder")
 	started = Process.Elapsed
 	paths = Paths(path)
-	loaded = isCounting or Directory.Exists(path) then Collected(path, root) else Tested(path, root, sources)
-	types = isProgram then Programmed(loaded, path, root, sources) else loaded
+	loaded = isCounting or Directory.Exists(path) then Collect(path, root) else TestFolder(path, root, sources)
+	types = isProgram then Program(loaded, path, root, sources) else loaded
 	counted = isCounting then CountedFiles(paths, root) else List(Text)
 	symbol = platform is Platform.IOS then "strict_main" else "main"
-	inlined = BuildProfile.Inlined(types)
-	BuildProfile.Reported("Frontend", started)
+	inlined = BuildProfile.Inline(types)
+	BuildProfile.Report("Frontend", started)
 	MlirModule(inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol, platform)
-Tested(path Text, root Text, sources Texts) List(TypeEntry)
-	NativeFolder(gated = Greeting).Tested("Missing.strict", ".", List(Text)) is Greeting
+TestFolder(path Text, root Text, sources Texts) List(TypeEntry)
+	NativeFolder(gated = Greeting).TestFolder("Missing.strict", ".", List(Text)) is Greeting
 	gated.Length > 0 then gated else Execute(selection).Load(path, root, true, sources)
 Natives(path Text, root Text, types List(TypeEntry)) Texts slow
 	NativeFolder.Natives("Examples", ".", List(TypeEntry) + Foreign.Adder) is ("Examples/NativeAdd/native")
@@ -41,9 +41,9 @@ CountedFiles(paths Texts, root Text) Texts
 	NativeFolder.CountedFiles(List(Text) + "./Examples/Sum.strict", ".") is ("Examples/Sum.strict")
 	for paths
 		TypeEntry(FileCompiler.FullName(value, root), List(MemberEntry), List(MethodEntry)).Source
-Programmed(loaded List(TypeEntry), path Text, root Text, sources Texts) List(TypeEntry)
-	NativeFolder.Programmed(List(TypeEntry) + TypeEntry.HelloLogger, "Missing.strict", ".", List(Text)).Length is 1
-	Execute.HasRun(NativeFolder.Programmed(Runless, "Examples/HelloLogger.strict", ".", List(Text)).First)
+Program(loaded List(TypeEntry), path Text, root Text, sources Texts) List(TypeEntry)
+	NativeFolder.Program(List(TypeEntry) + TypeEntry.HelloLogger, "Missing.strict", ".", List(Text)).Length is 1
+	Execute.HasRun(NativeFolder.Program(Runless, "Examples/HelloLogger.strict", ".", List(Text)).First)
 	isOld = loaded.Length > 0 then Execute.HasRun(loaded.First) is false else false
 	isOld then Execute(selection).Load(path, root, false, sources) else loaded
 Paths(path Text) Texts
@@ -56,11 +56,11 @@ Files(folder Text) Texts
 	for isRecursive then ResolveCheck.Tree(folder) else List(Text) + folder
 		files = files + Directory.Files(value, "*.strict")
 	files
-Collected(path Text, root Text) List(TypeEntry)
-	NativeFolder.Collected("Examples/NativeAdd/native", ".").Length is 0
+Collect(path Text, root Text) List(TypeEntry)
+	NativeFolder.Collect("Examples/NativeAdd/native", ".").Length is 0
 	folders = Directory.Exists(path) and isRecursive then ResolveCheck.Tree(path) else List(Text) + path
 	chunks = NativeChunks.Of(folders, File(NativeCompiler.Executable(root)).Exists)
-	counted = NativeChunks(selection).Compiled(chunks, root, NativeBuild.Output(path, false))
+	counted = NativeChunks(selection).Compile(chunks, root, NativeBuild.Output(path, false))
 	mutable mains = List(Mutable(TypeEntry))
 	mutable used = List(Mutable(TypeEntry))
 	for counted
@@ -68,10 +68,10 @@ Collected(path Text, root Text) List(TypeEntry)
 			return List(TypeEntry)
 		mains = mains + Leading(value, chunks(index).Length)
 		used = used + value
-	Merged(mains, used)
-Qualified(types List(TypeEntry), path Text, root Text) List(TypeEntry)
-	NativeFolder.Qualified(Greeting, Hellos.First, ".").First.Name is "Strict/Examples/HelloLogger"
-	NativeFolder.Qualified(List(TypeEntry) + Counting, Hellos.First, ".").First.Name is "Strict/A"
+	Merge(mains, used)
+Qualify(types List(TypeEntry), path Text, root Text) List(TypeEntry)
+	NativeFolder.Qualify(Greeting, Hellos.First, ".").First.Name is "Strict/Examples/HelloLogger"
+	NativeFolder.Qualify(List(TypeEntry) + Counting, Hellos.First, ".").First.Name is "Strict/A"
 	package = Path(FileCompiler.FullName(FileCompiler.Normalize(path), root)).PathOnly.text
 	for types
 		value.Name.IndexOf("/") < 0 then TypeEntry(value, Name = package + "/" + value.Name) else value
@@ -79,8 +79,8 @@ Leading(types List(TypeEntry), count Number) List(TypeEntry)
 	NativeFolder.Leading((Counting, Other), 1) is List(TypeEntry) + Counting
 	for Range(0, count)
 		types(value)
-Counted(paths Texts, root Text) List(TypeEntry) slow
-	NativeFolder.Counted(Hellos, ".")(1).Name is "Strict/Examples/HelloLogger"
+CollectAll(paths Texts, root Text) List(TypeEntry) slow
+	NativeFolder.CollectAll(Hellos, ".")(1).Name is "Strict/Examples/HelloLogger"
 	files = SourceFiles(root).Of(FileCompiler.Normalize(paths.First), paths)
 	rounds = Rounds(paths, root, files, ResolveCheck.Inference(files))
 	if rounds.Length < paths.Length
@@ -90,21 +90,21 @@ Counted(paths Texts, root Text) List(TypeEntry) slow
 	for rounds
 		mains.Add(value.entries.First)
 		used = used + value.entries
-	Qualified(Merged(mains, used), paths.First, root)
+	Qualify(Merge(mains, used), paths.First, root)
 Rounds(paths Texts, root Text, files Texts, inference TypeInference) List(LinkRound)
 	NativeFolder.Rounds(List(Text) + "Missing.strict", ".", List(Text), ResolveCheck.Counting).Length is 0
 	mutable rounds = List(Mutable(LinkRound))
 	mutable known = Dictionary(Text, TypeEntry)
 	for paths
-		linked = Typed(value, root, files, inference, known)
+		linked = LinkTypes(value, root, files, inference, known)
 		if linked.entries.Length is 0
 			return rounds
 		rounds.Add(linked)
 		known = linked.Known(known)
 	rounds
-Typed(path Text, root Text, files Texts, inference TypeInference, known Dictionary(Text, TypeEntry)) LinkRound
+LinkTypes(path Text, root Text, files Texts, inference TypeInference, known Dictionary(Text, TypeEntry)) LinkRound
 	constant none = Dictionary(Text, TypeEntry)
-	NativeFolder.Typed("Missing.strict", ".", List(Text), ResolveCheck.Counting, none).entries.Length is 0
+	NativeFolder.LinkTypes("Missing.strict", ".", List(Text), ResolveCheck.Counting, none).entries.Length is 0
 	if File(path).Exists is false
 		return FileCompiler.Unlinked
 	if selection is "" and Execute.Stale(List(Text) + path).Length is 0
@@ -113,9 +113,9 @@ Typed(path Text, root Text, files Texts, inference TypeInference, known Dictiona
 	if linked.entries.Length is 0
 		logger.Log("CompilationFailed: " + path)
 	linked
-Merged(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)
-	NativeFolder.Merged(List(TypeEntry) + Counting, (Initializing, Counting)).First.methods.Length is 2
-	NativeFolder.Merged(List(TypeEntry) + Counting, List(TypeEntry) + Other).Length is 2
+Merge(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)
+	NativeFolder.Merge(List(TypeEntry) + Counting, (Initializing, Counting)).First.methods.Length is 2
+	NativeFolder.Merge(List(TypeEntry) + Counting, List(TypeEntry) + Other).Length is 2
 	mutable merged = List(TypeEntry) + known
 	mutable names = Names(known)
 	for added
@@ -124,14 +124,14 @@ Merged(known List(TypeEntry), added List(TypeEntry)) List(TypeEntry)
 			merged = merged + value
 			names = names + value.Name
 		else
-			merged(at) = Joined(merged(at), value)
+			merged(at) = Join(merged(at), value)
 	merged
 Names(types List(TypeEntry)) Texts
 	NativeFolder.Names((Counting, Other)) is ("Strict/A", "Strict/B")
 	for types
 		value.Name
-Joined(type TypeEntry, other TypeEntry) TypeEntry
-	NativeFolder.Joined(Counting, Counting).methods.Length is 1
+Join(type TypeEntry, other TypeEntry) TypeEntry
+	NativeFolder.Join(Counting, Counting).methods.Length is 1
 	known = Signatures(type.methods)
 	added = Signatures(other.methods)
 	mutable methods = type.methods

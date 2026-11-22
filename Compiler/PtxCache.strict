@@ -4,22 +4,22 @@ constant Single = PtxCache("Compiler/output/Single")
 constant Metal = DeviceBuild(Toolchain(Platform.MacOS, "."))
 constant Reducing = PtxCache("Compiler/output/Reducing")
 constant Known = PtxCache("Compiler/output/Known")
-constant Doubles = Text.Combine(MlirGpu.Exported(DeviceBuild.Doubling), ",")
-constant Combining = DeviceBuild.Local.Combined(DeviceBuild.Doubling, DeviceBuild.Without)
+constant Doubles = Text.Combine(MlirGpu.Export(DeviceBuild.Doubling), ",")
+constant Combining = DeviceBuild.Local.Combine(DeviceBuild.Doubling, DeviceBuild.Without)
 constant Empty = "  llvm.mlir.global internal constant @strict_gpu_ptx(\"\\00\") : !llvm.array<1 x i8>\n}"
 constant Quoted = "module {\n  \"" + MlirGpu.Marker + "\"\n"
 constant Pruning = " --symbol-dce --mlir-disable-threading -o "
-Unlaunched(program Text) Text
-	Sample.Unlaunched("module {\n}") is "module {\n" + Empty
-	Sample.Unlaunched("module {\n}\n" + DeviceBuild.Doubling) is "module {\n" + Empty
-	Sample.Unlaunched(Quoted + "}\n" + DeviceBuild.Doubling) is Quoted + Empty
+Unlaunch(program Text) Text
+	Sample.Unlaunch("module {\n}") is "module {\n" + Empty
+	Sample.Unlaunch("module {\n}\n" + DeviceBuild.Doubling) is "module {\n" + Empty
+	Sample.Unlaunch(Quoted + "}\n" + DeviceBuild.Doubling) is Quoted + Empty
 	marker = program.IndexOf("\n" + MlirGpu.Marker)
 	host = marker < 0 then program else program.Substring(0, marker)
 	host.Substring(0, host.LastIndexOf("}")) + Empty
 Previous(device Text, isTiling Boolean, ending = ".kernels.mlir") Texts
 	PtxCache("Compiler/output/missing").Previous("module {\n}", false).Length is 0
-	Sample.Remembered("module {\n\n}", ("// new", "// old")) is ("// new", "// old")
-	DeviceBuild.Missing.Embedded("module {\n}", ("// new", "// old"), Sample.base).Length > 0
+	Sample.Remember("module {\n\n}", ("// new", "// old")) is ("// new", "// old")
+	DeviceBuild.Missing.Emb("module {\n}", ("// new", "// old"), Sample.base).Length > 0
 	Sample.Previous("module {\n\n}", true) is ("// new", "// old")
 	Sample.Previous("module {\n\n}", false) is ("// new")
 	Sample.Previous("module {\n}", true).Length is 0
@@ -31,20 +31,20 @@ Previous(device Text, isTiling Boolean, ending = ".kernels.mlir") Texts
 Read(ending Text) Text
 	Sample.Read(".ptx") is "// new"
 	Text.Combine(File(base + ending).ReadLines, "\n")
-Remembered(device Text, ptx Texts) Texts
-	PtxCache("Compiler/output/Failed").Remembered("module {\n}", "clang failed: x") is ("clang failed: x")
+Remember(device Text, ptx Texts) Texts
+	PtxCache("Compiler/output/Failed").Remember("module {\n}", "clang failed: x") is ("clang failed: x")
 	File("Compiler/output/Failed.kernels.mlir").Exists is false
-	PtxCache("Compiler/output/Written").Remembered("module {\n}", ("// new", "// old")) is ("// new", "// old")
+	PtxCache("Compiler/output/Written").Remember("module {\n}", ("// new", "// old")) is ("// new", "// old")
 	PtxCache("Compiler/output/Written").Read(".older.ptx") is "// old"
-	PtxCache("Compiler/output/Unkeyed").Remembered("", List(Text) + "// new") is List(Text) + "// new"
+	PtxCache("Compiler/output/Unkeyed").Remember("", List(Text) + "// new") is List(Text) + "// new"
 	File("Compiler/output/Unkeyed.kernels.mlir").Exists is false
 	if ptx.First.StartsWith("//") is false
 		return ptx
-	isKeyed = device is "" then true else Saved(".kernels.mlir", device) is not Error
+	isKeyed = device is "" then true else Save(".kernels.mlir", device) is not Error
 	HasWritten(ptx, ".ptx") and isKeyed then ptx else List(Text) + ("GPU cache write failed: " + base)
-Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
-	PtxCache("Compiler/output/Invalid").Built("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
-	PtxCache("Compiler/output/Metal").Built("module {\n}", false, Metal, "").Length is 1
+Build(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
+	PtxCache("Compiler/output/Invalid").Build("x", false, DeviceBuild.Missing, "").First.StartsWith("mlir-opt failed")
+	PtxCache("Compiler/output/Metal").Build("module {\n}", false, Metal, "").Length is 1
 	File("Compiler/output/Metal.ptx").Exists is false
 	key = Fingerprint(device, isTiling, builder, kept)
 	isCached = builder.tools.platform is not Platform.MacOS
@@ -53,30 +53,30 @@ Built(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Texts
 		return previous
 	File(base + ".gpu.mlir").Write(device)
 	isSplit = isCached and kept is not ""
-	built = isSplit then GpuBuilt(base, builder).Indexed(device, kept, isTiling) else builder.Ptx(base, isTiling, kept)
-	isCached then Remembered(key, built) else built
-Reduced(isTiling Boolean, builder DeviceBuild, kept Text) Texts
-	Reducing.Built(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")
-	Reducing.Saved((".ptx", ".gpu.mlir"), ("// reused", Combining + "\n// changed")) is not Error
-	Reducing.Reduced(false, DeviceBuild.Local, Doubles) is ("// reused")
-	key = Kept(builder.tools, kept) is "" then Fingerprint(Read(".gpu.kept.mlir"), isTiling, builder, kept) else ""
+	built = isSplit then GpuBuilt(base, builder).IndexPtx(device, kept, isTiling) else builder.Ptx(base, isTiling, kept)
+	isCached then Remember(key, built) else built
+Reduce(isTiling Boolean, builder DeviceBuild, kept Text) Texts
+	Reducing.Build(Combining, false, DeviceBuild.Local, Doubles).First.StartsWith("//")
+	Reducing.Save((".ptx", ".gpu.mlir"), ("// reused", Combining + "\n// changed")) is not Error
+	Reducing.Reduce(false, DeviceBuild.Local, Doubles) is ("// reused")
+	key = Keep(builder.tools, kept) is "" then Fingerprint(Read(".gpu.kept.mlir"), isTiling, builder, kept) else ""
 	previous = key is "" then List(Text) else Previous(key, isTiling, ".kept.mlir")
 	if previous.Length > 0
 		return previous
 	File(base + ".kept.mlir").Delete
 	built = builder.Ptx(base, isTiling, kept)
 	if key is not "" and built.First.StartsWith("//") and HasWritten(built, ".ptx")
-		Saved(".kept.mlir", key)
+		Save(".kept.mlir", key)
 	built
-Kept(tools Toolchain, kept Text) Text
-	PtxCache("Compiler/output/missing").Kept(DeviceBuild.Missing.tools, "A").StartsWith("mlir-opt failed")
-	Reducing.Kept(DeviceBuild.Local.tools, "") is ""
+Keep(tools Toolchain, kept Text) Text
+	PtxCache("Compiler/output/missing").Keep(DeviceBuild.Missing.tools, "A").StartsWith("mlir-opt failed")
+	Reducing.Keep(DeviceBuild.Local.tools, "") is ""
 	Reducing.Read(".gpu.kept.mlir").IndexOf("// changed") is -1
 	Reducing.Read(".gpu.kept.mlir").IndexOf("@strict_device_thread_index") > 0
-	input = tools.Quoted(base + ".gpu.mlir")
-	output = tools.Quoted(base + ".gpu.kept.mlir")
+	input = tools.Quote(base + ".gpu.mlir")
+	output = tools.Quote(base + ".gpu.kept.mlir")
 	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
-	ran = ToolRunner(tools.Located("mlir-opt")).Execute(input + privatized + Pruning + output)
+	ran = ToolRunner(tools.Locate("mlir-opt")).Execute(input + privatized + Pruning + output)
 	ran.HasFailed then "mlir-opt failed: " + ran.error else ""
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf("sm_120") > 0
@@ -85,15 +85,15 @@ Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	architectures = Text.Combine(CubinBuild.Architectures, " ") + " " + PtxLibraries.Layout
 	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept + " " + architectures
 	for ("clang", "mlir-opt", "mlir-translate")
-		path = Process.Find(tools.Located(value)).executable
+		path = Process.Find(tools.Locate(value)).executable
 		key = key + "\n// " + path + " " + File(path).Modified
 	if tools.platform is Platform.MacOS
 		key = key + "\n// " + File(Process.Current.executable).Modified
 	key
-Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
-	Known.Saved((".ptx", ".shared.mlir"), ("// known", Fingerprint("x", false, DeviceBuild.Missing, ""))) is not Error
-	Known.Shared("x", false, DeviceBuild.Missing) is ("// known")
-	Known.Shared("y", false, DeviceBuild.Missing) is Error("DirectoryNotCreated")
+Share(device Text, isTiling Boolean, builder DeviceBuild) Texts
+	Known.Save((".ptx", ".shared.mlir"), ("// known", Fingerprint("x", false, DeviceBuild.Missing, ""))) is not Error
+	Known.Share("x", false, DeviceBuild.Missing) is ("// known")
+	Known.Share("y", false, DeviceBuild.Missing) is Error("DirectoryNotCreated")
 	direct = Fingerprint(device, isTiling, builder, "")
 	isReady = builder.isShipped is false or File(base + ".fatbin").Exists
 	known = isReady then Previous(direct, isTiling, ".shared.mlir") else List(Text)
@@ -101,23 +101,23 @@ Shared(device Text, isTiling Boolean, builder DeviceBuild) Texts
 		return known
 	built = SharedKept(device, isTiling, builder)
 	if built.First.StartsWith("//")
-		Saved(".shared.mlir", direct)
+		Save(".shared.mlir", direct)
 	built
 SharedKept(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	File(base + ".gpu.mlir").Write(device)
-	reduced = Kept(builder.tools, "") is "" then Read(".gpu.kept.mlir") else device
+	reduced = Keep(builder.tools, "") is "" then Read(".gpu.kept.mlir") else device
 	key = Fingerprint(reduced, isTiling, builder, "")
 	folder = builder.tools.root + "/Tools/PtxCache"
 	Directory.Create(builder.tools.root + "/Tools")
 	Directory.Create(folder)
 	cache = PtxCache(folder + "/" + HashCode(key).number + "/module")
-	previous = cache.Waited(key, isTiling)
-	ptx = previous.Length > 0 then Remembered("", previous) else SharedBuild(cache, reduced, isTiling, builder)
+	previous = cache.Wait(key, isTiling)
+	ptx = previous.Length > 0 then Remember("", previous) else SharedBuild(cache, reduced, isTiling, builder)
 	isShipped = builder.isShipped and ptx.First.StartsWith("//")
-	failed = isShipped then CubinBuild(builder.tools).Shipped(cache.base, base) else ""
+	failed = isShipped then CubinBuild(builder.tools).Ship(cache.base, base) else ""
 	failed is "" then ptx else List(Text) + failed
-Waited(key Text, isTiling Boolean) Texts slow
-	PtxCache("Compiler/output/Unbuilt/module").Waited("module {\n}", false).Length is 0
+Wait(key Text, isTiling Boolean) Texts slow
+	PtxCache("Compiler/output/Unbuilt/module").Wait("module {\n}", false).Length is 0
 	lock = File(Path(base).PathOnly.text + ".lock")
 	started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
@@ -130,15 +130,15 @@ SharedBuild(cache PtxCache, device Text, isTiling Boolean, builder DeviceBuild) 
 	temporary = Path(cache.base).PathOnly.text + "." + 1000000000.Random.Floor
 	Directory.Create(temporary)
 	stage = PtxCache(temporary + "/module")
-	ptx = stage.Built(device, isTiling, builder, "")
-	Intermediates.Removed(stage.base)
+	ptx = stage.Build(device, isTiling, builder, "")
+	Intermediates.Remove(stage.base)
 	if ptx.First.StartsWith("//")
 		File(temporary).Rename(Path(cache.base).PathOnly.text)
-	result = Remembered("", ptx)
+	result = Remember("", ptx)
 	if Directory.Exists(temporary)
-		Discarded(stage)
+		Discard(stage)
 	result
-Discarded(stage PtxCache)
+Discard(stage PtxCache)
 	for (".ptx", ".older.ptx", ".kernels.mlir")
 		File(stage.base + value).Delete
 	Directory.Delete(Path(stage.base).PathOnly.text)
@@ -151,7 +151,7 @@ IsWritten(ptx Texts, ending Text) Boolean
 HasWritten(ptx Texts, ending Text) Boolean
 	Single.HasWritten(List(Text) + "// only", ".ptx")
 	File("Compiler/output/Single.older.ptx").Exists is false and Single.IsWritten("// only", ".ptx")
-	Sample.Saved(".fatbin", "binary") is not Error
+	Sample.Save(".fatbin", "binary") is not Error
 	Sample.HasWritten(("// new", "// old"), ".ptx")
 	CubinBuild.Local.IsOutdated(Sample.base) is false
 	older = ptx.Length > 1 then ptx.Last else ""
@@ -159,13 +159,13 @@ HasWritten(ptx Texts, ending Text) Boolean
 		return true
 	if older is ""
 		File(base + ".older" + ending).Delete
-	Saved(older is "" then List(Text) + ending else (ending, ".older" + ending), (ptx.First, older))
+	Save(older is "" then List(Text) + ending else (ending, ".older" + ending), (ptx.First, older))
 	IsWritten(ptx, ending)
-Saved(endings Texts, texts Texts)
-	Sample.Saved((".a", ".b"), ("1", "2")) is not Error
+Save(endings Texts, texts Texts)
+	Sample.Save((".a", ".b"), ("1", "2")) is not Error
 	for endings
-		Saved(value, texts(index))
-Saved(ending Text, text Text)
+		Save(value, texts(index))
+Save(ending Text, text Text)
 	path = base + ending
 	temporary = path + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(text)

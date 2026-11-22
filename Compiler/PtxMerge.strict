@@ -16,9 +16,9 @@ Other(names Texts) List(PtxFunction)
 	for functions
 		if value.name is not in names
 			value
-Merged(fresh List(PtxFunction)) List(PtxFunction)
-	Both.Merged(Helper).Length is 2 and Both.Merged(Helper).First.name is "H3Block_Gated_5_gpu7s"
-	PtxMerge(Helper).Merged(Both.functions).Last.name is "H3Block_Gated_5_gpu7s"
+Merge(fresh List(PtxFunction)) List(PtxFunction)
+	Both.Merge(Helper).Length is 2 and Both.Merge(Helper).First.name is "H3Block_Gated_5_gpu7s"
+	PtxMerge(Helper).Merge(Both.functions).Last.name is "H3Block_Gated_5_gpu7s"
 	Latest(fresh) + PtxMerge(fresh).Other(Titles)
 Latest(fresh List(PtxFunction)) List(PtxFunction)
 	Both.Latest(List(PtxFunction)).Length is 2

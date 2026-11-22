@@ -26,16 +26,16 @@ Emitted Texts
 	if kind is InstructionType.StoreConstantToVariable
 		return Literal(PayloadDecoder(entry).Value(0), "%v_" + entry.texts.Last, "")
 	if kind is InstructionType.LoadVariableToRegister
-		return function.Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), Temp(""))
+		return function.Copy("%v_" + entry.texts(0), "%r" + entry.payload(0), Temp(""))
 	if kind is InstructionType.StoreRegisterToVariable
-		return MlirOwned(function, position).Stored(entry)
-	kind is InstructionType.Return then Returned(entry) else Jumped(entry)
+		return MlirOwned(function, position).Store(entry)
+	kind is InstructionType.Return then Leave(entry) else Jump(entry)
 Binary(entry InstructionEntry) Texts
 	Copy.Binary(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
 	if MlirTexts(function, position).IsSum
-		return MlirTexts(function, position).Concatenated(entry)
+		return MlirTexts(function, position).Concatenate(entry)
 	operators = MlirListOperators(function, position)
-	operators.IsOperation then operators.Operated(entry) else Calculated(entry)
+	operators.IsOperation then operators.Operate(entry) else Calculate(entry)
 Temp(suffix Text) Text
 	Copy.Temp("c") is "%t0c"
 	Loading.Emitted is ("    %t0 = llvm.load %v_a : !llvm.ptr -> f64", "    llvm.store %t0, %r1 : f64, !llvm.ptr")
@@ -51,7 +51,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text, named = "") Texts
 	if literal.kind is "List"
 		return MlirLists(function, position, named).Literal(literal, slot, suffix)
 	if literal.kind is not in ("Number", "Boolean", "None", "Strict/Error")
-		return List(Text) + Unsupported(literal.kind + " constant")
+		return List(Text) + Unsupport(literal.kind + " constant")
 	loaded = literal.kind is "Strict/Error" then AnyError else " = arith.constant " + Hex(literal.number) + " : f64"
 	("    " + Temp(suffix + "c") + loaded, function.Store(Temp(suffix + "c"), slot))
 Hex(number Number) Text
@@ -61,25 +61,25 @@ Hex(number Number) Text
 	for 8
 		result = result + MetalValue("").Hex(bytes(7 - index), 2)
 	result
-Returned(entry InstructionEntry) Texts
-	MlirStatements(Copy.function, 2).Returned(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
-	Text.Combine(MlirStatements(MlirChecks.Presenting, 2).Returned(InstructionEntry.Return(0))).IndexOf("frame_ended") > 0
-	Text.Combine(MlirStatements(MlirDying.Dropping.function, 10).Returned(MlirDying.Dropped)).IndexOf("rc_dead(%t10d0") > 0
-	Copy.Returned(InstructionEntry.Return(1)) is Returning
-	kept = MlirChanged(function, position).Kept(false)
+Leave(entry InstructionEntry) Texts
+	MlirStatements(Copy.function, 2).Leave(InstructionEntry.Return(0)).Last is "    return %t2 : f64"
+	Text.Combine(MlirStatements(MlirChecks.Presenting, 2).Leave(InstructionEntry.Return(0))).IndexOf("frame_ended") > 0
+	Text.Combine(MlirStatements(MlirDying.Dropping.function, 10).Leave(MlirDying.Dropped)).IndexOf("rc_dead(%t10d0") > 0
+	Copy.Leave(InstructionEntry.Return(1)) is Returning
+	kept = MlirChanged(function, position).Keep(false)
 	if MlirLayout(function).IsInitializer
-		return kept + MlirLayout(function).Returned(position)
-	dying = MlirDying(function, position).Returned(entry)
+		return kept + MlirLayout(function).EmitReturn(position)
+	dying = MlirDying(function, position).EmitReturn(entry)
 	loaded = (List(Text) + function.Load(Temp(""), "%r" + entry.payload(0))) + dying
 	kept + loaded + MlirLines(function).Framed + ("    return " + Temp("") + " : f64")
-Jumped(entry InstructionEntry) Texts
-	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
+Jump(entry InstructionEntry) Texts
+	Copy.Jump(InstructionEntry.Jump(InstructionType.JumpEnd, 0)).Length is 0
 	if entry.kind is InstructionType.JumpEnd
 		return List(Text)
 	if entry.kind is InstructionType.CheckError
 		return MlirChecks(function, position).Emitted
 	if entry.kind is not in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
-		return List(Text) + Unsupported("instruction kind " + entry.kind)
+		return List(Text) + Unsupport("instruction kind " + entry.kind)
 	target = "^bb" + JumpEnd(PayloadDecoder(entry).SevenBit(0))
 	next = "^bb" + (position + 1)
 	branches = entry.kind is InstructionType.JumpToIdIfTrue then target + ", " + next else next + ", " + target
@@ -92,42 +92,42 @@ JumpEnd(id Number) Number
 		if value.kind is InstructionType.JumpEnd and PayloadDecoder(value).SevenBit(0) is id
 			return index
 	function.method.instructions.Length
-Unsupported(what Text) Text
-	Copy.Unsupported("List") is "unsupported: List in Shape_Run_0"
-	Copy.Jumped(InstructionEntry.Return(0)).First is Copy.Unsupported("instruction kind " + InstructionType.Return)
-	Copy.Jumped(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 1)).Last is "    cf.cond_br %t0, ^bb1, ^bb3"
+Unsupport(what Text) Text
+	Copy.Unsupport("List") is "unsupported: List in Shape_Run_0"
+	Copy.Jump(InstructionEntry.Return(0)).First is Copy.Unsupport("instruction kind " + InstructionType.Return)
+	Copy.Jump(InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 1)).Last is "    cf.cond_br %t0, ^bb1, ^bb3"
 	"unsupported: " + what + " in " + function.Symbol
-Calculated(entry InstructionEntry) Texts
-	Copy.Calculated(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
-	Copy.Calculated(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))) is Added
-	Copy.Calculated(InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))) is Equaled
-	Copy.Calculated(MlirKindTests.TextTest).Last.EndsWith("%flag : i1, !llvm.ptr")
+Calculate(entry InstructionEntry) Texts
+	Copy.Calculate(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))).Length is 4
+	Copy.Calculate(InstructionEntry.Binary(InstructionType.Add, (0, 1, 2))) is Added
+	Copy.Calculate(InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))) is Equaled
+	Copy.Calculate(MlirKindTests.TextTest).Last.EndsWith("%flag : i1, !llvm.ptr")
 	constant left = Temp("a")
 	constant right = Temp("b")
 	loads = (function.Load(left, "%r" + entry.payload(1)), function.Load(right, "%r" + entry.payload(2)))
 	if entry.kind is InstructionType.OfType
-		return MlirKindTests(function, position).Tested(entry)
+		return MlirKindTests(function, position).EmitTest(entry)
 	if MlirEquality(function, position).Handles(entry)
-		return MlirEquality(function, position).Compared(entry)
+		return MlirEquality(function, position).Compare(entry)
 	if entry.kind > InstructionType.ArithmeticSeparator
-		return loads + Compared(entry, left + ", " + right)
-	lines = loads + Operated(entry.kind, left, right) + MlirRounded(function, position).Stored(entry)
+		return loads + Compare(entry, left + ", " + right)
+	lines = loads + Operate(entry.kind, left, right) + MlirRounded(function, position).Store(entry)
 	entry.kind is InstructionType.Modulo then MlirCounter(function, position).Remainder(entry, lines) else lines
-Operated(kind Number, left Text, right Text) Text
-	Copy.Operated(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0
-	Copy.Operated(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
-	Summing.Operated(InstructionType.Add, "%a", "%b") is "    %t5c = arith.addf %a, %b fastmath<reassoc,contract> : f64"
-	MlirStatements(MlirFastLoop.Doubling.function, 6).Operated(InstructionType.Add, "%a", "%b").IndexOf("fastmath") is -1
-	Copy.Operated(InstructionType.Power, "%a", "%b").IndexOf("@strict_power(%a, %b)") > 0
-	MlirStatements(MlirFastLoop.Doubling.function, 6).Operated(InstructionType.Power, "%a", "%b").IndexOf("intr.pow(") > 0
+Operate(kind Number, left Text, right Text) Text
+	Copy.Operate(InstructionType.Modulo, "%a", "%b").IndexOf("@strict_remainder(%a, %b)") > 0
+	Copy.Operate(InstructionType.Add, "%a", "%b") is "    %t0c = arith.addf %a, %b : f64"
+	Summing.Operate(InstructionType.Add, "%a", "%b") is "    %t5c = arith.addf %a, %b fastmath<reassoc,contract> : f64"
+	MlirStatements(MlirFastLoop.Doubling.function, 6).Operate(InstructionType.Add, "%a", "%b").IndexOf("fastmath") is -1
+	Copy.Operate(InstructionType.Power, "%a", "%b").IndexOf("@strict_power(%a, %b)") > 0
+	MlirStatements(MlirFastLoop.Doubling.function, 6).Operate(InstructionType.Power, "%a", "%b").IndexOf("intr.pow(") > 0
 	result = "    " + Temp("c") + " = "
 	if kind is in (InstructionType.Power, InstructionType.Modulo)
-		return result + Called(kind) + "(" + left + ", " + right + ") : (f64, f64) -> f64"
+		return result + Call(kind) + "(" + left + ", " + right + ") : (f64, f64) -> f64"
 	isSum = MlirFastLoop(function, function.FastLoop).IsAccumulated(position)
 	flags = isSum then Reassociated else (MlirRangeLoop(function, position).IsRanged then MlirRangeLoop.Flags else "")
 	result + "arith." + Operation(kind) + " " + left + ", " + right + flags + " : f64"
-Called(kind Number) Text
-	Copy.Called(InstructionType.Modulo) is "func.call @strict_remainder"
+Call(kind Number) Text
+	Copy.Call(InstructionType.Modulo) is "func.call @strict_remainder"
 	if kind is InstructionType.Modulo
 		return "func.call @strict_remainder"
 	function.FastLoop >= 0 then "llvm.intr.pow" else "func.call @strict_power"
@@ -136,7 +136,7 @@ Operation(kind Number) Text
 	Copy.Operation(InstructionType.Add) is "addf"
 	Copy.Operation(InstructionType.Subtract) is "subf"
 	Copy.Operation(InstructionType.Multiply) is "mulf"
-	Copy.Operated(InstructionType.Power, "%a", "%b") is "    %t0c = func.call @strict_power(%a, %b) : (f64, f64) -> f64"
+	Copy.Operate(InstructionType.Power, "%a", "%b") is "    %t0c = func.call @strict_power(%a, %b) : (f64, f64) -> f64"
 	if kind is InstructionType.Add
 		return "addf"
 	kind is InstructionType.Subtract then "subf" else kind is InstructionType.Multiply then "mulf" else "divf"
@@ -148,18 +148,18 @@ Predicate(kind Number) Text
 	if kind is InstructionType.Equal
 		return "oeq"
 	kind is InstructionType.NotEqual then "une" else kind is InstructionType.LessThan then "olt" else "ogt"
-Compared(entry InstructionEntry, operands Text) Texts
-	Copy.Compared(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
-	Exact is in Singled.Compared(InstructionEntry.Binary(InstructionType.LessThan, (0, 1)), "%a, %b")
-	exact = MlirRational(MlirExact(function, position)).Compared(entry, Temp("f"), Temp("") + "c")
+Compare(entry InstructionEntry, operands Text) Texts
+	Copy.Compare(InstructionEntry.Binary(InstructionType.Equal, (0, 1)), "%a, %b").Length is 2
+	Exact is in Singled.Compare(InstructionEntry.Binary(InstructionType.LessThan, (0, 1)), "%a, %b")
+	exact = MlirRational(MlirExact(function, position)).Compare(entry, Temp("f"), Temp("") + "c")
 	compared = Temp("") + (exact.Length is 0 then "c" else "f")
 	compare = "    " + compared + " = arith.cmpf " + Predicate(entry.kind) + ", " + operands + " : " + function.Float
 	prefix = exact.Length is 3 then List(Text) else List(Text) + compare
 	flagged = prefix + exact + ("    llvm.store " + Temp("") + "c, %flag : i1, !llvm.ptr")
-	entry.payload(0) is not 3 then flagged else flagged + Numbered(Temp("c"), entry)
-Numbered(flag Text, entry InstructionEntry) Texts
-	Copy.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))).Length is 2
-	Singled.Numbered("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))) is Flagged
+	entry.payload(0) is not 3 then flagged else flagged + EmitNumber(Temp("c"), entry)
+EmitNumber(flag Text, entry InstructionEntry) Texts
+	Copy.EmitNumber("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))).Length is 2
+	Singled.EmitNumber("%f", InstructionEntry.Binary(InstructionType.Equal, (0, 1, 2))) is Flagged
 	number = "    " + Temp("d") + " = arith.uitofp " + flag + " : i1 to " + function.Float
 	slot = "%r" + entry.payload(3)
 	exact = MlirExact(function, position)

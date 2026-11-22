@@ -39,15 +39,15 @@ IsReference Boolean
 	Built.IsReference
 	Area.IsReference is false
 	MlirHanded(MlirPairs.Rewrapped.function, 0).IsReference is false
-	MlirLayout(function).Represented(MlirKinds(function).WrittenKind(position)) is not in ("Number", "Boolean", "Pair")
-Wrapped(emitted Texts) Texts
-	Built.Wrapped(List(Text)).Last is "    llvm.store volatile %t1hand, %handed1 : f64, !llvm.ptr"
-	Area.Wrapped(List(Text)).First is "    %t2hand1 = llvm.load volatile %handed1 : !llvm.ptr -> f64"
-	Area.Wrapped(List(Text)).Last is "    llvm.store volatile %zero, %handed1 : f64, !llvm.ptr"
+	MlirLayout(function).Represent(MlirKinds(function).WrittenKind(position)) is not in ("Number", "Boolean", "Pair")
+Wrap(emitted Texts) Texts
+	Built.Wrap(List(Text)).Last is "    llvm.store volatile %t1hand, %handed1 : f64, !llvm.ptr"
+	Area.Wrap(List(Text)).First is "    %t2hand1 = llvm.load volatile %handed1 : !llvm.ptr -> f64"
+	Area.Wrap(List(Text)).Last is "    llvm.store volatile %zero, %handed1 : f64, !llvm.ptr"
 	mutable reloads = List(Mutable(Text))
 	mutable clears = List(Mutable(Text))
 	for Writers
-		reloads = reloads + Reloaded(value)
+		reloads = reloads + Reload(value)
 		clears = clears + ("    llvm.store volatile %zero, %handed" + value + Stored)
 	reloads + emitted + clears + Kept
 Writers Numbers
@@ -59,8 +59,8 @@ Writers Numbers
 		if writer >= 0 and MlirHanded(function, writer).Reader is position
 			writers.Add(writer)
 	writers
-Reloaded(writer Number) Texts
-	Area.Reloaded(1).Last is "    llvm.store %t2hand1, %r1 : f64, !llvm.ptr"
+Reload(writer Number) Texts
+	Area.Reload(1).Last is "    llvm.store %t2hand1, %r1 : f64, !llvm.ptr"
 	reloaded = "%t" + position + "hand" + writer
 	loaded = "    " + reloaded + " = llvm.load volatile %handed" + writer + " : !llvm.ptr -> f64"
 	(loaded, function.Store(reloaded, "%r" + function.method.instructions(writer).payload(0)))

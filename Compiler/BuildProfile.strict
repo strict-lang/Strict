@@ -1,97 +1,97 @@
 constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
 IsDetailed Boolean
 	IsRequested
-Reported(phase Text, started Number)
+Report(phase Text, started Number)
 	elapsed = Process.Elapsed - started
 	if IsDetailed or elapsed >= 3
 		logger.Log((IsDetailed then "[build] " + phase else phase) + ": " + elapsed.Round(IsDetailed then 4 else 2) + " s")
 IsCurrent(cache NativeCache, phase = "Compiler build cache") Boolean
 	started = Process.Elapsed
 	current = cache.IsCurrent
-	Reported(phase + (current then " hit" else " miss"), started)
+	Report(phase + (current then " hit" else " miss"), started)
 	current
 Inputs(cache NativeCache, files Texts) Texts
 	started = Process.Elapsed
 	paths = cache.Inputs(files).Unique
-	Reported("Dependency inventory (" + paths.Length + " inputs)", started)
+	Report("Dependency inventory (" + paths.Length + " inputs)", started)
 	before = Process.Elapsed
 	inputs = cache.Snapshot(paths)
-	Reported("Dependency snapshot", before)
+	Report("Dependency snapshot", before)
 	inputs
-Compiled(cache NativeCache) Number
+Compile(cache NativeCache) Number
 	started = Process.Elapsed
 	files = cache.IsEnabled then cache.Files else List(Text)
 	if files.Length > 0
-		Reported("Frontend / source discovery (" + files.Length + " files)", started)
+		Report("Frontend / source discovery (" + files.Length + " files)", started)
 	inputs = cache.IsEnabled then Inputs(cache, files) else List(Text)
-	result = NativeCompiler.Compiled(cache.command, cache.rest, files)
-	Reported("Total compilation", started)
+	result = NativeCompiler.Compile(cache.command, cache.rest, files)
+	Report("Total compilation", started)
 	if result is 0
 		before = Process.Elapsed
-		cache.Saved(inputs)
-		Reported("Build stamp write", before)
+		cache.Save(inputs)
+		Report("Build stamp write", before)
 	result
 Program(module MlirModule, base Text, root Text, build NativeBuild) Text
 	started = Process.Elapsed
 	text = module.Text
-	Reported("MLIR emission", started)
+	Report("MLIR emission", started)
 	before = Process.Elapsed
-	program = build.Device(WebBuild.Shaded(text, base, build.isWeb), base, root)
-	Reported("GPU preparation", before)
+	program = build.Device(WebBuild.BuildShaders(text, base, build.isWeb), base, root)
+	Report("GPU preparation", before)
 	program
 Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") TypeEntry
 	started = Process.Elapsed
 	entry = withTests then TestCodegen(main, isQuiet, selection).Entry else main.Entry
-	Reported("Frontend / main codegen (" + entry.methods.Length + " methods)", started)
+	Report("Frontend / main codegen (" + entry.methods.Length + " methods)", started)
 	entry
-Linked(linker Linker, entry TypeEntry) LinkRound
+Link(linker Linker, entry TypeEntry) LinkRound
 	started = Process.Elapsed
 	linked = linker.Link(entry, List(Text))
-	Reported("Frontend / dependency linking (" + linked.entries.Length + " types)", started)
+	Report("Frontend / dependency linking (" + linked.entries.Length + " types)", started)
 	linked
 IsParsed(compiler FileCompiler, sources Texts) Boolean
 	started = Process.Elapsed
 	problems = compiler.Problems(sources) - ""
-	Reported("Frontend / syntax validation (" + sources.Length + " files)", started)
+	Report("Frontend / syntax validation (" + sources.Length + " files)", started)
 	if problems.Length > 0
 		logger.Log(problems.First)
 	problems.Length is 0
 Issues(compiler FileCompiler, sources Texts, inference TypeInference) List(Texts)
 	started = Process.Elapsed
 	issues = compiler.Issues(sources, inference)
-	Reported("Frontend / name validation (" + sources.Length + " files)", started)
+	Report("Frontend / name validation (" + sources.Length + " files)", started)
 	issues
 Runtime(build NativeBuild, program Text, root Text) Text
 	started = Process.Elapsed
 	text = build.Mlir(program, root, build.Target)
-	Reported("Host runtime assembly", started)
+	Report("Host runtime assembly", started)
 	text
-Emitted(module MlirModule, texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
+Emit(module MlirModule, texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
 	started = Process.Elapsed
-	emitted = module.Emitted(texts, functions, recursive)
-	Reported("Emission / function bodies (" + texts.Length + " functions)", started)
+	emitted = module.Emit(texts, functions, recursive)
+	Report("Emission / function bodies (" + texts.Length + " functions)", started)
 	emitted
 Shapes(files Texts) List(TypeShape)
 	started = Process.Elapsed
 	shapes = ResolveCheck.Shapes(files)
-	Reported("Frontend / shape loading and fusion (" + files.Length + " files)", started)
+	Report("Frontend / shape loading and fusion (" + files.Length + " files)", started)
 	shapes
-Inlined(types List(TypeEntry)) List(TypeEntry)
+Inline(types List(TypeEntry)) List(TypeEntry)
 	started = Process.Elapsed
 	inlined = Inliner(types, true).Inlined
-	Reported("Frontend / inlining", started)
+	Report("Frontend / inlining", started)
 	before = Process.Elapsed
 	split = StructLanes(inlined).Split
-	Reported("Frontend / struct lanes", before)
+	Report("Frontend / struct lanes", before)
 	split
-Packaged(build NativeBuild, base Text, program Text, tools Toolchain)
+Package(build NativeBuild, base Text, program Text, tools Toolchain)
 	if build.isFast
 		return
 	started = Process.Elapsed
-	Release(base).Packaged(program, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
-	Reported("Packaging", started)
-Lowered(tools Toolchain, base Text) Text
+	Release(base).Package(program, tools.isWeb, build.isCrossing, build.Target, build.isReleased)
+	Report("Packaging", started)
+Lower(tools Toolchain, base Text) Text
 	started = Process.Elapsed
-	lowered = tools.Lowered(base, "", tools.platform is Platform.Windows then Toolchain.Parts else 1)
-	Reported("Host lowering and translation", started)
+	lowered = tools.Lower(base, "", tools.platform is Platform.Windows then Toolchain.Parts else 1)
+	Report("Host lowering and translation", started)
 	lowered

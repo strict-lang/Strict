@@ -30,14 +30,14 @@ Origins(position Number, register Number, seen = List(Text)) Texts
 	Shifts.Origins(6, 3) is ("offset")
 	Shifts.Origins(8, 5) is ("?")
 	MlirGuards(MlirFunction(Shifted, Guarded = 5), 2).Origins(6, 3) is ("?")
-	MlirGuards(MlirPassed.Wrapped, 2).Written(8) is ("?", "offset", "/")
-	MlirGuards(Nested, 2).Written(5) is ("offset")
-	MlirGuards(Nested, 2).Written(9) is ("offset", "offset", "/")
+	MlirGuards(MlirPassed.Wrapped, 2).Write(8) is ("?", "offset", "/")
+	MlirGuards(Nested, 2).Write(5) is ("offset")
+	MlirGuards(Nested, 2).Write(9) is ("offset", "offset", "/")
 	writer = MlirKinds(function).Writer(position, register)
-	writer <= function.Guarded then List(Text) + "?" else Written(writer, seen)
-Written(writer Number, seen = List(Text)) Texts
-	Shifts.Written(5) is ("offset")
-	Shifts.Written(6) is ("?")
+	writer <= function.Guarded then List(Text) + "?" else Write(writer, seen)
+Write(writer Number, seen = List(Text)) Texts
+	Shifts.Write(5) is ("offset")
+	Shifts.Write(6) is ("?")
 	entry = function.method.instructions(writer)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return Variable(writer, entry.texts(0), seen)
@@ -47,17 +47,17 @@ Written(writer Number, seen = List(Text)) Texts
 		return Origins(writer, entry.payload(1), seen) + Origins(writer, entry.payload(2), seen) + "/"
 	if entry.kind is in Calculated
 		return Origins(writer, entry.payload(1), seen) + Origins(writer, entry.payload(2), seen)
-	entry.kind is InstructionType.Invoke then Called(writer, entry) else List(Text) + "?"
-Called(writer Number, entry InstructionEntry) Texts
-	Shifts.Called(5, Flooring) is ("offset")
-	Shifts.Called(5, InstructionEntry.Invoke(3, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2)).Length is 0
-	Shifts.Called(5, InstructionEntry.Invoke(3, ("Strict/Number", "Round", "Strict/Number"), List(Number), 2)) is ("?")
-	MlirGuards(Nested, 2).Written(6).Length is 0
-	MlirGuards(Nested, 2).Written(7) is ("?")
-	MlirGuards(Nested, 2).Written(11) is ("offset")
-	MlirGuards(Nested, 2).Written(12).Length is 0
+	entry.kind is InstructionType.Invoke then Call(writer, entry) else List(Text) + "?"
+Call(writer Number, entry InstructionEntry) Texts
+	Shifts.Call(5, Flooring) is ("offset")
+	Shifts.Call(5, InstructionEntry.Invoke(3, ("Strict/Number", "Length", "Strict/Number"), List(Number), 2)).Length is 0
+	Shifts.Call(5, InstructionEntry.Invoke(3, ("Strict/Number", "Round", "Strict/Number"), List(Number), 2)) is ("?")
+	MlirGuards(Nested, 2).Write(6).Length is 0
+	MlirGuards(Nested, 2).Write(7) is ("?")
+	MlirGuards(Nested, 2).Write(11) is ("offset")
+	MlirGuards(Nested, 2).Write(12).Length is 0
 	name = PayloadDecoder(entry).Text(2)
-	name is "Floor" then Floored(writer, entry) else name is "Length" then List(Text) else List(Text) + "?"
+	name is "Floor" then Floor(writer, entry) else name is "Length" then List(Text) else List(Text) + "?"
 Variable(position Number, name Text, seen = List(Text)) Texts
 	Shifts.Variable(4, "offset") is ("offset")
 	Shifts.Variable(4, "index").Length is 0 and Shifts.Variable(7, "value") is ("?")
@@ -66,7 +66,7 @@ Variable(position Number, name Text, seen = List(Text)) Texts
 	callees = MlirCalleeGuards(function, position)
 	if name.StartsWith("conditional")
 		return callees.StoreOrigins(function.Guarded + 1, position, name, seen + name)
-	stored = MlirKinds(function).Stored(position, name)
+	stored = MlirKinds(function).Store(position, name)
 	found = stored > function.Guarded then callees.StoredOrigin(stored, seen + name) else Initial(name)
 	found + LoopOrigins(position, name, seen + name)
 LoopOrigins(position Number, name Text, seen Texts) Texts
@@ -81,9 +81,9 @@ Initial(name Text) Texts
 	if function.Whole.Length > 0
 		return name is in function.Whole then List(Text) + name else List(Text) + "?"
 	MlirKinds(function).VariableKind(function.Guarded, name) is "Number" then List(Text) + name else List(Text) + "?"
-Sited(position Number) Texts
-	Shifts.Sited(6) is ("offset")
-	Shifts.Sited(5) is ("?")
+Sit(position Number) Texts
+	Shifts.Sit(6) is ("offset")
+	Shifts.Sit(5) is ("?")
 	entry = function.method.instructions(position)
 	kind = entry.kind
 	if kind > InstructionType.ArithmeticSeparator and kind < InstructionType.BinaryOperatorsSeparator
@@ -93,15 +93,15 @@ Sited(position Number) Texts
 	if kind is InstructionType.LoopBegin
 		return Origins(position, entry.payload(0))
 	isFloor = kind is InstructionType.Invoke and PayloadDecoder(entry).Text(2) is "Floor"
-	isFloor then Floored(position, entry) else List(Text) + "?"
-Floored(position Number, entry InstructionEntry) Texts
+	isFloor then Floor(position, entry) else List(Text) + "?"
+Floor(position Number, entry InstructionEntry) Texts
 	Shifts.Named is ExactNamed
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Named is PlainNamed
-	Shifts.Floored(5, Flooring) is ("offset")
-	MlirGuards(Nested, 2).Sited(8) is ("offset", "offset")
-	MlirGuards(Nested, 2).Sited(10) is ("offset")
-	MlirGuards(Nested, 2).Sited(11) is ("offset")
-	MlirGuards(Nested, 2).Sited(12) is ("?")
+	Shifts.Floor(5, Flooring) is ("offset")
+	MlirGuards(Nested, 2).Sit(8) is ("offset", "offset")
+	MlirGuards(Nested, 2).Sit(10) is ("offset")
+	MlirGuards(Nested, 2).Sit(11) is ("offset")
+	MlirGuards(Nested, 2).Sit(12) is ("?")
 	Whole(Origins(position, MlirDeviceCalls(function, position, function).Register(entry)))
 Whole(origins Texts) Texts
 	Shifts.Mask is 3
@@ -130,7 +130,7 @@ Parameters Texts
 	mutable names = List(Mutable(Text))
 	candidates = MlirCalleeGuards(function, at).FreeNumbers
 	for Range(at + 1, function.method.LoopEndOf(at))
-		origins = Sited(value)
+		origins = Sit(value)
 		if "?" is not in origins
 			names = names + Whole(origins)
 		if function.method.instructions(value).kind is InstructionType.Invoke
@@ -146,7 +146,7 @@ IsUseful Boolean
 	if function.Float is not "f32"
 		return false
 	for Range(at + 1, function.method.LoopEndOf(at))
-		if "?" is not in Sited(value)
+		if "?" is not in Sit(value)
 			return true
 	false
 Reads Texts
@@ -164,7 +164,7 @@ IsSingle(position Number) Boolean
 		return false
 	name = entry.texts(0)
 	isRows = MlirDeviceRows(function, position).IsRows(MlirKinds(function).VariableKind(position, name))
-	isRows is false and MlirKinds(function).Stored(position, name) < function.Guarded
+	isRows is false and MlirKinds(function).Store(position, name) < function.Guarded
 Mask Number
 	Shifts.Mask > 0
 	MlirGuards(MlirFunction(Shifted, Float = "f64"), 2).Mask is 0

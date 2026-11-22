@@ -17,13 +17,13 @@ Flags(platform Number, root Text) Text
 	for folders
 		file = value + "/" + Platform.NameOf(platform) + ".flags"
 		if File(file).Exists
-			flags = flags + Rooted(Text.Combine(File(file).ReadLines, " "), value, root)
+			flags = flags + Root(Text.Combine(File(file).ReadLines, " "), value, root)
 	flags
-Rooted(flags Text, folder Text, root Text) Text
-	Adding.Rooted("-DX a/b.c a/d.m -Ia/c", "../E/F/native", ".") is " -DX ../E/a/b.c ../E/a/d.m -I../E/a/c"
-	Adding.Rooted("-DX a/b.c", "Frameworks/native", ".") is " -DX a/b.c"
-	Adding.Rooted("-DX a/b.c -Ia/c", "C:/s/E/native", "C:/s") is " -DX C:/s/a/b.c -IC:/s/a/c"
-	Adding.Rooted("-DX a/b.c", "C:/sx/E/native", "C:/s") is " -DX a/b.c"
+Root(flags Text, folder Text, root Text) Text
+	Adding.Root("-DX a/b.c a/d.m -Ia/c", "../E/F/native", ".") is " -DX ../E/a/b.c ../E/a/d.m -I../E/a/c"
+	Adding.Root("-DX a/b.c", "Frameworks/native", ".") is " -DX a/b.c"
+	Adding.Root("-DX a/b.c -Ia/c", "C:/s/E/native", "C:/s") is " -DX C:/s/a/b.c -IC:/s/a/c"
+	Adding.Root("-DX a/b.c", "C:/sx/E/native", "C:/s") is " -DX a/b.c"
 	inside = folder.StartsWith(root + "/") then root + "/" else ""
 	project = folder.StartsWith("../") then "../" + folder.Split("/")(1) + "/" else inside
 	mutable rooted = ""
@@ -85,11 +85,11 @@ Inputs(platform Number, root Text) Texts
 	for folders
 		inputs = inputs + Directory.Files(value, "*.h") + (value + "/" + Platform.NameOf(platform) + ".flags")
 	inputs
-Placed(building Text, library Text) Text
-	Adding.Placed("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
+Place(building Text, library Text) Text
+	Adding.Place("Examples/NativeAdd/native/Missing.1.dll", Iconed + ".dll") is Iconed + ".dll"
 	Intermediates.IsWindows is false or Process.Find(Process.Variable("ComSpec")).Start(Intermediates.Holding) is 0
 	File(Fresh).Write("fresh") is not Error
-	Intermediates.IsWindows is false or Adding.Placed(Fresh, Intermediates.Kept) is Intermediates.Kept
+	Intermediates.IsWindows is false or Adding.Place(Fresh, Intermediates.Kept) is Intermediates.Kept
 	File(building).Rename(library)
 	if File(building).Exists and File(library).Exists
 		aside = Path(library).RemoveExtension.text + ".old" + NativeLibrary.RandomSuffixRange.Random.Floor
@@ -118,21 +118,21 @@ Resource(base Text, platform Number, root Text) Text
 		return ""
 	full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
 	File(base + ".rc").Write("GLFW_ICON ICON \"" + full + "\"")
-	compiler = Toolchain(platform, root).Located("llvm-rc")
+	compiler = Toolchain(platform, root).Locate("llvm-rc")
 	compiled = ToolRunner(compiler).Execute("/FO \"" + base + ".res\" \"" + base + ".rc\"")
 	File(base + ".rc").Delete
 	compiled.HasFailed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
-LinuxLinked(base Text, program Text, root Text) Text
-	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
+LinuxLink(base Text, program Text, root Text) Text
+	Adding.LinuxLink("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
 	tools = Toolchain(Platform.Windows, root)
-	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quoted(tools.WslPath(root + "/Compiler"))
+	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quote(tools.WslPath(root + "/Compiler"))
 	for Files
-		sources = sources + " " + tools.Quoted(tools.WslPath(value))
+		sources = sources + " " + tools.Quote(tools.WslPath(value))
 	gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc -no-pie "
-	linkage = gcc + tools.Quoted(tools.WslPath(base + ".linux.o"))
+	linkage = gcc + tools.Quote(tools.WslPath(base + ".linux.o"))
 	libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
-	output = " -o " + tools.Quoted(tools.WslPath(program)) + libraries
-	Release(base).Created(Path(program).PathOnly.text)
+	output = " -o " + tools.Quote(tools.WslPath(program)) + libraries
+	Release(base).Creat(Path(program).PathOnly.text)
 	linked = ToolRunner("wsl").Execute(linkage + sources + output)
 	linked.HasFailed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
 Wsl(flags Text, tools Toolchain) Text
@@ -141,7 +141,7 @@ Wsl(flags Text, tools Toolchain) Text
 	for flags.Split(" ")
 		isInclude = value.StartsWith("-I")
 		path = isInclude then value.Substring(2) else value
-		wsl = (isInclude then "-I" else "") + tools.Quoted(tools.WslPath(path))
+		wsl = (isInclude then "-I" else "") + tools.Quote(tools.WslPath(path))
 		if value is not ""
 			converted = converted + " " + (isInclude or IsSource(value) then wsl else value)
 	converted

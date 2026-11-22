@@ -25,28 +25,28 @@ Slots(kind Text) Number
 	Sample.Slots("List(Number)") is 0
 	element = LaneFlow(function.types).Element(kind)
 	element is "" then 0 else StructLanes(function.types).Members(function.TypeOf(element, true)).Length
-Indexed(entry InstructionEntry) Texts
-	"    %d4s = arith.muli %d4k, %d4q : i64" is in Sample.Indexed(LaneFlow.Picking)
-	Sample.Indexed(LaneFlow.Picking).Last is "  ^d4done:"
-	"    llvm.store %one, %r2_q : i64, !llvm.ptr" is in MlirDeviceRecords(Singles, 4).Indexed(LaneFlow.Picking)
+EmitIndex(entry InstructionEntry) Texts
+	"    %d4s = arith.muli %d4k, %d4q : i64" is in Sample.EmitIndex(LaneFlow.Picking)
+	Sample.EmitIndex(LaneFlow.Picking).Last is "  ^d4done:"
+	"    llvm.store %one, %r2_q : i64, !llvm.ptr" is in MlirDeviceRecords(Singles, 4).EmitIndex(LaneFlow.Picking)
 	slots = Slots(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	if slots is 0
-		return MlirDeviceStatements(function, at).Indexed(entry)
+		return MlirDeviceStatements(function, at).EmitIndex(entry)
 	position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	factor = MlirTyped.Integer.Constant(Temp("q"), slots to Text)
 	scaled = Line("s", "arith.muli " + Temp("k") + ", " + Temp("q") + " : i64")
 	whole = MlirExact(function, at).Set(Temp("s"), "%one", "%r" + entry.payload(0))
-	checked = Checked(Temp("s"), "%v_" + entry.texts(0)) + MlirDeviceStatements(function, at).Failed
-	position + (factor, scaled) + whole + checked + Kept("%r" + entry.payload(0))
-Kept(slot Text) Texts
-	Sample.Kept("%r2")(1) is "    %d4 = arith.sitofp %d4s : i64 to f64"
+	checked = Check(Temp("s"), "%v_" + entry.texts(0)) + MlirDeviceStatements(function, at).Failed
+	position + (factor, scaled) + whole + checked + Keep("%r" + entry.payload(0))
+Keep(slot Text) Texts
+	Sample.Keep("%r2")(1) is "    %d4 = arith.sitofp %d4s : i64 to f64"
 	float = Line("", "arith.sitofp " + Temp("s") + " : i64 to " + function.Float)
 	done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
 	("  ^d" + at + "read:", float, MlirTyped(function.Float).Store(Temp(""), slot)) + done
-Fielded(entry InstructionEntry) Texts
-	"    %d5c = arith.constant 1 : i64" is in Fielding.Fielded(Field)
-	Text.Combine(Fielding.Fielded(Field)).IndexOf("%v_pairs_d") > 0
-	"    %d5o = arith.cmpi ult, %d5p, %d5n : i64" is in MlirDeviceRecords(Singles, 5).Fielded(Field)
+EmitField(entry InstructionEntry) Texts
+	"    %d5c = arith.constant 1 : i64" is in Fielding.EmitField(Field)
+	Text.Combine(Fielding.EmitField(Field)).IndexOf("%v_pairs_d") > 0
+	"    %d5o = arith.cmpi ult, %d5p, %d5n : i64" is in MlirDeviceRecords(Singles, 5).EmitField(Field)
 	list = "%v_" + function.method.instructions(MlirKinds(function).Writer(at, entry.payload(1))).texts(0)
 	member = StructLanes(function.types).Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
 	offset = MlirTyped.Integer.Constant(Temp("c"), member to Text)
@@ -54,23 +54,23 @@ Fielded(entry InstructionEntry) Texts
 	device = MlirDeviceStatements(function, at)
 	read = device.Failed + device.Read(list, "%r" + entry.payload(0))
 	bound = MlirExact(function, at).Parts.Length is 0 then Temp("k") else Temp("p")
-	Start("%r" + entry.payload(1)) + (offset, added) + Checked(bound, list) + read
+	Start("%r" + entry.payload(1)) + (offset, added) + Check(bound, list) + read
 Start(slot Text) Texts
 	Fielding.Start("%r2").Last is "    %d5p = arith.fptosi %d5v : f64 to i64"
 	MlirDeviceRecords(Singles, 5).Start("%r2") is List(Text) + "    %d5p = llvm.load %r2_e : !llvm.ptr -> i64"
 	if MlirExact(function, at).Parts.Length > 0
 		return List(Text) + MlirTyped.Integer.Load(Temp("p"), slot + "_e")
 	(function.Load(Temp("v"), slot), Line("p", "arith.fptosi " + Temp("v") + " : " + function.Float + " to i64"))
-Checked(position Text, list Text) Texts
-	Sample.Checked("%p", "%v_pairs").Last is "    cf.cond_br %d4o, ^d4read, ^d4fail"
+Check(position Text, list Text) Texts
+	Sample.Check("%p", "%v_pairs").Last is "    cf.cond_br %d4o, ^d4read, ^d4fail"
 	compared = Line("o", "arith.cmpi ult, " + position + ", " + Temp("n") + " : i64")
 	branch = "    cf.cond_br " + Temp("o") + ", ^d" + at + "read, ^d" + at + "fail"
 	(MlirTyped.Integer.Load(Temp("n"), list + "_n"), compared, branch)
-Counted(slot Text, kind Text) Texts
-	Sample.Counted("%r2_n", "List(Pair)").Last is "    %d4n = arith.divui %d4t, %d4q : i64"
-	Sample.Counted("%r2_n", "Numbers") is ("    %d4n = llvm.load %r2_n : !llvm.ptr -> i64")
-	Sample.Counted("%r2_n", "List(Pair)")(0) is "    %d4t = llvm.load %r2_n : !llvm.ptr -> i64"
-	Sample.Counted("%r2_n", "List(Pair)")(1) is "    %d4q = arith.constant 2 : i64"
+EmitCount(slot Text, kind Text) Texts
+	Sample.EmitCount("%r2_n", "List(Pair)").Last is "    %d4n = arith.divui %d4t, %d4q : i64"
+	Sample.EmitCount("%r2_n", "Numbers") is ("    %d4n = llvm.load %r2_n : !llvm.ptr -> i64")
+	Sample.EmitCount("%r2_n", "List(Pair)")(0) is "    %d4t = llvm.load %r2_n : !llvm.ptr -> i64"
+	Sample.EmitCount("%r2_n", "List(Pair)")(1) is "    %d4q = arith.constant 2 : i64"
 	slots = Slots(kind)
 	if slots is 0
 		return List(Text) + MlirTyped.Integer.Load(Temp("n"), slot)
@@ -86,10 +86,10 @@ IsRead(entry InstructionEntry) Boolean
 	source = MlirKinds(function).Writer(at, entry.payload(1))
 	isIndexed = source >= 0 and function.method.instructions(source).kind is InstructionType.IndexCall
 	isIndexed and Slots(MlirKinds(function).VariableKind(source, function.method.instructions(source).texts(0))) > 0
-Flattened(loaded Text, kind Text) Texts
-	Sample.Flattened("%a", "List(Pair)").Last is "    %ar = func.call @strict_records_flat(%a, %as) : (f64, f64) -> f64"
-	Sample.Flattened("%a", "Numbers").Length is 0
-	Sample.Flattened("%a", "List(Pair)")(0) is "    %as = arith.constant 2.0 : f64"
+Flatten(loaded Text, kind Text) Texts
+	Sample.Flatten("%a", "List(Pair)").Last is "    %ar = func.call @strict_records_flat(%a, %as) : (f64, f64) -> f64"
+	Sample.Flatten("%a", "Numbers").Length is 0
+	Sample.Flatten("%a", "List(Pair)")(0) is "    %as = arith.constant 2.0 : f64"
 	slots = Slots(kind)
 	if slots is 0
 		return List(Text)
@@ -97,9 +97,9 @@ Flattened(loaded Text, kind Text) Texts
 	("    " + loaded + "s = arith.constant " + slots + ".0 : f64", "    " + loaded + "r" + call)
 Line(suffix Text, expression Text) Text
 	Sample.Line("o", "x") is "    %d4o = x"
-	Sample.Indexed(Listed)(2) is "    %d4y = arith.constant 0x0 : f64"
-	Sample.Indexed(LaneFlow.Picking) is IndexedLines
-	Fielding.Fielded(Field) is FieldedLines
+	Sample.EmitIndex(Listed)(2) is "    %d4y = arith.constant 0x0 : f64"
+	Sample.EmitIndex(LaneFlow.Picking) is IndexedLines
+	Fielding.EmitField(Field) is FieldedLines
 	"    " + Temp(suffix) + " = " + expression
 Temp(suffix Text) Text
 	Sample.Temp("k") is "%d4k"

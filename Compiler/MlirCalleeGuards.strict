@@ -29,12 +29,12 @@ Sites(candidates Texts, depth Number) Texts
 		return List(Text)
 	args = PayloadDecoder(function.method.instructions(at)).Arguments
 	mutable names = List(Text)
-	for MlirModule(function.types, "").Called(function, at)
+	for MlirModule(function.types, "").Call(function, at)
 		sub = value.type.Name is function.type.Name then MlirFunction(value, Guarded = -1, Whole = candidates) else value
-		names = names + Resolved(value, args, SubSites(sub, candidates, depth))
+		names = names + Resolve(value, args, SubSites(sub, candidates, depth))
 	names
-Resolved(sub MlirFunction, args Numbers, used Texts) Texts
-	MlirCalleeGuards(MlirGuards.Shifted, 6).Resolved(MlirGuards.Shifted, List(Number), List(Text)) is List(Text)
+Resolve(sub MlirFunction, args Numbers, used Texts) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).Resolve(MlirGuards.Shifted, List(Number), List(Text)) is List(Text)
 	guards = MlirGuards(function, at)
 	mutable result = List(Text)
 	for used
@@ -47,7 +47,7 @@ SubSites(sub MlirFunction, candidates Texts, depth Number) Texts
 	guards = MlirGuards(sub, 0)
 	mutable names = List(Text)
 	for sub.method.instructions
-		origins = guards.Sited(index)
+		origins = guards.Sit(index)
 		if "?" is not in origins
 			names = names + guards.Whole(origins)
 		if value.kind is InstructionType.Invoke
@@ -60,11 +60,11 @@ PassedNames(caller MlirFunction, callPos Number, candidates Texts) Texts
 		return candidates
 	guards = MlirGuards(caller, callPos)
 	args = PayloadDecoder(entry).Arguments
-	sub = MlirModule(caller.types, "").Called(caller, callPos)
-	members = sub.Length is 0 then candidates else Filtered(candidates, sub.First.method.ParameterNames)
+	sub = MlirModule(caller.types, "").Call(caller, callPos)
+	members = sub.Length is 0 then candidates else Filter(candidates, sub.First.method.ParameterNames)
 	members + PassedArgs(args, sub, guards)
-Filtered(candidates Texts, params Texts) Texts
-	MlirCalleeGuards(MlirGuards.Shifted, 6).Filtered(("a", "b"), List(Text) + "a") is List(Text) + "b"
+Filter(candidates Texts, params Texts) Texts
+	MlirCalleeGuards(MlirGuards.Shifted, 6).Filter(("a", "b"), List(Text) + "a") is List(Text) + "b"
 	for candidates
 		if value is not in params
 			value

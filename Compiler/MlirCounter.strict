@@ -28,7 +28,7 @@ constant ValueLoad = (InstructionEntry.Named(InstructionType.LoadVariableToRegis
 constant ValueRem = (List(InstructionEntry) + MlirLoops.Emptied + MlirKernel.NumbersLoop) + ValueLoad + Remaining + ValueWrite + InstructionEntry.Jump(InstructionType.LoopEnd, 7)
 constant FastRem = MlirCounter(MlirFunction(Doubler.types, Doubler.type, MethodEntry("Rem", Doubler.method.parameters, "Strict/List(Number)", ValueRem), List(Number), 2), 2)
 Remainder(entry InstructionEntry, lines Texts) Texts
-	MlirStatements(Quartering.function, 5).Calculated(Remaining)(1) is "    %t5i = arith.remsi %t2ki, %t5w : i64"
+	MlirStatements(Quartering.function, 5).Calculate(Remaining)(1) is "    %t5i = arith.remsi %t2ki, %t5w : i64"
 	Quartering.Remainder(Divided.First, List(Text)).Last is "    llvm.store %t5c, %r3 : f64, !llvm.ptr"
 	MlirCounter(MlirFunction(Quartering.function, FastLoop = -1), 5).Remainder(Divided.First, "x") is ("x")
 	fast = Divisor(entry.payload(1), entry.payload(2))
@@ -36,7 +36,7 @@ Remainder(entry InstructionEntry, lines Texts) Texts
 		return Whole(fast, "remsi", entry.payload(3), lines)
 	IsFastModulo(entry) is false then lines else lines.Slice(0, 2) + FastFloating(Temp("a"), Temp("b")) + lines.Last
 Floor(entry InstructionEntry, lines Texts) Texts
-	MlirNatives(Quartering.function, 7).Emitted(Floored, Number, "strict_floor")(1) is Quotient
+	MlirNatives(Quartering.function, 7).Emit(Floored, Number, "strict_floor")(1) is Quotient
 	Quartering.At(7).Floor(Floored, List(Text)).Last is "    llvm.store %t7c, %r5 : f64, !llvm.ptr"
 	Quartering.At(8).Floor(InstructionEntry.Invoke(5, FloorNames, List(Number), 3), "x") is ("x")
 	instance = PayloadDecoder(entry).Instance
@@ -63,9 +63,9 @@ Constant(register Number, after Number) Number
 		return 0
 	number = PayloadDecoder(loaded).Value(1).number
 	number >= 1 and number is number.Floor then number else 0
-Branched(target Text) Text
+Branch(target Text) Text
 	Unrolling.Looped.Last is "    llvm.br ^loop2(%t2next : i64)" + Unrolled
-	Quartering.At(2).Branched("^loop2") is "    cf.br ^loop2"
+	Quartering.At(2).Branch("^loop2") is "    cf.br ^loop2"
 	isCounted = MlirLoops(function, position).Collection is ""
 	count = isCounted then Constant(function.method.instructions(position).payload(0), -1) else 0
 	count > 0 and count <= Unrollable then "    llvm.br " + target + Unrolled else "    cf.br " + target
@@ -144,9 +144,9 @@ ExactCheck(left Text) Texts
 	lines = lines + ("    " + Temp("mpr") + " = llvm.load " + slot + " : !llvm.ptr -> i1")
 	lines = lines + ("    " + Temp("mal") + " = arith.andi " + Temp("mpr") + ", " + Temp("mok") + " : i1")
 	lines + ("    llvm.store " + Temp("mal") + ", " + slot + " : i1, !llvm.ptr")
-Finished(letter Text) Texts
-	Quartering.At(2).Finished("") is List(Text) + "    cf.br ^loop2joined"
-	FastRem.Finished("").Last is "    cf.cond_br %f2mok, ^loop2joined, ^loop2generic"
+Finish(letter Text) Texts
+	Quartering.At(2).Finish("") is List(Text) + "    cf.br ^loop2joined"
+	FastRem.Finish("").Last is "    cf.cond_br %f2mok, ^loop2joined, ^loop2generic"
 	label = "^loop" + position
 	if HasFastModulo is false
 		return List(Text) + ("    cf.br " + label + "joined")

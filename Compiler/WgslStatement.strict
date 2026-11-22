@@ -21,27 +21,27 @@ Lines Texts
 	WgslStatement(Doubled, 5).Lines is ("output[at] = r2.f;")
 	entry = function.method.instructions(at)
 	if entry.kind < InstructionType.IndexCall
-		return Moved(entry)
+		return Move(entry)
 	if entry.kind is in (InstructionType.IndexCall, InstructionType.FieldLoad)
-		return entry.kind is InstructionType.IndexCall then Indexed(entry) else Fielded(entry)
+		return entry.kind is InstructionType.IndexCall then EmitIndex(entry) else Field(entry)
 	if entry.kind < InstructionType.BinaryOperatorsSeparator
-		return Calculated(entry)
+		return Calculate(entry)
 	isLoop = entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
-	entry.kind is InstructionType.Invoke then Called(entry) else isLoop then Looped(entry) else Finished(entry)
-Moved(entry InstructionEntry) Texts
-	WgslStatement(Twice, 0).Moved(Twice.method.instructions(0)) is ("r0 = v_number;")
+	entry.kind is InstructionType.Invoke then Call(entry) else isLoop then Loop(entry) else Finish(entry)
+Move(entry InstructionEntry) Texts
+	WgslStatement(Twice, 0).Move(Twice.method.instructions(0)) is ("r0 = v_number;")
 	WgslStatement(Summed, 0).Lines is ("v_sum = n_int(0);")
 	WgslStatement(Summed, 10).Lines is ("v_sum = r6;")
-	WgslStatement(Twice, 0).Moved(MethodCodegen.StoreConstant(Twice.method.instructions(1), "a")) is ("v_a = n_int(2);")
+	WgslStatement(Twice, 0).Move(MethodCodegen.StoreConstant(Twice.method.instructions(1), "a")) is ("v_a = n_int(2);")
 	if entry.kind is InstructionType.LoadVariableToRegister
-		return Copied("v_" + entry.texts(0), "r" + entry.payload(0), entry.texts(0))
+		return Copy("v_" + entry.texts(0), "r" + entry.payload(0), entry.texts(0))
 	if entry.kind is InstructionType.StoreRegisterToVariable
-		return Copied("r" + entry.payload(0), "v_" + entry.texts(0), entry.texts(0))
+		return Copy("r" + entry.payload(0), "v_" + entry.texts(0), entry.texts(0))
 	isLoad = entry.kind is InstructionType.LoadConstantToRegister
 	target = isLoad then "r" + entry.payload(0) else "v_" + entry.texts.Last
 	List(Text) + (target + " = " + Literal(PayloadDecoder(entry).Value(isLoad then 1 else 0).number) + ";")
-Copied(source Text, target Text, name Text) Texts
-	WgslStatement(Summed, 5).Copied("v_input", "r3", "input") is ("r3l = v_inputl;")
+Copy(source Text, target Text, name Text) Texts
+	WgslStatement(Summed, 5).Copy("v_input", "r3", "input") is ("r3l = v_inputl;")
 	WgslStatement(Summed, 6).Lines is Indexing
 	WgslStatement(Records, 4).Lines is Recording
 	WgslStatement(Records, 5).Lines is Fielding
@@ -57,10 +57,10 @@ Literal(number Number) Text
 	constant int32Limit = 2147483648
 	isWhole = number is number.Floor and number >= -int32Limit and number < int32Limit
 	(isWhole then "n_int(" else "n_float(") + number + ")"
-Calculated(entry InstructionEntry) Texts
-	WgslStatement(Twice, 2).Calculated(Twice.method.instructions(2)) is ("r2 = n_mul(r0, r1);")
-	WgslStatement(Absolute, 2).Calculated(Absolute.method.instructions(2)) is ("flag = n_less(r0, r1);")
-	WgslStatement(Twice, 2).Calculated(Less)(1) is "r2 = n_int(select(0, 1, flag));"
+Calculate(entry InstructionEntry) Texts
+	WgslStatement(Twice, 2).Calculate(Twice.method.instructions(2)) is ("r2 = n_mul(r0, r1);")
+	WgslStatement(Absolute, 2).Calculate(Absolute.method.instructions(2)) is ("flag = n_less(r0, r1);")
+	WgslStatement(Twice, 2).Calculate(Less)(1) is "r2 = n_int(select(0, 1, flag));"
 	left = "r" + entry.payload(1)
 	right = "r" + entry.payload(2)
 	target = entry.payload(0) is 3 then "r" + entry.payload(3) else ""
@@ -70,12 +70,12 @@ Calculated(entry InstructionEntry) Texts
 		return List(Text) + (target + " = " + Arithmetic(entry.kind - InstructionType.Add) + left + ", " + right + ");")
 	compared = "flag = " + Comparisons(entry.kind - InstructionType.Equal) + left + ", " + right + ");"
 	target is "" then List(Text) + compared else (compared, target + " = n_int(select(0, 1, flag));")
-Indexed(entry InstructionEntry) Texts
-	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6)).First.StartsWith("let k6 = n_index(r")
-	WgslStatement(Summed, 6).Indexed(Summed.method.instructions(6))(1).IndexOf(" = n_of(n_item(v_") > 0
+EmitIndex(entry InstructionEntry) Texts
+	WgslStatement(Summed, 6).EmitIndex(Summed.method.instructions(6)).First.StartsWith("let k6 = n_index(r")
+	WgslStatement(Summed, 6).EmitIndex(Summed.method.instructions(6))(1).IndexOf(" = n_of(n_item(v_") > 0
 	slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).VariableKind(at, entry.texts(0)))
 	if slots > 0
-		return Recorded(entry, slots)
+		return Record(entry, slots)
 	list = "v_" + entry.texts(0) + "l"
 	index = "r" + entry.payload(1)
 	target = "r" + entry.payload(0)
@@ -83,14 +83,14 @@ Indexed(entry InstructionEntry) Texts
 	inside = "if (" + index + ".f >= 0.0 && " + position + " < " + list + ".y) { "
 	read = inside + target + " = n_of(n_item(" + list + ".x, " + position + ")); }"
 	("let " + position + " = n_index(" + index + ");", read, "else { failed[0] = 1u; " + target + " = n_int(0); }")
-Called(entry InstructionEntry) Texts
-	WgslStatement(Doubled, 4).Called(Doubled.method.instructions(4)) is ("r2 = s_Rows_Twice_1(n_int(0), r1);")
-	WgslStatement(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring) is ("r1 = n_floor(r0);")
-	WgslStatement(Made, 1).Called(MlirDeviceCalls.Making) is ("r1 = r0;")
+Call(entry InstructionEntry) Texts
+	WgslStatement(Doubled, 4).Call(Doubled.method.instructions(4)) is ("r2 = s_Rows_Twice_1(n_int(0), r1);")
+	WgslStatement(MlirGpuCheck.Floored, 1).Call(MlirGpuCheck.Flooring) is ("r1 = n_floor(r0);")
+	WgslStatement(Made, 1).Call(MlirDeviceCalls.Making) is ("r1 = r0;")
 	register = MlirDeviceCalls(function, at, function).Register(entry)
 	if IsNative(entry)
 		return List(Text) + Native(entry, "r" + register)
-	callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Call(function, at)
 	if callees.Length is not 1 or entry.texts(1) is in MlirDeviceCalls.Natives
 		return List(Text) + ("unsupported: " + entry.texts(1))
 	called = WgslFunction(callees.First)
@@ -102,8 +102,8 @@ IsNative(entry InstructionEntry) Boolean
 	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Sining)
 	WgslStatement(MlirDeviceCalls.Turned.function, 1).IsNative(MlirDeviceCalls.Turning) is false
 	WgslStatement(Measuring, 1).Lines is ("r1 = n_int(i32(r0l.y));")
-	WgslStatement(Doubled, 4).Called(MlirDeviceCalls.Rounding) is ("unsupported: from")
-	WgslStatement(Twice, 2).Called(Doubled.method.instructions(4)) is ("unsupported: Twice")
+	WgslStatement(Doubled, 4).Call(MlirDeviceCalls.Rounding) is ("unsupported: from")
+	WgslStatement(Twice, 2).Call(Doubled.method.instructions(4)) is ("unsupported: Twice")
 	WgslStatement(MlirGpuCheck.Powered, 2).Lines is ("r2 = n_power(r0, r1);")
 	name = entry.texts(1)
 	isRounding = MlirDeviceCalls(function, at, function).IsRounding(entry)
@@ -120,8 +120,8 @@ Native(entry InstructionEntry, instance Text) Text
 	made = name is "from" then "r" + PayloadDecoder(entry).Arguments.First else "n_" + name + "(" + instance + ")"
 	called = name is "Floor" then "n_floor(" + instance + ")" else made
 	"r" + entry.payload(0) + " = " + (name is "Length" then counted else called) + ";"
-Looped(entry InstructionEntry) Texts
-	WgslStatement(Summed, 11).Looped(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
+Loop(entry InstructionEntry) Texts
+	WgslStatement(Summed, 11).Loop(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")
 	WgslStatement(Summed, 2).Lines is Looping
 	WgslStatement(Summed, 7).Lines is List(Text)
 	if entry.kind is InstructionType.LoopBegin
@@ -139,11 +139,11 @@ Begun(register Text, entry InstructionEntry) Texts
 	item = isList then "n_of(n_item(e" + at + ".x, " + counter + "))" else "n_int(i32(" + counter + "))"
 	loop = "for (var " + counter + " = 0u; " + counter + " < c" + at + "; " + counter + "++) {"
 	saved + count + loop + ("v_index = n_int(i32(" + counter + "));") + ("v_value = " + item + ";")
-Finished(entry InstructionEntry) Texts
-	WgslStatement(Twice, 3).Finished(Twice.method.instructions(3)) is ("return r2;")
-	WgslStatement(Absolute, 3).Finished(Absolute.method.instructions(3)) is ("if (flag) {")
-	WgslStatement(Absolute, 11).Finished(Absolute.method.instructions(11)) is ("if (!flag) {")
-	WgslStatement(Absolute, 10).Finished(Absolute.method.instructions(10)) is ("}")
+Finish(entry InstructionEntry) Texts
+	WgslStatement(Twice, 3).Finish(Twice.method.instructions(3)) is ("return r2;")
+	WgslStatement(Absolute, 3).Finish(Absolute.method.instructions(3)) is ("if (flag) {")
+	WgslStatement(Absolute, 11).Finish(Absolute.method.instructions(11)) is ("if (!flag) {")
+	WgslStatement(Absolute, 10).Finish(Absolute.method.instructions(10)) is ("}")
 	if entry.kind is InstructionType.CheckError
 		return List(Text)
 	if entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
@@ -151,16 +151,16 @@ Finished(entry InstructionEntry) Texts
 	register = "r" + entry.payload(0)
 	line = entry.kind is InstructionType.Return then "return " + register + ";" else "output[at] = " + register + ".f;"
 	List(Text) + (entry.kind is InstructionType.JumpEnd then "}" else line)
-Recorded(entry InstructionEntry, slots Number) Texts
-	WgslStatement(Records, 4).Recorded(LaneFlow.Picking, 2).First is "let k4 = n_index(r1) * 2u;"
+Record(entry InstructionEntry, slots Number) Texts
+	WgslStatement(Records, 4).Record(LaneFlow.Picking, 2).First is "let k4 = n_index(r1) * 2u;"
 	position = "k" + at
 	target = "r" + entry.payload(0)
 	first = "let " + position + " = n_index(r" + entry.payload(1) + ") * " + slots + "u;"
 	inside = "if (r" + entry.payload(1) + ".f >= 0.0 && " + position + " < v_" + entry.texts(0) + "l.y) { "
 	read = inside + target + " = n_int(i32(" + position + ")); }"
 	(first, read, "else { failed[0] = 1u; " + target + " = n_int(0); }")
-Fielded(entry InstructionEntry) Texts
-	WgslStatement(Records, 5).Fielded(MlirDeviceRecords.Field)(1).EndsWith("r3 = n_of(n_item(v_pairsl.x, k5)); }")
+Field(entry InstructionEntry) Texts
+	WgslStatement(Records, 5).Field(MlirDeviceRecords.Field)(1).EndsWith("r3 = n_of(n_item(v_pairsl.x, k5)); }")
 	list = "v_" + function.method.instructions(MlirKinds(function).Writer(at, entry.payload(1))).texts(0) + "l"
 	member = StructLanes(function.types).Members(function.TypeOf(entry.texts(1))).Index(entry.texts(0))
 	position = "k" + at

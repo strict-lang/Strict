@@ -32,11 +32,11 @@ Run Number
 	folder = "Compiler/output/ResidencyCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	logger.Log("A list computed on the GPU from numbers alone stays there until the CPU reads it")
 	0
-Checked(folder Text)
+Check(folder Text)
 	CheckPrimary(folder)
 	CheckSmallAndPair(folder)
 	CheckSimpleAndOrbit(folder)

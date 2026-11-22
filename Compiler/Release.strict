@@ -1,7 +1,7 @@
 has base Text
 constant Opening = "= func.call @" + "Window_Open("
 constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
-AndroidPackaged
+AndroidPackage
 	release = Parent + "/Release/Android"
 	Content(Parent + "/Release/Content")
 	Directory.Create(Parent + "/Release")
@@ -12,38 +12,38 @@ AndroidPackaged
 	File(release + "/jniLibs/arm64-v8a/libmain.so").Write(File(library).ReadBytes)
 	Directory.Create(release + "/assets")
 	logger.Log("Android native library and assets: " + release)
-	Mirrored(release + "/assets/Content")
-MobilePackaged(platform Number)
+	Mirror(release + "/assets/Content")
+MobilePackage(platform Number)
 	if platform is Platform.Android
-		return AndroidPackaged
+		return AndroidPackage
 	Content(Parent + "/Release/Content")
 	release = Parent + "/Release/iOS"
-	Refreshed(release, release + "/Content", base, (".ios.a", ".simulator.a"))
-Packaged(program Text, isWeb = false, isCrossing = false, platform = -1, isReleased = false)
-	Release("Examples/Sum").Packaged("module {\n}") is not Error
-	Release("Missing/App.test").Packaged(Opening) is not Error
-	Release("Compiler/output/Console").Packaged("module {\n}", false, false, -1, true) is not Error
+	Refresh(release, release + "/Content", base, (".ios.a", ".simulator.a"))
+Package(program Text, isWeb = false, isCrossing = false, platform = -1, isReleased = false)
+	Release("Examples/Sum").Package("module {\n}") is not Error
+	Release("Missing/App.test").Package(Opening) is not Error
+	Release("Compiler/output/Console").Package("module {\n}", false, false, -1, true) is not Error
 	Directory.Exists("Compiler/output/Release/" + Platform.NameOf(Platform.Current))
 	if platform is in (Platform.Android, Platform.IOS, Platform.IOSSimulator)
-		return MobilePackaged(platform)
+		return MobilePackage(platform)
 	if base.EndsWith(".test")
 		return
 	if isWeb
-		return Refreshed(Parent + "/Release/Web", "", base, List(Text))
-	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing or File(Parent + "/" + Named(base) + ".shell.html").Exists
-		NativePackaged(isCrossing)
-NativePackaged(isCrossing Boolean)
+		return Refresh(Parent + "/Release/Web", "", base, List(Text))
+	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing or File(Parent + "/" + Label(base) + ".shell.html").Exists
+		NativePackage(isCrossing)
+NativePackage(isCrossing Boolean)
 	Content(Parent + "/Release/Content")
 	ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
-		return Refreshed(Parent + "/Release", "", BuildOutput.Deliver(base), (ending, ".shell.html"))
+		return Refresh(Parent + "/Release", "", BuildOutput.Deliver(base), (ending, ".shell.html"))
 	if Platform.Current is Platform.MacOS
-		return MacOSBundle(base).Released
+		return MacOSBundle(base).Ship
 	folder = Parent + "/Release/" + Platform.NameOf(Platform.Current)
-	Refreshed(folder, folder + "/Content", BuildOutput.Deliver(base), (ending, ".shell.html"))
+	Refresh(folder, folder + "/Content", BuildOutput.Deliver(base), (ending, ".shell.html"))
 	linux = Parent + "/Release/Linux"
-	if isCrossing and Platform.Current is Platform.Windows and File(linux + "/" + Named(base)).Exists
-		Refreshed(linux, linux + "/Content", base, List(Text))
+	if isCrossing and Platform.Current is Platform.Windows and File(linux + "/" + Label(base)).Exists
+		Refresh(linux, linux + "/Content", base, List(Text))
 IsDemo Boolean
 	File("Compiler/output/A.shell.html").Write("<html/>") is not Error
 	Release(TypeSource.Root + "/Examples/NativeAdd/AtlasDemo").IsDemo
@@ -66,17 +66,17 @@ Icon Text
 	own = BuildOutput.Deliver(base) + ".ico"
 	folder = Parent + "/" + Path(Parent).FileName.text + ".ico"
 	File(own).Exists then own else File(folder).Exists then folder else TypeSource.Root + "/Strict.ico"
-Refreshed(release Text, content Text, stem Text, endings Texts)
-	Created(release)
+Refresh(release Text, content Text, stem Text, endings Texts)
+	Creat(release)
 	for endings
 		built = stem + value
 		if File(built).Exists
-			if IsPlaced(built, release + "/" + Named(built)) is false
-				logger.Log("Release could not replace " + release + "/" + Named(built) + ", is it still running?")
+			if IsPlaced(built, release + "/" + Label(built)) is false
+				logger.Log("Release could not replace " + release + "/" + Label(built) + ", is it still running?")
 				return Error("ReleaseNotReplaced")
 	logger.Log("Release: " + release)
 	Sidecar(release)
-	Mirrored(content)
+	Mirror(content)
 IsPlaced(source Text, target Text) Boolean
 	temporary = target + "." + 1000000000.Random.Floor + ".tmp"
 	bytes = File(source).ReadBytes
@@ -91,26 +91,26 @@ Sidecar(release Text)
 	Release("Missing/App").Sidecar("Missing/Release") is not Error
 	PtxCache("Compiler/output/Sided").HasWritten(List(Text) + "// a", ".ptx")
 	Release("Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
-	Release("Compiler/output/obj/A").Packaged("module {\n}") is not Error
+	Release("Compiler/output/obj/A").Package("module {\n}") is not Error
 	File("Compiler/output/Release/" + Platform.NameOf(Platform.Current) + "/A.shell.html").Exists
 	isWeb = Path(release).FileName.text is "Web"
 	if isWeb and Icon is not TypeSource.Root + "/Strict.ico" and IsPlaced(Icon, release + "/favicon.ico") is false
 		logger.Log("Release could not place " + release + "/favicon.ico")
 	for Sidecars
 		if isWeb is false
-			PtxLibraries.Of(base).Placed(base, value, release)
-Mirrored(target Text)
+			PtxLibraries.Of(base).Place(base, value, release)
+Mirror(target Text)
 	if target is not ""
-		Synced(Parent + "/Release/Content", target)
-Synced(source Text, target Text)
-	Copied(source, target)
-	Removed(source, target)
+		Synce(Parent + "/Release/Content", target)
+Synce(source Text, target Text)
+	Copy(source, target)
+	Remove(source, target)
 Content(target Text)
 	Release("Missing/App").Content("Missing/Release/Content") is not Error
 	source = Parent + "/Content"
 	builder = Parent + "/ContentBuild.strict"
 	if File(builder).Exists is false
-		return Synced(source, target)
+		return Synce(source, target)
 	built = BuiltContent(builder, source, target)
 	if built.HasFailed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
@@ -123,32 +123,32 @@ BuiltContent(builder Text, source Text, target Text) ProcessResult
 	if compiled.HasFailed
 		return compiled
 	ToolRunner(tools.Executable(Parent + "/ContentBuild")).Execute("\"" + source + "\" \"" + target + "\"")
-Copied(source Text, target Text)
+Copy(source Text, target Text)
 	if Directory.Exists(source)
-		Created(target)
+		Creat(target)
 		for Directory.Files(source)
-			copy = target + "/" + Named(value)
+			copy = target + "/" + Label(value)
 			if File(copy).Exists is false or File(value).Modified > File(copy).Modified
 				File(copy).Write(File(value).ReadBytes)
 		for Directory.Directories(source)
-			Copied(value, target + "/" + Named(value))
-Created(path Text)
-	Release("Missing/App").Created("artifacts/Release/Content") is not Error
-	Release("Missing/App").Created("") is not Error
+			Copy(value, target + "/" + Label(value))
+Creat(path Text)
+	Release("Missing/App").Creat("artifacts/Release/Content") is not Error
+	Release("Missing/App").Creat("") is not Error
 	if path is not "" and Directory.Exists(path) is false
-		Created(Path(path).PathOnly.text)
+		Creat(Path(path).PathOnly.text)
 		Directory.Create(path)
-Removed(source Text, target Text)
-	Release("Missing/App").Removed("Missing/Content", "Missing/Release/Content") is not Error
+Remove(source Text, target Text)
+	Release("Missing/App").Remove("Missing/Content", "Missing/Release/Content") is not Error
 	if Directory.Exists(source) is false
 		if Directory.Exists(target)
 			Directory.Delete(target)
 		return
 	for Directory.Files(target)
-		if File(source + "/" + Named(value)).Exists is false
+		if File(source + "/" + Label(value)).Exists is false
 			File(value).Delete
 	for Directory.Directories(target)
-		Removed(source + "/" + Named(value), value)
-Named(path Text) Text
-	Release("App").Named("a\b/c.png") is "c.png"
+		Remove(source + "/" + Label(value), value)
+Label(path Text) Text
+	Release("App").Label("a\b/c.png") is "c.png"
 	Path(path.Replace("\\", "/")).FileName.text

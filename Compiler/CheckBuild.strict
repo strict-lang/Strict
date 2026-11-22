@@ -65,7 +65,7 @@ CheckHeadersAndTraits(folder Text, helper Text)
 		return Error("BootstrapNotChecked")
 	for (TraitFilesA + "\n" + TraitFilesB).Split("\n")
 		File(folder + "/" + value.Split("|")(0)).Write(value.Split("|")(1).Split("\\n"))
-	trait = Built(folder, "TraitCheck", TraitA + TraitB)
+	trait = Build(folder, "TraitCheck", TraitA + TraitB)
 	if trait is Error or Process.RunTool(trait, "", ShortSeconds).exitCode is not TraitExit
 		return Error("TraitCheckFailed")
 	File(folder + "/NativeChange.strict").Write(("has logger", "Run", "\tlogger.Log(Hmac.Sha256(\"key\", \"text\"))"))
@@ -79,14 +79,14 @@ CheckCleanup(folder Text, helper Text)
 	ran = Process.RunTool(helper, "lock \"" + locked + ".ll\" \"" + cmd + "\"", ShortSeconds)
 	if "Could not remove build intermediate: " + locked + ".ll" is not in ran.Output
 		return Error("CleanupLockMessageMissing: " + ran.Output)
-	built = Built(folder, "CleanupCheck", "")
+	built = Build(folder, "CleanupCheck", "")
 	Directory.Create(folder + "/Content")
 	File(folder + "/Content/data.txt").Write("initial")
 	if built is Error
 		return built
 	CheckNestedAndCache(folder, helper)
 CheckNestedAndCache(folder Text, helper Text)
-	nested = Built(folder, "NestedGpu", NestedA + NestedB)
+	nested = Build(folder, "NestedGpu", NestedA + NestedB)
 	if nested is Error
 		return nested
 	mlir = Text.Combine(File(folder + "/obj/NestedGpu.mlir").ReadLines, "\n")
@@ -97,7 +97,7 @@ CheckNestedAndCache(folder Text, helper Text)
 		return Error("ForcedGpuDidNotStop: " + ran.Output)
 	CheckProfileAndBuildCache(folder, helper)
 CheckProfileAndBuildCache(folder Text, helper Text)
-	prof = Built(folder, "ProfileCheck", ProfCode)
+	prof = Build(folder, "ProfileCheck", ProfCode)
 	out = prof is Error then prof to Text else Process.RunTool(prof, "", ShortSeconds).Output
 	if "Fast phase:" is in out or "Slow phase:" is not in out
 		return Error("DefaultProfileThresholdsBroken: " + out)
@@ -110,7 +110,7 @@ CheckProfileAndBuildCache(folder Text, helper Text)
 	File(src).Write(("Run Number", "\t1 is 1", "\tBuildValue.Result"))
 	CheckInc(folder, helper, src)
 CheckInc(folder Text, helper Text, src Text)
-	exe = Built(folder, "BuildCheck", "")
+	exe = Build(folder, "BuildCheck", "")
 	if exe is Error or Process.RunTool(exe, "", ShortSeconds).exitCode is not 0
 		return Error("CleanBuildFailed")
 	stamp = File(exe).Modified
@@ -173,12 +173,12 @@ CheckReadTextAndLinks(folder Text, helper Text)
 	File(folder + "/NamedCheck.strict").Write(NamedCode.Split("\n"))
 	if l1.exitCode is not 0
 		return Error("LinkChainFailed: " + l1.Output)
-	CheckNamedAndMoved(folder, helper)
-CheckNamedAndMoved(folder Text, helper Text)
+	CheckNamedAndMove(folder, helper)
+CheckNamedAndMove(folder Text, helper Text)
 	nr = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/NamedCheck.strict", ToolSeconds)
 	if nr.exitCode is 1 or "ResultMustBeUsed: Next(3)" is not in nr.Output
 		return Error("NamedFailureWrong: " + nr.Output)
-	moved = Built(folder, "MovedCheck", MovedA + MovedB)
+	moved = Build(folder, "MovedCheck", MovedA + MovedB)
 	if moved is Error
 		return moved
 	d = folder + "/elsewhere"
@@ -236,13 +236,13 @@ CheckCompilerTouch(folder Text, helper Text, src Text, usedBin Text, stored Numb
 	tB = Process.RunTool(helper, "touch \"" + Process.Find("strict").executable + "\" -1000000000", ShortSeconds)
 	if tA.exitCode is not 0 or tB.exitCode is not 0 or t2.exitCode is not 0 or File(usedBin).Modified is stored
 		return Error("ChangedCompilerReusedOldBytecode: " + usedBin)
-	if Built(folder, "NativeChange", "") is Error
+	if Build(folder, "NativeChange", "") is Error
 		return Error("NativeChangeInitFailed")
 	for ("Networking/native/Hmac.c", "Networking/Hmac.strict")
 		tch = Process.RunTool(helper, "touch \"" + value + "\" 0", ShortSeconds)
-		if tch.exitCode is not 0 or Built(folder, "NativeChange", "") is Error
+		if tch.exitCode is not 0 or Build(folder, "NativeChange", "") is Error
 			return Error("NativeBuildFailed: " + value)
-Built(folder Text, name Text, code Text) Text
+Build(folder Text, name Text, code Text) Text
 	src = folder + "/" + name + ".strict"
 	if code is not ""
 		File(src).Write(code.Split("\n"))

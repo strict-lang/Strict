@@ -28,21 +28,21 @@ Signing(identity Text, app Text) Text
 	quoted = "\"" + app + "\""
 	developer = "--force --options runtime --timestamp --sign \"" + identity + "\" " + quoted
 	identity is "-" then "--force --sign - " + quoted else developer
-Released
-	MacOSBundle("Compiler/output/App").Released is Error("ExecutableMissing")
+Ship
+	MacOSBundle("Compiler/output/App").Ship is Error("ExecutableMissing")
 	Directory.Exists("Compiler/output/Release/MacOS/App.app/Contents/Resources")
 	app = Contents.Substring(0, Contents.Length - 9)
 	release = Release(base)
 	folder = release.Parent + "/Release"
 	for (release.Parent, folder, folder + "/MacOS", app, Contents, Contents + "/Resources")
 		Directory.Create(value)
-	release.Refreshed(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Deliver(base), List(Text) + "")
-	Completed(release.Icon)
+	release.Refresh(Contents + "/MacOS", Contents + "/Resources/Content", BuildOutput.Deliver(base), List(Text) + "")
+	Complete(release.Icon)
 Converting(icon Text) Text
 	MacOSBundle("Missing/App").Converting("a.ico").StartsWith("-s format icns \"a.ico\" --out ")
 	"-s format icns \"" + icon + "\" --out \"" + Contents + "/Resources/" + Name + ".icns\""
-Completed(icon Text)
-	MacOSBundle("Missing/App").Completed("Missing.ico") is Error("ExecutableMissing")
+Complete(icon Text)
+	MacOSBundle("Missing/App").Complete("Missing.ico") is Error("ExecutableMissing")
 	if File(Contents + "/MacOS/" + Name).Exists is false
 		return Error("ExecutableMissing")
 	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))

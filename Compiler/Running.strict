@@ -66,8 +66,8 @@ IsGone(id Text) Boolean slow
 			return true
 		Process.Wait(0.1)
 	false
-Restarted(old Text) Text slow
-	Missing.Restarted("Compiler/output/Missing.old.exe") is ""
+Restart(old Text) Text slow
+	Missing.Restart("Compiler/output/Missing.old.exe") is ""
 	if Directory.Files(Path(executable).PathOnly.text + "/obj", "strict.server*").Length is 0
 		return ""
 	stopping = Stopping
@@ -75,11 +75,11 @@ Restarted(old Text) Text slow
 		logger.Log("Stopping " + executable + " (process " + Id(value) + ")")
 		if HasEnded(Id(value)) is false
 			return "process " + Id(value) + " did not stop"
-	if stopping.Length > 0 and IsStrict is false and Intermediates.Deleted(old) is Error
+	if stopping.Length > 0 and IsStrict is false and Intermediates.Delet(old) is Error
 		return old + " is still in use by " + Described
-	IsStrict then "" else Started(stopping)
-Started(lines Texts) Text
-	Missing.Started(List(Text)) is ""
+	IsStrict then "" else Start(stopping)
+Start(lines Texts) Text
+	Missing.Start(List(Text)) is ""
 	for lines
 		command = Forwarding.Quote + Command(value).Replace("'", "''").Replace("\"", Forwarding.Quote) + Forwarding.Quote
 		folder = "' -WindowStyle Hidden -WorkingDirectory '" + Directory.Current + "'"

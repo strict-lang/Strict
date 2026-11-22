@@ -29,26 +29,26 @@ IsDeferring Boolean
 IsKept(at Number) Boolean
 	Reading.IsKept(5)
 	entry = function.method.instructions(at)
-	kind = MlirLayout(function).Represented(MlirKinds(function).KindOf(at, entry.payload(0)))
+	kind = MlirLayout(function).Represent(MlirKinds(function).KindOf(at, entry.payload(0)))
 	entry.texts.Length is 0 and kind is "Number"
-Versioned(prefix Texts, original Texts) Texts
-	Doubling.Versioned(List(Text), Original) is Original
-	Text.Combine(Reading.Versioned(List(Text), Original)).IndexOf("cf.cond_br %t2rr, ^fdloop2deferred, ^loop2retry") > 0
-	Text.Combine(Reading.Versioned(List(Text), Original)).IndexOf("@strict_deferred_at(%n_numbers") > 0
-	Reading.Versioned(List(Text), Original).Last is "  original"
+Version(prefix Texts, original Texts) Texts
+	Doubling.Version(List(Text), Original) is Original
+	Text.Combine(Reading.Version(List(Text), Original)).IndexOf("cf.cond_br %t2rr, ^fdloop2deferred, ^loop2retry") > 0
+	Text.Combine(Reading.Version(List(Text), Original)).IndexOf("@strict_deferred_at(%n_numbers") > 0
+	Reading.Version(List(Text), Original).Last is "  original"
 	if IsDeferring is false or function.Packing is not ""
 		return original
 	label = "^loop" + position
 	entered = "    cf.cond_br " + Temp("rr") + ", ^fdloop" + position + "deferred, " + label + "retry"
 	checked = (Checking, "    cf.cond_br %failedNow, " + label + "retry, " + label + "done")
 	finished = ("  " + label + "done:", "    return %zero : f64", "  " + label + "retry:")
-	(Failing + Ready + entered) + Copied(prefix) + checked + finished + original
-Packed(original Texts) Texts
-	Doubling.Packed(Original).Last is "  original"
-	Text.Combine(Doubling.Packed(Original)).IndexOf("32: ^fsloop2packed, 16: ^fhloop2packed, 17: ^fhloop2packed]") > 0
-	Text.Combine(Doubling.Packed(Original)).IndexOf("%fs2g = arith.extf %fs2gn : f32 to f64") > 0
-	Text.Combine(Doubling.Packed(Original)).IndexOf("%fh2g = arith.select %f2brain_for, %fh2gg, %fh2gw : f64") > 0
-	MlirDeferred(MlirFunction(Doubling.function, Packing = "for 32"), 2).Packed(Original) is Original
+	(Failing + Ready + entered) + Copy(prefix) + checked + finished + original
+Pack(original Texts) Texts
+	Doubling.Pack(Original).Last is "  original"
+	Text.Combine(Doubling.Pack(Original)).IndexOf("32: ^fsloop2packed, 16: ^fhloop2packed, 17: ^fhloop2packed]") > 0
+	Text.Combine(Doubling.Pack(Original)).IndexOf("%fs2g = arith.extf %fs2gn : f32 to f64") > 0
+	Text.Combine(Doubling.Pack(Original)).IndexOf("%fh2g = arith.select %f2brain_for, %fh2gg, %fh2gw : f64") > 0
+	MlirDeferred(MlirFunction(Doubling.function, Packing = "for 32"), 2).Pack(Original) is Original
 	if function.Packing is not "" or MlirLoops(function, position).Collection is not "List(Number)" or IsNested
 		return original
 	label = "^loop" + position
@@ -79,17 +79,17 @@ Formats Texts
 Variant(width Text, letter Text) Texts
 	Doubling.Variant("16", "h").First is "  ^fhloop2packed:"
 	packed = MlirParallel(MlirFunction(function, Packing = MlirFastLoop.Iterated + " " + width), position).Iterated
-	Renamed(List(Text) + ("  ^loop" + position + "packed:") + packed, letter)
-Renamed(lines Texts, letter Text) Texts
-	Doubling.Renamed(List(Text) + "    %t2m = arith.cmpi slt, %t2ki, %to : i64", "s").Last.EndsWith("%fs2ki, %to : i64")
-	Doubling.Renamed(List(Text) + "func.call @z(%t2rv, %from, %to) : (f64, i64, i64) -> ()", "s").Last.IndexOf("%to)") > 0
-	for MlirKernel(function, position).Renamed(lines, letter)
+	Rename(List(Text) + ("  ^loop" + position + "packed:") + packed, letter)
+Rename(lines Texts, letter Text) Texts
+	Doubling.Rename(List(Text) + "    %t2m = arith.cmpi slt, %t2ki, %to : i64", "s").Last.EndsWith("%fs2ki, %to : i64")
+	Doubling.Rename(List(Text) + "func.call @z(%t2rv, %from, %to) : (f64, i64, i64) -> ()", "s").Last.IndexOf("%to)") > 0
+	for MlirKernel(function, position).Rename(lines, letter)
 		value.Replace("%f" + letter + "o ", "%to ").Replace("%f" + letter + "o)", "%to)")
-Copied(prefix Texts) Texts
-	Reading.Copied(List(Text)).First is "  ^fdloop2deferred:"
-	Text.Combine(Reading.Copied(MlirParallel(Reading.function, 2).Checked)).IndexOf("%fd2ki, %to : i64") > 0
+Copy(prefix Texts) Texts
+	Reading.Copy(List(Text)).First is "  ^fdloop2deferred:"
+	Text.Combine(Reading.Copy(MlirParallel(Reading.function, 2).Checked)).IndexOf("%fd2ki, %to : i64") > 0
 	parallel = MlirParallel(MlirFunction(function, IsDeferred = true), position)
-	Renamed((List(Text) + ("  ^loop" + position + "deferred:")) + prefix + parallel.Body + parallel.Next.Slice(0, 3), "d")
+	Rename((List(Text) + ("  ^loop" + position + "deferred:")) + prefix + parallel.Body + parallel.Next.Slice(0, 3), "d")
 Ready Texts
 	Reading.Ready.Last is "    %t2rr = arith.andi %t2rj0, %t2rj0 : i1"
 	mutable lines = ("    " + Temp("rz") + " = llvm.mlir.zero : !llvm.ptr", "    " + Temp("rt") + " = arith.constant true")
@@ -111,16 +111,16 @@ Lists Texts
 	for Range(position + 1, function.method.LoopEndOf(position))
 		entry = function.method.instructions(value)
 		if entry.kind is InstructionType.IndexCall
-			fixed = parameters.Fixed(entry.texts(0))
+			fixed = parameters.Fix(entry.texts(0))
 			if fixed is not "" and parameters.IsBytes(fixed) is false and fixed is not in names
 				names.Add(fixed)
 	names
 Temp(suffix Text) Text
 	Reading.Temp("rr") is "%t2rr"
 	"%t" + position + suffix
-Scoped(lines Texts) Texts
-	Reading.Scoped(List(Text) + "    llvm.store %t7e, %t7p : f64, !llvm.ptr").Last.IndexOf("%t7p {alias_scopes") > 0
-	Reading.Scoped(List(Text) + "    func.call @f() : () -> ()") is List(Text) + "    func.call @f() : () -> ()"
+EmitScope(lines Texts) Texts
+	Reading.EmitScope(List(Text) + "    llvm.store %t7e, %t7p : f64, !llvm.ptr").Last.IndexOf("%t7p {alias_scopes") > 0
+	Reading.EmitScope(List(Text) + "    func.call @f() : () -> ()") is List(Text) + "    func.call @f() : () -> ()"
 	if MlirListDestined(function, position).IsDestined or lines.Last.StartsWith("    llvm.store ") is false
 		return lines
 	store = lines.Last

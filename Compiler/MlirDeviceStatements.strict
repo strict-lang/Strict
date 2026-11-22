@@ -18,14 +18,14 @@ Emitted Texts
 	MlirDeviceStatements(Twice, 3).Emitted.Last is "    return %d3r1 : !llvm.struct<(f64)>"
 	entry = function.method.instructions(at)
 	if entry.kind < InstructionType.IndexCall
-		return Moved(entry)
+		return Move(entry)
 	if entry.kind is InstructionType.IndexCall
-		return MlirDeviceRows(function, at).Emitted(entry)
+		return MlirDeviceRows(function, at).Emit(entry)
 	if entry.kind < InstructionType.BinaryOperatorsSeparator
-		return Calculated(entry)
+		return Calculate(entry)
 	if entry.kind is in (InstructionType.LoopBegin, InstructionType.LoopEnd)
 		return MlirDeviceLoops(function, at).Emitted
-	entry.kind is InstructionType.Invoke then MlirDeviceRows(function, at).Called(entry) else Finished(entry)
+	entry.kind is InstructionType.Invoke then MlirDeviceRows(function, at).Call(entry) else Finish(entry)
 Temp(suffix Text) Text
 	MlirDeviceStatements(Doubled, 5).Emitted(0) is "    %d5z = arith.constant 0 : i64"
 	MlirDeviceStatements(Doubled, 5).Emitted(1) is "    %d5w = arith.cmpi eq, %lane, %d5z : i64"
@@ -36,25 +36,25 @@ Temp(suffix Text) Text
 	MlirDeviceStatements(Doubled, 5).Emitted(17) is "    cf.br ^d5skip"
 	MlirDeviceStatements(Doubled, 3).Temp("a") is "%d3a"
 	"%d" + at + suffix
-Moved(entry InstructionEntry) Texts
-	MlirDeviceStatements(Twice, 1).Moved(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64")
-	Text.Combine(MlirDeviceStatements(Singled, 1).Moved(Twice.method.instructions(1))).IndexOf("f64 to f32") > 0
-	MlirDeviceStatements(Layered, 4).Moved(Layered.method.instructions(4)).Last.EndsWith(", %r2_b : i64, !llvm.ptr")
+Move(entry InstructionEntry) Texts
+	MlirDeviceStatements(Twice, 1).Move(Twice.method.instructions(1)).First.EndsWith("0x4000000000000000 : f64")
+	Text.Combine(MlirDeviceStatements(Singled, 1).Move(Twice.method.instructions(1))).IndexOf("f64 to f32") > 0
+	MlirDeviceStatements(Layered, 4).Move(Layered.method.instructions(4)).Last.EndsWith(", %r2_b : i64, !llvm.ptr")
 	if entry.kind is InstructionType.LoadVariableToRegister
-		return Copied("%v_" + entry.texts(0), "%r" + entry.payload(0), entry.texts(0))
+		return Copy("%v_" + entry.texts(0), "%r" + entry.payload(0), entry.texts(0))
 	if entry.kind is InstructionType.StoreRegisterToVariable
-		return Copied("%r" + entry.payload(0), "%v_" + entry.texts(0), entry.texts(0))
+		return Copy("%r" + entry.payload(0), "%v_" + entry.texts(0), entry.texts(0))
 	isLoad = entry.kind is InstructionType.LoadConstantToRegister
 	number = PayloadDecoder(entry).Value(isLoad then 1 else 0).number
 	target = isLoad then "%r" + entry.payload(0) else "%v_" + entry.texts.Last
 	loaded = MlirTyped(function.Float).Number(Temp(""), MlirStatements(function, at).Hex(number))
 	loaded + function.Store(Temp(""), target)
-Copied(source Text, target Text, name Text) Texts
-	MlirDeviceStatements(Doubled, 3).Copied("%v_value", "%r1", "value").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
+Copy(source Text, target Text, name Text) Texts
+	MlirDeviceStatements(Doubled, 3).Copy("%v_value", "%r1", "value").Last is "    llvm.store %d3, %r1 : f64, !llvm.ptr"
 	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted.Last.EndsWith("%v_list0_b : i64, !llvm.ptr")
 	if IsList(MlirKinds(function).VariableKind(at + 1, name)) is false
 		moved = (function.Load(Temp(""), source), function.Store(Temp(""), target))
-		return moved + MlirExact(function, at).Copied(source, target)
+		return moved + MlirExact(function, at).Copy(source, target)
 	mutable lines = List(Mutable(Text))
 	for MlirTyped.Parts
 		lines = lines + MlirTyped(MlirTyped.Types(index)).Load(Temp(value), source + value)
@@ -71,16 +71,16 @@ IsList(kind Text) Boolean
 	MlirDeviceStatements(MlirDeviceRows.Nesting, 5).Emitted(2) is "    %d5_n = llvm.load %r2_n : !llvm.ptr -> i64"
 	Reading.IsList("Numbers")
 	Reading.IsList("Number") is false
-	MlirLayout(function).Represented(kind) is "List(Number)" or MlirDeviceRecords(function, at).Slots(kind) > 0
-Indexed(entry InstructionEntry) Texts
-	Text.Combine(Reading.Indexed(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
-	Reading.Indexed(Lookup)(3).StartsWith("    llvm.store %d6y, %r")
-	Reading.Indexed(Lookup)(5) is "    %d6o = arith.cmpi ult, %d6k, %d6n : i64"
+	MlirLayout(function).Represent(kind) is "List(Number)" or MlirDeviceRecords(function, at).Slots(kind) > 0
+EmitIndex(entry InstructionEntry) Texts
+	Text.Combine(Reading.EmitIndex(Lookup)).IndexOf("@strict_device_element(%d6d, %d6b, %d6k, %d6n)") > 0
+	Reading.EmitIndex(Lookup)(3).StartsWith("    llvm.store %d6y, %r")
+	Reading.EmitIndex(Lookup)(5) is "    %d6o = arith.cmpi ult, %d6k, %d6n : i64"
 	list = "%v_" + entry.texts(0)
 	position = MlirExact(function, at).Position("%r" + entry.payload(1), Temp("k"))
 	target = "%r" + entry.payload(0)
-	cleared = MlirTyped(function.Float).Number(Temp("y"), "0x0") + MlirFeeding(function, at).Stored(Temp("y"), target)
-	position + cleared + MlirDeviceRecords(function, at).Checked(Temp("k"), list) + Failed + Read(list, target)
+	cleared = MlirTyped(function.Float).Number(Temp("y"), "0x0") + MlirFeeding(function, at).Store(Temp("y"), target)
+	position + cleared + MlirDeviceRecords(function, at).Check(Temp("k"), list) + Failed + Read(list, target)
 Failed Texts
 	Reading.Failed(1) is "    %d6f = arith.constant 1 : i64"
 	Reading.Failed(2) is "    llvm.store %d6f, %failed : i64, !llvm.ptr"
@@ -108,20 +108,20 @@ Read(list Text, target Text) Texts
 	single = (bits, "    " + Temp("") + guarded + " : (!llvm.ptr, i64, i64) -> f32")
 	loaded = MlirGuards(function, function.Guarded).IsSingle(at) then single else read
 	done = ("    cf.br ^d" + at + "done", "  ^d" + at + "done:")
-	(("  ^d" + at + "read:", data) + loaded + MlirFeeding(function, at).Stored(Temp(""), target)) + done
-Calculated(entry InstructionEntry) Texts
+	(("  ^d" + at + "read:", data) + loaded + MlirFeeding(function, at).Store(Temp(""), target)) + done
+Calculate(entry InstructionEntry) Texts
 	MlirDeviceStatements(Singled, 2).Emitted.Last is "    llvm.store %x2d, %r2_q : i64, !llvm.ptr"
-	Multiplying.Calculated(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
-	Text.Combine(MlirDeviceStatements(Singled, 2).Calculated(Twice.method.instructions(2))).IndexOf(" : f32") > 0
-	Text.Combine(Absolute.Calculated(Absolute.function.method.instructions(2))).IndexOf("arith.cmpf olt") > 0
+	Multiplying.Calculate(Twice.method.instructions(2)).Last is "    llvm.store %d2, %r2 : f64, !llvm.ptr"
+	Text.Combine(MlirDeviceStatements(Singled, 2).Calculate(Twice.method.instructions(2))).IndexOf(" : f32") > 0
+	Text.Combine(Absolute.Calculate(Absolute.function.method.instructions(2))).IndexOf("arith.cmpf olt") > 0
 	if entry.kind > InstructionType.ArithmeticSeparator
-		return MlirStatements(function, at).Calculated(entry)
+		return MlirStatements(function, at).Calculate(entry)
 	left = function.Load(Temp("a"), "%r" + entry.payload(1))
 	right = function.Load(Temp("b"), "%r" + entry.payload(2))
 	flags = IsContracted(entry) then " fastmath<contract>" else ""
-	calculated = MlirTyped(function.Float).Operated(Temp(""), entry.kind, Temp("a") + ", " + Temp("b") + flags)
-	stored = MlirFeeding(function, at).Stored(Temp(""), "%r" + entry.payload(3))
-	((left, right, calculated) + stored) + MlirRational(MlirExact(function, at)).Operated(entry)
+	calculated = MlirTyped(function.Float).Operate(Temp(""), entry.kind, Temp("a") + ", " + Temp("b") + flags)
+	stored = MlirFeeding(function, at).Store(Temp(""), "%r" + entry.payload(3))
+	((left, right, calculated) + stored) + MlirRational(MlirExact(function, at)).Operate(entry)
 IsContracted(entry InstructionEntry) Boolean
 	MlirDeviceStatements(Summed, 9).IsContracted(Lookup) is false
 	MlirDeviceStatements(MlirDeviceRows.Nesting, 4).IsContracted(Summed.method.instructions(9)) is false
@@ -132,18 +132,18 @@ IsContracted(entry InstructionEntry) Boolean
 	isLooped = begin < at and function.method.instructions(begin).kind is InstructionType.LoopBegin
 	isCalculation = entry.kind is in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 	isCalculation and isLooped and MlirDeviceSums(function, begin).IsSum
-Called(entry InstructionEntry) Texts
-	Text.Combine(Calling.Called(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0
-	Text.Combine(Passing.Called(Layered.method.instructions(5))).IndexOf("%d5p0_d, %d5p0_n, %d5p0_b") > 0
-	MlirDeviceStatements(MlirGpuCheck.Floored, 1).Called(MlirGpuCheck.Flooring)(1).IndexOf("floor(%d1i)") > 0
-	MlirDeviceStatements(MlirTokens.Summing.function, 15).Called(MlirTokens.Dotting)(1).IndexOf("%source") > 0
+EmitCall(entry InstructionEntry) Texts
+	Text.Combine(Calling.EmitCall(Call)).IndexOf("@Rows_Twice_1_device(%failed, %lane, %lanes, %d4i, %d4p0)") > 0
+	Text.Combine(Passing.EmitCall(Layered.method.instructions(5))).IndexOf("%d5p0_d, %d5p0_n, %d5p0_b") > 0
+	MlirDeviceStatements(MlirGpuCheck.Floored, 1).EmitCall(MlirGpuCheck.Flooring)(1).IndexOf("floor(%d1i)") > 0
+	MlirDeviceStatements(MlirTokens.Summing.function, 15).EmitCall(MlirTokens.Dotting)(1).IndexOf("%source") > 0
 	if MlirDeviceCalls(function, at, function).IsNative
 		return MlirDeviceCalls(function, at, function).Native(entry)
 	calls = MlirDeviceCalls(function, at, Callee)
 	arguments = "(" + Text.Combine(calls.Arguments, ", ") + ")"
 	feeding = MlirFeeding(function, at)
-	loaded = calls.Loaded(entry) + calls.Filled(entry)
-	(loaded + feeding.Invoked(calls, Temp(""), arguments)) + feeding.Called(Temp(""), "%r" + entry.payload(0))
+	loaded = calls.Load(entry) + calls.Fill(entry)
+	(loaded + feeding.Invoke(calls, Temp(""), arguments)) + feeding.Call(Temp(""), "%r" + entry.payload(0))
 Callee MlirFunction
 	Reading.Emitted(0) is "    %d6kf = llvm.load %r3 : !llvm.ptr -> f64"
 	Reading.Emitted(1) is "    %d6k = arith.fptosi %d6kf : f64 to i64"
@@ -153,29 +153,29 @@ Callee MlirFunction
 	Reading.Emitted(7) is "  ^d6fail:"
 	Reading.Emitted(16) is "    cf.br ^d6done"
 	Calling.Callee.Symbol is "Rows_Twice_1"
-	MlirCalleeGuards(function, at).WithWhole(MlirModule(function.types, "").Called(function, at).First)
-Finished(entry InstructionEntry) Texts
-	MlirDeviceStatements(Checked, 5).Finished(Checked.method.instructions(5)).Length is 0
-	MlirDeviceStatements(Absolute.function, 3).Finished(Absolute.function.method.instructions(3)).Length is 2
+	MlirCalleeGuards(function, at).WithWhole(MlirModule(function.types, "").Call(function, at).First)
+Finish(entry InstructionEntry) Texts
+	MlirDeviceStatements(Checked, 5).Finish(Checked.method.instructions(5)).Length is 0
+	MlirDeviceStatements(Absolute.function, 3).Finish(Absolute.function.method.instructions(3)).Length is 2
 	if entry.kind is InstructionType.CheckError
 		return List(Text)
 	if entry.kind is InstructionType.FieldLoad
-		return MlirDeviceRecords(function, at).Fielded(entry)
+		return MlirDeviceRecords(function, at).EmitField(entry)
 	if entry.kind is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue, InstructionType.JumpEnd)
-		return MlirStatements(function, at).Jumped(entry)
-	entry.kind is InstructionType.Return then Returned("%r" + entry.payload(0)) else Collected(entry)
-Returned(register Text) Texts
+		return MlirStatements(function, at).Jump(entry)
+	entry.kind is InstructionType.Return then EmitReturn("%r" + entry.payload(0)) else Collect(entry)
+EmitReturn(register Text) Texts
 	MlirDeviceStatements(Twice, 3).Emitted(0) is "    %d3 = llvm.load %r2 : !llvm.ptr -> f64"
 	MlirDeviceStatements(Twice, 3).Emitted(1) is "    %d3r0 = llvm.mlir.undef : !llvm.struct<(f64)>"
 	MlirDeviceStatements(MlirDeviceRecords.Holding, 5).Emitted(2) is "    %d5c = arith.constant 1 : i64"
 	MlirDeviceStatements(MlirDeviceRows.Nesting, 2).Emitted(9) is "  ^d2loop:"
 	Calling.Emitted.Last is "    llvm.store %d4, %r2 : f64, !llvm.ptr"
-	MlirDeviceStatements(Singled, 3).Returned("%r1").Last is "    return %d3r3 : !llvm.struct<(f32, i64, i64)>"
-	MlirDeviceStatements(Singled, 3).Returned("%r1")(1) is "    %d3_e = llvm.load %r1_e : !llvm.ptr -> i64"
+	MlirDeviceStatements(Singled, 3).EmitReturn("%r1").Last is "    return %d3r3 : !llvm.struct<(f32, i64, i64)>"
+	MlirDeviceStatements(Singled, 3).EmitReturn("%r1")(1) is "    %d3_e = llvm.load %r1_e : !llvm.ptr -> i64"
 	exact = MlirExact(function, at)
-	loaded = (List(Text) + function.Load(Temp(""), register)) + exact.Loaded(Temp(""), register)
+	loaded = (List(Text) + function.Load(Temp(""), register)) + exact.LoadExact(Temp(""), register)
 	packed = Temp("r" + exact.Names(Temp("")).Length)
-	(loaded + MlirFeeding(function, at).Packed(Temp(""))) + ("    return " + packed + " : " + exact.Returned)
+	(loaded + MlirFeeding(function, at).Pack(Temp(""))) + ("    return " + packed + " : " + exact.Returned)
 Labeled Texts
 	MlirDeviceStatements(Absolute.function, 4).Labeled is ("  ^bb4:")
 	MlirDeviceStatements(Absolute.function, 10).Labeled is ("    cf.br ^bb10", "  ^bb10:")
@@ -187,12 +187,12 @@ Labeled Texts
 	isJump = previous is in (InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 	isTerminated = isJump or previous is InstructionType.Return
 	isTerminated then List(Text) + ("  ^bb" + at + ":") else ("    cf.br ^bb" + at, "  ^bb" + at + ":")
-Collected(entry InstructionEntry) Texts
-	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).Last is "  ^d13skip:"
-	MlirDeviceStatements(Doubled, 5).Collected(Doubled.method.instructions(5)).Last is "  ^d5skip:"
-	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call).First is "    cf.br ^d13write"
-	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collected(Call)(1) is "  ^d13write:"
-	stored = MlirLayout(function).Collected(Temp(""), Temp("p"), at)
+Collect(entry InstructionEntry) Texts
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collect(Call).Last is "  ^d13skip:"
+	MlirDeviceStatements(Doubled, 5).Collect(Doubled.method.instructions(5)).Last is "  ^d5skip:"
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collect(Call).First is "    cf.br ^d13write"
+	MlirDeviceStatements(MlirGrouped.Norming.function, 13).Collect(Call)(1) is "  ^d13write:"
+	stored = MlirLayout(function).Collect(Temp(""), Temp("p"), at)
 	compared = "    " + Temp("w") + " = arith.cmpi eq, %lane, " + Temp("z") + " : i64"
 	first = (MlirTyped.Integer.Constant(Temp("z"), "0"), compared)
 	branch = ("    cf.cond_br " + Temp("w") + ", ^d" + at + "write, ^d" + at + "skip", "  ^d" + at + "write:")

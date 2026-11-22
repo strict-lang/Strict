@@ -2,7 +2,7 @@ constant Batch = 128
 constant CrashExitCode = 128
 constant PendingPath = "./Compiler/output/Pending/Go.strict"
 constant PendingFile = BinaryFile(PendingPath)
-constant PendingSource = PtxCache("Compiler/output/Pending/Go").Saved(".strict", "from") is not Error
+constant PendingSource = PtxCache("Compiler/output/Pending/Go").Save(".strict", "from") is not Error
 constant PendingHeader = PendingSource then BinarySources(List(Text) + PendingPath).Stamped.Header else List(Number)
 constant PendingBytes = PendingFile.Pack(PendingHeader, List(TypeEntry) + BinaryLinks.Tested, List(Text))
 TestFolder(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number

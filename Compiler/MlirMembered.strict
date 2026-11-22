@@ -10,15 +10,14 @@ constant EntityReturned = (InstructionEntry.Named(InstructionType.LoadVariableTo
 constant Moving = EntityStored + PositionTripled + VelocityLoaded + MoverRebuilt + EntityReturned
 constant Moved = MlirMembered(MlirFunction((MlirDestined.Maker, MlirFlats.Summing, Mover), Mover, MethodEntry("Run", List(MemberEntry), "None", Moving)), 4)
 constant Defaulted = MlirMembered(MlirFunction(Moved.function.types, Mover, MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Mover", "from", "Mover"), List(Number), -1))), 0)
-Destined(entry InstructionEntry, compiled Texts) Texts
-	Moved.Destined(Moving(4), List(Text) + "call")(2).IndexOf("@strict_flat_destine_member(%t4mo, %t4ms)") > 0
-	MlirMembered(Moved.function, 7).Destined(Moving(7), List(Text) + "call") is ("call")
-	handed = MlirDestined(function, position).Handed(entry)
-	at = handed is "strict_flat_destine" then Rebuilding(entry.payload(0)) else -1
+Destine(entry InstructionEntry, compiled Texts) Texts
+	Moved.Destine(Moving(4), List(Text) + "call")(2).IndexOf("@strict_flat_destine_member(%t4mo, %t4ms)") > 0
+	MlirMembered(Moved.function, 7).Destine(Moving(7), List(Text) + "call") is ("call")
+	at = MlirDestined(function, position).Hand(entry) is "strict_flat_destine" then Rebuilding(entry.payload(0)) else -1
 	slot = at < 0 then -1 else Slot(at, entry.payload(0))
 	name = slot < 0 then "" else Target(at, slot)
 	if name is ""
-		return MlirStructs(function, position).Destined(entry, MlirDestined(function, position).Next(entry), compiled)
+		return MlirStructs(function, position).Aim(entry, MlirDestined(function, position).Next(entry), compiled)
 	temp = "%t" + position + "m"
 	counted = "    " + temp + "s = arith.constant " + slot + ".0 : f64"
 	destined = "    func.call @strict_flat_destine_member(" + temp + "o, " + temp + "s) : (f64, f64) -> ()"
@@ -42,7 +41,7 @@ Slot(at Number, register Number) Number
 	entry = function.method.instructions(at)
 	arguments = PayloadDecoder(entry).Arguments
 	names = Invocation(entry, List(VmValue), VmValue.None).ParameterNames
-	for MlirInstances(function, 0).Stored(function.TypeOf(entry.texts(0), true))
+	for MlirInstances(function, 0).Store(function.TypeOf(entry.texts(0), true))
 		chosen = names.Index(value.Name) < 0 then index else names.Index(value.Name)
 		if chosen < arguments.Length then arguments(chosen) is register else false
 			return index
@@ -55,7 +54,7 @@ Target(at Number, slot Number) Text
 	name = MlirOwned(function, at).Target(entry, owner)
 	if name is "" or MlirAlone(function).IsAlone(name) is false
 		return ""
-	IsKept(MlirInstances(function, 0).Stored(owner)(slot).Name) then name else ""
+	IsKept(MlirInstances(function, 0).Store(owner)(slot).Name) then name else ""
 IsKept(member Text) Boolean
 	Moved.IsKept("position")
 	MlirMembered(Moved.function, 7).IsKept("position") is false

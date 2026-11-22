@@ -22,34 +22,34 @@ Type(name Text) Text
 	Summing.Type("sum") is "f64"
 	Multiplying.Type("sum") is "f32"
 	IsSummed(name) then "f64" else "f32"
-Loaded(name Text, result Text) Texts
-	Summing.Loaded("sum", "%a") is ("    %a = llvm.load %v_sum : !llvm.ptr -> f64")
-	Multiplying.Loaded("sum", "%a").Last is "    %a = arith.truncf %ad : f64 to f32"
+Load(name Text, result Text) Texts
+	Summing.Load("sum", "%a") is ("    %a = llvm.load %v_sum : !llvm.ptr -> f64")
+	Multiplying.Load("sum", "%a").Last is "    %a = arith.truncf %ad : f64 to f32"
 	loaded = "llvm.load %v_" + name + " : !llvm.ptr -> f64"
-	narrowed = MlirSingle(function, position).Narrowed(result, loaded)
+	narrowed = MlirSingle(function, position).Narrow(result, loaded)
 	IsSummed(name) then List(Text) + ("    " + result + " = " + loaded) else narrowed
-Added(entry InstructionEntry, at Number, left Text, right Text) Texts
-	Summing.Added(Adding, 9, "%a", "%b").First is "    %t9w = arith.extf %b : f32 to f64"
-	Summing.Added(Adding, 9, "%a", "%b").Last is "    %t9s = arith.addf %a, %t9w" + MlirSingle.Summed
+Add(entry InstructionEntry, at Number, left Text, right Text) Texts
+	Summing.Add(Adding, 9, "%a", "%b").First is "    %t9w = arith.extf %b : f32 to f64"
+	Summing.Add(Adding, 9, "%a", "%b").Last is "    %t9s = arith.addf %a, %t9w" + MlirSingle.Summed
 	widened = "%t" + at + "w"
 	operation = "    %t" + at + "s = arith." + MlirStatements(function, at).Operation(entry.kind) + " "
 	("    " + widened + " = arith.extf " + right + " : f32 to f64", operation + left + ", " + widened + MlirSingle.Summed)
-Stored(name Text, index Number) Texts
-	Summing.Stored("sum", 0) is ("    llvm.store %t2u0, %v_sum : f64, !llvm.ptr")
-	Multiplying.Stored("sum", 0).First is "    %t2e0 = arith.extf %t2u0 : f32 to f64"
+Store(name Text, index Number) Texts
+	Summing.Store("sum", 0) is ("    llvm.store %t2u0, %v_sum : f64, !llvm.ptr")
+	Multiplying.Store("sum", 0).First is "    %t2e0 = arith.extf %t2u0 : f32 to f64"
 	carried = "%t" + position + "u" + index
 	if IsSummed(name)
 		return List(Text) + function.Store(carried, "%v_" + name)
 	widened = "%t" + position + "e" + index
 	("    " + widened + " = arith.extf " + carried + " : f32 to f64", function.Store(widened, "%v_" + name))
-Typed(letter Text, separator Text) Text
-	Summing.Typed("u", ": ") is ", %t2u0: f64"
-	Multiplying.Typed("", "") is ", f32"
+FormatTypes(letter Text, separator Text) Text
+	Summing.FormatTypes("u", ": ") is ", %t2u0: f64"
+	Multiplying.FormatTypes("", "") is ", f32"
 	for MlirSingle(function, position).Carried
 		", " + (letter is "" then "" else "%t" + position + letter + index) + separator + Type(value)
 Initials Texts
 	Summing.Initials is ("    %t2i0 = llvm.load %v_sum : !llvm.ptr -> f64")
 	mutable lines = List(Mutable(Text))
 	for MlirSingle(function, position).Carried
-		lines = lines + Loaded(value, "%t" + position + "i" + index)
+		lines = lines + Load(value, "%t" + position + "i" + index)
 	lines

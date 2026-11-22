@@ -18,7 +18,7 @@ Texts(module GpuModule, stamp Text) Texts
 Members(type Text, devices List(GpuFunction)) Texts
 	Sample.Members("A", Sample.Devices).Length is 2
 	own = Own(type)
-	names = Titles(own) + Reached(own, devices)
+	names = Titles(own) + Traverse(own, devices)
 	for functions
 		if value.name is in names
 			value.text
@@ -27,16 +27,16 @@ Own(type Text) List(GpuFunction)
 	for functions
 		if value.IsKernel and value.Library is type and value.name is in owned
 			value
-Reached(own List(GpuFunction), devices List(GpuFunction)) Texts
-	Sample.Reached(Sample.Own("A"), Sample.Devices) is List(Text) + "C_D_2_devices"
+Traverse(own List(GpuFunction), devices List(GpuFunction)) Texts
+	Sample.Traverse(Sample.Own("A"), Sample.Devices) is List(Text) + "C_D_2_devices"
 	known = Titles(devices)
-	mutable reached = Wanted(own, known)
+	mutable reached = Want(own, known)
 	mutable at = 0
 	for as long as at < reached.Length
-		reached = (reached + Wanted(Of(devices, reached(at)), known)).Unique
+		reached = (reached + Want(Of(devices, reached(at)), known)).Unique
 		at = at + 1
 	reached
-Wanted(callers List(GpuFunction), known Texts) Texts
+Want(callers List(GpuFunction), known Texts) Texts
 	mutable wanted = List(Text)
 	for callers
 		wanted = wanted + Known(value.Called, known)

@@ -76,7 +76,7 @@ ExtractedFn(src Text, name Text) Text
 	marker = "\n  func.func private @" + name + "("
 	split = src.Split(marker)
 	split.Length < 2 then Error("MissingMlirFn: " + name) else marker + split(1).Split("\n  }")(0) + "\n  }"
-Expanded(raw Text) Text
+Expand(raw Text) Text
 	s = raw.Replace("~p", "!llvm.ptr").Replace("~c", "func.call @").Replace("~a", "arith.constant ")
 	s.Replace("~mad", "llvm.mlir.addressof ").Replace("~gep", "llvm.getelementptr").Replace("~mc", "llvm.mlir.constant")
 KindMlirText(src Text) Texts
@@ -90,7 +90,7 @@ KindMlirText(src Text) Texts
 	out = out + (KM09 + "\n" + KM10 + "\n" + KM11 + "\n" + KM12 + "\n" + KM13 + "\n" + KM14 + "\n" + KM15 + "\n" + KM16)
 	out = out + (KM17 + "\n" + KM18 + "\n" + KM19 + "\n" + KM20 + "\n" + KM21 + "\n" + KM22 + "\n" + KM23 + "\n" + KM24)
 	out = out + (KM25 + "\n" + KM26 + "\n" + KM27 + "\n" + KM28 + "\n" + KM29 + "\n" + KM30 + "\n" + KindTail)
-	Expanded(Text.Combine(out, "\n")).Split("\n")
+	Expand(Text.Combine(out, "\n")).Split("\n")
 KindTail Text
 	constant remember = "func.func private @strict_gpu_remember(%l: f64, %k: i64, %c: i64, %o: ~p, %p: i64) {\nreturn\n}"
 	constant upload = "llvm.func @spill_upload(%lb: i64, %c: i64) -> i64 {\n%t = ~a3 : i64"
@@ -121,10 +121,10 @@ PoolMlirText(src Text) Texts
 	mutable out = List(Text) + "module {"
 	for ExtractedGlobalsAndFns(src, PoolNames + "strict_gpu_trim", PoolGlobals).Split("\n")
 		out = out + value
-	out = out + Expanded(PoolTailA + "\n" + PoolTailB) + "func.func private @strict_gpu_web_trim() {\nreturn\n}"
-	out = out + Expanded("func.func private @strict_clock() -> f64 {\n%z = ~a0.0 : f64\nreturn %z : f64\n}")
-	out = out + Expanded("func.func private @strict_gpu_own_collectable() -> i1 {\n%t = ~atrue\nreturn %t : i1\n}")
-	out = out + Expanded("func.func private @strict_gpu_residing_class(%c: i64) -> (i1, i1) {\n%f = ~afalse")
+	out = out + Expand(PoolTailA + "\n" + PoolTailB) + "func.func private @strict_gpu_web_trim() {\nreturn\n}"
+	out = out + Expand("func.func private @strict_clock() -> f64 {\n%z = ~a0.0 : f64\nreturn %z : f64\n}")
+	out = out + Expand("func.func private @strict_gpu_own_collectable() -> i1 {\n%t = ~atrue\nreturn %t : i1\n}")
+	out = out + Expand("func.func private @strict_gpu_residing_class(%c: i64) -> (i1, i1) {\n%f = ~afalse")
 	out = out + "return %f, %f : i1, i1\n}\nllvm.func @pool_clear() -> f64 {\n  %z = arith.constant 0.0 : f64"
 	out = out + "  %r = func.call @strict_gpu_trim_unused(%z) : (f64) -> f64\n  llvm.return %r : f64\n}\n}"
 	out

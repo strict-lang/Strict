@@ -25,7 +25,7 @@ IsWhole Boolean
 	Brightening.IsWhole
 	MlirWholeChild(MlirParallel.Doubling.function, 2).IsWhole is false
 	isKernel = MlirWholeKernel(function, position).IsKernel
-	if isKernel or MlirParallel(function, position).IsParallel is false or MlirLayout(function).Packed(position) is not 9
+	if isKernel or MlirParallel(function, position).IsParallel is false or MlirLayout(function).Pack(position) is not 9
 		return isKernel
 	if MlirLoops(function, position).Collection is not "" and MlirBytes(function, position).Iterated is not 9
 		return false
@@ -60,8 +60,8 @@ Lines Texts
 		return MlirWholeLanes(function, position).Lines(header, Fallback)
 	parts = MlirWholeTypes(function).Settled.Split("|")
 	body = MlirWholeBody(function)
-	allocated = body.Allocated(parts(0), parts(1)) + body.Slot("%wloop", "i64") + Failing
-	(List(Text) + header) + allocated + Guarded + Fallback + Looped(parts(0), parts(1), parts(2)) + "  }"
+	allocated = body.Allocate(parts(0), parts(1)) + body.Slot("%wloop", "i64") + Failing
+	(List(Text) + header) + allocated + Guarded + Fallback + Loop(parts(0), parts(1), parts(2)) + "  }"
 Fallback Texts
 	Brightening.Fallback.Last is "    return %wg : f64"
 	Text.Combine(Brightening.Fallback).Length is 132
@@ -83,18 +83,18 @@ Guarded Texts
 	guard = MlirWholeGuard(function, position)
 	mutable lines = guard.Started
 	for Inputs
-		context = Loaded("%wl" + index, "%v_" + value)
+		context = Load("%wl" + index, "%v_" + value)
 		input = MlirWholeFunction(function).IsByteList(value) then Bytes(value, index) else Number(value, index)
 		lines = lines + context + input
 	count = Inputs.Length + (MlirLoops(function, position).Collection is "" then 0 else 1)
-	joined = guard.Joined(MlirWholeCall(function, position).Conditions(count))
+	joined = guard.Join(MlirWholeCall(function, position).Conditions(count))
 	lines + Collections + joined + ("    cf.cond_br " + guard.Temp("whok") + ", ^wholestart, ^generic")
 Number(name Text, number Number) Texts
 	Brightening.Number("radius", 1).Last is "    llvm.store %wi1, %v_radius : i64, !llvm.ptr"
 	Text.Combine(Brightening.Number("radius", 1)).Length is 349
 	guard = MlirWholeGuard(function, position)
-	converted = MlirWholeValues(position).Converted("%wl" + number, "f", "i", "%wi" + number)
-	checked = guard.Checked("%wl" + number, guard.Temp("wh" + number), guard.Temp("whlimit"))
+	converted = MlirWholeValues(position).Convert("%wl" + number, "f", "i", "%wi" + number)
+	checked = guard.Check("%wl" + number, guard.Temp("wh" + number), guard.Temp("whlimit"))
 	checked + converted + ("    llvm.store %wi" + number + ", %v_" + name + " : i64, !llvm.ptr")
 Bytes(name Text, number Number) Texts
 	Brightening.Bytes("pixels", 0).Last is "    llvm.store %wn0i, %v_pixels_length : i64, !llvm.ptr"
@@ -103,14 +103,14 @@ Bytes(name Text, number Number) Texts
 	bytes = "    " + pointer + " = func.call @strict_list_bytes(%wl" + number + ") : (f64) -> !llvm.ptr"
 	stored = "    llvm.store " + pointer + ", %v_" + name + " : !llvm.ptr, !llvm.ptr"
 	length = "    %wn" + number + " = func.call @strict_list_length(%wl" + number + ") : (f64) -> f64"
-	converted = MlirWholeValues(position).Converted("%wn" + number, "f", "i", "%wn" + number + "i")
+	converted = MlirWholeValues(position).Convert("%wn" + number, "f", "i", "%wn" + number + "i")
 	slot = MlirWholeBody(function).Slot("%v_" + name + "_length", "i64")
 	present = MlirWholeGuard(function, position).Present(pointer, number)
 	counted = "    llvm.store %wn" + number + "i, %v_" + name + "_length : i64, !llvm.ptr"
 	(bytes, stored) + present + (length, converted, slot, counted)
-Loaded(name Text, slot Text) Texts
-	Brightening.Loaded("%x", "%v_pixels").Last is "    %x = llvm.load %xa : !llvm.ptr -> f64"
-	Text.Combine(Brightening.Loaded("%x", "%v_pixels")).Length is 116
+Load(name Text, slot Text) Texts
+	Brightening.Load("%x", "%v_pixels").Last is "    %x = llvm.load %xa : !llvm.ptr -> f64"
+	Text.Combine(Brightening.Load("%x", "%v_pixels")).Length is 116
 	index = MlirParallel(function, position).Snapshot.Index(slot)
 	address = "    " + name + "a = llvm.getelementptr %context[" + index + "]" + MlirParallel.Slot
 	(address, "    " + name + " = llvm.load " + name + "a : !llvm.ptr -> f64")
@@ -121,45 +121,45 @@ Collections Texts
 	result = Result
 	if MlirLoops(function, position).Collection is ""
 		return result
-	iterated = Loaded("%wil", "%r" + function.method.instructions(position).payload(0))
+	iterated = Load("%wil", "%r" + function.method.instructions(position).payload(0))
 	result + iterated + Items + MlirWholeGuard(function, position).Present("%witems", Inputs.Length)
 Result Texts
 	Brightening.Result.Last is "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
 	Text.Combine(Brightening.Result).Length is 190
-	Loaded("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
-Looped(registers Text, variables Text, naturals Text) Texts
-	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).IndexOf("@Rows_Twice_1_whole(") > 0
-	Text.Combine(Brightening.Looped(Types.Part(0), Types.Part(1), Types.Part(2))).Length is 1544
+	Load("%wrl", "%v_forResult") + "    %wout = func.call @strict_list_data(%wrl) : (f64) -> !llvm.ptr"
+Loop(registers Text, variables Text, naturals Text) Texts
+	Text.Combine(Brightening.Loop(Types.Part(0), Types.Part(1), Types.Part(2))).IndexOf("@Rows_Twice_1_whole(") > 0
+	Text.Combine(Brightening.Loop(Types.Part(0), Types.Part(1), Types.Part(2))).Length is 1544
 	mutable lines = Started + Checked + Current(variables)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		statements = MlirWholeStatements(function, value, registers, variables, naturals)
 		isWrite = function.method.instructions(value).kind is InstructionType.InvokeWriteToList
-		lines = lines + function.Label(value) + (isWrite then Written(value, registers, naturals) else statements.Emitted)
+		lines = lines + function.Label(value) + (isWrite then Write(value, registers, naturals) else statements.Emitted)
 	lines + Next + Exit
 Current(variables Text) Texts
 	Brightening.Current(Types.Part(1)).Last is "    llvm.store %wv, %v_value : i64, !llvm.ptr"
 	Text.Combine(Brightening.Current(Types.Part(1))).Length is 257
 	Text.Combine(Reading.Current(MlirWholeTypes(Reading.function).Part(1))).Length is 92
 	values = MlirWholeValues(position)
-	index = values.Stored("%wk", "i", "%v_index", variables(function.VariableNames.Index("index")))
+	index = values.Store("%wk", "i", "%v_index", variables(function.VariableNames.Index("index")))
 	type = variables(function.VariableNames.Index("value")) to Text
 	if MlirLoops(function, position).Collection is ""
-		return index + values.Stored("%wk", "i", "%v_value", type)
-	index + Element + values.Stored("%wv", "i", "%v_value", type)
-Written(at Number, registers Text, naturals Text) Texts
-	Brightening.Written(6, Types.Part(0), Types.Part(2)).Last is "    llvm.store %t6b, %t6p : i8, !llvm.ptr"
+		return index + values.Store("%wk", "i", "%v_value", type)
+	index + Element + values.Store("%wv", "i", "%v_value", type)
+Write(at Number, registers Text, naturals Text) Texts
+	Brightening.Write(6, Types.Part(0), Types.Part(2)).Last is "    llvm.store %t6b, %t6p : i8, !llvm.ptr"
 	register = function.method.instructions(at).payload(0)
 	type = MlirWholeTypes(function).Reaching(register, at, registers, naturals)
-	loaded = MlirWholeValues(at).Loaded("%t" + at + "v", "%r" + register, registers(register), type)
+	loaded = MlirWholeValues(at).Load("%t" + at + "v", "%r" + register, registers(register), type)
 	slot = "    %t" + at + "p = llvm.getelementptr %wout[%wk]" + Pointer
 	stored = "    llvm.store %t" + at + "b, %t" + at + "p : i8, !llvm.ptr"
 	if type is "f"
 		return loaded + ("    %t" + at + "b = func.call @strict_byte_packed(%t" + at + "v) : (f64) -> i8", slot, stored)
-	loaded + Clamped(at) + (slot, stored)
-Clamped(at Number) Texts
-	Brightening.Clamped(6).Last is "    %t6b = arith.trunci %t6c : i64 to i8"
-	Text.Combine(Brightening.Clamped(6)).Length is 194
-	Text.Combine(Brightening.Written(6, Types.Part(0), Types.Part(2))).Length is 360
+	loaded + Clamp(at) + (slot, stored)
+Clamp(at Number) Texts
+	Brightening.Clamp(6).Last is "    %t6b = arith.trunci %t6c : i64 to i8"
+	Text.Combine(Brightening.Clamp(6)).Length is 194
+	Text.Combine(Brightening.Write(6, Types.Part(0), Types.Part(2))).Length is 360
 	values = MlirWholeValues(at)
 	low = values.Line("l", "arith.maxsi %t" + at + "v, %t" + at + "z : i64")
 	high = values.Line("c", "arith.minsi %t" + at + "l, %t" + at + "h : i64")

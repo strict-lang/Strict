@@ -9,8 +9,8 @@ Of(base Text) PtxLibraries
 	PtxLibraries.Of("a/obj/B").folder is "a/obj" and PtxLibraries.Of("a/obj/B").prefix is "ptx/"
 	PtxLibraries.Of("a/obj/B.test").prefix is "ptx/test/"
 	PtxLibraries(Path(base).PathOnly.text, base.EndsWith(".test") then "ptx/test/" else "ptx/")
-Indexed(texts Texts) Texts slow
-	Sample.Indexed(List(Text) + "clang failed: x") is List(Text) + "clang failed: x"
+IndexTexts(texts Texts) Texts slow
+	Sample.IndexTexts(List(Text) + "clang failed: x") is List(Text) + "clang failed: x"
 	for texts
 		value.StartsWith("//") then Index(value, Endings(index)) else value
 Targeted(header Text) PtxLibraries
@@ -24,13 +24,13 @@ Index(text Text, ending Text) Text slow
 	Directory.Create(folder + "/ptx")
 	Directory.Create(folder + "/" + prefix.Substring(0, prefix.Length - 1))
 	Directory.Create(folder + "/" + targeted.prefix.Substring(0, targeted.prefix.Length - 1))
-	targeted.Listed(text, ending, module)
-Listed(text Text, ending Text, module PtxModule) Text slow
+	targeted.DescribeModule(text, ending, module)
+DescribeModule(text Text, ending Text, module PtxModule) Text slow
 	functions = module.Functions
 	names = Libraries(functions).Unique
 	for names
-		Written(value, ending, functions)
-	PtxGlobals(folder + "/" + prefix + "Globals" + ending, prefix).Written(module.Globals)
+		Write(value, ending, functions)
+	PtxGlobals(folder + "/" + prefix + "Globals" + ending, prefix).Write(module.Globals)
 	needs = " needs " + prefix + "Globals," + Text.Combine(Stems(names), "")
 	"// strict program " + HashCode(text).number + needs + "\n" + module.Header
 Libraries(functions List(PtxFunction)) Texts
@@ -42,19 +42,19 @@ Stems(names Texts) Texts
 	Sample.Stems(("A", "B")) is ("ptx/A,", "ptx/B,")
 	for names
 		prefix + value + ","
-Written(library Text, ending Text, functions List(PtxFunction)) slow
+Write(library Text, ending Text, functions List(PtxFunction)) slow
 	path = folder + "/" + prefix + library + ending
 	old = File(path).Exists then PtxModule(File(path).ReadLines).Functions else List(PtxFunction)
-	composed = Composed(library, PtxMerge(old).Merged(PtxMerge(functions).In(library)))
+	composed = Compose(library, PtxMerge(old).Merge(PtxMerge(functions).In(library)))
 	if File(path).Exists is false or Text.Combine(File(path).ReadLines, "\n") is not composed
 		File(path).Write(composed)
-Composed(library Text, functions List(PtxFunction)) Text
-	Sample.Composed("A", Both.Slice(0, 1)).StartsWith("// strict library ptx/A needs ptx/Attention,ptx/Strict,\n" + Marker)
-	Sample.Composed("B", Both.Slice(1, 1)).StartsWith("// strict library ptx/B needs \n.func ")
-	head = "// strict library " + prefix + library + " needs " + Text.Combine(Stems(Needed(functions).Unique), "")
+Compose(library Text, functions List(PtxFunction)) Text
+	Sample.Compose("A", Both.Slice(0, 1)).StartsWith("// strict library ptx/A needs ptx/Attention,ptx/Strict,\n" + Marker)
+	Sample.Compose("B", Both.Slice(1, 1)).StartsWith("// strict library ptx/B needs \n.func ")
+	head = "// strict library " + prefix + library + " needs " + Text.Combine(Stems(FindNeed(functions).Unique), "")
 	head + "\n" + Text.Combine(Prototypes(functions), "") + Marker + "\n" + Text.Combine(Bodies(functions), "")
-Needed(functions List(PtxFunction)) Texts
-	Sample.Needed(Both) is ("Attention", "Strict")
+FindNeed(functions List(PtxFunction)) Texts
+	Sample.FindNeed(Both) is ("Attention", "Strict")
 	mutable needs = List(Text)
 	for functions
 		needs = needs + value.Needs
@@ -67,15 +67,15 @@ Bodies(functions List(PtxFunction)) Texts
 	Sample.Bodies(Both).Length is 2
 	for functions
 		value.Body
-Placed(base Text, ending Text, release Text) slow
+Place(base Text, ending Text, release Text) slow
 	sidecar = base + ending
 	if File(sidecar).Exists and File(sidecar).Length > 0
 		File(BuildOutput.Ship(release, sidecar)).Write(File(sidecar).ReadBytes)
 		if ending is in Endings
-			Copied(Reached(sidecar, ending), ending, release)
+			Copy(Traverse(sidecar, ending), ending, release)
 	if ending is ".ptx"
 		File(release + "/" + Path(base).FileName.text + ".fatbin").Delete
-Copied(stems Texts, ending Text, release Text) slow
+Copy(stems Texts, ending Text, release Text) slow
 	Directory.Create(release + "/ptx")
 	for stems
 		Directory.Create(release + "/" + Path(value).PathOnly.text)
@@ -83,7 +83,7 @@ Copied(stems Texts, ending Text, release Text) slow
 		target = File(release + "/" + value + ending)
 		if target.Exists is false or target.ReadBytes is not source.ReadBytes
 			target.Write(source.ReadBytes)
-Reached(program Text, ending Text) Texts slow
+Traverse(program Text, ending Text) Texts slow
 	mutable stems = Needs(program)
 	mutable at = 0
 	for as long as at < stems.Length

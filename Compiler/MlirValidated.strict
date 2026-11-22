@@ -35,12 +35,12 @@ IsKnown Boolean
 IsUnchanged(made InstructionEntry, at Number) Boolean
 	Kept.IsUnchanged(Keeping.instructions(1), 1)
 	Changed.IsUnchanged(MlirStructs.Checker.function.method.instructions(1), 1) is false
-	for Checked(function.type)
+	for Check(function.type)
 		if IsKept(made, at, value) is false
 			return false
 	true
-Checked(owner TypeEntry) Texts
-	Kept.Checked(Validator) is ("width")
+Check(owner TypeEntry) Texts
+	Kept.Check(Validator) is ("width")
 	names = MlirInstances(function, 0).StoredNames(owner)
 	for owner.methods
 		if value.Name is "Validated"
@@ -74,9 +74,9 @@ Count(name Text) Number
 		if value.Name is name
 			return value.Count
 	0
-Returned(call InstructionEntry) Number
-	Sizes.Returned(CountCall) is 16
-	Sizes.Returned(FromCall) is 0
+Seek(call InstructionEntry) Number
+	Sizes.Seek(CountCall) is 16
+	Sizes.Seek(FromCall) is 0
 	name = call.kind is InstructionType.Invoke then call.texts(1) else "from"
 	if name is "from"
 		return 0
@@ -92,7 +92,7 @@ Gathered Number
 	steps = function.method.instructions
 	isLoaded = position > 0 and steps(position).kind is InstructionType.LoadVariableToRegister
 	isGathered = isLoaded and steps(position - 1).kind is InstructionType.LoopEnd
-	isGathered then MlirBytes(function, function.method.LoopBeginOf(position - 1)).Flattened else Returned(steps(position))
+	isGathered then MlirBytes(function, function.method.LoopBeginOf(position - 1)).Flattened else Seek(steps(position))
 Collected Number
 	MlirValidated(MlirFunction(List(TypeEntry) + Sized, Sized, Counting), 0).Collected is 16
 	Emptied.Collected is 0

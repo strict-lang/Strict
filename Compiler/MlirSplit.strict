@@ -13,7 +13,7 @@ constant Sample = MlirSplit(SampleHeader + CallingFunction + CalledFunction)
 constant Linking = MlirSplit("  llvm.linker_options [\"a\"]")
 constant RuntimeParts = 8
 constant Common = Sample.Shared
-constant Placing = Sample.Placed(Common)
+constant Placing = Sample.Place(Common)
 constant LinkerOptions = "  llvm.linker_options"
 constant Nowhere = -1
 constant Using = Dictionary(("t", 0), ("A", 0), ("B", 0))
@@ -27,19 +27,19 @@ Starts Numbers
 Declarations(starts Numbers) Texts
 	Sample.Declarations(Sample.Starts) is ("  func.func private @A() -> f64", "  func.func private @B(f64) -> f64")
 	for starts
-		Declared(lines(value))
+		Declare(lines(value))
 Name(line Text) Text
 	Sample.Name(Tricky) is "k"
 	Sample.Name(Sample.lines(3)) is "A"
 	at = line.IndexOf("@")
 	line.Substring(at + 1, line.IndexOf("(", at) - at - 1)
-Typed(name Text) Text
-	Sample.Typed("Xor_Run_0") is "Xor"
-	Sample.Typed("lXor_Run_0_1") is "Xor"
-	Sample.Typed("List_Number__First_0") is "List"
-	Sample.Typed("dp0") is "p0"
-	Sample.Typed("__stack_low") is "__stack_low"
-	Sample.Typed("t") is "t"
+FindType(name Text) Text
+	Sample.FindType("Xor_Run_0") is "Xor"
+	Sample.FindType("lXor_Run_0_1") is "Xor"
+	Sample.FindType("List_Number__First_0") is "List"
+	Sample.FindType("dp0") is "p0"
+	Sample.FindType("__stack_low") is "__stack_low"
+	Sample.FindType("t") is "t"
 	type = name.Split("_").First
 	type.Length < 2 then name else type(0).Lower is type(0) then type.Substring(1) else type
 Owner(line Text) Number
@@ -50,7 +50,7 @@ Owner(line Text) Number
 	name = Name(line)
 	if name.StartsWith("strict_")
 		return HashCode(name).number % RuntimeParts
-	RuntimeParts + HashCode(Typed(name)).number % (Toolchain.Parts - RuntimeParts)
+	RuntimeParts + HashCode(FindType(name)).number % (Toolchain.Parts - RuntimeParts)
 Shared Texts
 	Sample.Shared.Length is 2
 	Sample.Shared.First is "  llvm.func @printf(!llvm.ptr, ...) -> i32"
@@ -61,9 +61,9 @@ Shared Texts
 			value
 		else if (value.StartsWith("  llvm.func ") or value.StartsWith("  func.func ")) and value.EndsWith("{") is false
 			value
-Placed(shared Texts) Numbers
+Place(shared Texts) Numbers
 	Placing is (Nowhere, Sample.Owner(Sample.lines(2)))
-	Linking.Placed(Linking.lines) is (0)
+	Linking.Place(Linking.lines) is (0)
 	for shared
 		value.StartsWith(Visible) then Owner(value) else value.StartsWith(LinkerOptions) then 0 else Nowhere
 Data(part Number, shared Texts, placed Numbers) Texts
@@ -89,10 +89,10 @@ Others(declarations Texts, owners Numbers, part Number, used Dictionary(Text, Nu
 	for declarations
 		if owners(index) is not part and Name(value) is in used
 			value
-Owned(starts Numbers, owners Numbers, part Number) Texts
-	Sample.Owned(Sample.Starts, (0, 1), 0).First is "  func.func @A() -> f64 {"
-	Sample.Owned(Sample.Starts, (0, 1), 0).Last is "  }"
-	Sample.Owned(Sample.Starts, (0, 1), 0).Length is 4
+Own(starts Numbers, owners Numbers, part Number) Texts
+	Sample.Own(Sample.Starts, (0, 1), 0).First is "  func.func @A() -> f64 {"
+	Sample.Own(Sample.Starts, (0, 1), 0).Last is "  }"
+	Sample.Own(Sample.Starts, (0, 1), 0).Length is 4
 	mutable owned = List(Text)
 	for starts
 		if owners(index) is part
@@ -114,9 +114,9 @@ Public(header Text) Text
 	unlinked = header.Replace(" attributes {" + Internal + "}", "").Replace(Internal + ", ", "")
 	plain = unlinked.Replace(", " + Internal, "")
 	plain.Replace("  func.func private @", "  func.func @").Replace("  llvm.func internal @", "  llvm.func @")
-Declared(header Text) Text
-	Sample.Declared("  llvm.func @l(%s: !llvm.ptr, %n: i64) attributes {a} {") is "  llvm.func @l(!llvm.ptr, i64)"
-	Sample.Declared("  func.func private @F(%f: (i64) -> f64) -> (f64, i1) {").EndsWith("@F((i64) -> f64) -> (f64, i1)")
+Declare(header Text) Text
+	Sample.Declare("  llvm.func @l(%s: !llvm.ptr, %n: i64) attributes {a} {") is "  llvm.func @l(!llvm.ptr, i64)"
+	Sample.Declare("  func.func private @F(%f: (i64) -> f64) -> (f64, i1) {").EndsWith("@F((i64) -> f64) -> (f64, i1)")
 	open = header.IndexOf("(")
 	close = Closing(header, open)
 	kind = header.StartsWith("  func.func ") then "  func.func private " else "  llvm.func "

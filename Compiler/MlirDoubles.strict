@@ -27,7 +27,7 @@ Fails(inspected MlirFunction, first Number, limit Number, depth Number) Boolean
 		if entry.kind is InstructionType.Power or isLogarithm
 			return true
 		if depth < 3 and entry.kind is InstructionType.Invoke
-			for MlirModule(inspected.types, "").Called(inspected, value)
+			for MlirModule(inspected.types, "").Call(inspected, value)
 				if Fails(value, 0, value.method.instructions.Length, depth + 1)
 					return true
 	false
@@ -59,7 +59,7 @@ Format Number
 	Squaring.Format is 0
 	MlirDoubles(MlirLayout.Halves, 2).Format is 17
 	MlirDoubles(WgslShader.Scaled.function, 2).Format is 32
-	packed = MlirLayout(function).Packed(position)
+	packed = MlirLayout(function).Pack(position)
 	packed is 0 and IsSingle then Number.SingleBits else packed is 0 and IsKept then Number.DoubleBits else packed
 IsSingle Boolean
 	MlirDoubles(WgslShader.Scaled.function, 2).IsSingle

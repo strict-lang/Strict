@@ -26,23 +26,23 @@ Biases Text
 		return ""
 	groups = MlirGroups(function, position)
 	sum = groups.Writer(function.method.instructions(Written).payload(0), Written)
-	bias = Added(sum, function.method.instructions(call).payload(0))
+	bias = Add(sum, function.method.instructions(call).payload(0))
 	bias < 0 then "" else Read(groups.Writer(bias, sum))
 Written Number
 	Summing.Written is 16
 	Biasing.Written is 22
-	Varied.Measured(27) is ""
-	Varied.Measured(28) is "" and Varied.Measured(29) is ""
+	Varied.Measure(27) is ""
+	Varied.Measure(28) is "" and Varied.Measure(29) is ""
 	Varied.Read(30) is ""
 	MlirBiased(MlirLoops.Nested.function, 0).Written is -1
 	last = function.method.LoopEndOf(position) - 1
 	function.method.instructions(last).kind is InstructionType.InvokeWriteToList then last else Number.NotFound
-Added(at Number, dot Number) Number
-	Biasing.Added(21, 13) is 18
-	Biasing.Added(20, 13) is -1
-	Biasing.Added(5, 1) is -1
-	Biasing.Added(21, 18) is 13
-	Biasing.Added(21, 3) is -1
+Add(at Number, dot Number) Number
+	Biasing.Add(21, 13) is 18
+	Biasing.Add(20, 13) is -1
+	Biasing.Add(5, 1) is -1
+	Biasing.Add(21, 18) is 13
+	Biasing.Add(21, 3) is -1
 	if at < 0
 		return Number.NotFound
 	entry = function.method.instructions(at)
@@ -55,10 +55,10 @@ Read(at Number) Text
 	entry = function.method.instructions(at)
 	if at < 0 or entry.kind is not InstructionType.IndexCall
 		return ""
-	Measured(MlirGroups(function, position).Writer(entry.payload(1), at)) is entry.texts(0) then entry.texts(0) else ""
-Measured(at Number) Text
-	Biasing.Measured(19) is "biases"
-	Biasing.Measured(5) is ""
+	Measure(MlirGroups(function, position).Writer(entry.payload(1), at)) is entry.texts(0) then entry.texts(0) else ""
+Measure(at Number) Text
+	Biasing.Measure(19) is "biases"
+	Biasing.Measure(5) is ""
 	entry = function.method.instructions(at)
 	if at < 0 or entry.kind is not InstructionType.Modulo
 		return ""

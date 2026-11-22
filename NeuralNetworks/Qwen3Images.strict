@@ -16,7 +16,7 @@ Prefill(texts List(Numbers), images List(Numbers), height Number, width Number) 
 	lengths = Lengths(texts)
 	size = encoded.First.First.Length / model.norm.Length
 	rotation = Rotation(lengths, size, vision.Grid(height, width)(1) / 2)
-	model.Forwarded(Embedd(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
+	model.Forwarded(Embed(texts, encoded), rotation, 1, Stacks(encoded), Rows(lengths, size))
 Encode(images List(Numbers), height Number, width Number) List(List(Numbers)) slow
 	Tiny.Encode(List(Numbers) + QwenVision.Image, 32, 48).First.Length is 4
 	for images
@@ -25,8 +25,8 @@ Lengths(texts List(Numbers)) Numbers
 	Tiny.Lengths(((1, 2), (3, 4, 5))) is (2, 3)
 	for texts
 		value.Length
-Embedd(texts List(Numbers), encoded List(List(Numbers))) Numbers
-	Tiny.Embedd(((1, 2), (3, 4), (5, 6)), (((7, 8), (0, 0)), ((9, 10), (0, 0)))).Length is 388
+Embed(texts List(Numbers), encoded List(List(Numbers))) Numbers
+	Tiny.Embed(((1, 2), (3, 4), (5, 6)), (((7, 8), (0, 0)), ((9, 10), (0, 0)))).Length is 388
 	mutable embedded = List(Number)
 	for texts
 		embedded = embedded + Restore(value)
@@ -57,7 +57,7 @@ Rotation(lengths Numbers, size Number, columns Number) Numbers slow
 	model.Rotations(Axis(0, lengths, size, columns), heights, Axis(2, lengths, size, columns))
 Restore(tokens Numbers) Numbers
 	Tiny.Restore((1, 2)).Length is 128
-	model.basis.Restore(model.Embedd(tokens), model.norm.Length)
+	model.basis.Restore(model.Embed(tokens), model.norm.Length)
 Axis(axis Number, lengths Numbers, size Number, columns Number) Numbers
 	Tiny.Axis(0, (2, 3), 6, 3) is (0, 1, 2, 2, 2, 2, 2, 2, 5, 6, 7)
 	Tiny.Axis(1, (2, 3), 6, 3) is (0, 1, 2, 2, 2, 3, 3, 3, 5, 6, 7)

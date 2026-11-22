@@ -32,11 +32,11 @@ Issues(functions List(MlirFunction)) Texts
 	MlirNarrowing.Issues((Summing.function, MlirKernel.Doubling.function)) is List(Text) + Summing.Issue
 	mutable issues = List(Mutable(Text))
 	for functions
-		issues = issues + Found(value)
+		issues = issues + Find(value)
 	issues
-Found(inspected MlirFunction) Texts
-	MlirNarrowing.Found(Few.function).Length is 0
-	Text.Combine(MlirNarrowing.Found(MlirWideMembers.Sparking.function)).IndexOf("loops over Spark") > 0
+Find(inspected MlirFunction) Texts
+	MlirNarrowing.Find(Few.function).Length is 0
+	Text.Combine(MlirNarrowing.Find(MlirWideMembers.Sparking.function)).IndexOf("loops over Spark") > 0
 	for inspected.method.instructions
 		isLoop = value.kind is InstructionType.LoopBegin
 		wide = isLoop then MlirNarrowing(inspected, index).Issue + MlirWideMembers(inspected, index).Issue else ""
@@ -76,7 +76,7 @@ IsWide(name Text) Boolean
 	if Bits(name) > 0 and Bits(name) < Number.DoubleBits
 		return false
 	kind = MlirKinds(function).VariableKind(position, name)
-	MlirLayout(function).Represented(kind) is "List(Number)" and Format(kind) is 0
+	MlirLayout(function).Represent(kind) is "List(Number)" and Format(kind) is 0
 Iterated Texts
 	Summing.Iterated is ("numbers")
 	Few.Iterated.Length is 0
@@ -104,7 +104,7 @@ HasNumbers Boolean
 	Texting.HasNumbers is false
 	kinds = MlirKinds(function)
 	for Iterated + MlirKernel(function, position).Sources
-		kind = MlirLayout(function).Represented(kinds.VariableKind(position, value))
+		kind = MlirLayout(function).Represent(kinds.VariableKind(position, value))
 		if kind is "List(Number)" or Format(kind) > 0
 			return true
 	false

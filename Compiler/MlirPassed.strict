@@ -55,16 +55,16 @@ Candidate(slot Text) Text
 	origins = MlirGuards(function, function.Guarded).Origins(isDivided then writer else position, source)
 	free = MlirGpuCheck(function, function.Guarded).Free
 	origins.Length is 1 and origins(0) is in free then origins(0) else ""
-Divided(numerator Text, divisor Text, slot Text, quotient Text) Texts
-	MlirPassed(Wrapped, 3).Divided("%a", "%b", "%r2", "%q") is ("    %q = arith.divsi %a, %b : i64")
-	Wraps.Divided("%a", "%b", "%r2", "%q").Last is "  ^qdivided(%q: i64):"
-	Wraps.Divided("%a", "%b", "%r2", "%q")(8) is "  ^qfast:"
-	Wraps.Divided("%a", "%b", "%r2", "%q") is Branched
+Divide(numerator Text, divisor Text, slot Text, quotient Text) Texts
+	MlirPassed(Wrapped, 3).Divide("%a", "%b", "%r2", "%q") is ("    %q = arith.divsi %a, %b : i64")
+	Wraps.Divide("%a", "%b", "%r2", "%q").Last is "  ^qdivided(%q: i64):"
+	Wraps.Divide("%a", "%b", "%r2", "%q")(8) is "  ^qfast:"
+	Wraps.Divide("%a", "%b", "%r2", "%q") is Branched
 	name = Candidate(slot)
 	divided = " = arith.divsi " + numerator + ", " + divisor + " : i64"
 	if name is ""
 		return List(Text) + ("    " + quotient + divided)
-	slow = ("  " + Label(quotient) + "slow:", "    " + quotient + "s" + divided, Joined(quotient, quotient + "s"))
+	slow = ("  " + Label(quotient) + "slow:", "    " + quotient + "s" + divided, Join(quotient, quotient + "s"))
 	chosen = Chosen(numerator, divisor, name, quotient) + Magic(numerator, name, quotient)
 	(chosen + slow) + ("  " + Label(quotient) + "divided(" + quotient + ": i64):")
 Chosen(numerator Text, divisor Text, name Text, quotient Text) Texts
@@ -86,9 +86,9 @@ Magic(numerator Text, name Text, temp Text) Texts
 	multiplier = Line(temp, "w", "trunci " + magic + " : i64 to i32")
 	high = "    " + temp + "t:2 = arith.mului_extended " + temp + "x, " + temp + "w : i32"
 	rest = Line(temp, "r", "subi " + temp + "x, " + temp + "t#1 : i32")
-	(("  " + Label(temp) + "fast:", narrowed, multiplier, high, rest) + Shifted(magic, temp)) + Joined(temp, temp + "q")
-Shifted(magic Text, temp Text) Texts
-	Wraps.Shifted("%m", "%q")(3) is "    %qc = arith.trunci %qf : i64 to i8"
+	(("  " + Label(temp) + "fast:", narrowed, multiplier, high, rest) + Shift(magic, temp)) + Join(temp, temp + "q")
+Shift(magic Text, temp Text) Texts
+	Wraps.Shift("%m", "%q")(3) is "    %qc = arith.trunci %qf : i64 to i8"
 	constants = (MlirTyped.Integer.Constant(temp + "o", "32"), MlirTyped.Integer.Constant(temp + "n", "40"))
 	first = Line(temp, "f", "shrui " + magic + ", " + temp + "o : i64")
 	narrowed = Line(temp, "c", "trunci " + temp + "f : i64 to i8")
@@ -108,8 +108,8 @@ Label(temp Text) Text
 	Wraps.Candidate("%r0") is ""
 	Wraps.Candidate("%r1") is ""
 	"^" + temp.Substring(1)
-Joined(temp Text, result Text) Text
-	Wraps.Joined("%q", "%qs") is "    cf.br ^qdivided(%qs : i64)"
+Join(temp Text, result Text) Text
+	Wraps.Join("%q", "%qs") is "    cf.br ^qdivided(%qs : i64)"
 	Wraps.Candidate("%v2") is ""
 	"    cf.br " + Label(temp) + "divided(" + result + " : i64)"
 Divisors Texts
@@ -128,10 +128,10 @@ Assumed Texts
 	MlirPassed(Wrapped, 2).Assumed.Last is "    llvm.intr.assume %m_offset_a : i1"
 	mutable lines = List(Mutable(Text))
 	for Divisors
-		lines = lines + Bounded(value)
+		lines = lines + Bound(value)
 	lines
-Bounded(name Text) Texts
-	MlirPassed(Wrapped, 2).Bounded("offset")(3) is "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64"
+Bound(name Text) Texts
+	MlirPassed(Wrapped, 2).Bound("offset")(3) is "    %e_offset_b = arith.cmpi sle, %e_offset, %e_offset_l : i64"
 	MlirPassed(Wrapped, 2).Assumed is Bounds
 	exact = "%e_" + name
 	magic = "%m_" + name

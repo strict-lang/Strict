@@ -13,10 +13,10 @@ constant PassedInstructions = MlirDoubles.CountLoop + PassedWeight + PassedHead 
 constant Passing = MlirFeeding(MlirFunction(List(TypeEntry) + GpuChoiceSamples.Headed, GpuChoiceSamples.Headed, MethodEntry("Passed", List(MemberEntry) + MlirDoubles.Count, "Strict/List(Number)", PassedInstructions)), 4)
 constant Unfloated = (InstructionType.StoreRegisterToVariable, InstructionType.CheckError, InstructionType.IndexCall, InstructionType.LoopBegin)
 constant Invoking = "    %d6r = func.call @Rows_Twice_1_device(%a) : (!llvm.ptr, i64, i64, f64, f64) -> !llvm.struct<(f64)>"
-Stored(number Text, target Text) Texts
-	Summing.Stored("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
-	Singled.Stored("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
-	MlirFeeding(MlirDeviceStatements.Singled, 2).Stored("%d2", "%r2") is ("    llvm.store %d2, %r2 : f32, !llvm.ptr")
+Store(number Text, target Text) Texts
+	Summing.Store("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
+	Singled.Store("%d6", "%r4").Last is "    llvm.store %inexact, %r4_q : i64, !llvm.ptr"
+	MlirFeeding(MlirDeviceStatements.Singled, 2).Store("%d2", "%r2") is ("    llvm.store %d2, %r2 : f32, !llvm.ptr")
 	entry = function.method.instructions(at)
 	if entry.kind is in MlirRational.Kinds
 		return List(Text) + MlirTyped(function.Float).Store(number, target)
@@ -24,10 +24,10 @@ Stored(number Text, target Text) Texts
 		return List(Text) + function.Store(number, target)
 	inexact = MlirExact(function, at).Set("%inexact", "%inexact", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + inexact
-Packed(name Text) Texts
-	Singled.Packed("%d3").Last is "    %d3r3 = llvm.insertvalue %d3_q, %d3r2[2] : !llvm.struct<(f32, i64, i64)>"
-	Summing.Packed("%d3").Length is 2
-	Summing.Packed("%d3")(0) is "    %d3r0 = llvm.mlir.undef : !llvm.struct<(f64)>"
+Pack(name Text) Texts
+	Singled.Pack("%d3").Last is "    %d3r3 = llvm.insertvalue %d3_q, %d3r2[2] : !llvm.struct<(f32, i64, i64)>"
+	Summing.Pack("%d3").Length is 2
+	Summing.Pack("%d3")(0) is "    %d3r0 = llvm.mlir.undef : !llvm.struct<(f64)>"
 	Chained.IsFloating(0, Chained.function.method.instructions(0))
 	returned = MlirExact(function, at).Returned
 	mutable lines = List(Text) + ("    " + name + "r0 = llvm.mlir.undef : " + returned)
@@ -35,9 +35,9 @@ Packed(name Text) Texts
 		packed = " = llvm.insertvalue " + value + ", " + name + "r" + index + "[" + index + "] : "
 		lines = lines + ("    " + name + "r" + (index + 1) + packed + returned)
 	lines
-Unpacked(name Text) Texts
-	Singled.Unpacked("%d6").First is "    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f32, i64, i64)>"
-	Summing.Unpacked("%d6") is ("    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f64)>")
+Unpack(name Text) Texts
+	Singled.Unpack("%d6").First is "    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f32, i64, i64)>"
+	Summing.Unpack("%d6") is ("    %d6 = llvm.extractvalue %d6r[0] : !llvm.struct<(f64)>")
 	Summing.IsFloated(11, 0) is false
 	Summing.IsFloated(7, 1)
 	MlirFeeding(MlirWhole.Row.function, 0).IsFeeding(11, 9)
@@ -46,10 +46,10 @@ Unpacked(name Text) Texts
 	returned = MlirExact(function, at).Returned
 	for MlirExact(function, at).Names(name)
 		"    " + value + " = llvm.extractvalue " + name + "r[" + index + "] : " + returned
-Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
-	Summing.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").First.StartsWith("    %d6r = func.call @Rows_Twice_1_device(%a)")
-	Singled.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").Last.StartsWith("    %d6_q = llvm.extractvalue %d6r[2]")
-	Summing.Invoked(MlirDeviceCalls.Twice, "%d6", "(%a)").First is Invoking
+Invoke(calls MlirDeviceCalls, result Text, operands Text) Texts
+	Summing.Invoke(MlirDeviceCalls.Twice, "%d6", "(%a)").First.StartsWith("    %d6r = func.call @Rows_Twice_1_device(%a)")
+	Singled.Invoke(MlirDeviceCalls.Twice, "%d6", "(%a)").Last.StartsWith("    %d6_q = llvm.extractvalue %d6r[2]")
+	Summing.Invoke(MlirDeviceCalls.Twice, "%d6", "(%a)").First is Invoking
 	Chained.IsFloating(0, InstructionEntry.Invoke(0, ("Strict/List", "Length", "Strict/Number"), List(Number), 0)) is false
 	Chained.IsPositional(0, InstructionEntry.Invoke(0, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 0), 0)
 	Passing.IsPositional(5, Passing.function.method.instructions(5), 2) is false
@@ -57,17 +57,17 @@ Invoked(calls MlirDeviceCalls, result Text, operands Text) Texts
 	Chained.IsFloating(0, InstructionEntry.Invoke(0, ("Strict/Number", "Run", "Strict/Number"), List(Number), 0))
 	Passing.IsPassed(6, 5) is false
 	call = "    " + result + "r = func.call @" + Symbol(calls.callee) + operands
-	(List(Text) + (call + " : (" + calls.Types + ") -> " + MlirExact(function, at).Returned)) + Unpacked(result)
+	(List(Text) + (call + " : (" + calls.Types + ") -> " + MlirExact(function, at).Returned)) + Unpack(result)
 Symbol(callee MlirFunction) Text
 	Summing.Symbol(MlirDevice.Twice.function) is "Rows_Twice_1_device"
 	Singled.Symbol(MlirFunction(MlirDevice.Twice.function, Whole = ("b", "a"))) is "Rows_Twice_1_devicesx_a_b"
 	callee.Symbol + "_device" + MlirTyped(function.Float).Suffix + callee.Variant
-Called(number Text, target Text) Texts
-	Singled.Called("%d6", "%r4").Last is "    llvm.store %d6_q, %r4_q : i64, !llvm.ptr"
-	Summing.Called("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
-	Singled.Called("%d6", "%r4")(1) is "    llvm.store %d6_e, %r4_e : i64, !llvm.ptr"
-	Chained.Stored("%d1", "%r1") is ("    llvm.store %d1, %r1 : f64, !llvm.ptr")
-	Singled.Stored("%d6", "%r4")(1) is "    llvm.store %inexact, %r4_e : i64, !llvm.ptr"
+Call(number Text, target Text) Texts
+	Singled.Call("%d6", "%r4").Last is "    llvm.store %d6_q, %r4_q : i64, !llvm.ptr"
+	Summing.Call("%d6", "%r4") is ("    llvm.store %d6, %r4 : f64, !llvm.ptr")
+	Singled.Call("%d6", "%r4")(1) is "    llvm.store %d6_e, %r4_e : i64, !llvm.ptr"
+	Chained.Store("%d1", "%r1") is ("    llvm.store %d1, %r1 : f64, !llvm.ptr")
+	Singled.Store("%d6", "%r4")(1) is "    llvm.store %inexact, %r4_e : i64, !llvm.ptr"
 	Chained.IsStored(2, Chained.function.method.instructions(2), 2) is false
 	exact = MlirExact(function, at).Set(number + "_e", number + "_q", target)
 	(List(Text) + MlirTyped(function.Float).Store(number, target)) + exact
@@ -109,7 +109,7 @@ IsPassed(position Number, register Number) Boolean
 	Passing.IsPassed(6, 2)
 	MlirFeeding(MlirParallel.Doubling.function, 4).IsPassed(4, 1) is false
 	entry = function.method.instructions(position)
-	callees = MlirModule(function.types, "").Called(function, position)
+	callees = MlirModule(function.types, "").Call(function, position)
 	if callees.Length is 0
 		return false
 	for PayloadDecoder(entry).Arguments

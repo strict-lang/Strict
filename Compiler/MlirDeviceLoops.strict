@@ -57,14 +57,14 @@ Started Texts
 	mutable lines = List(Text) + MlirTyped.Integer.Constant(Temp("z"), "0")
 	lines = lines + ("    " + Temp("f") + " = arith.cmpi eq, %lane, " + Temp("z") + " : i64")
 	for sums.Accumulated
-		lines = lines + Zeroed(value, index)
+		lines = lines + Zero(value, index)
 	lines + MlirTyped.Integer.Store("%lane", "%loop" + at)
-Zeroed(name Text, number Number) Texts
-	Beginning.Zeroed("sum", 0).Last is "    llvm.store %d2a0z, %v_sum : f64, !llvm.ptr"
-	Beginning.Zeroed("sum", 0).Length is 4
-	Beginning.Zeroed("sum", 0)(0) is "    %d2a0 = llvm.load %v_sum : !llvm.ptr -> f64"
-	Beginning.Zeroed("sum", 0)(1) is "    %d2a0c = arith.constant 0.0 : f64"
-	Beginning.Zeroed("sum", 0)(2) is "    %d2a0z = arith.select %d2f, %d2a0, %d2a0c : f64"
+Zero(name Text, number Number) Texts
+	Beginning.Zero("sum", 0).Last is "    llvm.store %d2a0z, %v_sum : f64, !llvm.ptr"
+	Beginning.Zero("sum", 0).Length is 4
+	Beginning.Zero("sum", 0)(0) is "    %d2a0 = llvm.load %v_sum : !llvm.ptr -> f64"
+	Beginning.Zero("sum", 0)(1) is "    %d2a0c = arith.constant 0.0 : f64"
+	Beginning.Zero("sum", 0)(2) is "    %d2a0z = arith.select %d2f, %d2a0, %d2a0c : f64"
 	Ranging.Counted.Length is 3 and Ranging.Counted(1) is "    %ranged = llvm.bitcast %columns : i64 to f64"
 	loaded = function.Load(Temp("a" + number), "%v_" + name)
 	zero = MlirTyped(function.Float).Constant(Temp("a" + number + "c"), "0.0")
@@ -83,7 +83,7 @@ Kept Texts
 	exact = MlirExact(function, at)
 	for Saved + exact.Parts
 		lines = lines + Part(index).Load(Temp("s" + value), "%v_value" + value)
-	(lines + function.Load(Temp("sx"), "%v_index")) + exact.Loaded(exact.Temp("i"), "%v_index")
+	(lines + function.Load(Temp("sx"), "%v_index")) + exact.LoadExact(exact.Temp("i"), "%v_index")
 Current(register Text, isList Boolean) Texts
 	Beginning.Current("%r0", true).First is "    %d2t = arith.trunci %d2k : i64 to i32"
 	narrowed = "    " + Temp("t") + " = arith.trunci " + Temp("k") + " : i64 to i32"
@@ -107,26 +107,26 @@ End Texts
 	added = "    " + Temp("n") + " = arith.addi " + Temp("k") + ", " + step + " : i64"
 	next = (MlirTyped.Integer.Load(Temp("k"), counter), MlirTyped.Integer.Constant(Temp("o"), "1"), added)
 	stored = (MlirTyped.Integer.Store(Temp("n"), counter), "    cf.br ^d" + begin + "loop", "  ^d" + begin + "exit:")
-	reduced = isSum then Reduced(begin) else choice.IsChoice then choice.Reduced(at) else List(Text)
-	next + stored + Restored(begin) + reduced
-Reduced(begin Number) Texts
-	Ending.Reduced(2).Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
-	Ending.Reduced(2).Length is 3 and Ending.Reduced(2)(0) is "    %d11x0 = llvm.load %v_sum : !llvm.ptr -> f64"
-	Ending.Reduced(2)(1).IndexOf("%d11y0 = func.call @strict_device_lanes_sum(%d11x0, %lane") is 4
+	reduced = isSum then Reduce(begin) else choice.IsChoice then choice.Reduce(at) else List(Text)
+	next + stored + Restore(begin) + reduced
+Reduce(begin Number) Texts
+	Ending.Reduce(2).Last is "    llvm.store %d11y0, %v_sum : f64, !llvm.ptr"
+	Ending.Reduce(2).Length is 3 and Ending.Reduce(2)(0) is "    %d11x0 = llvm.load %v_sum : !llvm.ptr -> f64"
+	Ending.Reduce(2)(1).IndexOf("%d11y0 = func.call @strict_device_lanes_sum(%d11x0, %lane") is 4
 	Singled.Current("%r0", false)(3) is "    llvm.store %d3k, %v_index_e : i64, !llvm.ptr"
 	Singled.Current("%r0", false)(4) is "    llvm.store %one, %v_index_q : i64, !llvm.ptr"
 	Singled.Current("%r0", false)(6) is "    llvm.store %d3k, %v_value_e : i64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for MlirDeviceSums(function, begin).Accumulated
-		reduced = MlirTyped(function.Float).Summed(Temp("y" + index), Temp("x" + index))
+		reduced = MlirTyped(function.Float).Fold(Temp("y" + index), Temp("x" + index))
 		loaded = function.Load(Temp("x" + index), "%v_" + value)
 		lines = lines + loaded + reduced + function.Store(Temp("y" + index), "%v_" + value)
 	lines
-Restored(begin Number) Texts
-	Ending.Restored(2).First is "    llvm.store %d2s, %v_value : f64, !llvm.ptr"
-	Ending.Restored(2).Length is 5 and Ending.Restored(2)(4) is "    llvm.store %d2sx, %v_index : f64, !llvm.ptr"
-	Singled.Restored(3).Length is 9 and Singled.Restored(3)(7) is "    llvm.store %x3i_e, %v_index_e : i64, !llvm.ptr"
-	Singled.Restored(3)(8) is "    llvm.store %x3i_q, %v_index_q : i64, !llvm.ptr"
+Restore(begin Number) Texts
+	Ending.Restore(2).First is "    llvm.store %d2s, %v_value : f64, !llvm.ptr"
+	Ending.Restore(2).Length is 5 and Ending.Restore(2)(4) is "    llvm.store %d2sx, %v_index : f64, !llvm.ptr"
+	Singled.Restore(3).Length is 9 and Singled.Restore(3)(7) is "    llvm.store %x3i_e, %v_index_e : i64, !llvm.ptr"
+	Singled.Restore(3)(8) is "    llvm.store %x3i_q, %v_index_q : i64, !llvm.ptr"
 	Singled.Current("%r0", false)(7) is "    llvm.store %one, %v_value_q : i64, !llvm.ptr"
 	Beginning.Current("%r0", true).Length is 8
 	Beginning.Current("%r0", true)(3) is "    %d2ed = llvm.load %r0_d : !llvm.ptr -> !llvm.ptr"
@@ -161,10 +161,10 @@ Indexes Texts
 	isRanged = function.method.instructions(at).payload(1) is 1
 	start = isRanged then exact.Exact("%rangedw", "f64", "%start") else exact.Whole("%start", "0")
 	start + "    %index_e = arith.addi %at, %start_e : i64"
-Indexed(slot Text) Texts
-	Beginning.Indexed("%v_index") is ("    llvm.store %index, %v_index : f64, !llvm.ptr")
-	Singled.Indexed("%v_index").Last is "    llvm.store %start_q, %v_index_q : i64, !llvm.ptr"
-	Singled.Indexed("%v_index")(1) is "    llvm.store %index_e, %v_index_e : i64, !llvm.ptr"
+EmitIndex(slot Text) Texts
+	Beginning.EmitIndex("%v_index") is ("    llvm.store %index, %v_index : f64, !llvm.ptr")
+	Singled.EmitIndex("%v_index").Last is "    llvm.store %start_q, %v_index_q : i64, !llvm.ptr"
+	Singled.EmitIndex("%v_index")(1) is "    llvm.store %index_e, %v_index_e : i64, !llvm.ptr"
 	Beginning.Current("%r0", true)(4) is "    %d2eb = llvm.load %r0_b : !llvm.ptr -> i64"
 	Beginning.Current("%r0", true)(5) is "    %d2en = llvm.load %r0_n : !llvm.ptr -> i64"
 	Beginning.Current("%r0", true)(6).IndexOf("%d2e = func.call @strict_device_element(%d2ed, %d2eb, %d2k, %d2en) :") is 4

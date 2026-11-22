@@ -52,9 +52,9 @@ Matches(lines Texts) Boolean
 		if Value(lines(position)) is not lines(position + 1)
 			return false
 	true
-Saved(inputs Texts)
+Save(inputs Texts)
 	if IsEnabled and Matches(inputs)
-		Written(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
+		Write(Text.Combine((List(Text) + Key) + inputs + Snapshot(Outputs.Unique), "\n"))
 Inputs(sources Texts) Texts
 	"./Content/**" is not in NativeCache("test", ("Math", ".", "native")).Inputs(List(Text))
 	"./Examples/Content/**" is in NativeCache("build", ("Examples/Sum.strict", ".")).Inputs(List(Text))
@@ -80,7 +80,7 @@ NativeInputs(folders Texts) Texts
 	mutable files = List(Text)
 	tools = Toolchain(Platform.Current, rest(1))
 	for Toolchain.Needed + ("llvm-split", "lld-link", "llvm-rc")
-		files = files + Process.Find(tools.Located(value)).executable
+		files = files + Process.Find(tools.Locate(value)).executable
 	for folders
 		native = value + "/native"
 		sources = NativeSources(List(Text) + native)
@@ -118,9 +118,9 @@ Outputs Texts
 	for Release.Sidecars
 		if File(base + value).Exists
 			files = files + (base + value)
-	files + Released(release.Parent)
-Released(parent Text) Texts
-	NativeCache("build", ("Examples/Sum.strict", ".")).Released("Compiler/output/Missing").Length is 2
+	files + FindReleases(release.Parent)
+FindReleases(parent Text) Texts
+	NativeCache("build", ("Examples/Sum.strict", ".")).FindReleases("Compiler/output/Missing").Length is 2
 	NativeCache("build", ("Examples/Sum.strict", ".", "windows")).IsEnabled
 	NativeCache("build", ("Examples/Sum.strict", ".", "linux")).IsEnabled
 	NativeCache("build", ("Examples/Sum.strict", ".", "web")).IsEnabled
@@ -132,7 +132,7 @@ Released(parent Text) Texts
 			files = files + (value + "/" + name)
 	linux = parent + "/Release/Linux/" + name.Replace(".exe", "")
 	File(linux).Exists then files + linux else files
-Written(text Text)
+Write(text Text)
 	temporary = CacheFile + "." + 1000000000.Random.Floor + ".tmp"
 	File(temporary).Write(text)
 	if Text.Combine(File(temporary).ReadLines, "\n") is text

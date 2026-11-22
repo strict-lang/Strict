@@ -65,27 +65,27 @@ Unset Texts
 	Doubling.Unset.Length is 0
 	call = MlirGroups(function, position).Call
 	call < 0 then List(Text) else List(Text) + function.Store("%memo" + call + "n", "%memo" + call + "k")
-Kept(called Texts, register Number) Texts
-	Calling.Kept(List(Text) + "    call", 9) is Checking + "    call" + Joining
-	Calling.Kept(List(Text) + "    call", 9)(5) is "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64"
-	MlirGrouped(MlirGroups.Norming.function, 7).Kept(List(Text) + "    call", 5) is ("    call")
+Keep(called Texts, register Number) Texts
+	Calling.Keep(List(Text) + "    call", 9) is Checking + "    call" + Joining
+	Calling.Keep(List(Text) + "    call", 9)(5) is "    %t11gh = arith.cmpf oeq, %t11gk, %t11gm : f64"
+	MlirGrouped(MlirGroups.Norming.function, 7).Keep(List(Text) + "    call", 5) is ("    call")
 	begin = function.method.LoopBeginOf(position)
 	counted = begin >= 0 then MlirLoops(function, begin).Collection is "" else false
 	call = (counted then MlirGroups(function, 0).Adding(position) else 0) < 1 then -1 else MlirGroups(function, begin).Call
-	call is not position then called else Keyed(MlirGroups(function, begin).Size(position)) + called + Rejoined(register)
-Keyed(size Text) Texts
-	Calling.Keyed("size") is Checking
-	Calling.Keyed("size").Last is "  ^t11call:"
+	call is not position then called else Key(MlirGroups(function, begin).Size(position)) + called + Rejoin(register)
+Key(size Text) Texts
+	Calling.Key("size") is Checking
+	Calling.Key("size").Last is "  ^t11call:"
 	key = (function.Load(Temp("i"), "%v_index"), function.Load(Temp("s"), "%v_" + size))
 	divided = "    " + Temp("q") + " = arith.divf " + Temp("i") + ", " + Temp("s") + " : f64"
 	compared = "    " + Temp("h") + " = arith.cmpf oeq, " + Temp("k") + ", " + Temp("m") + " : f64"
 	label = "^t" + position
 	branch = ("    cf.cond_br " + Temp("h") + ", " + label + "kept, " + label + "call", "  " + label + "call:")
-	floored = (divided, MlirTyped.Double.Floored(Temp("k"), Temp("q")), function.Load(Temp("m"), Memo + "k"))
+	floored = (divided, MlirTyped.Double.Floor(Temp("k"), Temp("q")), function.Load(Temp("m"), Memo + "k"))
 	key + floored + compared + branch
-Rejoined(register Number) Texts
-	Calling.Rejoined(9) is Joining
-	Calling.Rejoined(9).Last is "  ^t11joined:"
+Rejoin(register Number) Texts
+	Calling.Rejoin(9) is Joining
+	Calling.Rejoin(9).Last is "  ^t11joined:"
 	memo = Memo
 	result = "%r" + register
 	fresh = (function.Store(Temp("k"), memo + "k"), function.Load(Temp("r"), result), function.Store(Temp("r"), memo))
@@ -119,28 +119,28 @@ Ending Texts
 	Doubling.Ending is MlirDevice.Ending
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("^body(%atNext : i64)") > 0
 	function.Group < 0 then MlirDevice.Ending else Next + MlirDevice.Ending
-Remembered(called Texts) Texts
-	Remembering.Remembered(List(Text) + "    call").First is "    %t11gf = arith.cmpi eq, %at, %atFirst : i64"
-	Remembering.Remembered(List(Text) + "    call").Last is "  ^t11joined:"
-	Norming.Remembered(List(Text) + "    call") is ("    call")
+Remember(called Texts) Texts
+	Remembering.Remember(List(Text) + "    call").First is "    %t11gf = arith.cmpi eq, %at, %atFirst : i64"
+	Remembering.Remember(List(Text) + "    call").Last is "  ^t11joined:"
+	Norming.Remember(List(Text) + "    call") is ("    call")
 	Text.Combine(MlirDevice(MlirGroups.Norming.function, 2).Kernel).IndexOf("%t11gf = arith.cmpi eq") > 0
 	if position is not function.Group
 		return called
 	register = "%r" + function.method.instructions(position).payload(0)
 	kept = ("    cf.br ^t" + position + "joined", "  ^t" + position + "kept:")
 	joined = ("    cf.br ^t" + position + "joined", "  ^t" + position + "joined:")
-	(Branched + called + Saved(register, "%groupMemo", "n")) + kept + Saved("%groupMemo", register, "o") + joined
+	(Branched + called + Save(register, "%groupMemo", "n")) + kept + Save("%groupMemo", register, "o") + joined
 Branched Texts
-	Remembering.Remembered(List(Text) + "    call") is Shared
+	Remembering.Remember(List(Text) + "    call") is Shared
 	Remembering.Branched(1) is "    cf.cond_br %t11gf, ^t11call, ^t11kept"
 	first = "    " + Temp("f") + " = arith.cmpi eq, %at, %atFirst : i64"
 	branch = "    cf.cond_br " + Temp("f") + ", ^t" + position + "call, ^t" + position + "kept"
 	(first, branch, "  ^t" + position + "call:")
-Saved(source Text, target Text, suffix Text) Texts
-	Exacting.Saved("%r9", "%m", "n")(2) is "    %t11gnx_e = llvm.load %r9_e : !llvm.ptr -> i64"
-	Exacting.Saved("%r9", "%m", "n")(4) is "    llvm.store %t11gnx_e, %m_e : i64, !llvm.ptr"
-	Exacting.Saved("%r9", "%m", "n").Last is "    llvm.store %t11gnx_q, %m_q : i64, !llvm.ptr"
-	Remembering.Saved("%r9", "%groupMemo", "n").First is "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64"
+Save(source Text, target Text, suffix Text) Texts
+	Exacting.Save("%r9", "%m", "n")(2) is "    %t11gnx_e = llvm.load %r9_e : !llvm.ptr -> i64"
+	Exacting.Save("%r9", "%m", "n")(4) is "    llvm.store %t11gnx_e, %m_e : i64, !llvm.ptr"
+	Exacting.Save("%r9", "%m", "n").Last is "    llvm.store %t11gnx_q, %m_q : i64, !llvm.ptr"
+	Remembering.Save("%r9", "%groupMemo", "n").First is "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64"
 	exact = MlirExact(function, position)
 	moved = (function.Load(Temp(suffix), source), function.Store(Temp(suffix), target))
-	moved + exact.Loaded(Temp(suffix + "x"), source) + exact.Set(Temp(suffix + "x_e"), Temp(suffix + "x_q"), target)
+	moved + exact.LoadExact(Temp(suffix + "x"), source) + exact.Set(Temp(suffix + "x_e"), Temp(suffix + "x_q"), target)

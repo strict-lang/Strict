@@ -18,16 +18,16 @@ ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
 	tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
 	started = Process.Elapsed
 	results = Process.RunTools(name, arguments)
-	BuildProfile.Reported(phase is "" then tool else phase, started)
+	BuildProfile.Report(phase is "" then tool else phase, started)
 	for results
-		Retried(Cleaned(value), arguments(index))
-Retried(result ProcessResult, arguments Text) ProcessResult
-	ToolRunner("noSuchStrictTool").Retried(ProcessResult(139, "", ""), "").exitCode is 127
-	ToolRunner("noSuchStrictTool").Retried(ProcessResult(1, "", ""), "").exitCode is 1
-	IsCrash(result.exitCode) then Cleaned(Process.RunTool(name, arguments)) else result
-Cleaned(result ProcessResult) ProcessResult
-	Echo.Cleaned(ProcessResult(0, "a\r\n", "")).Output is "a\n"
-	Echo.Cleaned(ProcessResult(127, "", "")).error is "Tool " + Echo.name + " exited 127 without output"
+		Retry(Clean(value), arguments(index))
+Retry(result ProcessResult, arguments Text) ProcessResult
+	ToolRunner("noSuchStrictTool").Retry(ProcessResult(139, "", ""), "").exitCode is 127
+	ToolRunner("noSuchStrictTool").Retry(ProcessResult(1, "", ""), "").exitCode is 1
+	IsCrash(result.exitCode) then Clean(Process.RunTool(name, arguments)) else result
+Clean(result ProcessResult) ProcessResult
+	Echo.Clean(ProcessResult(0, "a\r\n", "")).Output is "a\n"
+	Echo.Clean(ProcessResult(127, "", "")).error is "Tool " + Echo.name + " exited 127 without output"
 	silent = result.HasFailed and result.Output is "" and result.error is ""
 	error = silent then "Tool " + name + " exited " + result.exitCode + " without output" else result.error
 	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), error.Replace("\r", ""))

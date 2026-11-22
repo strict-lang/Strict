@@ -43,11 +43,11 @@ Run Number
 	if Directory.Create(OutputFolder) is Error
 		return Error("DirectoryNotCreated")
 	File(OutputFolder + "/driver.c").Write(DriverSrc.Split("\n"))
-	BuiltAndChecked(OutputFolder)
+	BuiltAndCheck(OutputFolder)
 	Directory.Delete(OutputFolder)
 	logger.Log("CheckParallel passed")
 	0
-BuiltAndChecked(folder Text)
+BuiltAndCheck(folder Text)
 	if BuiltPoolMlir(folder) is Error
 		return Error("BuiltPoolMlirFailed")
 	oArgs = "\"" + folder + "/pool.mlir\" --symbol-privatize=exclude=" + (ExA + ExB + ExC) + " " + OptFlags
@@ -97,9 +97,9 @@ MlirConst(path Text, name Text) Text
 		if value.StartsWith(prefix)
 			rhs = value.Substring(prefix.Length, value.Length - prefix.Length)
 			for Regex("\"((?:[^\"\\\\]|\\\\.)*)\"|([A-Za-z_][A-Za-z0-9_]*)").FindAll(rhs)
-				resolved = resolved + (value.StartsWith("\"") then Unescaped(value) else MlirConst(path, value)) + "\n"
+				resolved = resolved + (value.StartsWith("\"") then Unescape(value) else MlirConst(path, value)) + "\n"
 	resolved
-Unescaped(quoted Text) Text
+Unescape(quoted Text) Text
 	quoted.Substring(1, quoted.Length - 2).Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\\\", "\\")
 CachedFn(name Text, compute Text, chk Text, sto Text) Text
 	h1 = "  llvm.func @" + compute + "() -> f64\n  llvm.mlir.global internal @" + name + "_cache(0.0 : f64) : f64\n"

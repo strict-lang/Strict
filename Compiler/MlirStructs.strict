@@ -49,16 +49,16 @@ IsSource(at Number, register Number, depth Number) Boolean
 		return entry.texts(0) is function.method.returnType and MlirConstants(function, writer).IsConstant is false
 	if entry.texts(1) is "Validated"
 		return IsSource(writer, entry.payload.Last, depth)
-	callees = MlirModule(function.types, "").Called(function, writer)
+	callees = MlirModule(function.types, "").Call(function, writer)
 	callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(depth + 1) else false
 Prologue Texts
 	Filler.Consumes(0) is false
 	Made.Consumes(3) is false
-	Collector.Collected(Calling, List(Text) + "call", "Text") is ("call")
-	Text.Combine(Collector.Collected(Calling, "call", "Shape")).Length is 237
-	Text.Combine(Forwarder.Destined(Calling, Forwarding.instructions(2), "call")).Length is 124
-	Made.Constructed(Making.instructions(1), MlirInstances.Outer, MlirOwned.Fresh) is MlirOwned.Fresh
-	Text.Combine(Made.Constructed(Making.instructions(1), Maker, MlirOwned.Fresh)).Length is 510
+	Collector.Collect(Calling, List(Text) + "call", "Text") is ("call")
+	Text.Combine(Collector.Collect(Calling, "call", "Shape")).Length is 237
+	Text.Combine(Forwarder.Aim(Calling, Forwarding.instructions(2), "call")).Length is 124
+	Made.Construct(Making.instructions(1), MlirInstances.Outer, MlirOwned.Fresh) is MlirOwned.Fresh
+	Text.Combine(Made.Construct(Making.instructions(1), Maker, MlirOwned.Fresh)).Length is 510
 	Made.Prologue is Taking
 	Probing.IsRebuilt(ProbeMade, Probe) is false
 	MlirStructs(MlirInstances.Shapes, 0).Prologue.Length is 0
@@ -76,47 +76,47 @@ IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	isFull = MlirOwned(function, position).IsArgued(entry, owner)
 	isReturned = next.kind is InstructionType.Return and next.payload(0) is checked.payload(0)
 	isReturned and isFull and MlirConstants(function, position).IsConstant is false
-Constructed(entry InstructionEntry, owner TypeEntry, built Texts) Texts
-	Text.Combine(Made.Constructed(Making.instructions(1), Maker, MlirOwned.Fresh)).IndexOf("%structDestination") > 0
-	MlirStructs(MlirInstances.Shapes, 1).Constructed(MlirInstances.Built, Maker, MlirOwned.Fresh) is MlirOwned.Fresh
+Construct(entry InstructionEntry, owner TypeEntry, built Texts) Texts
+	Text.Combine(Made.Construct(Making.instructions(1), Maker, MlirOwned.Fresh)).IndexOf("%structDestination") > 0
+	MlirStructs(MlirInstances.Shapes, 1).Construct(MlirInstances.Built, Maker, MlirOwned.Fresh) is MlirOwned.Fresh
 	owned = MlirOwned(function, position)
 	if owned.Target(entry, owner) is not "" or IsRebuilt(entry, owner) is false or Consumes(0) is false
-		return owned.Reconstructed(entry, owner, built)
+		return owned.Reconstruct(entry, owner, built)
 	old = "%t" + position + "old"
 	compared = "    %t" + position + "re = arith.cmpf une, " + old + ", %zero : f64"
-	opened = (function.Load(old, "%structDestination"), compared) + owned.Placed(MlirOwned.Reusing.Slice(1, 3), 0, 0)
+	opened = (function.Load(old, "%structDestination"), compared) + owned.Place(MlirOwned.Reusing.Slice(1, 3), 0, 0)
 	reused = owned.Rewritten(entry, owner, "") + function.Store(old, "%r" + entry.payload(0))
-	fresh = owned.Placed(MlirOwned.Reusing.Slice(4, 2), 0, 0) + built
-	opened + reused + fresh + owned.Placed(MlirOwned.Reusing.Slice(6, 2), 0, 0)
-Destined(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
-	Forwarder.Destined(Calling, Forwarding.instructions(2), List(Text) + "call")(1) is Forwarder.Destine("sd")
-	Text.Combine(Filler.Destined(Calling, Filling.instructions(2), List(Text) + "call")).IndexOf("_destine_element(") > 0
-	Made.Destined(Calling, Making.instructions(2), List(Text) + "call") is ("call")
-	Text.Combine(MlirDestined(Filler.function, 1).Destined(Calling, List(Text) + "call")).IndexOf("_destine_element(") > 0
-	Text.Combine(MlirDestined(Forwarder.function, 1).Destined(Calling, List(Text) + "call")).IndexOf("struct_destine(") > 0
-	callees = MlirModule(function.types, "").Called(function, position)
+	fresh = owned.Place(MlirOwned.Reusing.Slice(4, 2), 0, 0) + built
+	opened + reused + fresh + owned.Place(MlirOwned.Reusing.Slice(6, 2), 0, 0)
+Aim(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
+	Forwarder.Aim(Calling, Forwarding.instructions(2), List(Text) + "call")(1) is Forwarder.Destine("sd")
+	Text.Combine(Filler.Aim(Calling, Filling.instructions(2), List(Text) + "call")).IndexOf("_destine_element(") > 0
+	Made.Aim(Calling, Making.instructions(2), List(Text) + "call") is ("call")
+	Text.Combine(MlirDestined(Filler.function, 1).Aim(Calling, List(Text) + "call")).IndexOf("_destine_element(") > 0
+	Text.Combine(MlirDestined(Forwarder.function, 1).Aim(Calling, List(Text) + "call")).IndexOf("struct_destine(") > 0
+	callees = MlirModule(function.types, "").Call(function, position)
 	if callees.Length is 0 then true else MlirStructs(callees.First, 0).Consumes(1) is false
-		return MlirElements(function, position).Destined(entry, next, compiled)
+		return MlirElements(function, position).Destine(entry, next, compiled)
 	if next.kind is InstructionType.Return and next.payload(0) is entry.payload(0) and Consumes(0)
 		return (function.Load("%t" + position + "sd", "%structDestination"), Destine("sd")) + compiled
 	Element(entry, next, compiled, TypeEntry.ShortName(callees.First.method.returnType))
 Element(entry InstructionEntry, next InstructionEntry, compiled Texts, returned Text) Texts
 	Made.Element(Calling, Making.instructions(2), List(Text) + "call", "Shape") is ("call")
 	if IsTarget(entry, next, returned) is false
-		return Collected(entry, compiled, returned)
+		return Collect(entry, compiled, returned)
 	parts = PayloadDecoder(next).ElementParts
 	temp = "%t" + position + "s"
 	index = MlirElements(function, position).Index(parts(1), temp + "i")
 	destined = "    func.call @strict_struct_destine_element(" + temp + "l, " + temp + "i) : (f64, f64) -> ()"
 	(function.Load(temp + "l", "%v_" + parts(0)), index, destined) + compiled
-Collected(entry InstructionEntry, compiled Texts, returned Text) Texts
-	Text.Combine(Collector.Collected(Calling, List(Text) + "call", "Shape")).IndexOf("_block(%t4kl, %t4ki, %t4kn)") > 0
-	Made.Collected(Calling, List(Text) + "call", "Shape") is ("call")
+Collect(entry InstructionEntry, compiled Texts, returned Text) Texts
+	Text.Combine(Collector.Collect(Calling, List(Text) + "call", "Shape")).IndexOf("_block(%t4kl, %t4ki, %t4kn)") > 0
+	Made.Collect(Calling, List(Text) + "call", "Shape") is ("call")
 	embedded = MlirEmbedded(function)
 	if embedded.IsNumbers(returned) is false
 		return compiled
 	if IsKept(entry) is false
-		return embedded.Stacked(position, compiled)
+		return embedded.Stack(position, compiled)
 	temp = "%t" + position + "k"
 	size = "    " + temp + "n = arith.constant " + embedded.Slots(returned) + ".0 : f64"
 	arguments = temp + "l, " + temp + "i, " + temp + "n) : (f64, f64, f64) -> ()"
@@ -151,8 +151,8 @@ Destine(suffix Text) Text
 	Filler.IsTarget(Calling, InstructionEntry(InstructionType.Return, "items(0)", (1, -1)), "Shape") is false
 	Filler.IsTarget(Calling, InstructionEntry.Named(Inliner.Store, 0, "items(0)"), "Shape") is false
 	Filler.IsTarget(Calling, InstructionEntry(Inliner.Store, "items(0)", 1), "Shape") is false
-	Forwarder.Destined(Calling, InstructionEntry.Return(0), "call") is ("call")
-	Forwarder.Destined(Calling, Calling, "call") is ("call")
+	Forwarder.Aim(Calling, InstructionEntry.Return(0), "call") is ("call")
+	Forwarder.Aim(Calling, Calling, "call") is ("call")
 	Text.Combine(Filler.Element(Calling, InstructionEntry(Inliner.Store, "items(a)", (1, 0)), "", "Shape")).Length is 177
 	Text.Combine(Filler.Element(Calling, Filling.instructions(2), List(Text), "Shape")).Length is 166
 	Made.Destine("sd") is "    func.call @strict_struct_destine(%t1sd) : (f64) -> ()"

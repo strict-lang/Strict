@@ -17,7 +17,7 @@ Rebuilt(arguments Texts) Number slow
 	if File(root + HoldFile).Exists
 		logger.Log(Shown + " is older than Strict sources, not rebuilt while obj/Strict.hold exists")
 		return Current
-	IsBuilt(arguments) then Process(TargetExecutable).Start(Quoted(arguments)) else Current
+	IsBuilt(arguments) then Process(TargetExecutable).Start(Quote(arguments)) else Current
 TargetExecutable Text
 	SelfBuild("C:\\a", "C:\\b\\strict.exe").TargetExecutable is "C:/a/strict.exe"
 	root.Replace("\\", "/") + "/" + Path(executable).FileName.text
@@ -32,7 +32,7 @@ IsBuilt(arguments Texts) Boolean slow
 	Directory.Change(root)
 	current = IsStale(arguments) is false or NativeCache("build", ("Strict.strict", ".")).IsCurrent
 	built = current then File(TargetExecutable).Modified > exeBefore else IsCoreRebuilt
-	Marked
+	Mark
 	Directory.Change(home)
 	IsUnlocked and built
 IsCoreRebuilt Boolean slow
@@ -61,7 +61,7 @@ IsUnlocked Boolean
 	SelfBuild("Compiler/output", "s").IsLocked and SelfBuild("Compiler/output", "s").IsUnlocked
 	File(root + BuildLock).Delete
 	File(root + BuildLock).Exists is false
-Marked
+Mark
 	Directory.Create(root + "/obj")
 	File(root + CheckedFile).Write("checked")
 IsStale(arguments Texts) Boolean
@@ -118,21 +118,21 @@ IsCoreTarget(target Text) Boolean
 NewestSource Number
 	SelfBuild("Compiler/output/Missing", "strict.exe").NewestSource is 0
 	mutable newest = File(root + "/Strict.strict").Modified
-	newest = MaxModified(Directory.Files(root, "*.strict"), newest)
-	newest = MaxModified(Directory.Files(root + "/Compiler", "*.mlir"), newest)
+	newest = MaxModify(Directory.Files(root, "*.strict"), newest)
+	newest = MaxModify(Directory.Files(root + "/Compiler", "*.mlir"), newest)
 	for CorePackages + ExtraPackages
-		newest = MaxModified(Directory.Files(root + "/" + value, "*.strict"), newest)
+		newest = MaxModify(Directory.Files(root + "/" + value, "*.strict"), newest)
 	newest
-MaxModified(paths Texts, current Number) Number
-	SelfBuild(".", "strict.exe").MaxModified(List(Text) + "Missing.strict", 5) is 5
+MaxModify(paths Texts, current Number) Number
+	SelfBuild(".", "strict.exe").MaxModify(List(Text) + "Missing.strict", 5) is 5
 	mutable newest = current
 	for paths
 		modified = File(value).Modified
 		if modified > newest
 			newest = modified
 	newest
-Quoted(arguments Texts) Text
-	SelfBuild(".", "strict.exe").Quoted(("a b", "c\"d")) is "\"a b\" \"c\\\"d\""
+Quote(arguments Texts) Text
+	SelfBuild(".", "strict.exe").Quote(("a b", "c\"d")) is "\"a b\" \"c\\\"d\""
 	mutable text = ""
 	for arguments
 		quoted = value.IndexOf(" ") >= 0 or value.IndexOf("\"") >= 0 or value is ""

@@ -28,10 +28,10 @@ Found List(PtxFunction)
 	for heads
 		part = lines.Slice(value, End(heads, index) - value)
 		if ";" is not in part
-			PtxFunction(Named(lines(value)), Renumbered(Code(part.Slice(0, part.Index("}") + 1))))
-Renumbered(code Texts) Texts
-	Sample.Renumbered(("a", "$L__BB12_3:", "\tbra.uni \t$L__BB12_3;")) is ("a", "$L__BB0_3:", "\tbra.uni \t$L__BB0_3;")
-	Sample.Renumbered(List(Text) + "a") is List(Text) + "a"
+			PtxFunction(FindName(lines(value)), Renumber(Code(part.Slice(0, part.Index("}") + 1))))
+Renumber(code Texts) Texts
+	Sample.Renumber(("a", "$L__BB12_3:", "\tbra.uni \t$L__BB12_3;")) is ("a", "$L__BB0_3:", "\tbra.uni \t$L__BB0_3;")
+	Sample.Renumber(List(Text) + "a") is List(Text) + "a"
 	label = Label(Text.Combine(code, "\n"))
 	for code
 		label is "" then value else value.Replace(label, Block + "0_")
@@ -45,9 +45,9 @@ Label(text Text) Text
 End(heads Numbers, at Number) Number
 	Sample.End((3, 9, 16), 0) is 9 and Sample.End((3, 9, 16), 2) is Sample.lines.Length
 	at + 1 < heads.Length then heads(at + 1) else lines.Length
-Named(head Text) Text
-	Sample.Named(".visible .entry A_B_1_gpu2(") is "A_B_1_gpu2"
-	Sample.Named(".func  (.param .b32 r) strict_device_byte_read") is "strict_device_byte_read"
+FindName(head Text) Text
+	Sample.FindName(".visible .entry A_B_1_gpu2(") is "A_B_1_gpu2"
+	Sample.FindName(".func  (.param .b32 r) strict_device_byte_read") is "strict_device_byte_read"
 	declared = head.EndsWith("(") then head.Substring(0, head.Length - 1) else head
 	declared.Substring(declared.LastIndexOf(" ") + 1)
 Code(part Texts) Texts
@@ -61,9 +61,9 @@ Bare(line Text) Text
 	at < 0 then line else line.Substring(0, at).TrimEnd
 Header Text
 	Sample.Header is "//\n.version 8.7\n"
-	Text.Combine(Kept(Heads.First).Unique, "\n") + "\n"
-Kept(first Number) Texts
-	Sample.Kept(3).Length is 2
+	Text.Combine(Keep(Heads.First).Unique, "\n") + "\n"
+Keep(first Number) Texts
+	Sample.Keep(3).Length is 2
 	for lines
 		if index < first and value is not "" and value.StartsWith("\t//") is false and IsShared(value) is false
 			value

@@ -52,9 +52,9 @@ Declarations Texts
 	Kernel.Declarations is ("bool v3;", "ulong v5;", "long v7;\nlong v7_in;")
 	for Body
 		if MetalInstruction(value, IsKernel).Result is not ""
-			Declared(MetalInstruction(value, IsKernel))
-Declared(instruction MetalInstruction) Text
-	Kernel.Declared(MetalInstruction("%7 = phi i64 [ 1, %4 ]", true)) is "long v7;\nlong v7_in;"
+			Declare(MetalInstruction(value, IsKernel))
+Declare(instruction MetalInstruction) Text
+	Kernel.Declare(MetalInstruction("%7 = phi i64 [ 1, %4 ]", true)) is "long v7;\nlong v7_in;"
 	type = MetalValue(instruction.Type).Type
 	name = MetalValue(instruction.Result).Operand("")
 	instruction.Operation is "phi" then type + " " + name + ";\n" + type + " " + name + "_in;" else type + " " + name + ";"

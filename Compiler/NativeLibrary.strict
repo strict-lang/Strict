@@ -4,40 +4,40 @@ constant Failing = "clang failed for Compiler/output/Cut.o: no"
 constant NoObject = "clang failed for Compiler/output/No" + Platform.ObjectExtension(Platform.Current)
 constant RandomSuffixRange = 999999
 constant AdderObject = "Examples/NativeAdd/native/Adder" + Platform.ObjectExtension(Platform.Current)
-Built(platform Number, root Text) Text
-	Adding.Built(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
+Build(platform Number, root Text) Text
+	Adding.Build(Platform.Current, ".").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
 	folder = sources.folders.First
 	base = folder + "/" + Path(Path(folder).PathOnly.text).FileName.text
 	library = base + Platform.LibraryExtension(platform)
 	shared = platform is Platform.Windows then "-shared -O2 -DSTRICT_LIBRARY" else "-shared -fPIC -O2 -DSTRICT_LIBRARY"
-	previous = Waited(library, sources.Files + sources.Inputs(platform, root), shared)
+	previous = Wait(library, sources.Files + sources.Inputs(platform, root), shared)
 	if previous is not ""
 		return previous
 	output = base + "." + RandomSuffixRange.Random.Floor + Platform.LibraryExtension(platform)
-	clang = Toolchain(platform, root).Located("clang")
+	clang = Toolchain(platform, root).Locate("clang")
 	result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
-	Finished(result, output, library, shared)
+	Finish(result, output, library, shared)
 Objects(files Texts, platform Number, root Text, options Text) Texts slow
 	Adding.Objects(NativeSources.Adding.Files, Platform.Current, ".", "") is (AdderObject)
 	mutable missing = List(Mutable(Text))
 	mutable previous = List(Mutable(Text))
 	for files
-		waited = Waited(Object(value, platform), sources.Inputs(platform, root) + value, options)
+		waited = Wait(Object(value, platform), sources.Inputs(platform, root) + value, options)
 		previous.Add(waited)
 		if waited is ""
 			missing.Add(value)
-	compiled = Compiled(missing, platform, root, options)
+	compiled = Compile(missing, platform, root, options)
 	for previous
 		built = value is "" then compiled(missing.Index(files(index))) else value
 		built.StartsWith("Built ") then built.Substring(6) else built
-Compiled(files Texts, platform Number, root Text, options Text) Texts slow
-	Adding.Compiled(List(Text) + "Compiler/output/No.c", Platform.Current, ".", "").First.StartsWith(NoObject)
+Compile(files Texts, platform Number, root Text, options Text) Texts slow
+	Adding.Compile(List(Text) + "Compiler/output/No.c", Platform.Current, ".", "").First.StartsWith(NoObject)
 	if files.Length is 0
 		return List(Text)
 	suffix = "." + RandomSuffixRange.Random.Floor + ".o"
 	flags = " -I\"" + root + "/Compiler\"" + Toolchain.Optimized + options
-	for ToolRunner(Toolchain(platform, root).Located("clang")).ExecuteAll(Commands(files, suffix, flags))
-		Finished(value, Path(files(index)).RemoveExtension.text + suffix, Object(files(index), platform), options)
+	for ToolRunner(Toolchain(platform, root).Locate("clang")).ExecuteAll(Commands(files, suffix, flags))
+		Finish(value, Path(files(index)).RemoveExtension.text + suffix, Object(files(index), platform), options)
 Object(file Text, platform Number) Text
 	Adding.Object("a/b.c", Platform.Linux) is "a/b.linux.o"
 	Path(file).RemoveExtension.text + Platform.ObjectExtension(platform)
@@ -45,34 +45,34 @@ Commands(files Texts, suffix Text, flags Text) Texts
 	Adding.Commands(List(Text) + "a/b.c", ".1.o", " -O2") is ("-c \"a/b.c\" -O2 -o \"a/b.1.o\"")
 	for files
 		"-c \"" + value + "\"" + flags + " -o \"" + Path(value).RemoveExtension.text + suffix + "\""
-Waited(target Text, inputs Texts, options Text) Text slow
-	Adding.Waited("Compiler/output/Missing.dll", List(Text), "") is ""
+Wait(target Text, inputs Texts, options Text) Text slow
+	Adding.Wait("Compiler/output/Missing.dll", List(Text), "") is ""
 	started = Process.Elapsed
 	for as long as Process.Elapsed - started < Strict.BuildWait
 		if sources.IsCompiled(target, inputs, options)
 			return "Built " + target
 		recorded = Text.Combine(File(target + ".built.nativecache").ReadLines, "\n")
 		if recorded.StartsWith("clang failed") and sources.IsCurrent(target + ".built.nativecache", inputs)
-			return Located(target, recorded)
+			return Locate(target, recorded)
 		if File(target + ".lock").IsLocked
 			return ""
 		Process.Wait(0.1)
 	""
-Finished(result ProcessResult, output Text, target Text, options Text) Text
+Finish(result ProcessResult, output Text, target Text, options Text) Text
 	File("Compiler/output/Cut.o.lock").IsLocked
-	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
+	Adding.Finish(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
 	File("Compiler/output/Cut.o.lock").Exists is false
 	failure = "clang failed for " + target + ": " + result.error
-	built = result.HasFailed then failure else "Built " + sources.Placed(output, target)
+	built = result.HasFailed then failure else "Built " + sources.Place(output, target)
 	File(target + ".built.nativecache").Write(built)
 	File(target + ".lock").Delete
 	if built is "Built " + target
 		File(target + ".nativecache").Write(options)
 	built
-Located(target Text, recorded Text) Text
-	Adding.Located("a/b.dll", "Built c/b.1.dll") is "Built a/b.1.dll"
-	Adding.Located("b.dll", "Built c/b.dll") is "Built b.dll"
-	Adding.Located("a/b.dll", "clang failed") is "clang failed"
+Locate(target Text, recorded Text) Text
+	Adding.Locate("a/b.dll", "Built c/b.1.dll") is "Built a/b.1.dll"
+	Adding.Locate("b.dll", "Built c/b.dll") is "Built b.dll"
+	Adding.Locate("a/b.dll", "clang failed") is "clang failed"
 	if recorded.StartsWith("Built ") is false
 		return recorded
 	folder = Path(target).PathOnly.text

@@ -13,11 +13,11 @@ Run Number
 	folder = "Compiler/output/Convolution" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	logger.Log("Convolutions of 3 and 1024 channels run on the tensor cores like 512 channels")
 	0
-Checked(folder Text)
+Check(folder Text)
 	src = folder + "/GpuConvolution.strict"
 	File(src).Write(ConvA + ConvB + ConvC + ConvD + ConvE + ConvF + ConvG + ConvH)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
@@ -36,9 +36,9 @@ VerifiedOutput(output Text)
 		found = Regex(value + " ([\\d.]+) ms, difference ([\\d.]+) of ([\\d.]+)").Groups(output)
 		if found.Length < 4
 			return Error("Convolution did not report: " + value)
-		Measured(value, found(1) to Number, found(2) to Number, found(3) to Number)
-Measured(name Text, time Number, difference Number, size Number)
-	CheckGpuConvolution.Measured("few", 1, 0.003, 2) is not Error
+		Measure(value, found(1) to Number, found(2) to Number, found(3) to Number)
+Measure(name Text, time Number, difference Number, size Number)
+	CheckGpuConvolution.Measure("few", 1, 0.003, 2) is not Error
 	if difference > MaxRatio * (size > 1 then size else 1)
 		return Error(name + " differs from Tapped by " + difference + " of " + size)
 	if time >= MaxMs

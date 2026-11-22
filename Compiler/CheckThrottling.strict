@@ -19,11 +19,11 @@ Run Number
 	folder = "Compiler/output/ThrottlingCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	logger.Log("CheckThrottling passed")
 	0
-Checked(folder Text)
+Check(folder Text)
 	src = folder + "/ThrottlingCheck.strict"
 	File(src).Write(ProbeLines)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)

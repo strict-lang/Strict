@@ -9,9 +9,9 @@ IsPairCode(entry InstructionEntry) Boolean
 	hasInstance = PayloadDecoder(entry).Instance >= 0
 	if PayloadDecoder(entry).Text(2) is not "Code" or hasInstance is false
 		return false
-	MlirLayout(function).Paired(TypeEntry.ShortName(PayloadDecoder(entry).Text(1))).Length > 0
-Coded(instance Number, result Text) Texts
-	Text.Combine(MlirCodes(Pricing, 1).Coded(0, "%r1")).IndexOf("@Text_Code_0 :") > 0
+	MlirLayout(function).Pair(TypeEntry.ShortName(PayloadDecoder(entry).Text(1))).Length > 0
+EmitCode(instance Number, result Text) Texts
+	Text.Combine(MlirCodes(Pricing, 1).EmitCode(0, "%r1")).IndexOf("@Text_Code_0 :") > 0
 	texts = MlirTexts(function, position)
 	kind = TypeEntry.ShortName(PayloadDecoder(function.method.instructions(position)).Text(1))
 	loaded = function.Load(texts.Temp("c"), "%r" + instance)

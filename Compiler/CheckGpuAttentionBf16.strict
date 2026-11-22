@@ -14,10 +14,10 @@ Run Number
 	folder = "Compiler/output/AttentionBf16" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	0
-Checked(folder Text)
+Check(folder Text)
 	isWin = Process.OperatingSystem is "Windows"
 	if PreparedData(folder, isWin) is Error
 		return Error("PrepareSafetensorsFailed")

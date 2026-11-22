@@ -60,42 +60,42 @@ At(at Number) Texts
 	Text.Combine(Quads.At(7)).IndexOf("mulf") > 0
 	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoopBegin
-		return Counted(at)
+		return EmitCount(at)
 	if entry.kind is in Constants
 		slot = entry.kind is InstructionType.StoreConstantToVariable then 0 else 1
 		number = PayloadDecoder(entry).Value(slot).number.Absolute
 		return List(Text) + ("    " + Name("wb", at) + " = arith.constant " + MlirStatements.Copy.Hex(number) + " : f64")
 	if entry.kind is InstructionType.LoadVariableToRegister
-		return Loaded(at)
-	entry.kind is in Bounded then Combined(at) else List(Text)
-Counted(at Number) Texts
+		return Load(at)
+	entry.kind is in Bounded then Combine(at) else List(Text)
+EmitCount(at Number) Texts
 	entry = function.method.instructions(at)
 	start = Source(entry.payload(0), at)
 	if entry.payload(1) is not 1
 		return List(Text) + ("    " + Name("wn", at) + " = llvm.intr.fabs(" + start + ") : (f64) -> f64")
 	end = Source(entry.payload(2), at)
 	List(Text) + ("    " + Name("wn", at) + " = arith.addf " + start + ", " + end + " : f64")
-Loaded(at Number) Texts
+Load(at Number) Texts
 	entry = function.method.instructions(at)
 	parameter = Parameter(entry.texts(0))
 	if parameter < 0 or entry.texts(0) is in ("value", "index")
 		return List(Text)
 	input = "%t" + position + "wl" + parameter
 	List(Text) + ("    " + Name("wb", at) + " = llvm.intr.fabs(" + input + ") : (f64) -> f64")
-Combined(at Number) Texts
-	Rescaled.Combined(12).First is "    %t4wb12 = arith.addf %t4whlimit, %t4wb11 : f64"
-	GatedSum.Combined(13).First is "    %t4wb13 = arith.addf %t4whlimit, %t4wn10 : f64"
+Combine(at Number) Texts
+	Rescaled.Combine(12).First is "    %t4wb12 = arith.addf %t4whlimit, %t4wb11 : f64"
+	GatedSum.Combine(13).First is "    %t4wb13 = arith.addf %t4whlimit, %t4wn10 : f64"
 	entry = function.method.instructions(at)
-	carried = Carried(at)
+	carried = Carry(at)
 	if entry.kind is not InstructionType.Multiply and carried >= 0
-		return Accumulated(at, carried)
+		return Accumulate(at, carried)
 	operation = entry.kind is InstructionType.Multiply then "mulf" else "addf"
 	factors = Source(entry.payload(1), at) + ", " + Source(entry.payload(2), at)
 	math = "    " + Name("wb", at) + " = arith." + operation + " " + factors + " : f64"
 	check = "    " + Name("wk", at) + " = arith.cmpf olt, " + Name("wb", at) + ", %t" + position + "whlimit : f64"
 	(List(Text) + math) + check
-Accumulated(at Number, carried Number) Texts
-	Pairs.Accumulated(11, 4).First is "    %t4wb11c3 = arith.mulf %t4wn3, %t4wn6 : f64"
+Accumulate(at Number, carried Number) Texts
+	Pairs.Accumulate(11, 4).First is "    %t4wb11c3 = arith.mulf %t4wn3, %t4wn6 : f64"
 	entry = function.method.instructions(at)
 	term = carried is entry.payload(1) then entry.payload(2) else entry.payload(1)
 	loaded = function.method.instructions(LoadReuse(function.method.instructions).Writer(carried, at, -1))
@@ -139,9 +139,9 @@ Variable(entry InstructionEntry, at Number) Text
 		return "%t" + position + "whlimit"
 	stored = function.method.instructions(store)
 	stored.kind is InstructionType.StoreConstantToVariable then Name("wb", store) else Source(stored.payload(0), store)
-Carried(at Number) Number
-	Quads.Carried(12) is 2
-	Quads.Carried(7) is -1
+Carry(at Number) Number
+	Quads.Carry(12) is 2
+	Quads.Carry(7) is -1
 	first = function.method.instructions(at).payload(1)
 	writer = LoadReuse(function.method.instructions).Writer(first, at, -1)
 	loaded = function.method.instructions(writer < 0 then at else writer)

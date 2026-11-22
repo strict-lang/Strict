@@ -31,7 +31,7 @@ Guarded Texts
 		if Kernel.Source(value) is not "index"
 			lines = lines + Input(index)
 			conditions.Add(call.Temp("wh" + index + "o"))
-	joined = MlirWholeGuard(function, Kernel.Call).Joined(Rowed < 0 then conditions else conditions + "%wwp")
+	joined = MlirWholeGuard(function, Kernel.Call).Join(Rowed < 0 then conditions else conditions + "%wwp")
 	lines + Widths + joined + (Zero, "    cf.cond_br " + call.Temp("whok") + ", ^wholestart, ^generic")
 Widths Texts
 	Blurring.Widths.Length is 0
@@ -45,9 +45,9 @@ Input(read Number) Texts
 	call = MlirWholeCall(function, Kernel.Call)
 	kind = MlirWholeFunction(Kernel.Callee).Kinds(read)
 	name = call.Temp("wl" + read)
-	loaded = MlirWholeChild(function, position).Loaded(name, "%v_" + Kernel.Source(Kernel.Reads(read)))
-	converted = MlirWholeValues(Kernel.Call).Converted(name, "f", "i", call.Temp("wa" + read))
-	loaded + call.Checked(read, kind) + (kind is in ("p", "d", "o", "t") then List(Text) else List(Text) + converted)
+	loaded = MlirWholeChild(function, position).Load(name, "%v_" + Kernel.Source(Kernel.Reads(read)))
+	converted = MlirWholeValues(Kernel.Call).Convert(name, "f", "i", call.Temp("wa" + read))
+	loaded + call.Check(read, kind) + (kind is in ("p", "d", "o", "t") then List(Text) else List(Text) + converted)
 Looped Texts
 	Blurring.Looped(Blurring.Looped.Length - 11) is "    llvm.store %wb, %wp : i32, !llvm.ptr"
 	isRowed = Rowed >= 0
@@ -58,7 +58,7 @@ Looped Texts
 			lines = lines + ("    " + Arguments + index + " = arith.addi %wk, %wzero : i64")
 	kinds = callee.Kinds + (isRowed then ("i", "i", "i") else List(Text))
 	symbol = isRowed then MlirWholeRows(Kernel.Callee, Rowed).Symbol else callee.Symbol
-	called = MlirWholeValues(Kernel.Call).Called("%wr", symbol, Arguments, kinds, "i")
+	called = MlirWholeValues(Kernel.Call).Call("%wr", symbol, Arguments, kinds, "i")
 	ending = (isRowed then Advanced else List(Text)) + MlirWholeChild.Next + MlirWholeChild.Exit
 	lines + (isRowed then Positions else List(Text)) + called + Stored + ending
 Positions Texts

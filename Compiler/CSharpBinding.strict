@@ -33,7 +33,7 @@ Lines Texts
 	header = "public static class " + name + (isRecord then "Methods" else "")
 	mutable lines = Using + Structs + header + "{" + declaration + Released
 	for library.Exported
-		lines = lines + Imported(value) + Method(value)
+		lines = lines + Import(value) + Method(value)
 	lines + "}"
 Structs Texts
 	Policy.Structs.Length is 0
@@ -56,17 +56,17 @@ Struct(typeName Text) Text
 	Trades.Struct("Strict/Trade") is "public struct Trade { public double price; public double amount; }"
 	type = MlirFunction(library.types, library.types.First, MlirLibrary.Total).TypeOf(typeName)
 	mutable fields = ""
-	for MlirInstances(MlirFunction(library.types, type, MlirLibrary.Total), 0).Stored(type)
+	for MlirInstances(MlirFunction(library.types, type, MlirLibrary.Total), 0).Store(type)
 		fields = fields + " public double " + Identifier(value.Name) + ";"
 	"public struct " + TypeEntry.ShortName(typeName) + " {" + fields + " }"
-Imported(method MethodEntry) Text
-	Policy.Imported(MlirLibrary.Start).EndsWith(" string mode, int enabled, out IntPtr result);")
-	Book.Imported(LibraryLists.Valued).EndsWith("(double[] trades, out IntPtr result);")
+Import(method MethodEntry) Text
+	Policy.Import(MlirLibrary.Start).EndsWith(" string mode, int enabled, out IntPtr result);")
+	Book.Import(LibraryLists.Valued).EndsWith("(double[] trades, out IntPtr result);")
 	instance = "ref " + TypeEntry.ShortName(library.types.First.Name) + " instance"
 	mutable parameters = library.IsRecord(library.types.First.Name) then List(Text) + instance else List(Text)
 	for method.parameters
 		parameters = parameters + (Native(value.typeName) + " " + Identifier(value.Name))
-	returned = Managed(method.returnType)
+	returned = Manage(method.returnType)
 	native = library.IsRecord(method.returnType) then returned else Native(method.returnType)
 	result = "out " + (returned is "string" or returned.EndsWith("[]") then "IntPtr" else native) + " result"
 	symbol = TypeEntry.ShortName(library.types.First.Name) + "_" + method.Name
@@ -79,16 +79,16 @@ Method(method MethodEntry) Texts
 	Money.Method(Echo)(4) is "\t\treturn Decimal(result, 0.00000001m);"
 	symbol = TypeEntry.ShortName(library.types.First.Name) + "_" + method.Name
 	step = Step(method, "")
-	declared = (step is "" then Managed(method.returnType) else "decimal") + " " + method.Name
+	declared = (step is "" then Manage(method.returnType) else "decimal") + " " + method.Name
 	header = "\tpublic static " + declared + "(" + Text.Combine(Parameters(method), ", ") + ")"
 	call = "\t\tif (" + symbol + "(" + Text.Combine(Arguments(method) + "out var result", ", ") + ") != 0)"
-	(header, "\t{", call, Thrown) + Returned(method.returnType, step) + "\t}"
+	(header, "\t{", call, Thrown) + EmitReturn(method.returnType, step) + "\t}"
 Parameters(method MethodEntry) Texts
 	Trades.Parameters(MlirLibrary.Total) is ("Trade instance")
 	instance = TypeEntry.ShortName(library.types.First.Name) + " instance"
 	mutable parameters = library.IsRecord(library.types.First.Name) then List(Text) + instance else List(Text)
 	for method.parameters
-		kind = Step(method, value.Name) is "" then Managed(value.typeName) else "decimal"
+		kind = Step(method, value.Name) is "" then Manage(value.typeName) else "decimal"
 		parameters = parameters + (kind + " " + Identifier(value.Name))
 	parameters
 Arguments(method MethodEntry) Texts
@@ -101,18 +101,18 @@ Argument(typeName Text, name Text, step = "") Text
 	Policy.Argument("Strict/Boolean", "on") is "on ? 1 : 0"
 	Policy.Argument("Strict/Numbers", "prices") is "Block(prices)"
 	if step is not ""
-		return Rounded(name, step)
-	kind = Managed(typeName)
+		return Round(name, step)
+	kind = Manage(typeName)
 	if kind.EndsWith("[]")
 		return "Block(" + name + ")"
 	kind is "bool" then name + " ? 1 : 0" else library.IsRecord(typeName) then "ref " + name else name
-Returned(returnType Text, step = "") Texts
-	Policy.Returned("Strict/Number") is ("\t\treturn result;")
-	Policy.Returned("Strict/List(Number)") is ("\t\treturn Items<double>(result);")
-	Book.Returned("Strict/List(Trade)") is ("\t\treturn Items<Trade>(result);")
+EmitReturn(returnType Text, step = "") Texts
+	Policy.EmitReturn("Strict/Number") is ("\t\treturn result;")
+	Policy.EmitReturn("Strict/List(Number)") is ("\t\treturn Items<double>(result);")
+	Book.EmitReturn("Strict/List(Trade)") is ("\t\treturn Items<Trade>(result);")
 	if step is not ""
 		return List(Text) + ("\t\treturn Decimal(result, " + step.Split(" ").First + "m);")
-	kind = Managed(returnType)
+	kind = Manage(returnType)
 	if kind.EndsWith("[]")
 		return List(Text) + ("\t\treturn Items<" + kind.Substring(0, kind.Length - 2) + ">(result);")
 	if kind is "string"
@@ -130,9 +130,9 @@ Step(method MethodEntry, parameter Text) Text
 		return ""
 	key = method.Name + (parameter is "" then "" else " " + parameter) + " step"
 	TypeShape(source).ParameterScope.TypeOf(key)
-Rounded(name Text, step Text) Text
-	Money.Rounded("amount", "0.01") is "Stepped(decimal.Round(amount / 0.01m, MidpointRounding.ToEven), 0.01m)"
-	Money.Rounded("amount", "0.01 Floor") is "Stepped(decimal.Floor(amount / 0.01m), 0.01m)"
+Round(name Text, step Text) Text
+	Money.Round("amount", "0.01") is "Stepped(decimal.Round(amount / 0.01m, MidpointRounding.ToEven), 0.01m)"
+	Money.Round("amount", "0.01 Floor") is "Stepped(decimal.Floor(amount / 0.01m), 0.01m)"
 	parts = step.Split(" ")
 	divided = name + " / " + parts.First + "m"
 	rounding = parts.Length is 1 or parts.Last is "Even" then "Round" else parts.Last
@@ -140,17 +140,17 @@ Rounded(name Text, step Text) Text
 	"Stepped(decimal." + rounding + "(" + divided + mode + "), " + parts.First + "m)"
 Native(typeName Text) Text
 	Policy.Native("Strict/Text") is Utf8 + " string"
-	kind = Managed(typeName)
+	kind = Manage(typeName)
 	if library.IsRecord(typeName)
 		return "ref " + kind
 	native = kind.EndsWith("[]") then "double[]" else kind
 	kind is "string" then Utf8 + " string" else kind is "bool" then "int" else native
-Managed(typeName Text) Text
-	Policy.Managed("Strict/Boolean") is "bool"
-	Policy.Managed("Strict/Numbers") is "double[]"
-	Book.Managed("Strict/List(Trade)") is "Trade[]"
+Manage(typeName Text) Text
+	Policy.Manage("Strict/Boolean") is "bool"
+	Policy.Manage("Strict/Numbers") is "double[]"
+	Book.Manage("Strict/List(Trade)") is "Trade[]"
 	name = TypeEntry.ShortName(typeName)
 	element = LibraryLists(library).Element(typeName)
 	if element is not ""
-		return Managed(element) + "[]"
+		return Manage(element) + "[]"
 	name is "Text" then "string" else name is "Boolean" then "bool" else name is "Number" then "double" else name

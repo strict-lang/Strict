@@ -42,16 +42,16 @@ IsStruct(typeName Text) Boolean
 	couples = MlirCouples(function, 0)
 	isPacked = couples.IsCoupled(typeName) or couples.IsSingle(typeName) or MlirLanes(function, 0).IsPacked(typeName)
 	isStruct and isPacked is false
-Represented(kind Text) Text
-	Wrapping.Represented("Angle") is "Number" and Wrapping.Represented("Shape") is "Shape"
-	Wrapping.Represented("Texts") is "List(Text)" and Wrapping.Represented("Boolean") is "Boolean"
-	Wrapping.Represented("Dictionary(Text, Number)") is "List(List(Text, Number))"
+Represent(kind Text) Text
+	Wrapping.Represent("Angle") is "Number" and Wrapping.Represent("Shape") is "Shape"
+	Wrapping.Represent("Texts") is "List(Text)" and Wrapping.Represent("Boolean") is "Boolean"
+	Wrapping.Represent("Dictionary(Text, Number)") is "List(List(Text, Number))"
 	if kind is in Plain
 		return kind
 	if kind.StartsWith(Keyed)
-		return "List(" + Represented(MethodBodies.Item(kind.Substring(Keyed.Length, kind.Length - Keyed.Length - 1))) + ")"
+		return "List(" + Represent(MethodBodies.Item(kind.Substring(Keyed.Length, kind.Length - Keyed.Length - 1))) + ")"
 	packed = MlirLanes(function, 0).IsPacked(kind) then "Number" else MlirFlats(function, 0).Kind(kind)
-	packed is not "" then packed else Wrapped(kind) is "" then Plural(kind) else Represented(Wrapped(kind))
+	packed is not "" then packed else Wrap(kind) is "" then Plural(kind) else Represent(Wrap(kind))
 Plural(kind Text) Text
 	Wrapping.Plural("Bytes") is "List(Number)"
 	Wrapping.Plural("List(Byte)") is "List(Number)"
@@ -66,13 +66,13 @@ Plural(kind Text) Text
 IsNumeric(kind Text) Boolean
 	Wrapping.IsNumeric("Byte")
 	MlirLayout(MlirLanes.Sample.function).IsNumeric("Rgb") is false
-	Represented(kind) is "Number" and MlirLanes(function, 0).IsPacked(kind) is false
-Wrapped(typeName Text) Text
-	MlirLayout(Eights).Stored("%d", "%p", 4)(0).Length is 76
-	Wrapping.Wrapped("Angle") is "Degrees"
-	Wrapping.Wrapped("Shape") is ""
-	Wrapping.Wrapped("Number") is ""
-	Wrapping.Wrapped("Float32") is "Number"
+	Represent(kind) is "Number" and MlirLanes(function, 0).IsPacked(kind) is false
+Wrap(typeName Text) Text
+	MlirLayout(Eights).Store("%d", "%p", 4)(0).Length is 76
+	Wrapping.Wrap("Angle") is "Degrees"
+	Wrapping.Wrap("Shape") is ""
+	Wrapping.Wrap("Number") is ""
+	Wrapping.Wrap("Float32") is "Number"
 	(typeName + "s") is in MlirNarrowing.PackedNames then "Number" else function.TypeOf(typeName, true).Wrapped
 Owner(type TypeEntry, name Text) TypeEntry
 	TypeEntry.ShortName(Wrapping.Owner(Angle, "Floor").Name) is "Number"
@@ -83,35 +83,35 @@ Owner(type TypeEntry, name Text) TypeEntry
 	inner = type.Wrapped is "" then type else function.TypeOf(type.Wrapped, true)
 	inner.Name is "" or inner.Name is type.Name then type else Owner(inner, name)
 IsInitializer Boolean
-	Packing.Returned(2)(0) is "    %t2nz = arith.constant 8 : i64"
-	Packing.Returned(2)(2) is "    %t2n0 = llvm.getelementptr %t2np[0] : (!llvm.ptr) -> !llvm.ptr, f64"
-	Packing.Returned(2)(3) is "    %t2v0 = llvm.load %v_width : !llvm.ptr -> f64"
-	Packing.Returned(2)(4) is "    llvm.store %t2v0, %t2n0 : f64, !llvm.ptr"
-	Packing.Returned(2)(5) is "    func.call @strict_rc_object(%t2np, %t2nz) : (!llvm.ptr, i64) -> ()"
-	Packing.Returned(2)(6) is "    %t2nf = func.call @strict_bits(%t2np) : (!llvm.ptr) -> f64"
+	Packing.EmitReturn(2)(0) is "    %t2nz = arith.constant 8 : i64"
+	Packing.EmitReturn(2)(2) is "    %t2n0 = llvm.getelementptr %t2np[0] : (!llvm.ptr) -> !llvm.ptr, f64"
+	Packing.EmitReturn(2)(3) is "    %t2v0 = llvm.load %v_width : !llvm.ptr -> f64"
+	Packing.EmitReturn(2)(4) is "    llvm.store %t2v0, %t2n0 : f64, !llvm.ptr"
+	Packing.EmitReturn(2)(5) is "    func.call @strict_rc_object(%t2np, %t2nz) : (!llvm.ptr, i64) -> ()"
+	Packing.EmitReturn(2)(6) is "    %t2nf = func.call @strict_bits(%t2np) : (!llvm.ptr) -> f64"
 	Wrapping.IsInitializer is false
 	Packing.IsInitializer
-	IsStruct(function.type.Name) and function.method.IsInitializer(MlirInstances(function, 0).Stored(function.type))
-Returned(position Number) Texts
-	Wrapping.Returned(-2) is ("    return %zero : f64")
-	Packing.Returned(2).Last is "    return %t2nf : f64"
+	IsStruct(function.type.Name) and function.method.IsInitializer(MlirInstances(function, 0).Store(function.type))
+EmitReturn(position Number) Texts
+	Wrapping.EmitReturn(-2) is ("    return %zero : f64")
+	Packing.EmitReturn(2).Last is "    return %t2nf : f64"
 	if IsInitializer is false
 		return List(Text) + "    return %zero : f64"
 	memory = MlirMemory(function, position)
-	mutable lines = memory.Allocated(MlirEmbedded(function).Slots(function.type.Name), "n")
-	for MlirInstances(function, 0).Stored(function.type)
+	mutable lines = memory.Allocate(MlirEmbedded(function).Slots(function.type.Name), "n")
+	for MlirInstances(function, 0).Store(function.type)
 		slot = memory.Slot(memory.Temp("np"), MlirEmbedded(function).Offset(function.type, value.Name), "n" + index)
-		lines = lines + slot + Copied(value, memory.Temp("v" + index), memory.Temp("n" + index))
+		lines = lines + slot + Copy(value, memory.Temp("v" + index), memory.Temp("n" + index))
 	lines = lines + MlirMemory.Counted.Replace("%p", memory.Temp("np")).Replace("%z", memory.Temp("nz"))
 	lines + memory.Bits(memory.Temp("np"), "n") + ("    return " + memory.Temp("nf") + " : f64")
-Copied(member MemberEntry, temp Text, slot Text) Texts
-	Wrapping.Copied(Red, "%v", "%n")(0) is "    %v = llvm.load %v_red : !llvm.ptr -> f64"
-	Wrapping.Copied(Red, "%v", "%n").Last is "    llvm.store %vb, %n : f64, !llvm.ptr"
-	Wrapping.Copied(Byting.members.First, "%v", "%n").Length is 2
-	Wrapping.Copied(Red, "%v", "%n")(1) is "    %vb = func.call @strict_byte(%v) : (f64) -> f64"
+Copy(member MemberEntry, temp Text, slot Text) Texts
+	Wrapping.Copy(Red, "%v", "%n")(0) is "    %v = llvm.load %v_red : !llvm.ptr -> f64"
+	Wrapping.Copy(Red, "%v", "%n").Last is "    llvm.store %vb, %n : f64, !llvm.ptr"
+	Wrapping.Copy(Byting.members.First, "%v", "%n").Length is 2
+	Wrapping.Copy(Red, "%v", "%n")(1) is "    %vb = func.call @strict_byte(%v) : (f64) -> f64"
 	loaded = function.Load(temp, "%v_" + member.Name)
 	if MlirEmbedded(function).IsInline(function.type, member)
-		return List(Text) + loaded + MlirEmbedded(function).Copied(temp, slot, member.typeName)
+		return List(Text) + loaded + MlirEmbedded(function).Copy(temp, slot, member.typeName)
 	if IsByte(member.typeName) is false
 		return (loaded, function.Store(temp, slot))
 	(loaded, "    " + temp + "b = func.call @strict_byte(" + temp + ") : (f64) -> f64", function.Store(temp + "b", slot))
@@ -120,59 +120,59 @@ IsByte(typeName Text) Boolean
 	Wrapping.IsByte("Number") is false
 	changing = function.TypeOf(typeName, true).Changing
 	changing.Length is 1 and changing.First.Bits is 8
-Paired(kind Text) Texts
-	Wrapping.Paired("List(Text, Number)") is ("Text", "Number")
-	Wrapping.Paired("Dictionary(Text, Shape)") is ("Text", "Shape")
-	Wrapping.Paired("Texts").Length is 0
-	Wrapping.Paired("Dictionary(Number, Number)") is ("Number", "Number")
+Pair(kind Text) Texts
+	Wrapping.Pair("List(Text, Number)") is ("Text", "Number")
+	Wrapping.Pair("Dictionary(Text, Shape)") is ("Text", "Shape")
+	Wrapping.Pair("Texts").Length is 0
+	Wrapping.Pair("Dictionary(Number, Number)") is ("Number", "Number")
 	if kind.StartsWith(Keyed)
 		return MethodBodies.Pair("List(" + kind.Substring(Keyed.Length, kind.Length - Keyed.Length - 1) + ")")
-	represented = Represented(kind)
+	represented = Represent(kind)
 	pair = MethodBodies.Pair(represented)
 	pair.Length > 0 then pair else MethodBodies.Pair(MlirKinds(function).ElementKind(represented))
-Packed(position Number) Number
-	MlirLayout(Eights).Packed(2) is 7
-	MlirLayout(Bytings).Packed(2) is 9
-	MlirLayout(Halves).Packed(2) is 17
-	MlirLayout(Singles).Packed(2) is 32
-	Wrapping.Packed(0) is 0
-	MlirLayout(MlirLanes.Collecting).Packed(2) is 33
+Pack(position Number) Number
+	MlirLayout(Eights).Pack(2) is 7
+	MlirLayout(Bytings).Pack(2) is 9
+	MlirLayout(Halves).Pack(2) is 17
+	MlirLayout(Singles).Pack(2) is 32
+	Wrapping.Pack(0) is 0
+	MlirLayout(MlirLanes.Collecting).Pack(2) is 33
 	kind = MlirKinds(function).VariableKind(position, "forResult")
 	isLanes = MlirLanes(function, 0).IsPacked(MlirKinds(function).ElementKind(kind))
 	isLanes then MlirDoubles.LanesFormat else MlirNarrowing.Format(kind)
-Collected(register Text, pointer Text, at Number) Texts
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(0).Length is 77
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(1) is "    %pw = arith.constant 64 : i64"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(2) is "    %pv = arith.cmpi eq, %results, %pw : i64"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(4) is "  ^d5wide:"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(6) is "    cf.br ^d5stored"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(7) is "  ^d5narrow:"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(8) is "    %dn = arith.truncf %d : f64 to f32"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(10) is "    cf.br ^d5stored"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5)(5) is "    llvm.store %d, %p : f64, !llvm.ptr"
-	MlirLayout(MlirDeviceStatements.Doubled).Collected("%d", "%p", 5).Last is "  ^d5stored:"
-	function.Float is "f64" then Narrowed(register, pointer, at) else Stored(register, pointer, at)
-Stored(register Text, pointer Text, at Number) Texts
-	MlirLayout(Eights).Stored("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
-	MlirLayout(Eights).Collected("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
-	MlirLayout(Bytings).Stored("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
-	MlirLayout(Halves).Stored("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")
-	MlirLayout(Singles).Stored("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")
-	MlirLayout(MlirGuards.Shifted).Stored("%d", "%p", 9).First.EndsWith("(%result, %at, %d, %results)" + Storing)
+Collect(register Text, pointer Text, at Number) Texts
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(0).Length is 77
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(1) is "    %pw = arith.constant 64 : i64"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(2) is "    %pv = arith.cmpi eq, %results, %pw : i64"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(4) is "  ^d5wide:"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(6) is "    cf.br ^d5stored"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(7) is "  ^d5narrow:"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(8) is "    %dn = arith.truncf %d : f64 to f32"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(10) is "    cf.br ^d5stored"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5)(5) is "    llvm.store %d, %p : f64, !llvm.ptr"
+	MlirLayout(MlirDeviceStatements.Doubled).Collect("%d", "%p", 5).Last is "  ^d5stored:"
+	function.Float is "f64" then Narrow(register, pointer, at) else Store(register, pointer, at)
+Store(register Text, pointer Text, at Number) Texts
+	MlirLayout(Eights).Store("%d", "%p", 4).Last is "    llvm.store %db, %p : i8, !llvm.ptr"
+	MlirLayout(Eights).Collect("%d", "%p", 4)(1) is "    %db = func.call @strict_device_float8(%d) : (f32) -> i8"
+	MlirLayout(Bytings).Store("%d", "%p", 4)(1) is "    %db = func.call @strict_device_byte(%d) : (f32) -> i8"
+	MlirLayout(Halves).Store("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")
+	MlirLayout(Singles).Store("%d", "%p", 4).First.StartsWith("    func.call @strict_device_stored(%result, %at, %d")
+	MlirLayout(MlirGuards.Shifted).Store("%d", "%p", 9).First.EndsWith("(%result, %at, %d, %results)" + Storing)
 	address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer
-	if Packed(function.method.LoopBeginOf(at)) is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
+	if Pack(function.method.LoopBeginOf(at)) is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
 		return List(Text) + ("    func.call @strict_device_stored(%result, %at, " + register + ", %results)" + Storing)
-	encoder = Packed(function.method.LoopBeginOf(at)) is 9 then "@strict_device_byte(" else "@strict_device_float8("
+	encoder = Pack(function.method.LoopBeginOf(at)) is 9 then "@strict_device_byte(" else "@strict_device_float8("
 	encoded = "    " + register + "b = func.call " + encoder + register + ") : (f32) -> i8"
 	(address + "i8", encoded, "    llvm.store " + register + "b, " + pointer + " : i8, !llvm.ptr")
-Narrowed(register Text, pointer Text, at Number) Texts
-	MlirLayout(MlirDeviceStatements.Doubled).Narrowed("%d", "%p", 5)(9).EndsWith("%dn, %results)" + Storing)
-	MlirLayout(MlirDeviceStatements.Doubled).Narrowed("%d", "%p", 5)(3) is "    cf.cond_br %pv, ^d5wide, ^d5narrow"
+Narrow(register Text, pointer Text, at Number) Texts
+	MlirLayout(MlirDeviceStatements.Doubled).Narrow("%d", "%p", 5)(9).EndsWith("%dn, %results)" + Storing)
+	MlirLayout(MlirDeviceStatements.Doubled).Narrow("%d", "%p", 5)(3) is "    cf.cond_br %pv, ^d5wide, ^d5narrow"
 	address = "    " + pointer + " = llvm.getelementptr %result[%at]" + MlirFastLoop.Pointer + "f64"
 	compared = "    " + pointer + "v = arith.cmpi eq, %results, " + pointer + "w : i64"
 	branch = "    cf.cond_br " + pointer + "v, ^d" + at + "wide, ^d" + at + "narrow"
 	wide = (address, MlirTyped.Integer.Constant(pointer + "w", "64"), compared, branch, "  ^d" + at + "wide:")
 	truncated = "    " + register + "n = arith.truncf " + register + " : f64 to f32"
 	narrow = ("    cf.br ^d" + at + "stored", "  ^d" + at + "narrow:", truncated)
-	stored = Stored(register + "n", pointer + "n", at) + ("    cf.br ^d" + at + "stored", "  ^d" + at + "stored:")
+	stored = Store(register + "n", pointer + "n", at) + ("    cf.br ^d" + at + "stored", "  ^d" + at + "stored:")
 	(wide + function.Store(register, pointer)) + narrow + stored

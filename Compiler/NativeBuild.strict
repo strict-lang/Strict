@@ -35,25 +35,25 @@ Compile(path Text, root Text, isTesting = false, isCounting = false, sources Tex
 		return Error("NoProgramEmitted")
 	natives = NativeFolder(isRecursive = isRecursive).Natives(path, root, module.types)
 	Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
-Tested(path Text, root Text, isCounting Boolean, sources Texts) Number
+TestPath(path Text, root Text, isCounting Boolean, sources Texts) Number
 	Compile(path, root, true, isCounting, sources)
-	Ran(Output(path, false), Toolchain(Platform.Current, root), path, isCounting)
+	RunBuilt(Output(path, false), Toolchain(Platform.Current, root), path, isCounting)
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
 	NativeBuild(isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
 	failure = Failure(program)
 	if failure is not ""
-		return Checked("Native compilation failed, " + failure)
+		return Check("Native compilation failed, " + failure)
 	marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if marker < 0 or isFast
-		return PtxCache(base).Unlaunched(program)
+		return PtxCache(base).Unlaunch(program)
 	gpu = DeviceBuild(Toolchain(Platform.Current, root))
 	device = program.Substring(marker + 1, program.Length - marker - 1)
-	ptx = Target is Platform.Current then gpu.Built(base, device, MlirTensors.Attending.Used(program)) else List(Text)
-	Checked(gpu.Embedded(program.Substring(0, marker), ptx, base))
-Checked(built Text) Text
-	NativeBuild.Checked("module") is "module"
-	NativeBuild.Checked("GPU kernels failed: x") is ""
+	ptx = Target is Platform.Current then gpu.Build(base, device, MlirTensors.Attending.Used(program)) else List(Text)
+	Check(gpu.Emb(program.Substring(0, marker), ptx, base))
+Check(built Text) Text
+	NativeBuild.Check("module") is "module"
+	NativeBuild.Check("GPU kernels failed: x") is ""
 	if (built.StartsWith("GPU kernels failed") or built.StartsWith("Native compilation failed")) is false
 		return built
 	logger.Log(built)
@@ -78,8 +78,8 @@ Build(base Text, program Text, tools Toolchain, isCounting = false)
 	if built.StartsWith("Built ") is false
 		return Error("NotBuilt")
 	CrossBuild(base, program, tools, isCounting)
-	Intermediates.Removed(base)
-	BuildProfile.Packaged(value, base, program, tools)
+	Intermediates.Remove(base)
+	BuildProfile.Package(value, base, program, tools)
 Target Number
 	NativeBuild(isIOS = true).Target is Platform.IOS
 	NativeBuild(isIOS = true, isSimulator = true).Target is Platform.IOSSimulator
@@ -106,11 +106,11 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
 		return "Built " + tuned.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)
 	if isIOS
-		return IOSBuild(tuned, isSimulator).Linked(base)
-	isAndroid then AndroidBuild(tuned).Linked(base) else Linked(base, tuned)
-Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
+		return IOSBuild(tuned, isSimulator).Link(base)
+	isAndroid then AndroidBuild(tuned).Link(base) else Link(base, tuned)
+RunBuilt(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 	executable = tools.Executable(base)
-	result = ToolRunner(executable).Cleaned(Process.RunTool(executable, ""))
+	result = ToolRunner(executable).Clean(Process.RunTool(executable, ""))
 	logger.Log(result.Output.Trim)
 	if ToolRunner.IsCrash(result.exitCode) is false
 		logger.Log(Execute.Summary(result.exitCode, path))
@@ -118,13 +118,13 @@ Ran(base Text, tools Toolchain, path Text, isCounting Boolean) Number
 		File(executable).Delete
 		File(base + ".mlir").Delete
 	result.exitCode
-Linked(base Text, tools Toolchain) Text slow
-	NativeBuild.Linked("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
+Link(base Text, tools Toolchain) Text slow
+	NativeBuild.Link("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	executable = tools.Executable(base)
 	isSwapped = Platform.Current is Platform.Windows and tools.isWeb is false and File(executable).Exists
 	target = isSwapped then executable.Replace(".exe", ".new.exe") else executable
-	built = tools.isWeb then WebBuild(tools).Linked(base, target) else tools.Built(base, target)
-	problem = isSwapped and built.StartsWith("Built ") then Intermediates.Replaced(executable, target) else ""
+	built = tools.isWeb then WebBuild(tools).Link(base, target) else tools.Build(base, target)
+	problem = isSwapped and built.StartsWith("Built ") then Intermediates.Replace(executable, target) else ""
 	kept = File(target).Exists then ", the new build is " + target else ""
 	failed = (kept is "" then "Replaced " else "Could not replace ") + executable + ", " + problem + kept
 	problem is "" then built.Replace(target, executable) else failed
@@ -134,7 +134,7 @@ CrossBuild(base Text, program Text, tools Toolchain, isCounting Boolean)
 	if Target is not Platform.Windows or isCounting or isCrossing is false
 		return
 	File(base + ".linux.mlir").Write(Mlir(program, tools.root, Platform.Linux))
-	crossed = LinuxBuild(tools).Built(base)
+	crossed = LinuxBuild(tools).Build(base)
 	logger.Log(crossed)
 	if crossed.StartsWith("Built ") is false
 		return Error("CrossBuildFailed")
@@ -152,15 +152,15 @@ Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
 	NativeBuild(false).Mlir("module {\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
-	runtime = Released(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
+	runtime = PlaceRelease(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
 	system = Text.Combine(Platform.Runtime(platform, root), "\n")
 	body = program.Substring(0, program.Length - 1)
 	if platform is Platform.Web
-		return WebBuild.Sized(body + runtime) + "\n" + system + "\n}"
+		return WebBuild.Patch(body + runtime) + "\n" + system + "\n}"
 	Text.Combine((body, runtime, "\n", system, "\n}"), "")
-Released(mlir Text) Text
-	NativeBuild(isWeb = true).Released(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
-	NativeBuild(false).Released(CpuNotice) is CpuNotice
+PlaceRelease(mlir Text) Text
+	NativeBuild(isWeb = true).PlaceRelease(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
+	NativeBuild(false).PlaceRelease(CpuNotice) is CpuNotice
 	isWeb then mlir.Replace(CpuNotice, CpuNotice.Replace("(1 : i64)", "(0 : i64)")) else mlir
 Failure(program Text) Text
 	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"

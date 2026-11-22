@@ -45,13 +45,13 @@ Run Number
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	CheckJobAndPressure(folder)
-	CheckUncollected(folder)
+	CheckUncollect(folder)
 	CheckCollections(folder)
 	Directory.Delete(folder)
 	logger.Log("CheckMemory passed")
 	0
 CheckJobAndPressure(folder Text)
-	exe = Built(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
+	exe = Build(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
 	if exe is Error
 		return exe
 	File(folder + "/job.c").Write(JobCode.Split("\n"))
@@ -68,7 +68,7 @@ CheckHeaps(folder Text)
 	p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
 	if p1 is Error
 		return p1
-	webJs = Built(folder, "WebPressure", FilledSrc + KeptSrc + WebA + WebB, "web")
+	webJs = Build(folder, "WebPressure", FilledSrc + KeptSrc + WebA + WebB, "web")
 	if webJs is Error
 		return webJs
 	web = Process.RunTool(Directory.Directories("Tools/emsdk/node").First + "/node.exe", webJs, RunSeconds)
@@ -77,7 +77,7 @@ CheckHeaps(folder Text)
 	ran = RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
 	if ran is Error
 		return ran
-CheckUncollected(folder Text)
+CheckUncollect(folder Text)
 	grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
 	u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
 	if u1 is Error
@@ -102,7 +102,7 @@ CheckCollections(folder Text)
 		return handed
 	CheckChurnAndProducts(folder)
 CheckChurnAndProducts(folder Text)
-	churnExe = Built(folder, "Churning", FilledSrc + ChurnSrc, "")
+	churnExe = Build(folder, "Churning", FilledSrc + ChurnSrc, "")
 	cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
 	churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
 	grp = Regex(ChurnPattern).Groups(churn)
@@ -184,7 +184,7 @@ CheckTools(folder Text)
 RepeatedLine(line Text, count Number) Texts
 	for count
 		line
-Built(folder Text, name Text, code Text, platform Text) Text
+Build(folder Text, name Text, code Text, platform Text) Text
 	src = folder + "/" + name + ".strict"
 	File(src).Write(code.Split("\n"))
 	arg = "build " + src + (platform is "" then "" else " " + platform)
@@ -193,7 +193,7 @@ Built(folder Text, name Text, code Text, platform Text) Text
 		return Error("BuildFailed " + name + ": " + built.Output + built.error)
 	platform is "" then folder + "/" + name + ".exe" else folder + "/Release/Web/" + name + ".js"
 RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, ban Text) Text
-	exe = Built(folder, name, code, platform)
+	exe = Build(folder, name, code, platform)
 	if exe is Error
 		return exe
 	res = Process.RunTool("cmd", "/c " + (env is "" then "" else "set " + env + "&& ") + "\"" + exe + "\"", RunSeconds)

@@ -14,11 +14,11 @@ constant CounterType = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.m
 constant NewCounter = InstructionEntry.Invoke(2, (CounterType.Name, "from", CounterType.Name, "left", "right"), (0, 1), -1)
 constant Counters = MlirCalls(MlirFunction(List(TypeEntry) + CounterType, CounterType, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 10), InstructionEntry.LoadNumber(1, 5), NewCounter))), 2)
 Temp(suffix Text) Text
-	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi"))).Length is 128
-	Text.Combine(MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 448
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.Print("Hi")).Last.IndexOf("@strict_log(%t3a, %t3a)") > 0
-	Text.Combine(MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 143
-	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).Length is 554
+	Text.Combine(MlirCalls(Shapes, 3).Print(InstructionEntry.Print("Hi"))).Length is 128
+	Text.Combine(MlirCalls(Shapes, 3).Print(InstructionEntry.PrintValue("Hi ", 0, false))).Length is 448
+	MlirCalls(Shapes, 3).Print(InstructionEntry.Print("Hi")).Last.IndexOf("@strict_log(%t3a, %t3a)") > 0
+	Text.Combine(MlirCalls(Shapes, 2).Compile(Area, PayloadDecoder(Area), AreaShape, 0)).Length is 143
+	Text.Combine(Counters.Creat(NewCounter, PayloadDecoder(NewCounter))).Length is 554
 	MlirCalls(Shapes, 1).Temp("a") is "%t1a"
 	"%t" + position + suffix
 Emitted Texts
@@ -27,17 +27,17 @@ Emitted Texts
 	Text.Combine(MlirCalls(Shapes, 1).Emitted).IndexOf("@strict_pin(%t1of)") > 0
 	entry = function.method.instructions(position)
 	if entry.kind is InstructionType.Print
-		return Printed(entry)
+		return Print(entry)
 	if entry.kind is InstructionType.FieldLoad
 		return MlirInstances(function, position).Field(entry)
 	if MlirTexts(function, position).IsConversion
-		return MlirTexts(function, position).Converted(entry)
+		return MlirTexts(function, position).Convert(entry)
 	decoder = PayloadDecoder(entry)
-	decoder.Text(2) is "from" then Created(entry, decoder) else Invoked(entry, decoder)
-Created(entry InstructionEntry, decoder PayloadDecoder) Texts
-	MlirCalls(Shapes, 1).Created(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
-	Text.Combine(MlirCalls(Hashes, 1).Created(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0
-	Text.Combine(Counters.Created(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0
+	decoder.Text(2) is "from" then Creat(entry, decoder) else Invoke(entry, decoder)
+Creat(entry InstructionEntry, decoder PayloadDecoder) Texts
+	MlirCalls(Shapes, 1).Creat(NewShape, PayloadDecoder(NewShape)).Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
+	Text.Combine(MlirCalls(Hashes, 1).Creat(Hashed, PayloadDecoder(Hashed))).IndexOf("@Hash_from_1(%t1m") > 0
+	Text.Combine(Counters.Creat(NewCounter, PayloadDecoder(NewCounter))).IndexOf("@Counter_from_foreign(") > 0
 	type = function.TypeOf(decoder.Text(1))
 	count = PayloadDecoder(entry).ArgumentCount
 	custom = decoder.Callee(type)
@@ -45,16 +45,16 @@ Created(entry InstructionEntry, decoder PayloadDecoder) Texts
 	target = "%r" + entry.payload(0)
 	isForeign = MlirForeign(MlirFunction(function.types, type, custom, typeIndex = function.typeIndex)).IsForeign
 	if custom.instructions.Length is 0 and isForeign is false or IsMemberValue(entry, type, custom)
-		return Shared(MlirPairs(function, position).Constructed(entry, decoder.Text(1), instances), target)
-	instances.Fresh(type, target, "f", List(Text)) + Compiled(entry, decoder, type, count)
-Shared(constructed Texts, target Text) Texts
-	MlirCalls(Shapes, 1).Shared(List(Text), "%r1").Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
-	MlirCalls(Hashes, 1).Shared(List(Text), "%r1").Length is 0
+		return Share(MlirPairs(function, position).Construct(entry, decoder.Text(1), instances), target)
+	instances.Fresh(type, target, "f", List(Text)) + Compile(entry, decoder, type, count)
+Share(constructed Texts, target Text) Texts
+	MlirCalls(Shapes, 1).Share(List(Text), "%r1").Last is "    llvm.store %t1r, %r1 : f64, !llvm.ptr"
+	MlirCalls(Hashes, 1).Share(List(Text), "%r1").Length is 0
 	if MlirConstants(function, position).IsConstant is false
 		return constructed
 	isFlat = MlirFlats(function, position).Count(function.method.instructions(position).texts(0)) > 0
 	pin = isFlat then "strict_flat_pin" else "strict_pin"
-	MlirLists(function, position).Cached(constructed, Temp("of"), pin) + function.Store(Temp("r"), target)
+	MlirLists(function, position).Cache(constructed, Temp("of"), pin) + function.Store(Temp("r"), target)
 IsMemberValue(entry InstructionEntry, type TypeEntry, chosen MethodEntry) Boolean
 	MlirCalls(Hashes, 1).IsMemberValue(Hashed, Hash, FromText) is false
 	MlirCalls(Holding, 1).IsMemberValue(InstructionEntry.HolderFrom, Holding.type, Holding.type.methods.First) is false
@@ -63,38 +63,38 @@ IsMemberValue(entry InstructionEntry, type TypeEntry, chosen MethodEntry) Boolea
 	arguments = PayloadDecoder(entry).Arguments
 	if members.Length is not 1 or arguments.Length is not 1 or chosen.parameters.Length is not 1
 		return false
-	member = layout.Represented(TypeEntry.ShortName(members.First.typeName))
-	if layout.Represented(TypeEntry.ShortName(chosen.parameters.First.typeName)) is member
+	member = layout.Represent(TypeEntry.ShortName(members.First.typeName))
+	if layout.Represent(TypeEntry.ShortName(chosen.parameters.First.typeName)) is member
 		return false
 	argument = MlirKinds(function).KindOf(position, arguments.First)
-	argument is TypeEntry.ShortName(type.Name) or layout.Represented(argument) is member
-Invoked(entry InstructionEntry, decoder PayloadDecoder) Texts
-	MlirCalls(Shapes, 2).Invoked(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
+	argument is TypeEntry.ShortName(type.Name) or layout.Represent(argument) is member
+Invoke(entry InstructionEntry, decoder PayloadDecoder) Texts
+	MlirCalls(Shapes, 2).Invoke(Area, PayloadDecoder(Area)).Last is "    llvm.store %t2r, %r2 : f64, !llvm.ptr"
 	Text.Combine(MlirCalls(MlirGroups.Norming.function, 11).Emitted).IndexOf("^t11kept") > 0
 	MlirCalls(MlirTails.Sample.function, 1).Emitted.Last is "  ^tail1:"
 	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
 	if MlirTails(function, position).IsTail
-		return MlirTails(function, position).Jumped(entry, type)
+		return MlirTails(function, position).Jump(entry, type)
 	count = PayloadDecoder(entry).ArgumentCount
 	helper = NativeHelper(entry, decoder)
 	if helper is not ""
-		return MlirDestined(function, position).Destined(entry, MlirNatives(function, position).Emitted(entry, type, helper))
-	compiled = MlirDestined(function, position).Destined(entry, Compiled(entry, decoder, type, count))
-	MlirGrouped(function, position).Kept(compiled, entry.payload(0))
-Compiled(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
-	MlirCalls(Shapes, 2).Compiled(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
+		return MlirDestined(function, position).Aim(entry, MlirNatives(function, position).Emit(entry, type, helper))
+	compiled = MlirDestined(function, position).Aim(entry, Compile(entry, decoder, type, count))
+	MlirGrouped(function, position).Keep(compiled, entry.payload(0))
+Compile(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
+	MlirCalls(Shapes, 2).Compile(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
 	callee = decoder.Callee(type)
 	target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
 	if callee.instructions.Length is 0 and MlirForeign(target).IsForeign is false
-		return List(Text) + MlirStatements(function, position).Unsupported("call of " + type.Name + "." + decoder.Text(2))
+		return List(Text) + MlirStatements(function, position).Unsupport("call of " + type.Name + "." + decoder.Text(2))
 	types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")
 	texts = MlirTextLists(value, MlirTextLists.IsTexted(type.Name, Owner(entry, type)), callee.declaredType)
 	names = Text.Combine(List(Text) + texts.Instance + ArgumentNames(callee.parameters.Length), ", ")
 	called = "    " + texts.Result + " = func.call @" + MlirCached(target).Called
 	call = called + "(" + names + ") : (" + types + ") -> f64"
-	returned = MlirSpent(function, position).Dead + MlirChecks(function, position).Returned(target, entry.payload(0))
+	returned = MlirSpent(function, position).Dead + MlirChecks(function, position).EmitReturn(target, entry.payload(0))
 	defaults = Defaults(callee, count)
-	MlirWholeCall(function, position).Dispatched(texts.Called(Loads(entry, type), defaults, call) + returned)
+	MlirWholeCall(function, position).Dispatch(texts.Call(Loads(entry, type), defaults, call) + returned)
 Defaults(callee MethodEntry, count Number) Texts
 	MlirCalls(Hashes, 1).Defaults(Defaulted, 0).Last is "    %t1a0 = llvm.load %r1 : !llvm.ptr -> f64"
 	if count > callee.parameters.Length
@@ -144,16 +144,16 @@ Argument(entry InstructionEntry, type TypeEntry, number Number) Text
 	Counters.Argument(NewCounter, CounterType, 1) is "    %t2a1 = llvm.load %r1 : !llvm.ptr -> f64"
 	register = PayloadDecoder(entry).Arguments(number)
 	layout = MlirLayout(function)
-	kind = layout.Represented(MlirKinds(function).KindOf(position, register))
+	kind = layout.Represent(MlirKinds(function).KindOf(position, register))
 	parameters = PayloadDecoder(entry).Callee(type).parameters
 	wanted = number < parameters.Length then TypeEntry.ShortName(parameters(number).typeName) else ""
 	isText = kind is "Text" and TypeEntry.ShortName(type.Name) is "List(Character)"
 	isCharacter = isText and wanted is in ("Character", "Generic")
-	if isCharacter is false and (kind is not "List(Number)" or layout.Represented(wanted) is not "List(Text)")
+	if isCharacter is false and (kind is not "List(Number)" or layout.Represent(wanted) is not "List(Text)")
 		return function.Load(Temp("a" + number), "%r" + register)
 	raw = Temp("an" + number)
 	helper = isCharacter then "strict_text_character" else "strict_list_texts"
-	converted = MlirMemory(function, position).Called(Temp("a" + number), helper, List(Text) + raw)
+	converted = MlirMemory(function, position).Call(Temp("a" + number), helper, List(Text) + raw)
 	function.Load(raw, "%r" + register) + Character.NewLine + converted
 ArgumentNames(count Number) Texts
 	MlirCalls(Shapes, 1).Loads(NewShape, AreaShape)(0) is "    %t1m = llvm.load %r1 : !llvm.ptr -> f64"
@@ -161,7 +161,7 @@ ArgumentNames(count Number) Texts
 	MlirCalls(Shapes, 2).Loads(InstructionEntry.Invoke(2, ("T", "A", "N"), List(Number), -1), Hash).First.Length is 35
 	MlirCalls(Shapes, 2).Loads(InstructionEntry.Invoke(2, ("T", "A", "N"), List(Number), -1), AreaShape).First.Length is 49
 	Text.Combine(MlirCalls(Hashes, 1).Defaults(Defaulted, 0)).Length is 143
-	Text.Combine(MlirCalls(Shapes, 1).Shared(List(Text), "%r1")).Length is 459
+	Text.Combine(MlirCalls(Shapes, 1).Share(List(Text), "%r1")).Length is 459
 	MlirCalls(Shapes, 2).ArgumentNames(2) is ("%t2a0", "%t2a1")
 	for count
 		Temp("a" + index)
@@ -169,8 +169,8 @@ ArgumentTypes(count Number) Texts
 	MlirCalls(Shapes, 1).ArgumentTypes(2) is ("f64", "f64")
 	for count
 		"f64"
-Printed(entry InstructionEntry) Texts
-	MlirCalls(Shapes, 3).Printed(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_log(") > 0
+Print(entry InstructionEntry) Texts
+	MlirCalls(Shapes, 3).Print(InstructionEntry.PrintValue("Hi ", 0, false)).Last.IndexOf("@strict_log(") > 0
 	address = "    " + Temp("a") + " = llvm.mlir.addressof @s" + function.Symbol + "_" + position + " : !llvm.ptr"
 	text = entry.payload(1) is 0 then Temp("a") else Temp("bp")
 	logged = "    func.call @strict_log(" + Temp("a") + ", " + text + ") : (!llvm.ptr, !llvm.ptr) -> ()"

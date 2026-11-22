@@ -49,7 +49,7 @@ Flat(type TypeEntry) MemberEntry
 				return Unflat
 			only = value
 	only.Bits is Number.SingleBits then only else Unflat
-Constrained(type TypeEntry) Number
+Constrain(type TypeEntry) Number
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Z", "N", "x"), List(Number) + 5, 2), 2)
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "Code", "N"), List(Number), 0), 0)
 	Sample.IsAccessor(InstructionEntry.Invoke(1, ("Strict/List(Number)", "to", "N"), List(Number), 0), 0) is false
@@ -58,7 +58,7 @@ Constrained(type TypeEntry) Number
 	Sample.IsAccessor(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "value"), 0) is false
 	Sample.IsAccessor(InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "inline2"), 0) is false
 	MlirFlats(MlirPairs.Sample.function, 0).Count("Pairing") is 0
-	Sample.Constrained(Tripling) is 3
+	Sample.Constrain(Tripling) is 3
 	changing = type.Changing
 	changing.Length is 1 then changing.First.Count else 0
 IsSupported(type TypeEntry, member Text) Boolean
@@ -98,9 +98,9 @@ Helper(entry InstructionEntry, owner Text, name Text) Text
 	if name is in ("Length", "Count", "Code")
 		return name is "Code" then "strict_flat_text" else "strict_flat_length"
 	name is in ("X", "Y", "Z", "W") then "strict_flat_" + name.Lower else ""
-Packed(name Text) Number
-	Made.Packed("listResult0") is 3
-	Sample.Packed("listResult0") is 0
+Pack(name Text) Number
+	Made.Pack("listResult0") is 3
+	Sample.Pack("listResult0") is 0
 	instructions = function.method.instructions
 	mutable writes = 0
 	mutable count = 0
@@ -121,40 +121,40 @@ Constructing(entry InstructionEntry, register Number) Number
 		return 0
 	arguments = PayloadDecoder(entry).Arguments
 	entry.texts(1) is "from" and arguments.Length is 1 and arguments.First is register then Count(entry.texts(0)) else 0
-Appended(entry InstructionEntry, fallback MlirLists) Texts
-	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2)).Last.IndexOf("_set(%t2f, %t2k, %t2e)") > 0
-	MlirFlats(Made.function, 4).Appended(Making.instructions(4), MlirLists(Made.function, 4)).Last.IndexOf("%t4k") > 0
-	count = entry.kind is InstructionType.InvokeWriteToList then Packed(entry.texts(0)) else 0
+Append(entry InstructionEntry, fallback MlirLists) Texts
+	Made.Append(Making.instructions(2), MlirLists(Made.function, 2)).Last.IndexOf("_set(%t2f, %t2k, %t2e)") > 0
+	MlirFlats(Made.function, 4).Append(Making.instructions(4), MlirLists(Made.function, 4)).Last.IndexOf("%t4k") > 0
+	count = entry.kind is InstructionType.InvokeWriteToList then Pack(entry.texts(0)) else 0
 	if count is 0
-		return fallback.Appended(entry)
-	written = MlirPairs(function, position).Written(entry.texts(0))
+		return fallback.Append(entry)
+	written = MlirPairs(function, position).Write(entry.texts(0))
 	temp = "%t" + position
 	index = "    " + temp + "k = arith.constant " + written + ".0 : f64"
 	set = "    func.call @strict_flat_set(" + temp + "f, " + temp + "k, " + temp + "e) : (f64, f64, f64) -> ()"
-	Started(count, written, "%v_" + entry.texts(0)) + index + function.Load(temp + "e", "%r" + entry.payload(0)) + set
-Started(count Number, written Number, slot Text) Texts
-	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2))(0) is "    %t2n = arith.constant 3.0 : f64"
-	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2))(3) is "    %t2k = arith.constant 0.0 : f64"
-	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2))(4) is "    %t2e = llvm.load %r0 : !llvm.ptr -> f64"
-	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2))(2).IndexOf("f, %v_listResult0 :") is 18
-	Made.Started(3, 0, "%s").Last is "    llvm.store %t2f, %s : f64, !llvm.ptr"
-	Made.Started(3, 1, "%s") is ("    %t2f = llvm.load %s : !llvm.ptr -> f64")
+	Start(count, written, "%v_" + entry.texts(0)) + index + function.Load(temp + "e", "%r" + entry.payload(0)) + set
+Start(count Number, written Number, slot Text) Texts
+	Made.Append(Making.instructions(2), MlirLists(Made.function, 2))(0) is "    %t2n = arith.constant 3.0 : f64"
+	Made.Append(Making.instructions(2), MlirLists(Made.function, 2))(3) is "    %t2k = arith.constant 0.0 : f64"
+	Made.Append(Making.instructions(2), MlirLists(Made.function, 2))(4) is "    %t2e = llvm.load %r0 : !llvm.ptr -> f64"
+	Made.Append(Making.instructions(2), MlirLists(Made.function, 2))(2).IndexOf("f, %v_listResult0 :") is 18
+	Made.Start(3, 0, "%s").Last is "    llvm.store %t2f, %s : f64, !llvm.ptr"
+	Made.Start(3, 1, "%s") is ("    %t2f = llvm.load %s : !llvm.ptr -> f64")
 	temp = "%t" + position
 	if written > 0
 		return List(Text) + function.Load(temp + "f", slot)
 	counted = "    " + temp + "n = arith.constant " + count + ".0 : f64"
-	created = MlirDestined(function, position).Started(temp, slot.Replace("%v_", ""))
+	created = MlirDestined(function, position).Start(temp, slot.Replace("%v_", ""))
 	(List(Text) + counted) + created + function.Store(temp + "f", slot)
-Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
-	MlirFlats(Made.function, 8).Constructed(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
-	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("flat_from_list(") > 0
+Construct(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
+	MlirFlats(Made.function, 8).Construct(Construction, "Tripling", MlirInstances(Made.function, 8)).Length is 2
+	Sample.Construct(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("flat_from_list(") > 0
 	if Count(typeName) is 0
-		return instances.Constructed(entry, typeName)
+		return instances.Construct(entry, typeName)
 	argument = PayloadDecoder(entry).Arguments.First
 	writer = MlirKinds(function).Writer(position, argument)
 	loaded = writer >= 0 then function.method.instructions(writer) else entry
-	if loaded.kind is InstructionType.LoadVariableToRegister and Packed(loaded.texts(0)) > 0
-		return instances.Constructed(entry, typeName)
+	if loaded.kind is InstructionType.LoadVariableToRegister and Pack(loaded.texts(0)) > 0
+		return instances.Construct(entry, typeName)
 	temp = "%t" + position
 	converted = "    " + temp + "f = func.call @" + Converter(writer) + "(" + temp + "l) : (f64) -> f64"
 	(function.Load(temp + "l", "%r" + argument), converted, function.Store(temp + "f", "%r" + entry.payload(0)))
@@ -166,45 +166,45 @@ Converter(writer Number) Text
 	isLoaded = writer >= 0 and function.method.instructions(writer).kind is InstructionType.LoadVariableToRegister
 	isLoaded and MlirValidated(function, writer).Gathered > 0 then "strict_validated" else "strict_flat_from_list"
 Kind(kind Text) Text
-	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(0).IndexOf("l = llvm.load %r3 ") is 7
-	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("(%t1l) :") is 43
-	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("1f = func") is 6
-	Sample.Constructed(Construction, "Tripling", MlirInstances(Sample.function, 1))(2).IndexOf("%t1f, %r4 :") is 15
+	Sample.Construct(Construction, "Tripling", MlirInstances(Sample.function, 1))(0).IndexOf("l = llvm.load %r3 ") is 7
+	Sample.Construct(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("(%t1l) :") is 43
+	Sample.Construct(Construction, "Tripling", MlirInstances(Sample.function, 1))(1).IndexOf("1f = func") is 6
+	Sample.Construct(Construction, "Tripling", MlirInstances(Sample.function, 1))(2).IndexOf("%t1f, %r4 :") is 15
 	Sample.Kind("Tripling") is "Flat"
 	Sample.Kind("Summing") is ""
 	MlirFlats(MlirPairs.Sample.function, 0).Kind("Pairing") is "Pair"
 	MlirPairs(function, 0).IsPaired(kind) then "Pair" else (Count(kind) > 0 then "Flat" else "")
 IsListed(kind Text) Boolean
-	Made.Appended(Making.instructions(2), MlirLists(Made.function, 2)).Length is 6
-	MlirFlats(Made.function, 4).Appended(Making.instructions(4), MlirLists(Made.function, 4))(1).EndsWith("t 1.0 : f64")
+	Made.Append(Making.instructions(2), MlirLists(Made.function, 2)).Length is 6
+	MlirFlats(Made.function, 4).Append(Making.instructions(4), MlirLists(Made.function, 4))(1).EndsWith("t 1.0 : f64")
 	Sample.IsListed("Tripling")
 	MlirFlats(MlirPairs.Sample.function, 0).IsListed("Pairing")
 	MlirFlats(MlirCouples.Sample.function, 0).IsListed("Sizing") is false
 	MlirPairs(function, 0).IsListed(kind) or Count(kind) > 0
-Defaulted(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(7) is "    %t1d0fl = llvm.load %s : !llvm.ptr -> f64"
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(8).IndexOf("f = func.call @strict_flat_from_list(") is 9
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0")(8).EndsWith("(%t1d0fl) : (f64) -> f64")
-	Sample.Defaulted("Tripling", MlirPairs.Twice, "%s", "d0").Length is 10
-	MlirFlats(MlirPairs.Sample.function, 0).Defaulted("Pairing", MlirPairs.Twice, "%s", "d0").Length is 4
-	Sample.Defaulted("Summing", MlirPairs.Twice, "%s", "d0").Length is 7
+Default(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
+	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
+	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0")(7) is "    %t1d0fl = llvm.load %s : !llvm.ptr -> f64"
+	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0")(8).IndexOf("f = func.call @strict_flat_from_list(") is 9
+	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0")(8).EndsWith("(%t1d0fl) : (f64) -> f64")
+	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0").Length is 10
+	MlirFlats(MlirPairs.Sample.function, 0).Default("Pairing", MlirPairs.Twice, "%s", "d0").Length is 4
+	Sample.Default("Summing", MlirPairs.Twice, "%s", "d0").Length is 7
 	if Kind(kind) is "Pair"
-		return MlirPairs(function, position).Defaulted(initial, slot, suffix)
+		return MlirPairs(function, position).Default(initial, slot, suffix)
 	built = MlirStatements(function, position).Literal(initial, slot, suffix)
 	if Kind(kind) is not "Flat"
 		return built
 	temp = "%t" + position + suffix
 	converted = "    " + temp + "f = func.call @strict_flat_from_list(" + temp + "fl) : (f64) -> f64"
 	built + function.Load(temp + "fl", slot) + converted + function.Store(temp + "f", slot)
-Indexed(entry InstructionEntry, fallback MlirLists) Texts
-	Reader.Indexed(Tripling.methods(2).instructions(1), MlirLists(Sample.function, 1))(0).IndexOf("l = llvm.load %v_") is 7
-	Reader.Indexed(Tripling.methods(2).instructions(1), MlirLists(Sample.function, 1))(1).IndexOf("i = llvm.load %r0") is 7
-	Reader.Indexed(Tripling.methods(2).instructions(1), MlirLists(Sample.function, 1))(2).IndexOf("at(%t1l, %t1i) :") is 34
-	Reader.Indexed(Tripling.methods.Last.instructions(1), MlirLists(Sample.function, 1))(3).IndexOf("%t1x, %r1 :") is 15
-	Reader.Indexed(Tripling.methods.Last.instructions(1), MlirLists(Sample.function, 1))(2).IndexOf("flat_at(") > 0
+Fetch(entry InstructionEntry, fallback MlirLists) Texts
+	Reader.Fetch(Tripling.methods(2).instructions(1), MlirLists(Sample.function, 1))(0).IndexOf("l = llvm.load %v_") is 7
+	Reader.Fetch(Tripling.methods(2).instructions(1), MlirLists(Sample.function, 1))(1).IndexOf("i = llvm.load %r0") is 7
+	Reader.Fetch(Tripling.methods(2).instructions(1), MlirLists(Sample.function, 1))(2).IndexOf("at(%t1l, %t1i) :") is 34
+	Reader.Fetch(Tripling.methods.Last.instructions(1), MlirLists(Sample.function, 1))(3).IndexOf("%t1x, %r1 :") is 15
+	Reader.Fetch(Tripling.methods.Last.instructions(1), MlirLists(Sample.function, 1))(2).IndexOf("flat_at(") > 0
 	if MlirCouples(function, position).IsFlatRead(entry) is false
-		return fallback.Indexed(entry)
+		return fallback.EmitIndex(entry)
 	temp = "%t" + position
 	read = "    " + temp + "x = func.call @strict_flat_at(" + temp + "l, " + temp + "i) : (f64, f64) -> f64"
 	loads = (function.Load(temp + "l", "%v_" + entry.texts(0)), function.Load(temp + "i", "%r" + entry.payload(1)))

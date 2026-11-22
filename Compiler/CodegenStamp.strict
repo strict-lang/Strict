@@ -29,10 +29,10 @@ Pending(path Text)
 	if Path(path).FileName.text is "Strict.strict"
 		Directory.Create(root + "/obj")
 		File(root + "/obj/Strict.codegen.pending").Write(Hashed)
-Promoted(executable Text)
+Promote(executable Text)
 	Directory.Create("Compiler/output/Promoting") is not Error
 	Promoting.Pending("Strict.strict") is not Error
-	Promoting.Promoted(Process.Current.executable) is not Error
+	Promoting.Promote(Process.Current.executable) is not Error
 	File("Compiler/output/Promoting/obj/Strict.codegen.pending").Exists is false
 	pending = File(root + "/obj/Strict.codegen.pending")
 	if pending.Exists
@@ -40,7 +40,7 @@ Promoted(executable Text)
 		pending.Delete
 Current(executable Text) Text
 	Output.Pending("Strict.strict") is not Error
-	Output.Promoted(Process.Current.executable) is not Error
+	Output.Promote(Process.Current.executable) is not Error
 	Output.Current(Process.Current.executable) is "codegen " + Output.Hashed
 	Output.Current("Compiler/output/missing.exe").StartsWith("Compiler/output/missing.exe|")
 	stamp = File(root + "/obj/Strict.codegen")

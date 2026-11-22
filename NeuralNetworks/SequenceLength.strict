@@ -8,8 +8,8 @@ Align(align Number) Number
 		if value.Length > longest
 			longest = value.Length
 	((longest + align - 1) / align).Floor * align
-Padd(length Number) Numbers
-	SequenceLength(((1, 2), (3, 4, 5))).Padd(4) is (1, 2, 1, 1, 3, 4, 5, 3)
+Pad(length Number) Numbers
+	SequenceLength(((1, 2), (3, 4, 5))).Pad(4) is (1, 2, 1, 1, 3, 4, 5, 3)
 	for prompts.Length * length
 		prompt = prompts((index / length).Floor)
 		at = index % length

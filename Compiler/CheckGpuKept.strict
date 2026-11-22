@@ -27,10 +27,10 @@ Run Number
 	folder = "Compiler/output/KeptTokens" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	Checked(folder)
+	Check(folder)
 	Directory.Delete(folder)
 	0
-Checked(folder Text)
+Check(folder Text)
 	src = folder + "/KeptTokens.strict"
 	File(src).Write(ProgramA + ProgramB + ProgramC)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, BuildSeconds)

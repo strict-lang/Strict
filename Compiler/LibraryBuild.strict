@@ -1,25 +1,25 @@
 constant NoExports = ", a library exports the public methods with Number, Text, Boolean or record values and lists of numbers or records"
-Built(path Text, root Text)
-	Exported(MlirLibrary(Execute.Load(path, root, false)), NativeBuild.Output(path, true), root)
-Exported(library MlirLibrary, base Text, root Text)
+Build(path Text, root Text)
+	Export(MlirLibrary(Execute.Load(path, root, false)), NativeBuild.Output(path, true), root)
+Export(library MlirLibrary, base Text, root Text)
 	if library.Exported.Length is 0
 		logger.Log("No exported methods in " + base + ".strict" + NoExports)
 		return Error("NoExportedMethods")
 	program = NativeBuild.Device(library.Text, base, root)
 	File(base + ".mlir").Write(NativeBuild.Mlir(program, root, Platform.Current))
-	error = program is "" then "Failed " + base else Linked(base, Toolchain(Platform.Current, root), library)
+	error = program is "" then "Failed " + base else Link(base, Toolchain(Platform.Current, root), library)
 	logger.Log(error is "" then "Built " + Target(base, Platform.Current) + " and " + base + ".cs" else error)
 	if error is not ""
 		return Error("LibraryNotBuilt")
 	File(base + ".cs").Write(CSharpBinding(library, File(base + ".strict").ReadLines).Lines)
-	Intermediates.Removed(base)
-Linked(base Text, tools Toolchain, library MlirLibrary) Text
-	lowered = tools.Lowered(base)
+	Intermediates.Remove(base)
+Link(base Text, tools Toolchain, library MlirLibrary) Text
+	lowered = tools.Lower(base)
 	if lowered is not ""
 		return lowered
-	target = Toolchain.Quoted(Target(base, Platform.Current))
-	linking = tools.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + Shared(library)
-	linked = ToolRunner(tools.Located("clang")).Execute(linking)
+	target = Toolchain.Quote(Target(base, Platform.Current))
+	linking = tools.Quote(base + ".ll") + " -o " + target + Toolchain.Optimized + Share(library)
+	linked = ToolRunner(tools.Locate("clang")).Execute(linking)
 	linked.HasFailed then "clang failed: " + linked.error else ""
 Target(base Text, platform Number) Text
 	LibraryBuild.Target("./Games/Policy", Platform.Windows) is "./Games/Policy.dll"
@@ -28,8 +28,8 @@ Target(base Text, platform Number) Text
 	name = Path(base).FileName.text
 	folder = base.Substring(0, base.Length - name.Length)
 	platform is Platform.Windows then base + ".dll" else folder + "lib" + name + Platform.LibraryExtension(platform)
-Shared(library MlirLibrary) Text
-	LibraryBuild.Shared(MlirLibrary.Policy).EndsWith("Policy_Start") is (Platform.Current is Platform.Windows)
+Share(library MlirLibrary) Text
+	LibraryBuild.Share(MlirLibrary.Policy).EndsWith("Policy_Start") is (Platform.Current is Platform.Windows)
 	if Platform.Current is not Platform.Windows
 		return " -shared -fPIC -lm -lpthread"
 	mutable exports = " -shared -Wl,/EXPORT:strict_last_error -Wl,/EXPORT:strict_release"

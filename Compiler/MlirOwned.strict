@@ -55,14 +55,14 @@ IsOwned(name Text, depth = 0, seed = "") Boolean
 	isTemporary is false and isOuter is false and IsReference(name) and IsContained(name, depth, seed)
 IsReference(name Text) Boolean
 	Owner.IsReference("moved")
-	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).Length is 516
+	Text.Combine(Rebuilt.Reconstruct(Rebuilding(7), MlirInstances.Outer, Fresh)).Length is 516
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved")(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
-	Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)(0).StartsWith("    %t7old = llvm.load %v_moved")
+	Rebuilt.Reconstruct(Rebuilding(7), MlirInstances.Outer, Fresh)(0).StartsWith("    %t7old = llvm.load %v_moved")
 	IsHeap(MlirKinds(function).VariableKind(function.method.instructions.Length, name))
 IsHeap(kind Text) Boolean
 	Owner.IsHeap("List(Number)")
 	Owner.IsHeap("Number") is false
-	represented = MlirLayout(function).Represented(kind)
+	represented = MlirLayout(function).Represent(kind)
 	isHeap = represented.StartsWith("List(") or represented is "Flat" or MlirLayout(function).IsStruct(kind)
 	isHeap and MlirPairs(function, 0).IsPaired(kind) is false
 IsContained(name Text, depth = 0, seed = "") Boolean
@@ -71,7 +71,7 @@ IsContained(name Text, depth = 0, seed = "") Boolean
 	for function.method.instructions
 		if value.kind is in MlirAlone.Named and value.texts(0) is name
 			isLoad = value.kind is InstructionType.LoadVariableToRegister
-			isSeed = seed is not "" and MlirDying(function, index).Loaded(value.payload(0)) is seed
+			isSeed = seed is not "" and MlirDying(function, index).Load(value.payload(0)) is seed
 			if (isLoad then IsSafeRead(index, name) else isSeed or IsFresh(function, index, value.payload(0), depth)) is false
 				return false
 	true
@@ -134,34 +134,34 @@ IsLeaked(at Number, register Number) Boolean
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		if entry.payload(value) is register
 			isTaken = true
-	returned = MlirLayout(function).Represented(TypeEntry.ShortName(entry.texts(2)))
+	returned = MlirLayout(function).Represent(TypeEntry.ShortName(entry.texts(2)))
 	isTaken and returned is not in MlirFresh.Scalars and MlirFresh(function).IsCall(at, 0) is false
-Stored(entry InstructionEntry) Texts
-	Owner.Stored(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
-	MlirOwned(Copying, 4).Stored(Copying.method.instructions(4)).Length is 2
-	MlirOwned(MlirCarried.Carrying.function, 6).Stored(MlirCarried.Stored).Length > 2
-	Text.Combine(Owner.Stored(Built(2))).Length is 332
-	Text.Combine(Owner.Stored(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "#this"))).Length is 90
+Store(entry InstructionEntry) Texts
+	Owner.Store(Built(2)).Index("    func.call @strict_rc_dead(%t2o, %t2) : (f64, f64) -> ()") is 6
+	MlirOwned(Copying, 4).Store(Copying.method.instructions(4)).Length is 2
+	MlirOwned(MlirCarried.Carrying.function, 6).Store(MlirCarried.Stored).Length > 2
+	Text.Combine(Owner.Store(Built(2))).Length is 332
+	Text.Combine(Owner.Store(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "#this"))).Length is 90
 	slot = entry.texts(0) is "#this" then "%instance" else "%v_" + entry.texts(0)
-	copied = function.Copied("%r" + entry.payload(0), slot, "%t" + position)
+	copied = function.Copy("%r" + entry.payload(0), slot, "%t" + position)
 	seed = MlirDying(function, position).Seed(entry.texts(0))
 	if MlirDying(function, position).IsReleased(entry.texts(0), seed) is false
 		return copied
-	dying = Placed(MlirDying(function, position).Guarded(Reusing.Slice(8, 6), seed), 0, 0)
+	dying = Place(MlirDying(function, position).EmitGuard(Reusing.Slice(8, 6), seed), 0, 0)
 	(List(Text) + function.Load("%t" + position + "o", slot)) + copied + dying
-Reconstructed(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
-	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("@strict_rc_unshared(") > 0
-	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[1]") > 0
-	Text.Combine(Rebuilt.Reconstructed(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[0]") is -1
-	MlirOwned(Rebuilt.function, 4).Reconstructed(Making, MlirInstances.Outer, Fresh) is Fresh
+Reconstruct(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
+	Text.Combine(Rebuilt.Reconstruct(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("@strict_rc_unshared(") > 0
+	Text.Combine(Rebuilt.Reconstruct(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[1]") > 0
+	Text.Combine(Rebuilt.Reconstruct(Rebuilding(7), MlirInstances.Outer, Fresh)).IndexOf("%t7rp[0]") is -1
+	MlirOwned(Rebuilt.function, 4).Reconstruct(Making, MlirInstances.Outer, Fresh) is Fresh
 	name = Target(entry, owner)
 	if name is ""
 		return fresh
 	old = "%t" + position + "old"
 	checked = (function.Load(old, "%v_" + name), MlirAlone(function).Check(name, position))
-	opened = checked + Placed(Reusing.Slice(1, 3), 0, 0)
+	opened = checked + Place(Reusing.Slice(1, 3), 0, 0)
 	reused = Rewritten(entry, owner, name) + function.Store(old, "%r" + entry.payload(0))
-	opened + reused + Placed(Reusing.Slice(4, 2), 0, 0) + fresh + Placed(Reusing.Slice(6, 2), 0, 0)
+	opened + reused + Place(Reusing.Slice(4, 2), 0, 0) + fresh + Place(Reusing.Slice(6, 2), 0, 0)
 Target(entry InstructionEntry, owner TypeEntry) Text
 	Rebuilt.Target(Rebuilding(7), MlirInstances.Outer) is "moved"
 	MlirOwned(Rebuilt.function, 4).Target(Making, MlirInstances.Outer) is ""
@@ -175,7 +175,7 @@ Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
 	arguments = PayloadDecoder(entry).Arguments
 	mutable lines = List(Text)
-	for MlirInstances(function, 0).Stored(owner)
+	for MlirInstances(function, 0).Store(owner)
 		register = arguments(Argument(entry, value, index))
 		if IsKept(register, value.Name, name) is false
 			lines = lines + Put(owner, value, register)
@@ -189,7 +189,7 @@ Argument(entry InstructionEntry, member MemberEntry, slot Number) Number
 IsArgued(entry InstructionEntry, owner TypeEntry) Boolean
 	Rebuilt.IsArgued(Rebuilding(7), MlirInstances.Outer)
 	Rebuilt.IsArgued(MlirStructs.ProbeMade, MlirStructs.Probe) is false
-	for MlirInstances(function, 0).Stored(owner)
+	for MlirInstances(function, 0).Store(owner)
 		if Argument(entry, value, index) < 0
 			return false
 	true
@@ -198,14 +198,14 @@ Put(owner TypeEntry, member MemberEntry, register Number) Texts
 	Rebuilt.Put(MlirFunction.Shape, MlirFunction.Shape.members.First, 5).Last.StartsWith("    llvm.store %t7ra0, %t7r0")
 	offset = MlirEmbedded(function).Offset(owner, member.Name)
 	if MlirEmbedded(function).IsNumbers(owner.Name) is false
-		return Placed(Putting, offset, register)
+		return Place(Putting, offset, register)
 	if MlirEmbedded(function).IsInline(owner, member) is false
-		return Placed(Putting.Slice(0, 2) + "    llvm.store %t#ra$, %t#r$ : f64, !llvm.ptr", offset, register)
+		return Place(Putting.Slice(0, 2) + "    llvm.store %t#ra$, %t#r$ : f64, !llvm.ptr", offset, register)
 	source = "%t" + position + "ra" + offset
 	target = "%t" + position + "r" + offset
-	Placed(Putting.Slice(0, 2), offset, register) + MlirEmbedded(function).Copied(source, target, member.typeName)
-Placed(lines Texts, slot Number, register Number) Texts
-	Rebuilt.Placed(Putting, 1, 5)(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
+	Place(Putting.Slice(0, 2), offset, register) + MlirEmbedded(function).Copy(source, target, member.typeName)
+Place(lines Texts, slot Number, register Number) Texts
+	Rebuilt.Place(Putting, 1, 5)(1) is "    %t7ra1 = llvm.load %r5 : !llvm.ptr -> f64"
 	Text.Combine(Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.First, 4)).Length is 323
 	Rebuilt.Put(MlirInstances.Outer, MlirInstances.Outer.members.First, 4).Last.StartsWith("    %t7ra0m = llvm.call")
 	Text.Combine(Rebuilt.Put(MlirFunction.Shape, MlirFunction.Shape.members.First, 5)).Length is 165

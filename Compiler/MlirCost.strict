@@ -34,7 +34,7 @@ IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolea
 	for Range(first, last)
 		if inspected.method.instructions(value).kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, value).IsGpu
 			return true
-		callees = depth < 8 then MlirModule(inspected.types, "").Called(inspected, value) else List(MlirFunction)
+		callees = depth < 8 then MlirModule(inspected.types, "").Call(inspected, value) else List(MlirFunction)
 		if callees.Length > 0 and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
 			return true
 	false
@@ -44,7 +44,7 @@ Iteration Number
 	Norming.Iteration < Norming.Sum(Normed, 3, Normed.method.LoopEndOf(2), 0)
 	total = Sum(function, position + 1, function.method.LoopEndOf(position), 0)
 	kept = MlirGroups(function, position).Call
-	kept < 0 then total else total - Called(function, kept, 0) + Native
+	kept < 0 then total else total - Call(function, kept, 0) + Native
 Sum(inspected MlirFunction, first Number, last Number, depth Number) Number
 	Doubling.Sum(Doubling.function, 3, 6, 0) is 8
 	mutable total = 0
@@ -57,13 +57,13 @@ Instruction(inspected MlirFunction, at Number, depth Number) Number
 	entry = inspected.method.instructions(at)
 	if entry.kind is InstructionType.LoopBegin
 		return 1 + Repeats * Sum(inspected, at + 1, inspected.method.LoopEndOf(at), depth)
-	entry.kind is InstructionType.Invoke then Called(inspected, at, depth) else 1
-Called(inspected MlirFunction, at Number, depth Number) Number
-	Doubling.Called(Doubling.function, 4, 0) is 6
-	Doubling.Called(Doubling.function, 4, 4) is Native
+	entry.kind is InstructionType.Invoke then Call(inspected, at, depth) else 1
+Call(inspected MlirFunction, at Number, depth Number) Number
+	Doubling.Call(Doubling.function, 4, 0) is 6
+	Doubling.Call(Doubling.function, 4, 4) is Native
 	if TypeEntry.ShortName(PayloadDecoder(inspected.method.instructions(at)).Text(1)) is in External
 		return Outside
-	callees = MlirModule(inspected.types, "").Called(inspected, at)
+	callees = MlirModule(inspected.types, "").Call(inspected, at)
 	if callees.Length is 0
 		return Native
 	depth >= 4 then Native else 2 + Sum(callees.First, 0, callees.First.method.instructions.Length, depth + 1)

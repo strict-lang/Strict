@@ -41,7 +41,7 @@ ContractedList Text
 	iterated = MlirKinds(function).KindOf(position, function.method.instructions(position).payload(0))
 	check = MlirGpuCheck(function, position)
 	isBlocked = check.IsPure and check.IsGpu is false
-	isSmall = MlirLayout(function).Represented(iterated) is not in MlirGpuCheck.Rows
+	isSmall = MlirLayout(function).Represent(iterated) is not in MlirGpuCheck.Rows
 	isBlocked and isSmall and HasContractOn(iterated) then iterated else ""
 HasContractOn(kind Text) Boolean
 	Laned.HasContractOn("List(Rgb)")
@@ -78,10 +78,10 @@ Blocker(inspected MlirFunction, first Number, last Number, depth Number) Text
 	check = MlirGpuCheck(inspected, first)
 	for Range(first, last)
 		if check.IsDevice(inspected, value, depth) is false
-			return Blamed(inspected, value, depth)
+			return Blame(inspected, value, depth)
 	""
-Blamed(inspected MlirFunction, at Number, depth Number) Text
-	Doubling.Blamed(Doubling.function, 2, 0).StartsWith("instruction ")
+Blame(inspected MlirFunction, at Number, depth Number) Text
+	Doubling.Blame(Doubling.function, 2, 0).StartsWith("instruction ")
 	Weighing.Issue.IndexOf(" because of Strict/") > 0
 	entry = inspected.method.instructions(at)
 	named = entry.texts.Length > 1 then entry.texts(0) + "." + entry.texts(1) else "instruction " + entry.kind

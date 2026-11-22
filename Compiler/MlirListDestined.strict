@@ -40,7 +40,7 @@ IsDestined Boolean
 	MlirListDestined(MlirDestined.Made.function, 2).IsDestined is false
 	steps = function.method.instructions
 	begin = ResultLoop
-	returned = MlirLayout(function).Represented(TypeEntry.ShortName(function.method.returnType))
+	returned = MlirLayout(function).Represent(TypeEntry.ShortName(function.method.returnType))
 	if begin < 0 or returned.StartsWith("List(") is false
 		return false
 	for Range(begin + 1, steps.Length)
@@ -66,16 +66,16 @@ Sources Texts
 	for function.method.parameters
 		if value.typeName is function.method.returnType
 			value.Name
-Created(result Text, capacity Text) Texts
-	MlirListDestined(Copied.function, 2).Created("%r", "%a").Last.IndexOf("numbers_into(%listDestination, %a)") > 0
-	Copied.Created("%r", "%a").Last.IndexOf("@strict_numbers_new(%a) : (f64) -> f64") > 0
-	Lined.Created("%r", "%a").Last.IndexOf("@strict_list_created(%a, %rc)") > 0
-	Copied.Created("%r", "%a").First is "    %rc = arith.constant 0.0 : f64"
-	Lined.Created("%r", "%a").First is "    %rc = arith.constant 3.0 : f64"
-	Lined.Created("%r", "%a").Last is "    %r = func.call @strict_list_created(%a, %rc) : (f64, f64) -> f64"
+Creat(result Text, capacity Text) Texts
+	MlirListDestined(Copied.function, 2).Creat("%r", "%a").Last.IndexOf("numbers_into(%listDestination, %a)") > 0
+	Copied.Creat("%r", "%a").Last.IndexOf("@strict_numbers_new(%a) : (f64) -> f64") > 0
+	Lined.Creat("%r", "%a").Last.IndexOf("@strict_list_created(%a, %rc)") > 0
+	Copied.Creat("%r", "%a").First is "    %rc = arith.constant 0.0 : f64"
+	Lined.Creat("%r", "%a").First is "    %rc = arith.constant 3.0 : f64"
+	Lined.Creat("%r", "%a").Last is "    %r = func.call @strict_list_created(%a, %rc) : (f64, f64) -> f64"
 	element = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, "forResult"))
 	if MlirEmbedded(function).IsNumbers(element)
-		return MlirEmbedded(function).Listed(element, result, capacity)
+		return MlirEmbedded(function).EmitList(element, result, capacity)
 	counted = "    " + result + "c = arith.constant " + MlirFlats(function, position).Count(element) + ".0 : f64"
 	(counted, "    " + result + " = func.call " + Allocation(result, capacity, element) + " -> f64")
 Allocation(result Text, capacity Text, element Text) Text
@@ -97,7 +97,7 @@ IsElement(entry InstructionEntry) Boolean
 	reads = LoadReuse(steps).InvokeReads(entry)
 	writer = reads.Length > 0 then MlirKinds(function).Writer(position, entry.payload(reads.Last)) else -1
 	isValue = writer >= 0 then Text.Combine(steps(writer).texts) is "value" else false
-	callees = MlirModule(function.types, "").Called(function, position)
+	callees = MlirModule(function.types, "").Call(function, position)
 	isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
 	isValue and IsDestined and isFlat and IsKept(writer)
 IsKept(at Number) Boolean

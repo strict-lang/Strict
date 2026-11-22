@@ -56,7 +56,7 @@ IsDotted(at Number) Boolean
 	Summing.IsRowDot(Overlong) is false
 	if function.method.instructions(at).kind is not InstructionType.Invoke
 		return false
-	callees = MlirModule(function.types, "").Called(function, at)
+	callees = MlirModule(function.types, "").Call(function, at)
 	callees.Length is 1 then IsRowDot(callees.First) else false
 IsRowDot(callee MlirFunction) Boolean
 	Summing.IsRowDot(MlirFunction(Summing.function.types, Tokens, Dotted))
@@ -80,32 +80,32 @@ Row(register Number, before Number) Texts
 	read = function.method.instructions(writer)
 	if writer < 0 or read.kind is not InstructionType.IndexCall
 		return List(Text)
-	rows = Ranged(groups.Writer(read.payload(1), writer))
+	rows = EmitRange(groups.Writer(read.payload(1), writer))
 	rows.Length is 0 then rows else List(Text) + read.texts(0) + rows
-Ranged(at Number) Texts
-	Summing.Ranged(5) is List(Text) + "rows"
-	Grouped.Ranged(13) is ("rows", "bases")
-	Summing.Ranged(11).Length is 0
-	rows = Indexed(at, InstructionType.Modulo)
+EmitRange(at Number) Texts
+	Summing.EmitRange(5) is List(Text) + "rows"
+	Grouped.EmitRange(13) is ("rows", "bases")
+	Summing.EmitRange(11).Length is 0
+	rows = EmitIndex(at, InstructionType.Modulo)
 	if rows is not ""
 		return List(Text) + rows
 	sum = function.method.instructions(at)
 	if at < 0 or sum.kind is not InstructionType.Add
 		return List(Text)
-	modulo = Indexed(MlirGroups(function, position).Writer(sum.payload(2), at), InstructionType.Modulo)
-	bases = Based(sum.payload(1), at, modulo)
+	modulo = EmitIndex(MlirGroups(function, position).Writer(sum.payload(2), at), InstructionType.Modulo)
+	bases = Base(sum.payload(1), at, modulo)
 	modulo is "" or bases is "" then List(Text) else (modulo, bases)
-Based(register Number, before Number, rows Text) Text
-	Grouped.Based(24, 13, "rows") is "bases"
-	Grouped.Based(24, 13, "width") is ""
-	Grouped.Based(99, 12, "") is ""
-	Grouped.Based(23, 12, "") is ""
+Base(register Number, before Number, rows Text) Text
+	Grouped.Base(24, 13, "rows") is "bases"
+	Grouped.Base(24, 13, "width") is ""
+	Grouped.Base(99, 12, "") is ""
+	Grouped.Base(23, 12, "") is ""
 	groups = MlirGroups(function, position)
 	writer = groups.Writer(register, before)
 	read = function.method.instructions(writer)
 	if writer < 0 or read.kind is not InstructionType.IndexCall
 		return ""
-	Tiled(groups.Writer(read.payload(1), writer)) is rows then read.texts(0) else ""
+	EmitTile(groups.Writer(read.payload(1), writer)) is rows then read.texts(0) else ""
 Start(register Number, before Number) Texts
 	Summing.Start(12, 15) is ("rows", "width")
 	Summing.Start(4, 15).Length is 0
@@ -116,7 +116,7 @@ Start(register Number, before Number) Texts
 	product = function.method.instructions(writer)
 	if writer < 0 or product.kind is not InstructionType.Multiply
 		return List(Text)
-	rows = Floored(groups.Writer(product.payload(1), writer))
+	rows = EmitFloor(groups.Writer(product.payload(1), writer))
 	width = Variable(product.payload(2), writer)
 	rows is "" or width is "" then List(Text) else (rows, width)
 Floor(at Number) Number
@@ -129,18 +129,18 @@ Floor(at Number) Number
 	if floor.texts(1) is not "Floor"
 		return Number.NotFound
 	MlirGroups(function, position).Writer(MlirDeviceCalls(function, at, function).Register(floor), at)
-Floored(at Number) Text
-	Summing.Floored(12) is "rows"
-	Summing.Floored(11) is ""
+EmitFloor(at Number) Text
+	Summing.EmitFloor(12) is "rows"
+	Summing.EmitFloor(11) is ""
 	Grouped.Names(23) is ("weights", "input", "width", "rows", "bases")
 	Varied.Names(32).Length is 0 and Varied.Names(35).Length is 0
 	Varied.Names(38).Length is 0 and Varied.Names(43).Length is 0
 	Varied.Names(46).Length is 0
-	Indexed(Floor(at), InstructionType.Divide)
-Tiled(at Number) Text
-	Grouped.Tiled(11) is "rows"
-	Summing.Tiled(12) is ""
-	Varied.Tiled(49) is "" and Varied.Tiled(52) is ""
+	EmitIndex(Floor(at), InstructionType.Divide)
+EmitTile(at Number) Text
+	Grouped.EmitTile(11) is "rows"
+	Summing.EmitTile(12) is ""
+	Varied.EmitTile(49) is "" and Varied.EmitTile(52) is ""
 	quotient = Floor(at)
 	divide = function.method.instructions(quotient)
 	if quotient < 0 or divide.kind is not InstructionType.Divide
@@ -149,13 +149,13 @@ Tiled(at Number) Text
 	tile = groups.Writer(divide.payload(2), quotient)
 	tiles = function.method.instructions(tile)
 	isTile = tile >= 0 and tiles.payload is (divide.payload(2), 1, Tile)
-	isTile then Indexed(groups.Writer(divide.payload(1), quotient), InstructionType.Divide) else ""
-Indexed(at Number, kind Number) Text
-	Summing.Indexed(5, InstructionType.Modulo) is "rows"
-	Summing.Indexed(11, InstructionType.Modulo) is ""
-	Summing.Indexed(14, InstructionType.Multiply) is ""
-	Varied.Ranged(28).Length is 0
-	Varied.Ranged(29).Length is 0 and Varied.Ranged(30).Length is 0
+	isTile then EmitIndex(groups.Writer(divide.payload(1), quotient), InstructionType.Divide) else ""
+EmitIndex(at Number, kind Number) Text
+	Summing.EmitIndex(5, InstructionType.Modulo) is "rows"
+	Summing.EmitIndex(11, InstructionType.Modulo) is ""
+	Summing.EmitIndex(14, InstructionType.Multiply) is ""
+	Varied.EmitRange(28).Length is 0
+	Varied.EmitRange(29).Length is 0 and Varied.EmitRange(30).Length is 0
 	entry = function.method.instructions(at)
 	if at < 0 or entry.kind is not kind
 		return ""

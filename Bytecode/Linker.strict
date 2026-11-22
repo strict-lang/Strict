@@ -34,7 +34,7 @@ Link(entries List(TypeEntry), signatures Texts) LinkRound slow
 		round = next
 	round
 IsSettled(next LinkRound, complete Boolean, started Number) Boolean
-	BuildProfile.Reported("Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")", started)
+	BuildProfile.Report("Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")", started)
 	complete
 Next(round LinkRound) LinkRound slow
 	Sample.Next(LinkRound.Single).entries.Length is 1

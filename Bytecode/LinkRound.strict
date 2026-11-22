@@ -82,7 +82,7 @@ Checked List(TypeEntry)
 Explain(target Text) Text
 	Single.Explain("Strict/Missing.Go") is "UnresolvedLink: Strict/Missing.Go"
 	Single.Explain("Strict/Logger.Log") is "UnresolvedLink: Strict/Logger.Log"
-	PtxCache("Compiler/output/Stray").Saved(".strict", "Run\n\t1\nconstant A = 1") is not Error
+	PtxCache("Compiler/output/Stray").Save(".strict", "Run\n\t1\nconstant A = 1") is not Error
 	Single.Explain("Strict/Compiler/output/Stray.A").EndsWith(":line 3: MembersMustComeBeforeMethods: constant A = 1")
 	path = linker.SourcePath(target.Substring(0, target.LastIndexOf(".")))
 	misplaced = File(path).Exists then ResolveCheck.Misplace(path, File(path).ReadLines) else List(Text)

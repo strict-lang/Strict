@@ -11,22 +11,22 @@ constant Guarded = ("check Expressions", "check Compiler", "build Runtime/Hosted
 constant IsWindows = Process.OperatingSystem is "Windows"
 constant Kept = "Compiler\\output\\Held.old.exe"
 constant Holding = "/c copy /y %SystemRoot%\\System32\\PING.EXE " + Kept + " >nul & start \"\" /b " + Kept + " -n 3 127.0.0.1 >nul"
-Removed(base Text)
-	Intermediates.Removed("Compiler/output/missing") is not Error
+Remove(base Text)
+	Intermediates.Remove("Compiler/output/missing") is not Error
 	mutable files = Directory.Files(Path(base).PathOnly.text, Path(base).FileName.text + ".ios-*.o")
 	for Endings
 		files = files + (base + value)
 	for Toolchain.Parts
 		files = files + Part(base + "-" + value) + Part(base + ".linux-" + value) + Part(base + ".web-" + value)
 	for files
-		if Deleted(value) is Error
+		if Delet(value) is Error
 			logger.Log("Could not remove build intermediate: " + value + " (another program still held it after 5 s)")
 			return Error("IntermediateNotRemoved")
 Part(name Text) Texts
 	Intermediates.Part("a") is ("a", "a.mlir", "a.llvm.mlir")
 	(name, name + ".mlir", name + ".llvm.mlir")
-Deleted(path Text)
-	Intermediates.Deleted("Compiler/output/missing") is not Error
+Delet(path Text)
+	Intermediates.Delet("Compiler/output/missing") is not Error
 	started = Process.Elapsed
 	for as long as File(path).Exists and Process.Elapsed - started < 5
 		File(path).Delete
@@ -34,12 +34,12 @@ Deleted(path Text)
 			Process.Wait(0.1)
 	if File(path).Exists
 		return Error("FileNotDeleted: " + path)
-Replaced(executable Text, target Text) Text
-	Swapped.Saved((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
-	Intermediates.Replaced("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
+Replace(executable Text, target Text) Text
+	Swapped.Save((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
+	Intermediates.Replace("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
 	unrunnable = Unrunnable(executable, target)
-	refused = unrunnable is "" then Unchecked(executable, target) else unrunnable
+	refused = unrunnable is "" then Uncheck(executable, target) else unrunnable
 	if refused is not ""
 		return refused
 	old = Free(executable)
@@ -49,8 +49,8 @@ Replaced(executable Text, target Text) Text
 		File(old).Rename(executable)
 	File(old).Delete
 	if File(target).Exists is false and Path(executable).FileName.RemoveExtension.text is "strict"
-		CodegenStamp(Path(executable).PathOnly.text).Promoted(executable)
-	File(target).Exists then Used(executable, executable) else Running(executable).Restarted(old)
+		CodegenStamp(Path(executable).PathOnly.text).Promote(executable)
+	File(target).Exists then Used(executable, executable) else Running(executable).Restart(old)
 Unrunnable(executable Text, target Text) Text
 	Intermediates.Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
 	Intermediates.Unrunnable("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
@@ -59,12 +59,12 @@ Unrunnable(executable Text, target Text) Text
 		return ""
 	ran = Process.RunTool(target, "version")
 	ran.exitCode is 0 then "" else target + " does not run (version exit " + ran.exitCode + "), " + executable + " stays"
-Unchecked(executable Text, target Text) Text slow
-	Intermediates.Unchecked("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
-	Intermediates.Unchecked("Compiler/output/Missing/strict.exe", "Compiler/output/missing.new.exe") is ""
+Uncheck(executable Text, target Text) Text slow
+	Intermediates.Uncheck("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
+	Intermediates.Uncheck("Compiler/output/Missing/strict.exe", "Compiler/output/missing.new.exe") is ""
 	Directory.Create(Rooted) is not Error and Directory.Create(Rooted + "/Compiler") is not Error
 	File(Rooted + "/Compiler/A.strict").Write("has a Number") is not Error
-	Intermediates.Unchecked(Rooted + "/strict.exe", "Compiler/output/missing.new.exe").Length > 0
+	Intermediates.Uncheck(Rooted + "/strict.exe", "Compiler/output/missing.new.exe").Length > 0
 	isStrict = Path(executable).FileName.RemoveExtension.text is "strict"
 	if (isStrict then IsCompilerChanged(executable) else false) is false
 		return ""
@@ -108,7 +108,7 @@ Old(executable Text, number Number) Text
 	executable.Replace(".exe", number is 1 then ".old.exe" else ".old" + number + ".exe")
 Used(file Text, executable Text) Text slow
 	File("Compiler/output/Held.exe").IsLocked
-	Held.Saved(List(Text) + ".new.exe", List(Text) + "built") is not Error
-	Intermediates.Replaced(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
+	Held.Save(List(Text) + ".new.exe", List(Text) + "built") is not Error
+	Intermediates.Replace(Held.base + ".exe", Renewing) is Held.base + ".exe is in use by another program"
 	File("Compiler/output/Held.exe").Delete
 	file + " is in use by " + Running(executable).Described

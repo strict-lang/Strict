@@ -32,11 +32,11 @@ Indexed List(MemberEntry)
 	Pairs.Indexed.Length is 0
 	MlirParameters(MlirFunction(List(TypeEntry) + Texting, Texting, Membered.function.method)).Indexed.Length is 0
 	layout = MlirLayout(function)
-	isWrapper = layout.Represented(TypeEntry.ShortName(function.type.Name)).StartsWith("List(")
+	isWrapper = layout.Represent(TypeEntry.ShortName(function.type.Name)).StartsWith("List(")
 	if MlirFlats(function, 0).IsListed(function.type.Name) or (layout.IsStruct(function.type.Name) or isWrapper) is false
 		return List(MemberEntry)
 	for function.type.members
-		kind = layout.Represented(TypeEntry.ShortName(value.typeName))
+		kind = layout.Represent(TypeEntry.ShortName(value.typeName))
 		if value.IsConstant is false and kind.StartsWith("List(") and IsLooped(value.Name)
 			value
 IsLooped(name Text) Boolean
@@ -59,19 +59,19 @@ IsFixed(name Text) Boolean
 			if target is name or target.StartsWith(name + "(")
 				return false
 	true
-Hoisted(entries List(MemberEntry)) Texts
-	Reading.Hoisted(Reading.function.method.parameters).Length is 4
-	Membered.Hoisted(Membered.Indexed).First is "    %q_numbers = llvm.load %v_numbers : !llvm.ptr -> f64"
+Hoist(entries List(MemberEntry)) Texts
+	Reading.Hoist(Reading.function.method.parameters).Length is 4
+	Membered.Hoist(Membered.Indexed).First is "    %q_numbers = llvm.load %v_numbers : !llvm.ptr -> f64"
 	fixed = FixedLists
 	mutable lines = List(Mutable(Text))
 	for entries
 		if value.Name is in fixed
-			lines = lines + function.Load("%q_" + value.Name, "%v_" + value.Name) + Started(value.Name, "%q_" + value.Name)
+			lines = lines + function.Load("%q_" + value.Name, "%v_" + value.Name) + Start(value.Name, "%q_" + value.Name)
 	lines
-Started(name Text, parameter Text) Texts
-	Reading.Started("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"
-	Reading.Started("numbers", "%p1").Last is "    %k_numbers = func.call @strict_list_version() : () -> i64"
-	Bytes.Started("pixels", "%p1").Last is "    %b_pixels = func.call @strict_list_host_bytes(%p1) : (f64) -> !llvm.ptr"
+Start(name Text, parameter Text) Texts
+	Reading.Start("numbers", "%p1").First is "    %h_numbers = func.call @strict_list_hoisted(%p1) : (f64) -> !llvm.ptr"
+	Reading.Start("numbers", "%p1").Last is "    %k_numbers = func.call @strict_list_version() : () -> i64"
+	Bytes.Start("pixels", "%p1").Last is "    %b_pixels = func.call @strict_list_host_bytes(%p1) : (f64) -> !llvm.ptr"
 	items = "    %h_" + name + " = func.call @strict_list_hoisted(" + parameter + ") : (f64) -> !llvm.ptr"
 	length = "    %n_" + name + " = func.call @strict_list_length(" + parameter + ") : (f64) -> f64"
 	started = (items, length, "    %k_" + name + " = func.call @strict_list_version() : () -> i64")
@@ -85,23 +85,23 @@ Read(name Text, list Text, position Text, nameBits Text, result Text) Text
 		call = "    " + result + " = func.call @strict_hoisted_byte_read(%b_" + name + ", "
 		return call + operands.Substring(1) + ByteReadTypes
 	"    " + result + " = func.call @strict_hoisted_read" + operands + " : (!llvm.ptr, f64, f64, f64, i64, f64) -> f64"
-Fetched(name Text, list Text, position Text, nameBits Text, result Text) Texts
-	Reading.Fetched("a", "%l", "%i", "%nb", "%x").Length is 1
-	Deferring.Fetched("a", "%l", "%i", "%nb", "%x").Length is 3
+Fetch(name Text, list Text, position Text, nameBits Text, result Text) Texts
+	Reading.Fetch("a", "%l", "%i", "%nb", "%x").Length is 1
+	Deferring.Fetch("a", "%l", "%i", "%nb", "%x").Length is 3
 	if function.IsDeferred and IsBytes(name) is false
-		return Deferred(name, position, result)
+		return Defer(name, position, result)
 	List(Text) + Read(name, list, position, nameBits, result)
-Deferred(name Text, position Text, result Text) Texts
-	Reading.Deferred("a", "%i", "%x")(0) is "    %xa = func.call @strict_deferred_at(%n_a, %i, %failed)" + DeferredTypes
-	Reading.Deferred("a", "%i", "%x").Last is "    %x = llvm.load %xp" + ReadScope + " : !llvm.ptr -> f64"
+Defer(name Text, position Text, result Text) Texts
+	Reading.Defer("a", "%i", "%x")(0) is "    %xa = func.call @strict_deferred_at(%n_a, %i, %failed)" + DeferredTypes
+	Reading.Defer("a", "%i", "%x").Last is "    %x = llvm.load %xp" + ReadScope + " : !llvm.ptr -> f64"
 	call = " = func.call @strict_deferred_at(%n_" + name + ", " + position + ", %failed)" + DeferredTypes
 	address = " = llvm.getelementptr %h_" + name + "[" + result + "a]" + MlirFastLoop.Pointer + "f64"
 	loaded = "    " + result + " = llvm.load " + result + "p" + ReadScope + " : !llvm.ptr -> f64"
 	("    " + result + "a" + call, "    " + result + "p" + address, loaded)
-Fixed(name Text) Text
-	Reading.Fixed("numbers") is "numbers"
-	Aliasing.Fixed("copy") is "numbers"
-	Aliasing.Fixed("other") is ""
+Fix(name Text) Text
+	Reading.Fix("numbers") is "numbers"
+	Aliasing.Fix("copy") is "numbers"
+	Aliasing.Fix("other") is ""
 	if name is in FixedLists
 		return name
 	mutable source = ""
@@ -121,11 +121,11 @@ Source(at Number, name Text) Text
 	target = entry.kind is InstructionType.StoreConstantToVariable then entry.texts.Last else entry.texts.First
 	if target is not name
 		return target.StartsWith(name + "(") then "?" else ""
-	loaded = entry.kind is InstructionType.StoreRegisterToVariable then Loaded(at, entry.payload(0)) else ""
+	loaded = entry.kind is InstructionType.StoreRegisterToVariable then Load(at, entry.payload(0)) else ""
 	loaded is in FixedLists then loaded else "?"
-Loaded(at Number, register Number) Text
-	Aliasing.Loaded(1, 0) is "numbers"
-	Aliasing.Loaded(5, 3) is ""
+Load(at Number, register Number) Text
+	Aliasing.Load(1, 0) is "numbers"
+	Aliasing.Load(5, 3) is ""
 	reuse = LoadReuse(function.method.instructions)
 	for at
 		earlier = function.method.instructions(at - 1 - index)

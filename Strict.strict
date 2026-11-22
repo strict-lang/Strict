@@ -42,7 +42,7 @@ Host(command Text, arguments Texts, resident Resident) slow
 	if command is "status"
 		return Coordinator.Report
 	rest = arguments.Slice(1, arguments.Length - 1)
-	NativeChunks(rest(2)).Saved(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
+	NativeChunks(rest(2)).Save(rest(0), rest(1), rest.Slice(3, rest.Length - 3))
 Serve(resident Resident) slow
 	server = resident.Opened
 	if server is Error
@@ -278,7 +278,7 @@ Update(updater Bytecode/Repositories, folder Text) slow
 	logger.Log("Updated " + updater.Update(folder) + " packages in " + folder)
 Native(command Text, rest Texts) Number slow
 	Strict.Native("test", ("Missing.strict", ".", "values", "other")) is 2
-	NativeCompiler.Ran((List(Text) + command) + rest)
+	NativeCompiler.RunCommand((List(Text) + command) + rest)
 Format(path Text) Text slow
 	Strict.Format("Examples/HelloLogger.strict").StartsWith("has logger")
 	lines = RoundTrip.Tab(File(path).ReadLines)

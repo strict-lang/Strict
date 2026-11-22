@@ -89,11 +89,11 @@ Arguments Texts
 		kind = TypeEntry.ShortName(value.typeName)
 		isDefaulted = value.initial.Length > 0 and kind is in ("Number", "Boolean", "Text")
 		name = "%arg" + index + (isDefaulted then "given" else "")
-		lines = lines + Argument(kind, index, name) + (isDefaulted then Defaulted(value, index) else List(Text))
+		lines = lines + Argument(kind, index, name) + (isDefaulted then Default(value, index) else List(Text))
 	lines
-Defaulted(parameter MemberEntry, index Number) Texts
-	Framed.Defaulted(Frames, 0).First is "    %arg0slot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
-	Text.Combine(Foldered.Defaulted(Folders.methods.First.parameters.First, 0)).IndexOf(" @dp0 ") > 0
+Default(parameter MemberEntry, index Number) Texts
+	Framed.Default(Frames, 0).First is "    %arg0slot = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"
+	Text.Combine(Foldered.Default(Folders.methods.First.parameters.First, 0)).IndexOf(" @dp0 ") > 0
 	slot = "%arg" + index + "slot"
 	initial = Natives(entry.types).Initial(parameter)
 	named = initial.kind is "Text" then MlirDefaults(entry).ParameterName(initial.text) else ""
@@ -151,9 +151,9 @@ Instance(function MlirFunction, suffix Text) Texts
 	callee = MlirFunction(function, method = start).Symbol
 	called = "    %started" + suffix + " = func.call @" + callee + "(%fresh" + suffix + ") : (f64) -> f64"
 	fresh + (function.Load("%fresh" + suffix, slot), called, function.Store("%started" + suffix, slot))
-Optimized(method MethodEntry, emitted Text) Text
-	MlirEntry.Optimized(MethodEntry(MethodEntry.CountingLoop, Name = TestCodegen.Runner), Linked) is Unoptimized
-	MlirEntry.Optimized(MethodEntry.CountingLoop, Linked) is Linked
+Optimize(method MethodEntry, emitted Text) Text
+	MlirEntry.Optimize(MethodEntry(MethodEntry.CountingLoop, Name = TestCodegen.Runner), Linked) is Unoptimized
+	MlirEntry.Optimize(MethodEntry.CountingLoop, Linked) is Linked
 	Framed.Arguments(4) is "    %t0d0c = arith.constant 0x401C000000000000 : f64"
 	Framed.Arguments(6) is "    %arg0has = arith.cmpi sgt, %argc, %argindex0 : i32"
 	Framed.Arguments(7) is "    %arg0default = llvm.load %arg0slot : !llvm.ptr -> f64"

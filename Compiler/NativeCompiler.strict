@@ -9,27 +9,27 @@ constant Whole = "fast builds single programs, build a complete game with its Co
 constant WebOnly = " is a Web app, build it with web"
 constant Tested = NativeCompiler
 constant Web = "MossWeb.strict"
-Ran(arguments Texts) Number
+RunCommand(arguments Texts) Number
 	rest = arguments.Slice(1, arguments.Length - 1)
 	if IsLocked(rest(0)) is false
 		return 1
 	started = Process.Elapsed
 	cache = NativeCache(arguments(0), rest)
-	result = IsCurrent(cache) then 0 else BuildProfile.Compiled(cache)
+	result = IsCurrent(cache) then 0 else BuildProfile.Compile(cache)
 	code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
-	reported = Reported(code, started, result is Error then result to Text else "")
+	reported = Report(code, started, result is Error then result to Text else "")
 	IsUnlocked(rest(0)) then reported else 1
 IsCurrent(cache NativeCache) Boolean
 	isCurrent = BuildProfile.IsCurrent(cache)
 	if isCurrent
 		logger.Log(cache.Message)
 	isCurrent
-Reported(code Number, started Number, problem Text) Number
-	NativeCompiler.Reported(1, Process.Elapsed, "Error: Failed\n\tat Compiler/NativeCompiler.strict:line 9") is 1
-	NativeCompiler.Reported(2, Process.Elapsed, "Error: InvalidTestRequest") is 2
+Report(code Number, started Number, problem Text) Number
+	NativeCompiler.Report(1, Process.Elapsed, "Error: Failed\n\tat Compiler/NativeCompiler.strict:line 9") is 1
+	NativeCompiler.Report(2, Process.Elapsed, "Error: InvalidTestRequest") is 2
 	if (problem is "" then "" else problem.Lines.First) is not in Logged
 		logger.Log(problem)
-	BuildProfile.Reported(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
+	BuildProfile.Report(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
 	code
 IsLocked(target Text) Boolean slow
 	lock = File(Lock(target))
@@ -55,9 +55,9 @@ Lock(target Text) Text
 	path = BuildOutput.Intermediate(target) + ".lock"
 	Directory.Create(Path(path).PathOnly.text)
 	path
-Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
+Compile(command Text, rest Texts, sources Texts = List(Text)) Number
 	if command is "build"
-		return Checked(rest, sources)
+		return Check(rest, sources)
 	request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
@@ -65,21 +65,21 @@ Compiled(command Text, rest Texts, sources Texts = List(Text)) Number
 	isCounting = request.Option is "lines"
 	isRecursive = "--no-recursive" is not in request.Options
 	selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
-	NativeBuild(false, selection = selection, isRecursive = isRecursive).Tested(rest(0), rest(1), isCounting, sources)
-Checked(rest Texts, sources Texts) Number
+	NativeBuild(false, selection = selection, isRecursive = isRecursive).TestPath(rest(0), rest(1), isCounting, sources)
+Check(rest Texts, sources Texts) Number
 	gate = Execute.Serve(rest(0), rest(1), true, sources)
 	if gate.code is 0
-		Built(rest, sources, gate.Types)
+		Build(rest, sources, gate.Types)
 	gate.code
-Built(rest Texts, sources Texts, gated List(TypeEntry))
+Build(rest Texts, sources Texts, gated List(TypeEntry))
 	options = Options(rest)
 	if rest.Length > 2 and rest(2) is "library"
-		return LibraryBuild.Built(rest(0), rest(1))
+		return LibraryBuild.Build(rest(0), rest(1))
 	problem = Problem(rest(0), options, sources)
 	if problem is not ""
 		logger.Log(problem)
 		return Error("UnsupportedBuildOptions")
-	NativeBuild(Configured(options, rest(0)), gated = gated).Compile(rest(0), rest(1), sources = sources)
+	NativeBuild(Configure(options, rest(0)), gated = gated).Compile(rest(0), rest(1), sources = sources)
 Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler.Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
 	NativeCompiler.Problem("Examples/Sum.strict", ("android", "ios"), Summing) is Mixed
@@ -95,7 +95,7 @@ Problem(path Text, options Texts, sources Texts) Text
 	isFast and IsGame(path) then Whole + path else isFast and IsLearning(sources) then path + Model else ""
 IsGame(path Text) Boolean
 	NativeCompiler.IsGame("Missing/App/App.strict") is false
-	Release("Compiler/output/Game/obj/Demo").Created("Compiler/output/Game/Content") is not Error
+	Release("Compiler/output/Game/obj/Demo").Creat("Compiler/output/Game/Content") is not Error
 	NativeCompiler.IsGame("Compiler/output/Game/Game.strict")
 	NativeCompiler.IsGame("Compiler/output/Game/Demo.strict") is false
 	folder = Path(path).PathOnly.text
@@ -115,12 +115,12 @@ IsMixed(options Texts) Boolean
 	isMobile = "android" is in options or "ios" is in options
 	isDesktop = "web" is in options or "linux" is in options or "windows" is in options
 	"android" is in options and "ios" is in options or isMobile and isDesktop
-Configured(options Texts, path = "") NativeBuild
-	NativeCompiler.Configured(("ios", "simulator")).Target is Platform.IOSSimulator
-	NativeCompiler.Configured(("linux", "web")).isCrossing is false
-	NativeCompiler.Configured(List(Text) + "windows").isReleased
-	NativeCompiler.Configured(List(Text) + "fast").isFast
-	NativeCompiler.Configured(List(Text), "./Strict.strict").isReleased
+Configure(options Texts, path = "") NativeBuild
+	NativeCompiler.Configure(("ios", "simulator")).Target is Platform.IOSSimulator
+	NativeCompiler.Configure(("linux", "web")).isCrossing is false
+	NativeCompiler.Configure(List(Text) + "windows").isReleased
+	NativeCompiler.Configure(List(Text) + "fast").isFast
+	NativeCompiler.Configure(List(Text), "./Strict.strict").isReleased
 	isWeb = "web" is in options
 	isCrossing = "linux" is in options and isWeb is false
 	configured = NativeBuild(isCrossing, isWeb, "android" is in options, "ios" is in options)

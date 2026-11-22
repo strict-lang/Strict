@@ -38,10 +38,10 @@ IsRounded(entry InstructionEntry) Boolean
 	MlirRounded(Sample.function, 4).IsRounded(Shifted(1)) is false
 	Sample.IsRounded(Read(1)) is false
 	entry.kind is not in MlirSingle.Operators then false else IsSingle(entry.payload(1)) and IsSingle(entry.payload(2))
-Stored(entry InstructionEntry) Texts
-	Sample.Stored(Squared) is Narrowed + "    llvm.store %t2cw, %r2 : f64, !llvm.ptr"
-	MlirRounded(Sample.function, 4).Stored(Shifted(1)) is List(Text) + "    llvm.store %t4c, %r4 : f64, !llvm.ptr"
-	Text.Combine(MlirStatements(Sample.function, 2).Calculated(Squared)).IndexOf("arith.truncf %t2c ") > 0
+Store(entry InstructionEntry) Texts
+	Sample.Store(Squared) is Narrowed + "    llvm.store %t2cw, %r2 : f64, !llvm.ptr"
+	MlirRounded(Sample.function, 4).Store(Shifted(1)) is List(Text) + "    llvm.store %t4c, %r4 : f64, !llvm.ptr"
+	Text.Combine(MlirStatements(Sample.function, 2).Calculate(Squared)).IndexOf("arith.truncf %t2c ") > 0
 	result = "%t" + position + "c"
 	if IsRounded(entry) is false
 		return List(Text) + function.Store(result, "%r" + entry.payload(3))

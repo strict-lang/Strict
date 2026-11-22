@@ -60,7 +60,7 @@ IsCallable(depth Number) Boolean
 HasWholeParameters Boolean
 	Nested.HasWholeParameters is false
 	Row.HasWholeParameters
-	for MlirInstances(function, 0).Stored(function.type)
+	for MlirInstances(function, 0).Store(function.type)
 		isKnown = MlirWholeText(function).IsText(value.Name) or MlirWholeInstance(function).Kind(value.typeName) is not ""
 		if value.Name is in function.VariableNames and isKnown is false
 			return false

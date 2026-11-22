@@ -6,27 +6,27 @@ constant Range = 4503599627370496
 constant Counting = EmissionCache(MlirModule.Counters, MlirModule.Counters.Functions, List(Text))
 constant SafeCounter = MlirFunction(MlirModule.Counters.Functions.First, safeCalls = Dictionary(("Counter_Run_0", 1)))
 constant Safe = EmissionCache(MlirModule.Counters, List(MlirFunction) + SafeCounter, List(Text))
-Emitted(texts List(MlirFunction)) Texts slow
-	Counting.Emitted(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
+Emit(texts List(MlirFunction)) Texts slow
+	Counting.Emit(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
 	if module.Cached is ""
 		return Fresh(texts)
 	keys = Keys(texts)
 	stored = Stored
-	emitted = Reused(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
-	Saved(keys, emitted, stored)
+	emitted = Reuse(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
+	Save(keys, emitted, stored)
 	emitted
 Fresh(texts List(MlirFunction)) Texts
 	Counting.Fresh(MlirModule.Counters.Functions).Length is 1
 	for texts
 		module.Emission(value, functions, recursive)
-Reused(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
+Reuse(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
 	mutable reused = 0
 	for keys
 		reused = value is in stored then reused + 1 else reused
 	checking = isChecked then ", each compared with a fresh emission" else ""
 	Logger.Log("Emission cache: " + reused + " of " + texts.Length + " functions reused" + checking)
-	Picked(texts, keys, stored, isChecked)
-Picked(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
+	Pick(texts, keys, stored, isChecked)
+Pick(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
 	for texts
 		Chosen(value, keys(index), stored, isChecked)
 Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked Boolean) Text slow
@@ -39,10 +39,10 @@ Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked
 		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
 	fresh
 Stored Dictionary(Text, Text) slow
-	File(module.Cached).Exists then Parsed(File(module.Cached).ReadText) else Dictionary(Text, Text)
-Parsed(text Text) Dictionary(Text, Text)
-	Counting.Parsed(Separator + "a\nx" + Separator + "b\ny").Length is 2
-	Counting.Parsed(Separator + "a\nx" + Separator + "a\ny")("a") is "x"
+	File(module.Cached).Exists then Parse(File(module.Cached).ReadText) else Dictionary(Text, Text)
+Parse(text Text) Dictionary(Text, Text)
+	Counting.Parse(Separator + "a\nx" + Separator + "b\ny").Length is 2
+	Counting.Parse(Separator + "a\nx" + Separator + "a\ny")("a") is "x"
 	mutable stored = Dictionary(Text, Text)
 	for text.Split(Separator)
 		end = value.IndexOf("\n")
@@ -50,7 +50,7 @@ Parsed(text Text) Dictionary(Text, Text)
 		if key is not "" and key is not in stored
 			stored = stored.Add(key, value.Substring(end + 1))
 	stored
-Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
+Save(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 	mutable isNew = keys.Length is not stored.Length
 	mutable joined = List(Mutable(Text))
 	for keys
@@ -61,7 +61,7 @@ Saved(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 Keys(texts List(MlirFunction)) Texts
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
 	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")
-	shared = Shared(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
+	shared = Share(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
 	graph = CallGraph(module.types)
 	for texts
 		own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
@@ -72,10 +72,10 @@ Flags(function MlirFunction) Text
 	slots = loops + "|" + function.Packing + "|" + function.Float
 	calls = (function.lineSlots to Text) + "|" + function.IsDeferred
 	function.Symbol + "|" + function.Variant + "|" + slots + "|" + calls + "|" + (function.Symbol is in recursive)
-Shared(compiler Text) Text
-	Counting.Shared("a").Length > 0
-	Counting.Shared("a") is not Counting.Shared("b")
-	Safe.Shared("a") is not Counting.Shared("a")
+Share(compiler Text) Text
+	Counting.Share("a").Length > 0
+	Counting.Share("a") is not Counting.Share("b")
+	Safe.Share("a") is not Counting.Share("a")
 	safe = functions.Length > 0 then functions.First.safeCalls to Text else ""
 	entry = compiler + "|" + safe + "|" + module.entryName + "|" + module.entries + "|" + module.entrySymbol
 	mutable sum = Wide(entry + "|" + module.platform + "|" + (module.countedFiles to Text))

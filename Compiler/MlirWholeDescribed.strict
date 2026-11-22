@@ -1,9 +1,9 @@
 has at Number
 has order Number
-Measured(text Text) Texts
-	MlirWholeDescribed(4, 1).Measured("%v").First is "    %t4wt1d = func.call @strict_text_data(%v) : (f64) -> !llvm.ptr"
-	MlirWholeDescribed(4, 1).Measured("%v")(1) is "    %t4wt1a = llvm.ptrtoint %t4wt1d : !llvm.ptr to i64"
-	MlirWholeDescribed(4, 1).Measured("%v").Last is "    %t4wt1n = func.call @strict_text_size(%v) : (f64) -> i64"
+Measure(text Text) Texts
+	MlirWholeDescribed(4, 1).Measure("%v").First is "    %t4wt1d = func.call @strict_text_data(%v) : (f64) -> !llvm.ptr"
+	MlirWholeDescribed(4, 1).Measure("%v")(1) is "    %t4wt1a = llvm.ptrtoint %t4wt1d : !llvm.ptr to i64"
+	MlirWholeDescribed(4, 1).Measure("%v").Last is "    %t4wt1n = func.call @strict_text_size(%v) : (f64) -> i64"
 	name = "wt" + order
 	values = MlirWholeValues(at)
 	data = values.Line(name + "d", "func.call @strict_text_data(" + text + ") : (f64) -> !llvm.ptr")
@@ -25,4 +25,4 @@ Lines(text Text) Texts
 	places = (Place("wa" + order, 1), Place("wt" + order + "s", 2))
 	count = MlirWholeValues(at).Line("wt" + order + "c", "func.call @strict_text_count(" + text + ") : (f64) -> i64")
 	ascii = MlirWholeValues(at).Line("wh" + order + "o", "arith.cmpi eq, " + prefix + "c, " + prefix + "n : i64")
-	Measured(text) + places + stores + count + ascii
+	Measure(text) + places + stores + count + ascii

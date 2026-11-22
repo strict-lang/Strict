@@ -53,30 +53,30 @@ Body Texts
 	device = MlirDevice(function, position)
 	grouped = MlirGroupBatched(function, position)
 	if IsUsed is false
-		scalar = device.Started + device.Emitted(position + 1, function.method.LoopEndOf(position))
+		scalar = device.Started + device.Emit(position + 1, function.method.LoopEndOf(position))
 		return grouped.IsUsed then grouped.Body + scalar else scalar
 	loaded = function.Float is "f32" then Prefetched else List(Text) + "  ^loadStart:"
-	loaded + "    cf.br ^computeEntry" + "  ^computeEntry:" + Computing + Computed(device.Started + Emitted(false))
+	loaded + "    cf.br ^computeEntry" + "  ^computeEntry:" + Computing + Compute(device.Started + Emit(false))
 Prefetched Texts
 	Paired.Prefetched.Length is 43 and Paired.Prefetched(34) is "  ^loaded:"
 	Paired.Prefetched(30) is "    %loadNext = arith.addi %at, %one : i64"
 	Paired.Prefetched(31) is "    %loadIndex = arith.addi %batchIndex, %one : i64"
 	Paired.Prefetched(33).IndexOf("^load(%loadNext, %loadIndex : i64, i64), ^loaded {") > 0
 	MlirBatched(Single.function, 2).Prefetched.Length is 212
-	body = MlirDevice(function, position).Started + Emitted(true)
-	next = Advanced("load", "batchIndex", "at", "loaded")
+	body = MlirDevice(function, position).Started + Emit(true)
+	next = Advance("load", "batchIndex", "at", "loaded")
 	Linear + LoadStart + body + next + "  ^loaded:" + MlirBatchReads(function, position).Loaded
-Emitted(loading Boolean, linear Boolean = false) Texts
-	MlirBatched(Single.function, 2).Emitted(true).Length is 63
-	MlirBatched(Single.function, 2).Emitted(true, true).Length is 87
-	Paired.Emitted(false).Length is 67
+Emit(loading Boolean, linear Boolean = false) Texts
+	MlirBatched(Single.function, 2).Emit(true).Length is 63
+	MlirBatched(Single.function, 2).Emit(true, true).Length is 87
+	Paired.Emit(false).Length is 67
 	mutable lines = List(Mutable(Text))
 	reads = MlirBatchReads(function, position)
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if loading
-			lines = lines + (linear then reads.LinearPrefetched(value) else reads.Prefetched(value))
+			lines = lines + (linear then reads.LinearPrefetch(value) else reads.Prefetch(value))
 		else
-			lines = lines + reads.Computed(value)
+			lines = lines + reads.Compute(value)
 	lines
 Ending Texts
 	Gathered.Ending is MlirDevice.Ending
@@ -87,12 +87,12 @@ Ending Texts
 	Paired.Ending.Length is 11 and MlirBatched(Single.function, 2).Ending(7) is MlirBatchReads.Storing
 	if IsUsed is false
 		return MlirGrouped(function, position).Ending
-	next = Advanced("compute", "compute_batchIndex", "compute_at", "stored")
+	next = Advance("compute", "compute_batchIndex", "compute_at", "stored")
 	stored = function.Float is "f32" then MlirBatchReads(function, position).Stored else List(Text)
 	next + "  ^stored:" + stored + MlirDevice.Ending
-Advanced(label Text, index Text, at Text, done Text) Texts
-	Paired.Advanced("l", "i", "a", "d").First is "    cf.br ^lNextBlock"
-	Paired.Advanced("l", "i", "a", "d").Last.StartsWith("    llvm.cond_br %lMore, ^l(%lNext, %lIndex : i64, i64), ^d {")
+Advance(label Text, index Text, at Text, done Text) Texts
+	Paired.Advance("l", "i", "a", "d").First is "    cf.br ^lNextBlock"
+	Paired.Advance("l", "i", "a", "d").Last.StartsWith("    llvm.cond_br %lMore, ^l(%lNext, %lIndex : i64, i64), ^d {")
 	Paired.Ending(5).IndexOf("i64), ^stored {loop") > 0
 	first = "    %" + label + "Next = arith.addi %" + at + ", %one : i64"
 	last = "    %" + label + "Index = arith.addi %" + index + ", %one : i64"
@@ -101,8 +101,8 @@ Advanced(label Text, index Text, at Text, done Text) Texts
 	loop = branch + "Index : i64, i64), ^" + done
 	constant unrolled = " {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}"
 	("    cf.br ^" + label + "NextBlock", "  ^" + label + "NextBlock:", first, last, more, loop + unrolled)
-Computed(lines Texts, prefix Text = "compute") Texts
-	Paired.Computed("%x %at ^bb %narrow", "p") is ("%p_x %p_at ^p_bb %p_narrow")
+Compute(lines Texts, prefix Text = "compute") Texts
+	Paired.Compute("%x %at ^bb %narrow", "p") is ("%p_x %p_at ^p_bb %p_narrow")
 	for lines
 		mutable text = value
 		for Names
@@ -122,6 +122,5 @@ Linear Texts
 		return List(Text)
 	constant seed = ("    %at = arith.addi %batchFirst, %batchZero : i64", "    %batchIndex = arith.constant 0 : i64")
 	started = seed + "    cf.br ^body" + MlirDevice(function, position).Started
-	body = started + Emitted(true, true) + MlirBatchReads(function, position).Loaded
-	heading = List(Text) + "  ^loadStart:" + linear.Guard + "  ^linearStart:"
-	heading + Computed(body, "linear") + "    cf.br ^computeEntry"
+	body = started + Emit(true, true) + MlirBatchReads(function, position).Loaded
+	List(Text) + "  ^loadStart:" + linear.Guard + "  ^linearStart:" + Compute(body, "linear") + "    cf.br ^computeEntry"

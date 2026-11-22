@@ -46,11 +46,11 @@ IsMatched(entry InstructionEntry, callee MlirWholeFunction) Boolean
 	isComplete = PayloadDecoder(entry).ArgumentCount is callee.function.method.parameters.Length
 	isRead = MlirWholeText(function).Reads(entry, callee.function) is callee.Kinds.Length
 	isComplete and isRead and callee.IsWhole
-Dispatched(compiled Texts) Texts
-	Calling.Dispatched(List(Text) + "slow")(Calling.Dispatched(List(Text) + "slow").Index("  ^bb1slowcall:") + 1) is "slow"
-	Calling.Dispatched(List(Text) + "slow").Last is "  ^bb1called:"
-	MlirWholeCall(MlirWholeTypes.Halving.function, 3).Dispatched(List(Text) + "slow") is ("slow")
-	Calling.Dispatched(List(Text) + "slow") is Dispatching
+Dispatch(compiled Texts) Texts
+	Calling.Dispatch(List(Text) + "slow")(Calling.Dispatch(List(Text) + "slow").Index("  ^bb1slowcall:") + 1) is "slow"
+	Calling.Dispatch(List(Text) + "slow").Last is "  ^bb1called:"
+	MlirWholeCall(MlirWholeTypes.Halving.function, 3).Dispatch(List(Text) + "slow") is ("slow")
+	Calling.Dispatch(List(Text) + "slow") is Dispatching
 	if IsDispatched is false
 		return compiled
 	label = "^bb" + position
@@ -64,23 +64,23 @@ Guarded Texts
 	guard = MlirWholeGuard(function, position)
 	entry = function.method.instructions(position)
 	kinds = MlirWholeFunction(MlirWholeFunction(function).Callee(entry)).Kinds
-	mutable lines = guard.Started + MlirWholeText(function).Guarded(entry, kinds.Length, position)
+	mutable lines = guard.Started + MlirWholeText(function).Guard(entry, kinds.Length, position)
 	for LoadReuse(function.method.instructions).InvokeReads(entry)
 		loaded = Temp("wl" + index)
-		checked = Checked(index, kinds(index))
+		checked = Check(index, kinds(index))
 		lines = lines + function.Load(loaded, "%r" + entry.payload(value)) + checked
 	span = MlirWholeSpan(MlirWholeFunction(function).Callee(entry), position)
-	lines + span.Lines + guard.Joined(Conditions(kinds.Length) + span.Checks)
-Checked(number Number, kind Text) Texts
-	Calling.Checked(0, "i").First is "    %t1wh0t = llvm.intr.trunc(%t1wl0) : (f64) -> f64"
-	Calling.Checked(0, "p").First is "    %t1wa0 = func.call @strict_list_bytes(%t1wl0) : (f64) -> !llvm.ptr"
+	lines + span.Lines + guard.Join(Conditions(kinds.Length) + span.Checks)
+Check(number Number, kind Text) Texts
+	Calling.Check(0, "i").First is "    %t1wh0t = llvm.intr.trunc(%t1wl0) : (f64) -> f64"
+	Calling.Check(0, "p").First is "    %t1wa0 = func.call @strict_list_bytes(%t1wl0) : (f64) -> !llvm.ptr"
 	if kind is "t"
 		return MlirWholeDescribed(position, number).Lines(Temp("wl" + number))
 	if kind is "o"
 		return Members(number)
 	if kind is in ("p", "d")
 		return Present(number, kind)
-	MlirWholeGuard(function, position).Checked(Temp("wl" + number), Temp("wh" + number), Temp("whlimit"))
+	MlirWholeGuard(function, position).Check(Temp("wl" + number), Temp("wh" + number), Temp("whlimit"))
 Members(number Number) Texts
 	Text.Combine(Sizing.Members(0)).IndexOf("@strict_list_packed(%t1wh0m0v)") > 0
 	Sizing.Members(0).First is "    %t1wa0 = func.call @strict_ptr(%t1wl0) : (f64) -> !llvm.ptr"
@@ -103,7 +103,7 @@ Member(number Number, member Number, kind Text) Texts
 	Calling.Member(0, 1, "d").First is "    %t1wh0m1k = func.call @strict_list_packed(%t1wh0m1v) : (f64) -> i64"
 	Calling.Member(0, 1, "d")(2) is "    %t1wh0m1o = arith.cmpi eq, %t1wh0m1k, %t1wh0m1l : i64"
 	prefix = Temp("wh" + number + "m" + member)
-	whole = MlirWholeGuard(function, position).Checked(prefix + "v", prefix, Temp("whlimit"))
+	whole = MlirWholeGuard(function, position).Check(prefix + "v", prefix, Temp("whlimit"))
 	checked = kind is "i" then whole else Usable(prefix, kind)
 	previous = Temp("wh" + number + "c" + member)
 	checked + ("    " + Temp("wh" + number + "c" + (member + 1)) + " = arith.andi " + previous + ", " + prefix + "o : i1")
@@ -111,23 +111,23 @@ Usable(prefix Text, kind Text) Texts
 	Calling.Usable("%a", "p").Last is "    %ao = arith.cmpi ne, %ai, %t1whz : i64"
 	Calling.Usable("%a", "c").Last is "    %ao = arith.andi %axo, %ayo : i1"
 	if kind is "c"
-		return Coupled(prefix)
+		return EmitCouple(prefix)
 	if kind is "d"
 		packed = "    " + prefix + "k = func.call @strict_list_packed(" + prefix + "v) : (f64) -> i64"
 		lanes = "    " + prefix + "l = arith.constant " + MlirDoubles.LanesFormat + " : i64"
 		return (packed, lanes, "    " + prefix + "o = arith.cmpi eq, " + prefix + "k, " + prefix + "l : i64")
 	address = "    " + prefix + "i = llvm.ptrtoint " + prefix + "p : !llvm.ptr to i64"
 	present = (address, "    " + prefix + "o = arith.cmpi ne, " + prefix + "i, " + Temp("whz") + " : i64")
-	MlirWholeFields(function).Converted(prefix + "v", kind, prefix + "p") + present
-Coupled(prefix Text) Texts
-	Calling.Coupled("%a").First is "    %axv = func.call @strict_two_x(%av) : (f64) -> f64"
-	Calling.Coupled("%a")(1) is "    %axt = llvm.intr.trunc(%axv) : (f64) -> f64"
-	Calling.Coupled("%a")(4) is "    %axs = arith.cmpf olt, %axa, %t1whlimit : f64"
+	MlirWholeFields(function).Convert(prefix + "v", kind, prefix + "p") + present
+EmitCouple(prefix Text) Texts
+	Calling.EmitCouple("%a").First is "    %axv = func.call @strict_two_x(%av) : (f64) -> f64"
+	Calling.EmitCouple("%a")(1) is "    %axt = llvm.intr.trunc(%axv) : (f64) -> f64"
+	Calling.EmitCouple("%a")(4) is "    %axs = arith.cmpf olt, %axa, %t1whlimit : f64"
 	guard = MlirWholeGuard(function, position)
 	mutable lines = List(Mutable(Text))
 	for ("x", "y")
 		half = "    " + prefix + value + "v = func.call @strict_two_" + value + "(" + prefix + "v) : (f64) -> f64"
-		lines = lines + half + guard.Checked(prefix + value + "v", prefix + value, Temp("whlimit"))
+		lines = lines + half + guard.Check(prefix + value + "v", prefix + value, Temp("whlimit"))
 	lines + ("    " + prefix + "o = arith.andi " + prefix + "xo, " + prefix + "yo : i1")
 Conditions(count Number) Texts
 	Calling.Conditions(1) is ("%t1wh0o")
@@ -156,12 +156,12 @@ Direct Texts
 	kinds = callee.Kinds
 	mutable lines = List(Mutable(Text))
 	for kinds
-		converted = MlirWholeValues(position).Converted(Temp("wl" + index), "f", "i", Temp("wa" + index))
+		converted = MlirWholeValues(position).Convert(Temp("wl" + index), "f", "i", Temp("wa" + index))
 		lines = value is in ("p", "d", "o", "t") then lines else lines + converted
 	returned = MlirWholeTypes(callee.function).Returned
 	result = Temp(returned is "f" then "wf" else "wr")
-	call = MlirWholeValues(position).Called(result, callee.Symbol, Temp("wa"), kinds, returned, "%wfailed")
-	lines + call + Returned(returned)
+	call = MlirWholeValues(position).Call(result, callee.Symbol, Temp("wa"), kinds, returned, "%wfailed")
+	lines + call + EmitReturn(returned)
 Clearing Texts
 	Calling.Clearing is Cleared
 	("    " + Temp("wfn") + " = arith.constant 0 : i64", "    llvm.store " + Temp("wfn") + ", %wfailed : i64, !llvm.ptr")
@@ -171,13 +171,13 @@ Checking Texts
 	compared = "    " + Temp("wfc") + " = arith.cmpi ne, " + Temp("wfl") + ", " + Temp("wfn") + " : i64"
 	label = "^bb" + position
 	(loaded, compared, "    cf.cond_br " + Temp("wfc") + ", " + label + "slowcall, " + label + "called")
-Returned(returned Text) Texts
-	Calling.Returned("i").Last is "    llvm.store %t1wf, %r1 : f64, !llvm.ptr"
-	Calling.Returned("f") is ("    llvm.store %t1wf, %r1 : f64, !llvm.ptr")
+EmitReturn(returned Text) Texts
+	Calling.EmitReturn("i").Last is "    llvm.store %t1wf, %r1 : f64, !llvm.ptr"
+	Calling.EmitReturn("f") is ("    llvm.store %t1wf, %r1 : f64, !llvm.ptr")
 	target = "%r" + function.method.instructions(position).payload(0)
 	if returned is "f"
 		return List(Text) + function.Store(Temp("wf"), target)
-	(MlirWholeValues(position).Converted(Temp("wr"), "i", "f", Temp("wf")), function.Store(Temp("wf"), target))
+	(MlirWholeValues(position).Convert(Temp("wr"), "i", "f", Temp("wf")), function.Store(Temp("wf"), target))
 Temp(suffix Text) Text
 	Calling.Temp("wr") is "%t1wr"
 	"%t" + position + suffix

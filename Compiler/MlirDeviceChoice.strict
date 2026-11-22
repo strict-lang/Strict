@@ -42,7 +42,7 @@ IsUpdate(store Number) Boolean
 	call = function.method.instructions(store - 1)
 	if call.kind is not InstructionType.Invoke or call.payload(0) is not function.method.instructions(store).payload(0)
 		return false
-	callees = MlirModule(function.types, "").Called(function, store - 1)
+	callees = MlirModule(function.types, "").Call(function, store - 1)
 	isPassed = IsPassed(store - 1, function.method.instructions(store).texts(0))
 	callees.Length is 1 and isPassed and IsChoosing(callees.First)
 IsPassed(call Number, name Text) Boolean
@@ -96,10 +96,10 @@ IsCompared(callee MlirFunction, sides Texts) Boolean
 				writer = MlirDeviceSums(callee, -1).Writer(position, value)
 				compared.Add(writer >= 0 then callee.method.instructions(writer).texts(0) else "")
 	compared is sides or compared is sides.Reverse
-Reduced(end Number) Texts
-	Maximum.Reduced(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
-	Text.Combine(Maximum.Reduced(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0
-	Maximum.Reduced(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
+Reduce(end Number) Texts
+	Maximum.Reduce(12).First is "    %d12c0r0 = llvm.load %v_largest : !llvm.ptr -> f64"
+	Text.Combine(Maximum.Reduce(12)).IndexOf("@strict_device_shuffle(%d12c0r4, %d12o0r4)") > 0
+	Maximum.Reduce(12).Last is "    llvm.store %d12c0r5, %v_largest : f64, !llvm.ptr"
 	mutable lines = List(Mutable(Text))
 	for Range(at + 1, end)
 		entry = function.method.instructions(value)
@@ -109,7 +109,7 @@ Reduced(end Number) Texts
 Rounds(call Number, prefix Text, number Number) Texts
 	Maximum.Rounds(10, "%d12", 0).Length is 23
 	Text.Combine(Owned.Rounds(10, "%d12", 0)).IndexOf("(%failed, %lane, %lanes, %d12c0r0, %d12s0r0)") > 0
-	calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Called(function, call).First)
+	calls = MlirDeviceCalls(function, call, MlirModule(function.types, "").Call(function, call).First)
 	name = "%v_" + function.method.instructions(call + 1).texts(0)
 	first = function.Load(prefix + "c" + number + "r0", name)
 	instance = calls.Instance(function.method.instructions(call), prefix + "h" + number)
@@ -127,6 +127,6 @@ Round(calls MlirDeviceCalls, prefix Text, number Number, round Number) Texts
 	held = calls.callee.method.parameters.Length is 1 then List(Text) else exact.Names(prefix + "h" + number)
 	numbers = held + exact.Inexact(current) + exact.Inexact(shuffled)
 	operands = "(" + Text.Combine(("%failed", "%lane", "%lanes") + numbers + calls.MemberArguments, ", ") + ")"
-	invoked = MlirFeeding(function, at).Invoked(calls, prefix + "c" + number + "r" + (round + 1), operands)
+	invoked = MlirFeeding(function, at).Invoke(calls, prefix + "c" + number + "r" + (round + 1), operands)
 	offsetLine = "    " + offset + " = arith.constant " + Offsets(round) + " : i32"
-	(offsetLine, MlirTyped(function.Float).Shuffled(shuffled, current, offset)) + invoked
+	(offsetLine, MlirTyped(function.Float).Shuffle(shuffled, current, offset)) + invoked

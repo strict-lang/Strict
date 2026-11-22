@@ -76,10 +76,10 @@ DictionaryHelper(name Text) Text
 	MlirNatives(Texts, 1).DictionaryHelper("set") is "strict_dictionary_set"
 	isKeyed = name is in ("in", "get", "set", "Add", "Remove")
 	isKeyed then "strict_dictionary_" + (name is "in" then "has" else name.Lower) else ""
-Keyed(kind Text) Texts
-	MlirNatives(Texts, 1).Keyed("Strict/Dictionary(Text, Number)") is ("strict_hash_text", "strict_text_equal")
-	MlirNatives(Texts, 1).Keyed("Dictionary(Text, Text)") is ("strict_hash_text", "strict_text_equal")
-	MlirNatives(MlirEquality.Same, 0).Keyed("Dictionary(Shape, Text)") is ("strict_hash_Shape", "strict_equal_Shape")
+EmitKeys(kind Text) Texts
+	MlirNatives(Texts, 1).EmitKeys("Strict/Dictionary(Text, Number)") is ("strict_hash_text", "strict_text_equal")
+	MlirNatives(Texts, 1).EmitKeys("Dictionary(Text, Text)") is ("strict_hash_text", "strict_text_equal")
+	MlirNatives(MlirEquality.Same, 0).EmitKeys("Dictionary(Shape, Text)") is ("strict_hash_Shape", "strict_equal_Shape")
 	key = Key(kind)
 	if key is "Text"
 		return ("strict_hash_text", "strict_text_equal")
@@ -94,31 +94,31 @@ Key(kind Text) Text
 	MlirNatives(Texts, 1).Key("List(List(Text, Number))") is "Text"
 	MlirNatives(Texts, 1).Key("Dictionary(Number, Number)") is "Number"
 	short = TypeEntry.ShortName(kind)
-	pair = MlirLayout(function).Paired(short)
+	pair = MlirLayout(function).Pair(short)
 	kinds = MlirKinds(function)
-	MlirLayout(function).Represented(pair.Length > 0 then pair(0) else kinds.ElementKind(kinds.ElementKind(short)))
+	MlirLayout(function).Represent(pair.Length > 0 then pair(0) else kinds.ElementKind(kinds.ElementKind(short)))
 Keying(helper Text, operands Texts, kind Text) Texts
 	MlirNatives(Texts, 2).Keying("f", ("%m", "%k"), "Dictionary(Text, Text)").Last.IndexOf("trace(%t2k") > 0
 	memory = MlirMemory(function, position)
-	functions = Keyed(kind)
+	functions = EmitKeys(kind)
 	hash = memory.Constant(memory.Temp("h"), functions(0), "(f64) -> i64")
 	equal = memory.Constant(memory.Temp("e"), functions(1), "(f64, f64) -> f64")
 	arguments = Text.Combine(operands + memory.Temp("h") + memory.Temp("e"), ", ")
 	types = Text.Combine(MlirCalls(function, position).ArgumentTypes(operands.Length), ", ")
 	call = "    " + memory.Temp("k") + " = func.call @" + helper + "(" + arguments + ") : (" + types
-	traced = memory.Traced(memory.Temp("k"), memory.Temp("r"), "strict_trace")
+	traced = memory.Trace(memory.Temp("k"), memory.Temp("r"), "strict_trace")
 	(hash, equal, call + ", (f64) -> i64, (f64, f64) -> f64) -> f64") + traced
 Element(kind Text) Text
-	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_index") is SearchLines
-	MlirNatives(Texts, 2).Emitted(Getting, Counted, "strict_dictionary_get") is GettingLines
-	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_last_index")(2).EndsWith("%t2a0) : (f64, f64) -> f64")
-	MlirNatives(Texts, 1).Emitted(LengthCall, TextType, "strict_text_index")(1).EndsWith("(%t1m) : (f64) -> f64")
+	MlirNatives(Texts, 2).Emit(Search, TextType, "strict_text_index") is SearchLines
+	MlirNatives(Texts, 2).Emit(Getting, Counted, "strict_dictionary_get") is GettingLines
+	MlirNatives(Texts, 2).Emit(Search, TextType, "strict_text_last_index")(2).EndsWith("%t2a0) : (f64, f64) -> f64")
+	MlirNatives(Texts, 1).Emit(LengthCall, TextType, "strict_text_index")(1).EndsWith("(%t1m) : (f64) -> f64")
 	MlirNatives(Texts, 1).ValueHelper("Boolean", "Floor", 0) is ""
 	MlirNatives(Texts, 1).ValueHelper("Boolean", "Increment", 0) is ""
 	MlirNatives(Texts, 1).ValueHelper("Text", "Upper", 0) is "strict_text_upper"
 	MlirNatives(Texts, 1).Element("List(Text)") is "Text"
 	MlirNatives(Texts, 1).Element("Strict/List(Text)") is "Text"
-	MlirLayout(function).Represented(MlirKinds(function).ElementKind(TypeEntry.ShortName(kind)))
+	MlirLayout(function).Represent(MlirKinds(function).ElementKind(TypeEntry.ShortName(kind)))
 TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadLines") is "strict_file_read_lines"
 	MlirNatives(Texts, 1).TypeHelper("Directory", "Files") is "strict_directory_files"
@@ -131,7 +131,7 @@ TypeHelper(kind Text, name Text) Text
 		return name is "At" then "strict_list_get" else "strict_list_set"
 	isHosted = kind is in Hosted.Kinds and kind is not "Strict" then kind + "." + name is in Hosted.Methods else false
 	if isHosted is false and (kind is not "Memo" or name.StartsWith(TestCodegen.Runner))
-		return kind is "GpuMemory" or kind is "Gpu" and name is "Require" then GpuHelper(name) else Validated(name)
+		return kind is "GpuMemory" or kind is "Gpu" and name is "Require" then GpuHelper(name) else Validate(name)
 	"strict_" + kind.Lower + "_" + (name is "ReadLines" then "read_lines" else name.Lower)
 GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
@@ -146,10 +146,10 @@ GpuHelper(name Text) Text
 	if name.StartsWith(TestCodegen.Runner)
 		return ""
 	"strict_gpu_" + (name is "Trim" then "trim_unused" else (name is "Evict" then "evict_all" else name.Lower))
-Validated(name Text) Text
-	MlirNatives(MlirValidated.Kept.function, 2).Validated("Validated") is "strict_validated"
-	MlirNatives(MlirValidated.Changed.function, 2).Validated("Validated") is ""
-	MlirNatives(Texts, 1).Validated("Floor") is ""
+Validate(name Text) Text
+	MlirNatives(MlirValidated.Kept.function, 2).Validate("Validated") is "strict_validated"
+	MlirNatives(MlirValidated.Changed.function, 2).Validate("Validated") is ""
+	MlirNatives(Texts, 1).Validate("Floor") is ""
 	name is not "Validated" then "" else MlirValidated(function, position).IsKnown then "strict_validated" else ""
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
@@ -164,22 +164,22 @@ TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TextHelper("Bytes") is "strict_text_as_bytes"
 	found = TextNames.Index(name)
 	found < 0 then "" else TextHelpers(found)
-Emitted(entry InstructionEntry, type TypeEntry, helper Text) Texts
-	MlirNatives(Texts, 2).Emitted(Search, TextType, "strict_text_index").Length is 4
+Emit(entry InstructionEntry, type TypeEntry, helper Text) Texts
+	MlirNatives(Texts, 2).Emit(Search, TextType, "strict_text_index").Length is 4
 	calls = MlirCalls(function, position)
 	count = PayloadDecoder(entry).ArgumentCount
 	owner = calls.Owner(entry, type)
 	textual = Textual(entry, Element(owner), count)
 	arguments = textual.Length > 0 then List(Text) + calls.Temp("ct") else calls.ArgumentNames(count)
-	completed = Completed(helper, count, List(Text) + calls.Temp("m") + arguments)
-	plain = MlirMemory(function, position).Passed(calls.Temp("r"), helper, completed, Element(owner))
+	completed = Complete(helper, count, List(Text) + calls.Temp("m") + arguments)
+	plain = MlirMemory(function, position).Pass(calls.Temp("r"), helper, completed, Element(owner))
 	call = helper.StartsWith("strict_dictionary_") then Keying(helper, completed, owner) else plain
 	lines = calls.Loads(entry, type) + textual + call + function.Store(calls.Temp("r"), "%r" + entry.payload(0))
 	helper is "strict_floor" then MlirCounter(function, position).Floor(entry, lines) else lines
-Completed(helper Text, count Number, operands Texts) Texts
-	MlirNatives.Completed("strict_text_substring", 1, ("%m", "%a")) is ("%m", "%a", "%end")
-	MlirNatives.Completed("strict_text_index", 1, ("%m", "%a")) is ("%m", "%a", "%zero")
-	MlirNatives.Completed("strict_text_substring", 2, ("%m", "%a", "%b")) is ("%m", "%a", "%b")
+Complete(helper Text, count Number, operands Texts) Texts
+	MlirNatives.Complete("strict_text_substring", 1, ("%m", "%a")) is ("%m", "%a", "%end")
+	MlirNatives.Complete("strict_text_index", 1, ("%m", "%a")) is ("%m", "%a", "%zero")
+	MlirNatives.Complete("strict_text_substring", 2, ("%m", "%a", "%b")) is ("%m", "%a", "%b")
 	isEnded = helper is "strict_text_substring" and count is 1
 	IsShort(helper, count) then operands + "%zero" else isEnded then operands + "%end" else operands
 IsShort(helper Text, count Number) Boolean
@@ -194,7 +194,7 @@ Textual(entry InstructionEntry, element Text, count Number) Texts
 	if element is not "Text" or count is not 1
 		return List(Text)
 	register = PayloadDecoder(entry).Arguments.First
-	if MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)) is not "Character"
+	if MlirLayout(function).Represent(MlirKinds(function).KindOf(position, register)) is not "Character"
 		return List(Text)
 	calls = MlirCalls(function, position)
-	List(Text) + MlirMemory(function, position).Called(calls.Temp("ct"), "strict_character_text", calls.ArgumentNames(1))
+	List(Text) + MlirMemory(function, position).Call(calls.Temp("ct"), "strict_character_text", calls.ArgumentNames(1))

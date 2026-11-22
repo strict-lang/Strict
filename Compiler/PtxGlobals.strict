@@ -1,16 +1,16 @@
 has path Text
 has prefix Text
 constant Sample = PtxGlobals("Compiler/output/Globals.ptx", "ptx/")
-Written(lines Texts) slow
+Write(lines Texts) slow
 	old = File(path).Exists then File(path).ReadLines else List(Text)
-	composed = Composed((Kept(old) + lines).Unique)
+	composed = Compose((Keep(old) + lines).Unique)
 	if File(path).Exists is false or Text.Combine(old, "\n") is not composed
 		File(path).Write(composed)
-Kept(old Texts) Texts
-	Sample.Kept(("// a", ".shared a;", "")) is List(Text) + ".shared a;"
+Keep(old Texts) Texts
+	Sample.Keep(("// a", ".shared a;", "")) is List(Text) + ".shared a;"
 	for old
 		if PtxModule.Sample.IsShared(value)
 			value
-Composed(lines Texts) Text
-	Sample.Composed(List(Text) + "a;") is "// strict library ptx/Globals needs \na;\n// strict definitions\n"
+Compose(lines Texts) Text
+	Sample.Compose(List(Text) + "a;") is "// strict library ptx/Globals needs \na;\n// strict definitions\n"
 	"// strict library " + prefix + "Globals needs \n" + Text.Combine(lines + PtxLibraries.Marker, "\n") + "\n"

@@ -16,16 +16,16 @@ Of(folders Texts, isParallel Boolean) List(Texts)
 		for Range(0, paths.Length is 0 then 0 else ((paths.Length + size - 1) / size).Floor)
 			chunks.Add(paths.Slice(value * size, (paths.Length - value * size).Clamp(0, size)))
 	chunks
-Compiled(chunks List(Texts), root Text, base Text) List(List(TypeEntry))
-	NativeChunks("*").Compiled(List(Texts), ".", "Compiler/output/Compiled").Length is 0
-	NativeChunks("*").Compiled(Clashing, ".", "Compiler/output/Compiled").First.Length is 0
+Compile(chunks List(Texts), root Text, base Text) List(List(TypeEntry))
+	NativeChunks("*").Compile(List(Texts), ".", "Compiler/output/Compiled").Length is 0
+	NativeChunks("*").Compile(Clashing, ".", "Compiler/output/Compiled").First.Length is 0
 	clash = Clash(chunks)
 	if clash is not ""
 		logger.Log(clash)
 		return (List(TypeEntry), List(TypeEntry))
-	loaded = Loaded(Prepared(chunks, root, base), chunks)
+	loaded = Load(Prepare(chunks, root, base), chunks)
 	for chunks
-		loaded(index).Length > 0 then loaded(index) else NativeFolder(selection, false).Counted(value, root)
+		loaded(index).Length > 0 then loaded(index) else NativeFolder(selection, false).CollectAll(value, root)
 Clash(chunks List(Texts)) Text
 	NativeChunks.Clash(Single) is ""
 	NativeChunks.Clash(Clashing).StartsWith("SameNamedTypes: P in a/P.strict and b/P.strict, a build keys")
@@ -39,31 +39,31 @@ Clash(chunks List(Texts)) Text
 				return "SameNamedTypes: " + places + ", a build keys types by their plain name, rename one"
 			seen.Add(name, value)
 	""
-Chunked(base Text, index Number) Text
-	NativeChunks.Chunked("./Math/Tests.test", 2) is "./Math/Tests.test-2.strictbinary"
+Chunk(base Text, index Number) Text
+	NativeChunks.Chunk("./Math/Tests.test", 2) is "./Math/Tests.test-2.strictbinary"
 	base + "-" + index + ".strictbinary"
-Prepared(chunks List(Texts), root Text, base Text) Texts
-	NativeChunks.Prepared(Single, ".", "Compiler/output/Prepared") is ("")
+Prepare(chunks List(Texts), root Text, base Text) Texts
+	NativeChunks.Prepare(Single, ".", "Compiler/output/Prepared") is ("")
 	if chunks.Length is 1
 		return List(Text) + ""
 	mutable commands = List(Mutable(Text))
 	for chunks
-		commands.Add(NativeCompiler.Arguments("linked", (Chunked(base, index), root, selection) + value))
+		commands.Add(NativeCompiler.Arguments("linked", (Chunk(base, index), root, selection) + value))
 	for ToolRunner(NativeCompiler.Executable(root)).ExecuteAll(commands, "Frontend / chunks (" + chunks.Length + " jobs)")
-		Chunked(base, index)
-Saved(output Text, root Text, paths Texts)
-	NativeChunks("*").Saved(Unsaved, ".", List(Text) + "Missing.strict") is Error("ChunkNotCompiled")
+		Chunk(base, index)
+Save(output Text, root Text, paths Texts)
+	NativeChunks("*").Save(Unsaved, ".", List(Text) + "Missing.strict") is Error("ChunkNotCompiled")
 	if IsKept(output, paths, root)
 		return
 	File(output).Delete
-	counted = NativeFolder(selection, false).Counted(paths, root)
+	counted = NativeFolder(selection, false).CollectAll(paths, root)
 	if counted.Length < paths.Length
 		return Error("ChunkNotCompiled")
 	File(output).Write(BinaryFile(output).Pack(List(Number), counted, List(Text)))
-	Stamped(output, paths, root, counted)
+	Stamp(output, paths, root, counted)
 IsKept(output Text, paths Texts, root Text) Boolean
 	NativeChunks.IsKept(Unsaved, NativeFolder.Hellos, ".") is false
-	NativeChunks("*").Saved(Stamping, ".", NativeFolder.Hellos) is not Error
+	NativeChunks("*").Save(Stamping, ".", NativeFolder.Hellos) is not Error
 	NativeChunks("*").IsKept(Stamping, NativeFolder.Hellos, ".")
 	NativeChunks.IsKept(Stamping, NativeFolder.Hellos, ".") is false
 	stamp = File(output + ".stamp")
@@ -74,8 +74,8 @@ IsKept(output Text, paths Texts, root Text) Boolean
 Key(paths Texts, root Text) Text
 	NativeChunks("*").Key(List(Text) + "A.strict", ".") is ".\t*\tA.strict"
 	Text.Combine((root, selection) + paths, "\t")
-Stamped(output Text, paths Texts, root Text, types List(TypeEntry))
-	NativeChunks.Stamped(Unsaved, List(Text) + "Examples/Sum.strict", ".", List(TypeEntry)) is not Error
+Stamp(output Text, paths Texts, root Text, types List(TypeEntry))
+	NativeChunks.Stamp(Unsaved, List(Text) + "Examples/Sum.strict", ".", List(TypeEntry)) is not Error
 	mutable inputs = List(Text) + Process.Current.executable
 	for paths
 		inputs = inputs + (Path(value).PathOnly.text + "/*")
@@ -83,17 +83,17 @@ Stamped(output Text, paths Texts, root Text, types List(TypeEntry))
 		inputs = inputs + TypeSource(value).Locate(Path(paths.First).PathOnly.text)
 	lines = (List(Text) + Key(paths, root)) + NativeCache.Adding.Snapshot(inputs.Unique)
 	File(output + ".stamp").Write(Text.Combine(lines, "\n"))
-Loaded(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
-	NativeChunks.Loaded(List(Text) + Unsaved, Single).First.Length is 0
+Load(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
+	NativeChunks.Load(List(Text) + Unsaved, Single).First.Length is 0
 	Decodings(outputs, chunks)
 Decodings(outputs Texts, chunks List(Texts)) List(List(TypeEntry))
 	NativeChunks.Decodings(List(Text) + "", Single).Length is 1
 	for outputs
-		Decoded(value, chunks(index).Length)
-Decoded(output Text, count Number) List(TypeEntry)
-	NativeChunks.Decoded(Unsaved, 1).Length is 0
-	NativeChunks("*").Saved(Saving, ".", NativeFolder.Hellos) is not Error
-	NativeChunks.Decoded(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
+		Decode(value, chunks(index).Length)
+Decode(output Text, count Number) List(TypeEntry)
+	NativeChunks.Decode(Unsaved, 1).Length is 0
+	NativeChunks("*").Save(Saving, ".", NativeFolder.Hellos) is not Error
+	NativeChunks.Decode(Saving, 2)(1).Name is "Strict/Examples/HelloLogger"
 	if File(output).Exists is false
 		return List(TypeEntry)
 	types = BinaryFile(output).Types(BinaryFile(output).Unpack(File(output).ReadBytes))

@@ -107,13 +107,13 @@ PrefilledBatch(prompts List(Numbers), start = 0, chunk = 8192) List(Numbers) nat
 RunBatch(prompts List(Numbers), length Number, start Number) Numbers
 	Tiny.RunBatch(Uneven, 3, 0).Length is 2 * 3 * Tiny.norm.Length
 	part = SequenceLength(prompts)
-	Steps(part.Padd(length), part.Positions(length, start), prompts.Length).hidden
+	Steps(part.Pad(length), part.Positions(length, start), prompts.Length).hidden
 Steps(chosen Numbers, positions Numbers, sequences Number) Qwen3
 	Tiny.Steps(List(Number) + 1, List(Number) + 0, 1).hidden.Length is 8
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).hidden.Length is 16
-	Forwarded(basis.Restore(Embedd(chosen), norm.Length), Rotations(positions), sequences, List(Numbers), List(Number))
+	Forwarded(basis.Restore(Embed(chosen), norm.Length), Rotations(positions), sequences, List(Numbers), List(Number))
 Forwarded(input Numbers, rotation Numbers, sequences Number, deepstack List(Numbers), rows Numbers) Qwen3
-	Tiny.Forwarded(Tiny.Embedd((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
+	Tiny.Forwarded(Tiny.Embed((1, 2)), Tiny.Rotations((0, 1)), 1, List(Numbers), List(Number)).hidden is Prompted.hidden
 	mutable current = input
 	mutable updated = List(Mutable(Qwen3Block))
 	completion = Completion(progress, blocks.Length, Process.Elapsed)
@@ -146,9 +146,9 @@ Nexts Numbers
 	Prompted.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Prompted.Step(3, 2).Next, Prompted.Step(4, 2).Next)
 	logits = basis.Sums(outputs, Layer.Unbiased, Qwen3Block.Normalize(hidden, 0, hidden.Length, norm))
 	Greedy.Rows(logits, outputs.Length)
-Embedd(chosen Numbers) Numbers
-	Tiny.Embedd((1, 2)).Length is 16
-	Tiny.Embedd((1, 2))(8) is Tiny.tokens(2).First
+Embed(chosen Numbers) Numbers
+	Tiny.Embed((1, 2)).Length is 16
+	Tiny.Embed((1, 2))(8) is Tiny.tokens(2).First
 	width = norm.Length
 	for chosen.Length * width
 		tokens(chosen((index / width).Floor))(index % width)

@@ -49,33 +49,33 @@ WrittenKind(writer Number) Text
 		return entry.kind is InstructionType.IndexCall then ElementKind(variable) else variable
 	if entry.kind is InstructionType.Invoke
 		return TypeEntry.ShortName(PayloadDecoder(entry).ReturnType)
-	entry.kind is InstructionType.FieldLoad then FieldKind(writer, entry) else Calculated(writer, entry)
-Calculated(writer Number, entry InstructionEntry) Text
-	Graded.Calculated(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
-	Graded.Calculated(4, InstructionEntry.Binary(InstructionType.Equal, (1, 0, 3))) is "Boolean"
-	MlirKinds(MlirListOperators.Mixed).Calculated(5, MlirListOperators.Mixed.method.instructions(5)) is "List(Number)"
+	entry.kind is InstructionType.FieldLoad then FieldKind(writer, entry) else Calculate(writer, entry)
+Calculate(writer Number, entry InstructionEntry) Text
+	Graded.Calculate(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
+	Graded.Calculate(4, InstructionEntry.Binary(InstructionType.Equal, (1, 0, 3))) is "Boolean"
+	MlirKinds(MlirListOperators.Mixed).Calculate(5, MlirListOperators.Mixed.method.instructions(5)) is "List(Number)"
 	if entry.kind > InstructionType.ArithmeticSeparator and entry.kind < InstructionType.BinaryOperatorsSeparator
 		return "Boolean"
 	if entry.kind < InstructionType.StoreSeparator or entry.kind >= InstructionType.Modulo
 		return "Number"
-	left = MlirLayout(function).Represented(KindOf(writer, entry.payload(1)))
+	left = MlirLayout(function).Represent(KindOf(writer, entry.payload(1)))
 	if left.StartsWith("List(") or entry.kind is InstructionType.Add and left is "Text"
 		return left
 	entry.kind is InstructionType.Add then AddedRight(writer, entry) else "Number"
 AddedRight(writer Number, entry InstructionEntry) Text
 	Graded.AddedRight(4, InstructionEntry.Binary(InstructionType.Add, (1, 0, 3))) is "Text"
-	right = MlirLayout(function).Represented(KindOf(writer, entry.payload(2)))
+	right = MlirLayout(function).Represent(KindOf(writer, entry.payload(2)))
 	right.StartsWith("List(") or right is "Text" then right else "Number"
 IsText(position Number, register Number) Boolean
-	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (0, 4, 9))) is "Text"
-	Graded.Calculated(7, InstructionEntry.Binary(InstructionType.Add, (4, 4, 9))) is "Number"
-	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.Invoke, (0, 0, 9))) is "Number"
-	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.LoadConstantToRegister, (0, 0, 9))) is "Number"
-	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 9))) is "List(Number)"
-	Listed.Calculated(5, InstructionEntry.Binary(InstructionType.Add, (0, 1, 9))) is "List(Number)"
+	Graded.Calculate(7, InstructionEntry.Binary(InstructionType.Add, (0, 4, 9))) is "Text"
+	Graded.Calculate(7, InstructionEntry.Binary(InstructionType.Add, (4, 4, 9))) is "Number"
+	Listed.Calculate(5, InstructionEntry.Binary(InstructionType.Invoke, (0, 0, 9))) is "Number"
+	Listed.Calculate(5, InstructionEntry.Binary(InstructionType.LoadConstantToRegister, (0, 0, 9))) is "Number"
+	Listed.Calculate(5, InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 9))) is "List(Number)"
+	Listed.Calculate(5, InstructionEntry.Binary(InstructionType.Add, (0, 1, 9))) is "List(Number)"
 	Graded.IsText(4, 1)
 	Graded.IsText(4, 2) is false
-	MlirLayout(function).Represented(KindOf(position, register)) is "Text"
+	MlirLayout(function).Represent(KindOf(position, register)) is "Text"
 Writer(position Number, register Number) Number
 	Graded.Writer(5, 1) is 2
 	Graded.Writer(1, 7) is -1
@@ -88,7 +88,7 @@ Writer(position Number, register Number) Number
 VariableKind(position Number, name Text) Text
 	Graded.VariableKind(2, "letter") is "Text"
 	Graded.VariableKind(2, "width") is "Number"
-	found = Stored(position, name)
+	found = Store(position, name)
 	if found < 0
 		return DeclaredKind(position, name)
 	store = function.method.instructions(found)
@@ -104,9 +104,9 @@ WrappedKind(kind Text, name Text) Text
 		return kind
 	isMember = name.StartsWith("inline") and name.EndsWith("_" + changing.First.Name)
 	isMember then TypeEntry.ShortName(changing.First.typeName) else kind
-Stored(position Number, name Text) Number
-	Graded.Stored(2, "letter") is 1
-	Graded.Stored(2, "width") is -1
+Store(position Number, name Text) Number
+	Graded.Store(2, "letter") is 1
+	Graded.Store(2, "width") is -1
 	for position
 		at = position - 1 - index
 		entry = function.method.instructions(at)
@@ -157,7 +157,7 @@ FieldKind(writer Number, entry InstructionEntry) Text
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, ("Name", "Error"), (5, 6, -1))) is "Text"
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, ("Stacktraces", "Error"), (5, 6, -1))) is not "Text"
 	kind = KindOf(writer, entry.payload(1))
-	wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrapped(kind)
+	wrapped = entry.texts is ("Name", "Error") then "Text" else MlirLayout(function).Wrap(kind)
 	if entry.texts(0) is "value" or wrapped is not ""
 		return entry.texts(0) is "value" then kind else wrapped
 	member = MembersKind(function.TypeOf(kind).members, entry.texts(0))
@@ -166,7 +166,7 @@ FieldKind(writer Number, entry InstructionEntry) Text
 MembersKind(members List(MemberEntry), name Text) Text
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, "value", (5, 6, -1))) is "Shape"
 	Graded.FieldKind(7, InstructionEntry(InstructionType.FieldLoad, "other", (5, 6, -1))) is "Number"
-	Graded.Stored(5, "letter") is 1
+	Graded.Store(5, "letter") is 1
 	Graded.DeclaredKind(0, "other") is "Number"
 	Graded.MembersKind(MlirFunction.Shape.members, "width") is "Number"
 	Graded.MembersKind(MlirFunction.Shape.members, "other") is ""
@@ -181,7 +181,7 @@ ElementKind(container Text) Text
 	Graded.ElementKind("List(TypeEntry)") is "TypeEntry"
 	Graded.ElementKind("Text") is "Character"
 	Graded.ElementKind("Number") is "Number"
-	represented = MlirLayout(function).Represented(container)
+	represented = MlirLayout(function).Represent(container)
 	if represented is "Text"
 		return "Character"
 	represented.StartsWith("List(") then represented.Substring(5, represented.Length - 6) else "Number"
@@ -203,5 +203,5 @@ ElementSuffix(kind Text) Text
 	Graded.ElementSuffix("List(Text)") is "text"
 	Graded.ElementSuffix("List(Shape)") is ""
 	MlirKinds(MlirFlats.Sample.function).ElementSuffix("List(Tripling)") is "flat"
-	element = MlirLayout(function).Represented(ElementKind(kind))
+	element = MlirLayout(function).Represent(ElementKind(kind))
 	element is in ("Text", "Number", "Flat") then element.Lower else ""

@@ -66,15 +66,15 @@ Terminator Text
 	MetalBranch(Body, Labels, 4, true, true).Terminator.EndsWith("} v7_in = ((long)1); strict_block = 2; continue;")
 	words = MetalInstruction(body(at), isKernel).Words
 	if words.First is "switch"
-		return Switched(words)
+		return Switch(words)
 	if words.First is "br"
 		condition = words.Length is 3 then "" else "if (" + MetalValue(words(2)).Operand("i1") + ") { "
 		return words.Length is 3 then Jump(words.Last) else condition + Jump(words(4)) + " } else { " + Jump(words(6)) + " }"
 	if words.First is "ret" and words.Length is 3
 		return "return " + MetalValue(words.Last).Operand(words(1)) + ";"
 	isVoid then "return;" else "return {};"
-Switched(words Texts) Text
-	MetalBranch(Body, Labels, 4, true, true).Switched(Switching).StartsWith("if (v0 == ((long)16))")
+Switch(words Texts) Text
+	MetalBranch(Body, Labels, 4, true, true).Switch(Switching).StartsWith("if (v0 == ((long)16))")
 	mutable cases = ""
 	mutable next = at + 1
 	for body.Slice(at + 1, body.Length - at - 1)

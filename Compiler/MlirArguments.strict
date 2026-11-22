@@ -18,14 +18,14 @@ Constant(callee MlirFunction, parameter Number, depth Number) Numbers
 	if depth > 4
 		return found
 	for functions
-		matched = Matched(value, callee, parameter, depth)
+		matched = Match(value, callee, parameter, depth)
 		if matched.Length > 1 or matched.Length is 1 and found.Length is 1 and found.First is not matched.First
 			return List(Number)
 		found = matched.Length is 1 then matched else found
 	found
-Matched(caller MlirFunction, callee MlirFunction, parameter Number, depth Number) Numbers
-	Calling.Matched(Calling.functions.First, Called, 0, 0) is (12)
-	Calling.Matched(Called, Called, 0, 0).Length is 0
+Match(caller MlirFunction, callee MlirFunction, parameter Number, depth Number) Numbers
+	Calling.Match(Calling.functions.First, Called, 0, 0) is (12)
+	Calling.Match(Called, Called, 0, 0).Length is 0
 	mutable found = List(Number)
 	for caller.method.instructions
 		if IsTargeting(caller, index, callee)
@@ -40,9 +40,9 @@ Argument(caller MlirFunction, at Number, parameter Number, depth Number) Numbers
 	entry = caller.method.instructions(at)
 	if parameter >= PayloadDecoder(entry).ArgumentCount
 		return List(Number)
-	Evaluated(caller, entry.payload(LoadReuse(caller.method.instructions).InvokeReads(entry)(parameter)), at, depth)
-Evaluated(caller MlirFunction, register Number, at Number, depth Number) Numbers
-	Calling.Evaluated(Calling.functions.First, 2, 3, 0) is (12)
+	Evaluat(caller, entry.payload(LoadReuse(caller.method.instructions).InvokeReads(entry)(parameter)), at, depth)
+Evaluat(caller MlirFunction, register Number, at Number, depth Number) Numbers
+	Calling.Evaluat(Calling.functions.First, 2, 3, 0) is (12)
 	writer = LoadReuse(caller.method.instructions).Writer(register, at, -1)
 	if writer < 0
 		return List(Number)
@@ -53,15 +53,15 @@ Evaluated(caller MlirFunction, register Number, at Number, depth Number) Numbers
 	if entry.kind is InstructionType.LoadVariableToRegister
 		parameter = caller.method.ParameterNames.Index(entry.texts(0))
 		return parameter < 0 then List(Number) else Constant(caller, parameter, depth + 1)
-	Combined(caller, entry, writer, depth)
-Combined(caller MlirFunction, entry InstructionEntry, at Number, depth Number) Numbers
-	Calling.Combined(Calling.functions.First, Calls(2), 2, 0) is (12)
-	Calling.Combined(Calling.functions.First, Calls(3), 3, 0).Length is 0
+	Combine(caller, entry, writer, depth)
+Combine(caller MlirFunction, entry InstructionEntry, at Number, depth Number) Numbers
+	Calling.Combine(Calling.functions.First, Calls(2), 2, 0) is (12)
+	Calling.Combine(Calling.functions.First, Calls(3), 3, 0).Length is 0
 	LoadReuse(Calling.functions.First.method.instructions).Writer(2, 3, -1) is 2
 	if entry.kind is not in (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 		return List(Number)
-	left = Evaluated(caller, entry.payload(1), at, depth)
-	right = Evaluated(caller, entry.payload(2), at, depth)
+	left = Evaluat(caller, entry.payload(1), at, depth)
+	right = Evaluat(caller, entry.payload(2), at, depth)
 	if left.Length is 0 or right.Length is 0
 		return List(Number)
 	sum = entry.kind is InstructionType.Add then left.First + right.First else left.First - right.First

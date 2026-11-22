@@ -35,7 +35,7 @@ Operand(type Text) Text
 		return "v" + text.Substring(1).Replace(".", "_").Replace("-", "_")
 	if text is in ("true", "false", "poison", "undef", "null", "zeroinitializer")
 		return text is in ("true", "false") then text else "0"
-	text.StartsWith("0x") then Hexed(type) else Literal(type)
+	text.StartsWith("0x") then FormatHex(type) else Literal(type)
 Literal(type Text) Text
 	MetalValue("-3").Literal("i64") is "((long)-3)"
 	MetalValue("2.500000e-01").Literal("float") is "2.500000e-01f"
@@ -43,9 +43,9 @@ Literal(type Text) Text
 	if text is "" or "0123456789-".IndexOf(text(0)) < 0 or type is "double" or MetalValue(type).Type is ""
 		return "@" + text
 	type is "float" then text + "f" else "((" + MetalValue(type).Type + ")" + text + ")"
-Hexed(type Text) Text
-	MetalValue("0xH3C00").Hexed("half") is "as_type<half>((ushort)0x3C00)"
-	MetalValue("0x3FF0000000000000").Hexed("double") is "0x3FF0000000000000ul"
+FormatHex(type Text) Text
+	MetalValue("0xH3C00").FormatHex("half") is "as_type<half>((ushort)0x3C00)"
+	MetalValue("0x3FF0000000000000").FormatHex("double") is "0x3FF0000000000000ul"
 	if text.StartsWith("0xH")
 		return "as_type<half>((ushort)0x" + text.Substring(3) + ")"
 	type is "float" then "as_type<float>(" + FloatBits + "u)" else text + "ul"

@@ -53,7 +53,7 @@ Members(name Text, input Number) Texts
 	for MlirWholeInstance(kernel.Callee).Members(input)
 		kind = kernel.Kind(name + "_" + value)
 		if kind is in ("i", "c")
-			MlirWholeFields(function).Converted("%f_" + name + "_" + value, kind, "%w" + input + "_" + value).First
+			MlirWholeFields(function).Convert("%f_" + name + "_" + value, kind, "%w" + input + "_" + value).First
 Names Texts
 	Body.Names is ("%f_board_cells_d", "%at")
 	kernel = MlirWholeKernel(function, position)
@@ -82,26 +82,26 @@ Functions Texts
 	Text.Combine(Body.Functions).IndexOf("llvm.alloca %one x i64 : (i64) -> !llvm.ptr<5>") > 0
 	mutable symbols = List(Mutable(Text))
 	mutable lines = List(Mutable(Text))
-	for Flattened(MlirWholeKernel(function, position).Callee, 0)
+	for Flatten(MlirWholeKernel(function, position).Callee, 0)
 		if value.Symbol is not in symbols
 			symbols.Add(value.Symbol)
 			lines = lines + MlirWholeFlat(value).Lines
-	Privatized(lines)
-Flattened(callee MlirFunction, depth Number) List(MlirFunction)
-	Body.Flattened(MlirWholeKernel.Kernel.Callee, 0).Length is 1
+	Privatize(lines)
+Flatten(callee MlirFunction, depth Number) List(MlirFunction)
+	Body.Flatten(MlirWholeKernel.Kernel.Callee, 0).Length is 1
 	mutable found = List(MlirFunction) + callee
 	for callee.method.instructions
 		isCall = value.kind is InstructionType.Invoke and depth < 3
 		if isCall and MlirWholeFunction(callee).IsBuilt(value, index) is false and IsNative(callee, value, index) is false
-			found = found + Flattened(MlirWholeFunction(callee).Callee(value), depth + 1)
+			found = found + Flatten(MlirWholeFunction(callee).Callee(value), depth + 1)
 	found
 IsNative(callee MlirFunction, entry InstructionEntry, at Number) Boolean
 	Body.IsNative(Body.function, MlirWholeKernel.Blurring(8), 8) is false
 	helper = MlirCalls(callee, at).NativeHelper(entry, PayloadDecoder(entry))
 	PayloadDecoder(entry).Text(2) is in ("Floor", "Length") or helper is not ""
-Privatized(lines Texts) Texts
-	Body.Privatized(List(Text) + "    %r0 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr").Length is 2
-	Body.Privatized(List(Text) + "    %a = x") is List(Text) + "    %a = x"
+Privatize(lines Texts) Texts
+	Body.Privatize(List(Text) + "    %r0 = llvm.alloca %one x i64 : (i64) -> !llvm.ptr").Length is 2
+	Body.Privatize(List(Text) + "    %a = x") is List(Text) + "    %a = x"
 	constant alloca = " = llvm.alloca %one x "
 	mutable result = List(Mutable(Text))
 	for lines

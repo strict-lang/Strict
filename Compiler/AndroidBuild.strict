@@ -23,9 +23,9 @@ Ndk Text
 	home = Environment("ANDROID_HOME")
 	sdk = home is "" then Environment("ANDROID_SDK_ROOT") else home
 	local = tools.platform is Platform.Windows then Environment("LOCALAPPDATA") + "/Android/Sdk" else ""
-	Located(Environment("ANDROID_NDK_ROOT"), sdk is "" then local else sdk)
-Located(ndk Text, sdk Text) Text
-	AndroidBuild(Toolchain.OnWindows).Located("Compiler/output/missing", "Compiler/output/missing") is ""
+	Locate(Environment("ANDROID_NDK_ROOT"), sdk is "" then local else sdk)
+Locate(ndk Text, sdk Text) Text
+	AndroidBuild(Toolchain.OnWindows).Locate("Compiler/output/missing", "Compiler/output/missing") is ""
 	if ndk is not ""
 		return Compiler(ndk) is "" then "" else ndk
 	for Directory.Directories(sdk + "/ndk").Reverse
@@ -35,23 +35,23 @@ Located(ndk Text, sdk Text) Text
 Executable(base Text) Text
 	AndroidBuild(Toolchain.OnWindows).Executable("Games/App") is "Games/App.android.so"
 	base + ".android.so"
-Linked(base Text) Text
-	AndroidBuild(Toolchain.OnWindows).Linked("Compiler/output/missing").StartsWith("mlir-opt failed")
-	compiled = Compiled(base)
+Link(base Text) Text
+	AndroidBuild(Toolchain.OnWindows).Link("Compiler/output/missing").StartsWith("mlir-opt failed")
+	compiled = Compile(base)
 	if compiled is not ""
 		return compiled
 	compiler = Compiler(Ndk)
 	if compiler is ""
 		return "Android NDK not found: set ANDROID_NDK_ROOT or ANDROID_HOME with an installed ndk/<version>"
 	sources = NativeSources(tools.natives).Arguments(Platform.Android, tools.root)
-	output = " -o " + tools.Quoted(Executable(base)) + Flags + Toolchain.Optimization
-	arguments = tools.Quoted(base + ".android.o") + sources + output
+	output = " -o " + tools.Quote(Executable(base)) + Flags + Toolchain.Optimization
+	arguments = tools.Quote(base + ".android.o") + sources + output
 	linked = ToolRunner(compiler).Execute(arguments)
 	linked.HasFailed then "Android clang failed: " + linked.error + linked.Output else "Built " + Executable(base)
-Compiled(base Text) Text
-	lowered = tools.Lowered(base)
+Compile(base Text) Text
+	lowered = tools.Lower(base)
 	if lowered is not ""
 		return lowered
-	arguments = "-c " + tools.Quoted(base + ".ll") + " -o " + tools.Quoted(base + ".android.o")
-	compiled = ToolRunner(tools.Located("clang")).Execute(arguments + Architecture + Toolchain.Optimization)
+	arguments = "-c " + tools.Quote(base + ".ll") + " -o " + tools.Quote(base + ".android.o")
+	compiled = ToolRunner(tools.Locate("clang")).Execute(arguments + Architecture + Toolchain.Optimization)
 	compiled.HasFailed then "clang failed: " + compiled.error + compiled.Output else ""

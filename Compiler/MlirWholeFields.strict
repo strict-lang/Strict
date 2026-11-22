@@ -20,7 +20,7 @@ Fields(input Number) Texts
 		kind = MlirWholeInstance(function).MemberKind(owner, value)
 		name = isSelf then value else prefix + "_" + value
 		read = Field("%p" + input, SlotOf(owner, value), "%" + prefix + value, kind)
-		lines = lines + Slot(name, kind, isSelf) + read + Stored("%" + prefix + value + kind, kind, name)
+		lines = lines + Slot(name, kind, isSelf) + read + Store("%" + prefix + value + kind, kind, name)
 	lines
 SlotOf(owner Text, member Text) Number
 	Sized.SlotOf("Strict/Grid", "cells") is 1
@@ -29,22 +29,22 @@ SlotOf(owner Text, member Text) Number
 Slot(name Text, kind Text, isSelf Boolean) Texts
 	Fits.Slot("width", "i", true).Length is 0
 	Sized.Slot("grid_cells", "d", false).First.StartsWith("    %v_grid_cells = llvm.alloca %one x !llvm.ptr")
-	slot = "    %v_" + name + " = llvm.alloca %one x " + MlirWholeValues(0).Typed(kind) + " : (i64) -> !llvm.ptr"
+	slot = "    %v_" + name + " = llvm.alloca %one x " + MlirWholeValues(0).MapType(kind) + " : (i64) -> !llvm.ptr"
 	isSelf then List(Text) else List(Text) + slot
 Field(instance Text, slot Number, target Text, kind Text) Texts
 	Fits.Field("%p1", 0, "%a", "i").Last is "    %ai = arith.fptosi %av : f64 to i64"
-	Read(instance, slot, target) + Converted(target + "v", kind, target + kind)
+	Read(instance, slot, target) + Convert(target + "v", kind, target + kind)
 Read(instance Text, slot Number, target Text) Texts
 	Fits.Read("%p1", 0, "%a").Last is "    %av = llvm.load %a : !llvm.ptr -> f64"
 	address = "    " + target + " = llvm.getelementptr " + instance + "[" + slot + "] : (!llvm.ptr) -> !llvm.ptr, f64"
 	(address, "    " + target + "v = llvm.load " + target + " : !llvm.ptr -> f64")
-Stored(source Text, kind Text, name Text) Text
-	Fits.Stored("%a", "i", "width") is "    llvm.store %a, %v_width : i64, !llvm.ptr"
-	"    llvm.store " + source + ", %v_" + name + " : " + MlirWholeValues(0).Typed(kind) + ", !llvm.ptr"
-Converted(source Text, kind Text, target Text) Texts
-	Sized.Converted("%v", "i", "%w") is ("    %w = arith.fptosi %v : f64 to i64")
-	Sized.Converted("%v", "d", "%w") is ("    %w = func.call @strict_list_lanes(%v) : (f64) -> !llvm.ptr")
-	Sized.Converted("%v", "c", "%w") is ("    %w = arith.bitcast %v : f64 to i64")
+Store(source Text, kind Text, name Text) Text
+	Fits.Store("%a", "i", "width") is "    llvm.store %a, %v_width : i64, !llvm.ptr"
+	"    llvm.store " + source + ", %v_" + name + " : " + MlirWholeValues(0).MapType(kind) + ", !llvm.ptr"
+Convert(source Text, kind Text, target Text) Texts
+	Sized.Convert("%v", "i", "%w") is ("    %w = arith.fptosi %v : f64 to i64")
+	Sized.Convert("%v", "d", "%w") is ("    %w = func.call @strict_list_lanes(%v) : (f64) -> !llvm.ptr")
+	Sized.Convert("%v", "c", "%w") is ("    %w = arith.bitcast %v : f64 to i64")
 	if kind is in ("i", "c")
 		operation = kind is "i" then " = arith.fptosi " else " = arith.bitcast "
 		return List(Text) + ("    " + target + operation + source + " : f64 to i64")

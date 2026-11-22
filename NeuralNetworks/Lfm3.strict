@@ -54,15 +54,15 @@ Forwarded(input Numbers, positions Numbers, sequences = 1) Lfm3 slow
 		current = forwarded.output
 		updated.Add(Lfm3Block(forwarded, output = List(Number)))
 	Lfm3(value, layers = updated, hidden = current)
-Embedd(tokens Numbers) Numbers
-	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedd((1, 0)) is (3, 4, 1, 2)
-	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embedd((-1, 0)) is (0, 0, 1, 2)
+Embed(tokens Numbers) Numbers
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embed((1, 0)) is (3, 4, 1, 2)
+	Lfm3(Unloaded, embedding = ((1, 2), (3, 4))).Embed((-1, 0)) is (0, 0, 1, 2)
 	width = embedding.First.Length
 	for tokens.Length * width
 		token = tokens((index / width).Floor)
 		token < 0 then 0 else embedding(token)(index % width)
 Prefilled(prompt Numbers) Lfm3 slow
-	first = Forwarded(Embedd(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
+	first = Forwarded(Embed(prompt.Slice(0, prompt.Length.Minimum(Batch))), Range(0, prompt.Length.Minimum(Batch)))
 	mutable model = first
 	for Range(Batch, prompt.Length.Maximum(Batch))
 		model = model.Step(prompt(value), value)
@@ -75,7 +75,7 @@ PrefilledEach(prompts List(Numbers)) Lfm3 slow
 	masked = Lfm3(value, layers = Mask(lengths.Pads(longest)))
 	tokens = lengths.Column(longest, 0, first)
 	positions = lengths.Positions(first, 0)
-	mutable model = first > 0 then masked.Forwarded(Embedd(tokens), positions, prompts.Length) else masked
+	mutable model = first > 0 then masked.Forwarded(Embed(tokens), positions, prompts.Length) else masked
 	for Range(first, longest)
 		model = model.Steps(lengths.Column(longest, value, 1), lengths.Positions(1, value))
 	model
@@ -87,7 +87,7 @@ Batch Number
 	Unloaded.Batch is 256 and Lfm3(Unloaded, window = 0).Batch is 256
 	window > 0 then window else 256
 Step(token Number, position Number) Lfm3 slow
-	Forwarded(Embedd(List(Number) + token), List(Number) + position)
+	Forwarded(Embed(List(Number) + token), List(Number) + position)
 Scored Numbers slow
 	size = norm.Length
 	Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Norm(hidden.Slice(hidden.Length - size, size), norm))
@@ -99,7 +99,7 @@ Copy(count Number) List(Lfm3Block)
 	for layers
 		value.Copied(count)
 Steps(tokens Numbers, positions Numbers) Lfm3 slow
-	Forwarded(Embedd(tokens), positions, tokens.Length)
+	Forwarded(Embed(tokens), positions, tokens.Length)
 Nexts Numbers
 	Lfm3(Unloaded, embedding = ((1, 0), (0, 1)), norm = (1, 1), hidden = (3, 1, 1, 2)).Nexts is (0, 1)
 	Greedy.Rows(Basis.None.Sums(embedding, Layer.Unbiased, Lfm3Block.Passing.Norm(hidden, norm)), embedding.Length)

@@ -5,61 +5,61 @@ constant Plain = MlirKindTests(MlirStatements.Copy.function, 4)
 constant TextTest = InstructionEntry(InstructionType.OfType, ("Text", "Number", "Text"), (2, 0, 1))
 constant Numbered = InstructionEntry(TextTest, texts = ("Number", "Number", "Text"))
 constant Listed = InstructionEntry(TextTest, texts = ("Text", "List", "Text"))
-Tested(entry InstructionEntry) Texts
-	Plain.Tested(TextTest).Last is "    llvm.store %t4kr, %flag : i1, !llvm.ptr"
-	Plain.Tested(Numbered).Last is "    llvm.store %t4kc, %flag : i1, !llvm.ptr"
-	Plain.Tested(Listed).First.StartsWith("unsupported: type test")
-	Plain.Tested(InstructionEntry(TextTest, payload = (3, 0, 1, 2))).Last.IndexOf("%r2") > 0
+EmitTest(entry InstructionEntry) Texts
+	Plain.EmitTest(TextTest).Last is "    llvm.store %t4kr, %flag : i1, !llvm.ptr"
+	Plain.EmitTest(Numbered).Last is "    llvm.store %t4kc, %flag : i1, !llvm.ptr"
+	Plain.EmitTest(Listed).First.StartsWith("unsupported: type test")
+	Plain.EmitTest(InstructionEntry(TextTest, payload = (3, 0, 1, 2))).Last.IndexOf("%r2") > 0
 	alternatives = entry.texts.Slice(1, entry.texts.Length - 1)
 	unsupported = "type test of " + Text.Combine(alternatives, " or ")
 	if IsMixed(alternatives) is false
-		return List(Text) + MlirStatements(function, position).Unsupported(unsupported)
+		return List(Text) + MlirStatements(function, position).Unsupport(unsupported)
 	isNumber = entry.texts.First is in Numeric
 	flag = isNumber then Temp("c") else Temp("r")
 	flipped = (Line("o", "arith.constant true"), Line("c", "arith.xori " + Temp("r") + ", " + Temp("o") + " : i1"))
 	checked = Reference("%r" + entry.payload(1)) + (isNumber then flipped else List(Text))
 	stored = checked + ("    llvm.store " + flag + ", %flag : i1, !llvm.ptr")
-	entry.payload(0) is not 3 then stored else stored + MlirStatements(function, position).Numbered(flag, entry)
+	entry.payload(0) is not 3 then stored else stored + MlirStatements(function, position).EmitNumber(flag, entry)
 IsMixed(alternatives Texts) Boolean
 	Plain.IsMixed(("Number", "Text")) and Plain.IsMixed(("Text", "List")) is false
 	MlirKindTests(MlirStatements.Singled.function, 0).IsMixed(("Number", "Text")) is false
 	first = alternatives.Length is 2 then alternatives.First is in Numeric else false
 	first is not (alternatives.Length is 2 then alternatives.Last is in Numeric else first) and function.Float is "f64"
-Texted(register Number, suffix Text, kind Text) Texts
-	Plain.Texted(0, "b", "Boolean or Text").Last is "    %t4bx = arith.select %t4kr, %t4b, %t4bn : f64"
-	Plain.Texted(0, "b", "Number or Boolean").First.StartsWith("unsupported: text of")
+EmitText(register Number, suffix Text, kind Text) Texts
+	Plain.EmitText(0, "b", "Boolean or Text").Last is "    %t4bx = arith.select %t4kr, %t4b, %t4bn : f64"
+	Plain.EmitText(0, "b", "Number or Boolean").First.StartsWith("unsupported: text of")
 	alternatives = kind.Split(" or ")
 	if IsMixed(alternatives) is false or "Text" is not in alternatives
-		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
+		return List(Text) + MlirStatements(function, position).Unsupport("text of " + kind)
 	numeric = alternatives.First is in Numeric then alternatives.First else alternatives.Last
 	texts = MlirTexts(function, position)
 	input = texts.Temp(suffix)
 	converted = MlirMemory(function, position).Converting(texts.Temp(suffix + "n"), texts.Helper(numeric), input)
 	chosen = "arith.select " + Temp("r") + ", " + input + ", " + texts.Temp(suffix + "n") + " : f64"
 	loaded = List(Text) + function.Load(input, "%r" + register)
-	loaded + converted + Classified(input) + Named(texts.Temp(suffix + "x"), chosen)
+	loaded + converted + Classify(input) + NameTest(texts.Temp(suffix + "x"), chosen)
 Reference(slot Text) Texts
 	Plain.Reference("%r0").Last is "    %t4kr = arith.ori %t4ka, %t4km : i1"
-	(List(Text) + function.Load(Temp("v"), slot)) + Classified(Temp("v"))
-Classified(word Text) Texts
-	Plain.Classified("%x").First is "    %t4ki = arith.bitcast %x : f64 to i64"
+	(List(Text) + function.Load(Temp("v"), slot)) + Classify(Temp("v"))
+Classify(word Text) Texts
+	Plain.Classify("%x").First is "    %t4ki = arith.bitcast %x : f64 to i64"
 	bits = (Line("i", "arith.bitcast " + word + " : f64 to i64"), Line("s", "arith.constant 48 : i64"))
 	top = (Line("t", "arith.shrui " + Temp("i") + ", " + Temp("s") + " : i64"), Line("z", "arith.constant 0 : i64"))
-	plain = (Compare("p", "eq", "t", "z"), Compare("n", "ne", "i", "z"), Joined("a", "andi", "p", "n"))
+	plain = (Compare("p", "eq", "t", "z"), Compare("n", "ne", "i", "z"), Join("a", "andi", "p", "n"))
 	tags = (Line("l", "arith.constant 32761 : i64"), Line("h", "arith.constant 32767 : i64"))
-	tagged = (Compare("g", "uge", "t", "l"), Compare("k", "ule", "t", "h"), Joined("m", "andi", "g", "k"))
-	bits + top + plain + tags + tagged + Joined("r", "ori", "a", "m")
+	tagged = (Compare("g", "uge", "t", "l"), Compare("k", "ule", "t", "h"), Join("m", "andi", "g", "k"))
+	bits + top + plain + tags + tagged + Join("r", "ori", "a", "m")
 Compare(target Text, predicate Text, left Text, right Text) Text
 	Plain.Compare("p", "eq", "t", "z") is "    %t4kp = arith.cmpi eq, %t4kt, %t4kz : i64"
 	Line(target, "arith.cmpi " + predicate + ", " + Temp(left) + ", " + Temp(right) + " : i64")
-Joined(target Text, operation Text, left Text, right Text) Text
-	Plain.Joined("r", "ori", "a", "m") is "    %t4kr = arith.ori %t4ka, %t4km : i1"
+Join(target Text, operation Text, left Text, right Text) Text
+	Plain.Join("r", "ori", "a", "m") is "    %t4kr = arith.ori %t4ka, %t4km : i1"
 	Line(target, "arith." + operation + " " + Temp(left) + ", " + Temp(right) + " : i1")
 Line(target Text, expression Text) Text
 	Plain.Line("o", "arith.constant true") is "    %t4ko = arith.constant true"
-	Named(Temp(target), expression)
-Named(name Text, expression Text) Text
-	Plain.Named("%x", "a") is "    %x = a"
+	NameTest(Temp(target), expression)
+NameTest(name Text, expression Text) Text
+	Plain.NameTest("%x", "a") is "    %x = a"
 	"    " + name + " = " + expression
 Temp(name Text) Text
 	Plain.Temp("x") is "%t4kx"

@@ -10,7 +10,7 @@ has softcap Number
 has hidden Numbers = List(Number)
 constant Tiny = Gemma4.Loaded("NeuralNetworks/tinygemma.gguf", 32)
 constant Prompt = (0, 4, 5)
-constant Start = Tiny.Embedd(Prompt)
+constant Start = Tiny.Embed(Prompt)
 Loaded(file Text, bits = 4) Gemma4 native
 	(Tiny.blocks.Length, Tiny.tokens.Length, Tiny.softcap) is (6, 14, 30)
 	Generation(Tiny).Generate(Prompt, 8) is (9, 2, 13, 2, 1, 4, 4, 6)
@@ -35,7 +35,7 @@ Step(token Number, position Number) Gemma4 slow
 Steps(chosen Numbers, positions Numbers, sequences = 1) Gemma4 native
 	Tiny.Steps(Prompt, (0, 1, 2)).Next is 9
 	Tiny.Steps(Prompt, (0, 1, 2)).Steps((9, 2, 13, 2), (3, 4, 5, 6)).Next is 1
-	input = Embedd(chosen)
+	input = Embed(chosen)
 	Forwarded(input, Enter(chosen, input), positions, sequences)
 Prefilled(prompt Numbers, start Number) Gemma4 slow
 	Tiny.Prefilled((0, 4, 5, 9, 2), 0).Next is 13
@@ -82,9 +82,9 @@ Repeat(cache Numbers, stride Number, count Number) Numbers
 	block = count * stride
 	for cache.Length * count
 		cache((index / block).Floor * stride + index % stride)
-Embedd(chosen Numbers) Numbers
-	Tiny.Embedd(Prompt).Length is 48
-	Tiny.Embedd(Prompt)(16) is Tiny.tokens(4).First * 4
+Embed(chosen Numbers) Numbers
+	Tiny.Embed(Prompt).Length is 48
+	Tiny.Embed(Prompt)(16) is Tiny.tokens(4).First * 4
 	width = norm.Length
 	for chosen.Length * width
 		tokens(chosen((index / width).Floor))(index % width) * width.SquareRoot

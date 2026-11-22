@@ -22,13 +22,13 @@ Globals Texts
 	mutable lines = List(Mutable(Text))
 	for function.types
 		type = value
-		for MlirInstances(function, 0).Stored(type)
-			lines = lines + Declared(type, value)
+		for MlirInstances(function, 0).Store(type)
+			lines = lines + Declare(type, value)
 	lines + ParameterGlobals
-Declared(owner TypeEntry, member MemberEntry) Texts
-	Labeling.Declared(Labeled, Label) is (LabelGlobal)
-	Mixing.Declared(Mixed, Mixed.members.First).Length is 0
-	Mixing.Declared(Mixed, Mixed.members.Last).Length is 0
+Declare(owner TypeEntry, member MemberEntry) Texts
+	Labeling.Declare(Labeled, Label) is (LabelGlobal)
+	Mixing.Declare(Mixed, Mixed.members.First).Length is 0
+	Mixing.Declare(Mixed, Mixed.members.Last).Length is 0
 	literal = Natives(function.types).Initial(member)
 	constants = MlirConstants(function, 0, Name(owner, member))
 	if literal.kind is "Text"
@@ -47,11 +47,11 @@ ParameterTexts Texts
 	Greets.ParameterTexts is ("Hi")
 	mutable texts = List(Mutable(Text))
 	for type, method in function.types, type.methods
-		texts = Added(texts, method.parameters)
+		texts = Add(texts, method.parameters)
 	texts
-Added(texts Texts, parameters List(MemberEntry)) Texts
-	Greets.Added(List(Text), Greeting.methods.First.parameters) is ("Hi")
-	Mixing.Added(List(Text), Mixed.methods.First.parameters) is ("Hi")
+Add(texts Texts, parameters List(MemberEntry)) Texts
+	Greets.Add(List(Text), Greeting.methods.First.parameters) is ("Hi")
+	Mixing.Add(List(Text), Mixed.methods.First.parameters) is ("Hi")
 	mutable added = texts
 	for parameters
 		initial = Natives(function.types).Initial(value)

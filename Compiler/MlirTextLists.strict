@@ -23,9 +23,9 @@ Converted Texts
 	Texted.Converted is List(Text) + "    %t2x = func.call @strict_text_list(%t2m) : (f64) -> f64"
 	line = "    " + Instance + " = func.call @strict_text_list(" + calls.Temp("m") + ") : (f64) -> f64"
 	isTexted then List(Text) + line else List(Text)
-Called(loads Texts, defaults Texts, call Text) Texts
-	Plain.Called("a", "b", "c") is ("a", "b", "c")
-	Texted.Called("a", "b", "c").Length is 5
+Call(loads Texts, defaults Texts, call Text) Texts
+	Plain.Call("a", "b", "c") is ("a", "b", "c")
+	Texted.Call("a", "b", "c").Length is 5
 	loads + Converted + defaults + call + Back
 Back Texts
 	Plain.Back.Length is 0

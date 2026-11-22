@@ -20,9 +20,9 @@ constant AppendLoads = ("    %t3pl = llvm.load %v_listResult0 : !llvm.ptr -> f64
 constant AppendPacked = ("    %t3pk = func.call @strict_two_x(%t3pl) : (f64) -> f64", "    %t3pp = func.call @strict_two_packed(%t3pk, %t3pe) : (f64, f64) -> f64", "    llvm.store %t3pp, %v_listResult0 : f64, !llvm.ptr")
 constant Appending = AppendLoads + AppendPacked
 IsPaired(kind Text) Boolean
-	Built.Appended(Building.instructions(3), MlirLists(Built.function, 3)) is Appending
-	Text.Combine(Built.Appended(Building.instructions(4), MlirLists(Built.function, 3))).IndexOf("push(") > 0
-	Text.Combine(Sample.Appended(Building.instructions(2), MlirLists(Sample.function, 1))).IndexOf("push(") > 0
+	Built.Append(Building.instructions(3), MlirLists(Built.function, 3)) is Appending
+	Text.Combine(Built.Append(Building.instructions(4), MlirLists(Built.function, 3))).IndexOf("push(") > 0
+	Text.Combine(Sample.Append(Building.instructions(2), MlirLists(Sample.function, 1))).IndexOf("push(") > 0
 	Sample.IsPaired("Pairing")
 	MlirPairs(MlirCouples.Sample.function, 0).IsPaired("Sizing")
 	IsListed(kind) or MlirCouples(function, position).IsCoupled(kind)
@@ -44,15 +44,15 @@ Helper(entry InstructionEntry, owner Text, name Text) Text
 	if isList and name is in ("Length", "Count")
 		return "strict_two_length"
 	isList and name is in ("X", "Y") then "strict_two_" + name.Lower else ""
-Constructed(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
-	Sample.Constructed(Constructing, "Strict/Math/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
-	Text.Combine(Rewrapped.Constructed(Constructing, "Pairing", Instances)).IndexOf("strict_two_from_list") is -1
+Construct(entry InstructionEntry, typeName Text, instances MlirInstances) Texts
+	Sample.Construct(Constructing, "Strict/Math/Pairing", Instances).Last is "    llvm.store %t1pp, %r1 : f64, !llvm.ptr"
+	Text.Combine(Rewrapped.Construct(Constructing, "Pairing", Instances)).IndexOf("strict_two_from_list") is -1
 	if IsListed(typeName) is false
-		return MlirLanes(function, position).Built(entry, typeName, instances)
+		return MlirLanes(function, position).Build(entry, typeName, instances)
 	register = PayloadDecoder(entry).Arguments.First
 	argument = "%r" + register
 	if IsBuiltArgument(entry) or IsPaired(MlirKinds(function).KindOf(position, register))
-		return function.Copied(argument, "%r" + entry.payload(0), "%t" + position + "pp")
+		return function.Copy(argument, "%r" + entry.payload(0), "%t" + position + "pp")
 	call = "    %t" + position + "pp = func.call @strict_two_from_list(%t" + position + "pa) : (f64) -> f64"
 	loaded = function.Load("%t" + position + "pa", argument)
 	(loaded, call, function.Store("%t" + position + "pp", "%r" + entry.payload(0)))
@@ -73,20 +73,20 @@ IsPacking(entry InstructionEntry, register Number) Boolean
 	isFrom = entry.kind is InstructionType.Invoke and entry.texts(1) is "from" and IsPaired(entry.texts(0))
 	isFrom and PayloadDecoder(entry).ArgumentCount is 1 and PayloadDecoder(entry).Arguments.First is register
 IsBuiltArgument(entry InstructionEntry) Boolean
-	Sample.Constructed(Constructing, "Pairing", Instances)(0) is "    %t1pa = llvm.load %r0 : !llvm.ptr -> f64"
-	Sample.Constructed(Constructing, "Pairing", Instances)(1).EndsWith("_from_list(%t1pa) : (f64) -> f64")
-	Sample.Constructed(Constructing, "Pairing", Instances)(1).StartsWith("    %t1pp = func.call @strict_two")
-	Sample.Defaulted(Twice, "%s", "d3")(1) is "    %t1d3dy = arith.constant 0x4000000000000000 : f64"
+	Sample.Construct(Constructing, "Pairing", Instances)(0) is "    %t1pa = llvm.load %r0 : !llvm.ptr -> f64"
+	Sample.Construct(Constructing, "Pairing", Instances)(1).EndsWith("_from_list(%t1pa) : (f64) -> f64")
+	Sample.Construct(Constructing, "Pairing", Instances)(1).StartsWith("    %t1pp = func.call @strict_two")
+	Sample.Default(Twice, "%s", "d3")(1) is "    %t1d3dy = arith.constant 0x4000000000000000 : f64"
 	MlirPairs(Built.function, 5).IsBuiltArgument(Building.instructions(5))
 	previous = position > 0 then function.method.instructions(position - 1) else entry
 	previous.kind is InstructionType.LoadVariableToRegister and IsBuilt(previous.texts(0))
-Appended(entry InstructionEntry, fallback MlirLists) Texts
-	MlirPairs(Built.function, 2).Appended(Building.instructions(2), MlirLists(Built.function, 2)).Length is 5
+Append(entry InstructionEntry, fallback MlirLists) Texts
+	MlirPairs(Built.function, 2).Append(Building.instructions(2), MlirLists(Built.function, 2)).Length is 5
 	if entry.kind is not InstructionType.InvokeWriteToList or IsBuilt(entry.texts(0)) is false
-		return MlirFlats(function, position).Appended(entry, fallback)
+		return MlirFlats(function, position).Append(entry, fallback)
 	slot = "%v_" + entry.texts(0)
 	temp = "%t" + position
-	isFirst = Written(entry.texts(0)) is 0
+	isFirst = Write(entry.texts(0)) is 0
 	kept = "    " + temp + "pk = func.call @strict_two_" + (isFirst then "y" else "x") + "(" + temp + "pl) : (f64) -> f64"
 	parts = isFirst then temp + "pe, " + temp + "pk" else temp + "pk, " + temp + "pe"
 	packed = "    " + temp + "pp = func.call @strict_two_packed(" + parts + ") : (f64, f64) -> f64"
@@ -95,18 +95,18 @@ Appended(entry InstructionEntry, fallback MlirLists) Texts
 Writes(name Text) Number
 	Built.Writes("listResult0") is 2
 	Built.Writes("numbers") is 0
-	MlirPairs(function, function.method.instructions.Length).Written(name)
-Started(slot Text, suffix Text) Texts
-	Built.Started("%v_listResult0", "") is List(Text) + "    llvm.store %zero, %v_listResult0 : f64, !llvm.ptr"
-	MlirPairs(Tripled, 0).Started("%v_listResult0", "")(0).IndexOf("0x401C") > 0
-	MlirPairs(Tripled, 0).Started("%v_listResult0", "").Last is "    llvm.store %t0l, %v_listResult0 : f64, !llvm.ptr"
-	MlirPairs(MlirLoops.Collecting.function, 0).Started("%v_forResult", "").First.StartsWith("    llvm.store %zero, ")
-	MlirPairs(MlirFlats.Made.function, 0).Started("%v_listResult0", "").Length is 1
+	MlirPairs(function, function.method.instructions.Length).Write(name)
+Start(slot Text, suffix Text) Texts
+	Built.Start("%v_listResult0", "") is List(Text) + "    llvm.store %zero, %v_listResult0 : f64, !llvm.ptr"
+	MlirPairs(Tripled, 0).Start("%v_listResult0", "")(0).IndexOf("0x401C") > 0
+	MlirPairs(Tripled, 0).Start("%v_listResult0", "").Last is "    llvm.store %t0l, %v_listResult0 : f64, !llvm.ptr"
+	MlirPairs(MlirLoops.Collecting.function, 0).Start("%v_forResult", "").First.StartsWith("    llvm.store %zero, ")
+	MlirPairs(MlirFlats.Made.function, 0).Start("%v_listResult0", "").Length is 1
 	name = slot.Substring(3)
-	if IsBuilt(name) or IsPresized(name) or MlirFlats(function, position).Packed(name) > 0
+	if IsBuilt(name) or IsPresized(name) or MlirFlats(function, position).Pack(name) > 0
 		return List(Text) + function.Store("%zero", slot)
 	lists = MlirLists(function, position)
-	lists.Created(Writes(name), suffix) + function.Store(lists.Temp(suffix + "l"), slot)
+	lists.Creat(Writes(name), suffix) + function.Store(lists.Temp(suffix + "l"), slot)
 IsPresized(name Text) Boolean
 	MlirPairs(MlirLoops.Collecting.function, 0).IsPresized("forResult")
 	MlirPairs(MlirLoops.Collecting.function, 0).IsPresized("listResult0") is false
@@ -117,21 +117,21 @@ IsPresized(name Text) Boolean
 		if steps(value).kind is InstructionType.LoopBegin
 			return name is "forResult" and MlirLoops(function, value).Presized.Length > 0
 	false
-Written(name Text) Number
-	Sample.Defaulted(Twice, "%s", "d3")(0) is "    %t1d3dx = arith.constant 0x3FF0000000000000 : f64"
-	Sample.Defaulted(Twice, "%s", "d3")(2).EndsWith("(%t1d3dx, %t1d3dy) : (f64, f64) -> f64")
-	Sample.Defaulted(Twice, "%s", "d3")(2).StartsWith("    %t1d3dp = func.call @strict_two_packed(")
-	MlirPairs(Built.function, 3).Written("listResult0") is 1
+Write(name Text) Number
+	Sample.Default(Twice, "%s", "d3")(0) is "    %t1d3dx = arith.constant 0x3FF0000000000000 : f64"
+	Sample.Default(Twice, "%s", "d3")(2).EndsWith("(%t1d3dx, %t1d3dy) : (f64, f64) -> f64")
+	Sample.Default(Twice, "%s", "d3")(2).StartsWith("    %t1d3dp = func.call @strict_two_packed(")
+	MlirPairs(Built.function, 3).Write("listResult0") is 1
 	mutable count = 0
 	for position
 		earlier = function.method.instructions(index)
 		if earlier.kind is InstructionType.InvokeWriteToList and earlier.texts(0) is name
 			count = count + 1
 	count
-Defaulted(initial Runtime/VmValue, slot Text, suffix Text) Texts
-	Sample.Defaulted(VmValue.OfList(List(VmValue)), "%s", "d3") is ("    llvm.store %zero, %s : f64, !llvm.ptr")
-	Sample.Defaulted(Twice, "%s", "d3").Length is 4
-	Sample.Defaulted(Twice, "%s", "d3").First.StartsWith("    %t1d3dx")
+Default(initial Runtime/VmValue, slot Text, suffix Text) Texts
+	Sample.Default(VmValue.OfList(List(VmValue)), "%s", "d3") is ("    llvm.store %zero, %s : f64, !llvm.ptr")
+	Sample.Default(Twice, "%s", "d3").Length is 4
+	Sample.Default(Twice, "%s", "d3").First.StartsWith("    %t1d3dx")
 	if initial.items.Length is not 2
 		return List(Text) + function.Store("%zero", slot)
 	temp = "%t" + position + suffix

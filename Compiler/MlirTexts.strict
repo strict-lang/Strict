@@ -35,8 +35,8 @@ Temp(suffix Text) Text
 	MlirTexts(Joined, 7).IsNativeConversion(Joined.method.instructions(7), "Boolean") is false
 	MlirTexts(Listing, 1).Elements(0, "List(Text)", "%r1").Length is 2
 	MlirTexts(Listing, 1).Elements(0, "List(Boolean)", "%r1").Length is 2
-	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Length is 4
-	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)")(3).IndexOf("%t1dx = func.call @strict_pair_text(") > 0
+	MlirTexts(Joined, 1).Describe("", "d", "List(Text, Number)").Length is 4
+	MlirTexts(Joined, 1).Describe("", "d", "List(Text, Number)")(3).IndexOf("%t1dx = func.call @strict_pair_text(") > 0
 	MlirStatements(function, position).Temp(suffix)
 IsSum Boolean
 	MlirTexts(Joined, 2).IsSum
@@ -64,25 +64,25 @@ IsNativeConversion(entry InstructionEntry, target Text) Boolean
 	source = MlirKinds(function).KindOf(position, Instance(entry))
 	own = function.TypeOf(source).Callee("to", 0, target, List(Text))
 	isOwn = source is not "Text" and own.instructions.Length > 0
-	isSame = MlirLayout(function).Represented(source) is MlirLayout(function).Represented(target)
+	isSame = MlirLayout(function).Represent(source) is MlirLayout(function).Represent(target)
 	target is "Text" or isOwn is false and (target is in ("Number", "Character") or isSame)
 Instance(entry InstructionEntry) Number
 	MlirTexts(Joined, 7).Instance(Joined.method.instructions(7)) is 1
 	MlirTexts(Listing, 1).Instance(ToNumbers) is 0
-	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)) is NumberText
+	MlirTexts(Joined, 7).Convert(Joined.method.instructions(7)) is NumberText
 	PayloadDecoder(entry).Instance
-Converted(entry InstructionEntry) Texts
-	MlirTexts(Joined, 7).Converted(Joined.method.instructions(7)).Length is 4
+Convert(entry InstructionEntry) Texts
+	MlirTexts(Joined, 7).Convert(Joined.method.instructions(7)).Length is 4
 	instance = Instance(entry)
 	result = "%r" + entry.payload(0)
 	target = TypeEntry.ShortName(PayloadDecoder(entry).ReturnType)
 	if PayloadDecoder(entry).Text(2) is "Code"
-		return MlirCodes(function, position).Coded(instance, result)
+		return MlirCodes(function, position).EmitCode(instance, result)
 	if target is "Number"
-		return Numbered(instance, result)
+		return EmitNumber(instance, result)
 	if target.StartsWith("List(")
 		return Elements(instance, target, result)
-	copied = function.Copied("%r" + instance, result, Temp("y"))
+	copied = function.Copy("%r" + instance, result, Temp("y"))
 	target is in ("Text", "Character") then Textual(instance, target, result) else copied
 Textual(instance Number, target Text, result Text) Texts
 	MlirTexts(Joined, 7).Textual(1, "Text", "%r3").Length is 4
@@ -97,8 +97,8 @@ Textual(instance Number, target Text, result Text) Texts
 	checked = MlirMemory(function, position).Converting(Temp("vx"), "strict_text_itself", Temp("v"))
 	text = isText then List(Text) + loaded + checked else TextBits(instance, "v")
 	memory = MlirMemory(function, position)
-	character = memory.Called(Temp("vc"), "strict_text_character", List(Text) + Temp("vx"))
-	first = isText then character else memory.Called(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
+	character = memory.Call(Temp("vc"), "strict_text_character", List(Text) + Temp("vx"))
+	first = isText then character else memory.Call(Temp("vc"), "strict_text_at", (Temp("vx"), "%zero"))
 	target is "Text" then text + function.Store(Temp("vx"), result) else text + first + function.Store(Temp("vc"), result)
 Elements(instance Number, target Text, result Text) Texts
 	Text.Combine(MlirTexts(Listing, 1).Elements(0, "List(Number)", "%r1")).IndexOf("@strict_list_numbers(") > 0
@@ -110,20 +110,20 @@ Elements(instance Number, target Text, result Text) Texts
 	if source is element or element is not in ("Number", "Text") or source is not in ("Number", "Text")
 		return (loaded, function.Store(Temp("w"), result))
 	helper = element is "Number" then "strict_list_numbers" else "strict_list_texts"
-	converted = MlirMemory(function, position).Called(Temp("wc"), helper, List(Text) + Temp("w"))
+	converted = MlirMemory(function, position).Call(Temp("wc"), helper, List(Text) + Temp("w"))
 	(loaded, converted, function.Store(Temp("wc"), result))
-Numbered(instance Number, target Text) Texts
-	MlirTexts(Joined, 1).Numbered(0, "%r1").Length is 3
-	MlirTexts(Joined, 1).Numbered(0, "%r1") is NumberedLines
-	MlirTexts(Joined, 2).Numbered(1, "%r2").Length is 2
-	MlirTexts(MlirKinds.Lettered.function, 2).Numbered(1, "%r2")(2).IndexOf("@strict_text_number(%t2nt)") > 0
+EmitNumber(instance Number, target Text) Texts
+	MlirTexts(Joined, 1).EmitNumber(0, "%r1").Length is 3
+	MlirTexts(Joined, 1).EmitNumber(0, "%r1") is NumberedLines
+	MlirTexts(Joined, 2).EmitNumber(1, "%r2").Length is 2
+	MlirTexts(MlirKinds.Lettered.function, 2).EmitNumber(1, "%r2")(2).IndexOf("@strict_text_number(%t2nt)") > 0
 	loaded = function.Load(Temp("n"), "%r" + instance)
 	isCharacter = MlirKinds(function).KindOf(position, instance) is "Character"
 	if (MlirKinds(function).IsText(position, instance) or isCharacter) is false
 		return (loaded, function.Store(Temp("n"), target))
-	shown = MlirMemory(function, position).Called(Temp("nt"), "strict_character_text", List(Text) + Temp("n"))
+	shown = MlirMemory(function, position).Call(Temp("nt"), "strict_character_text", List(Text) + Temp("n"))
 	text = isCharacter then Temp("nt") else Temp("n")
-	parsed = MlirMemory(function, position).Called(Temp("nv"), "strict_text_number", List(Text) + text)
+	parsed = MlirMemory(function, position).Call(Temp("nv"), "strict_text_number", List(Text) + text)
 	(isCharacter then (loaded, shown) else List(Text) + loaded) + parsed + function.Store(Temp("nv"), target)
 TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).TextBits(2, "b") is ("    %t3bx = llvm.load %r2 : !llvm.ptr -> f64")
@@ -131,14 +131,14 @@ TextBits(register Number, suffix Text) Texts
 	MlirTexts(Joined, 6).TextBits(1, "b").Length is 3
 	declared = MlirKinds(function).KindOf(position, register)
 	if declared.IndexOf(" or ") > 0
-		return MlirKindTests(function, position).Texted(register, suffix, declared)
+		return MlirKindTests(function, position).EmitText(register, suffix, declared)
 	kind = Printable(declared)
 	if kind is "Text"
 		return List(Text) + function.Load(Temp(suffix + "x"), "%r" + register)
 	loaded = function.Load(Temp(suffix), "%r" + register)
 	helper = Helper(kind)
 	if helper is ""
-		return Described(loaded, suffix, kind)
+		return Describe(loaded, suffix, kind)
 	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), helper, Temp(suffix))
 Printable(kind Text) Text
 	MlirTexts(Joined, 0).Printable("Number") is "Number"
@@ -149,7 +149,7 @@ Printable(kind Text) Text
 	own = function.TypeOf(kind).Callee("to", 0, "Text", List(Text))
 	if own.instructions.Length is 0 and MlirLanes(function, 0).IsPacked(kind)
 		return "Lanes" + MlirLanes(function, 0).Members(kind).Length
-	own.instructions.Length > 0 then kind else MlirLayout(function).Represented(kind)
+	own.instructions.Length > 0 then kind else MlirLayout(function).Represent(kind)
 Helper(kind Text) Text
 	MlirTexts(Joined, 0).Helper("Boolean") is "strict_boolean_text"
 	MlirTexts(Joined, 0).Helper("Error") is "strict_error_report"
@@ -163,38 +163,38 @@ Helper(kind Text) Text
 		return kind is "Pair" then "strict_two_text" else "strict_" + kind.Lower + "_text"
 	suffix = kind.StartsWith("List(") then MlirKinds(function).ElementSuffix(kind) else ""
 	suffix is "" then "" else "strict_list_text_" + suffix
-Described(loaded Text, suffix Text, kind Text) Texts
-	MlirTexts(Joined, 1).Described("", "d", "Shape").Index(ShapeConverter) is 1
-	MlirTexts(Joined, 1).Described("", "d", "Logger").First.StartsWith("unsupported")
-	MlirTexts(Joined, 1).Described("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0
+Describe(loaded Text, suffix Text, kind Text) Texts
+	MlirTexts(Joined, 1).Describe("", "d", "Shape").Index(ShapeConverter) is 1
+	MlirTexts(Joined, 1).Describe("", "d", "Logger").First.StartsWith("unsupported")
+	MlirTexts(Joined, 1).Describe("", "d", "List(Text, Number)").Last.IndexOf("@strict_pair_text(") > 0
 	type = function.TypeOf(kind)
 	method = type.Callee("to", 0, "Text", List(Text))
 	automatic = MlirAutomatic(function).Conversion(kind)
-	if method.instructions.Length is 0 and MlirLayout(function).Paired(kind).Length > 0
+	if method.instructions.Length is 0 and MlirLayout(function).Pair(kind).Length > 0
 		return List(Text) + loaded + MlirAutomatic(function).Pairs(Temp(suffix + "x"), kind, Temp(suffix))
 	if method.instructions.Length is 0 and automatic is "skip"
-		return List(Text) + MlirStatements(function, position).Unsupported("text of " + kind)
+		return List(Text) + MlirStatements(function, position).Unsupport("text of " + kind)
 	symbol = method.instructions.Length is 0 then automatic else MlirFunction(function.types, type, method).Symbol
 	List(Text) + loaded + MlirMemory(function, position).Converting(Temp(suffix + "x"), symbol, Temp(suffix))
 Pointer(register Number, suffix Text) Texts
 	MlirTexts(Joined, 3).Pointer(2, "b").Last is "    %t3bp = func.call @strict_text_ptr(%t3bs) : (f64) -> !llvm.ptr"
 	MlirTexts(Joined, 3).Pointer(2, "b")(1) is "    %t3bs = func.call @strict_shown(%t3bx) : (f64) -> f64"
 	MlirTexts(Joined, 3).Pointer(2, "b").Length is 3
-	MlirTexts(Listing, 1).Converted(ToNumbers) is ElementLines
-	MlirTexts(MlirKinds.Lettered.function, 2).Numbered(1, "%r2")(1).IndexOf("@strict_character_text(%t2n)") > 0
-	shown = MlirMemory(function, position).Called(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
+	MlirTexts(Listing, 1).Convert(ToNumbers) is ElementLines
+	MlirTexts(MlirKinds.Lettered.function, 2).EmitNumber(1, "%r2")(1).IndexOf("@strict_character_text(%t2n)") > 0
+	shown = MlirMemory(function, position).Call(Temp(suffix + "s"), "strict_shown", List(Text) + Temp(suffix + "x"))
 	pointed = " = func.call @strict_text_ptr(" + Temp(suffix + "s") + ") : (f64) -> !llvm.ptr"
 	TextBits(register, suffix) + shown + ("    " + Temp(suffix + "p") + pointed)
-Concatenated(entry InstructionEntry) Texts
-	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)).Length is 6
-	MlirTexts(Joined, 2).Concatenated(Joined.method.instructions(2)) is ConcatenatedLines
-	Text.Combine(MlirTexts(MlirLoops.Spelling.function, 7).Concatenated(MlirLoops.Spelled(7))).IndexOf("_concat") is -1
-	MlirTexts(MlirAppended.Growing.function, 4).Concatenated(MlirAppended.Added(0))(2).IndexOf("@strict_text_append(") > 0
+Concatenate(entry InstructionEntry) Texts
+	MlirTexts(Joined, 2).Concatenate(Joined.method.instructions(2)).Length is 6
+	MlirTexts(Joined, 2).Concatenate(Joined.method.instructions(2)) is ConcatenatedLines
+	Text.Combine(MlirTexts(MlirLoops.Spelling.function, 7).Concatenate(MlirLoops.Spelled(7))).IndexOf("_concat") is -1
+	MlirTexts(MlirAppended.Growing.function, 4).Concatenate(MlirAppended.Added(0))(2).IndexOf("@strict_text_append(") > 0
 	if IsLetter and MlirLoops(function, function.method.LoopBeginOf(position)).IsSpelling
-		return Spelled(entry)
+		return Spell(entry)
 	operands = TextBits(entry.payload(1), "l") + TextBits(entry.payload(2), "r")
 	helper = MlirAppended(function, position).IsOwned then "strict_text_append" else "strict_text_concat"
-	joined = MlirMemory(function, position).Called(Temp("c"), helper, (Temp("lx"), Temp("rx")))
+	joined = MlirMemory(function, position).Call(Temp("c"), helper, (Temp("lx"), Temp("rx")))
 	operands + joined + function.Store(Temp("c"), "%r" + entry.payload(3))
 IsLetter Boolean
 	MlirTexts(MlirLoops.Spelling.function, 7).IsLetter
@@ -217,11 +217,11 @@ IsMisspelled(begin Number) Boolean
 	if entry.kind is not InstructionType.StoreRegisterToVariable or Text.Combine(entry.texts) is not "forResult"
 		return false
 	function.method.LoopBeginOf(position) is not begin or MlirTexts(function, position - 1).IsLetter is false
-Spelled(entry InstructionEntry) Texts
-	MlirTexts(MlirLoops.Spelling.function, 7).Spelled(MlirLoops.Spelled(7)) is SpelledLoads + SpelledWrites
+Spell(entry InstructionEntry) Texts
+	MlirTexts(MlirLoops.Spelling.function, 7).Spell(MlirLoops.Spelled(7)) is SpelledLoads + SpelledWrites
 	slot = "%spelled" + function.method.LoopBeginOf(position)
 	letter = function.Load(Temp("r"), "%r" + entry.payload(2))
 	loads = TextBits(entry.payload(1), "l") + letter + function.Load(Temp("sa"), slot)
 	operands = (Temp("lx"), Temp("sa"), Temp("r"))
-	written = MlirMemory(function, position).Called(Temp("sn"), "strict_text_written", operands)
+	written = MlirMemory(function, position).Call(Temp("sn"), "strict_text_written", operands)
 	loads + written + function.Store(Temp("sn"), slot) + function.Store(Temp("lx"), "%r" + entry.payload(3))

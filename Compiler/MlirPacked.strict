@@ -16,10 +16,10 @@ Branch Texts
 	targets = ", ^floop" + position + kind + position + "generic"
 	isParallel = MlirParallel(function, position).IsParallel
 	chosen = isParallel then "%f" + position + "fast" else flag
-	(isParallel then Limited(flag) else List(Text)) + ("    cf.cond_br " + chosen + targets)
-Limited(flag Text) Texts
-	Doubling.Limited("%f2ok1")(1) is "    %f2few = arith.cmpf olt, %f2n, %f2pt : f64"
-	Doubling.Limited("%f2ok1").Last is "    %f2fast = arith.andi %f2ok1, %f2few : i1"
+	(isParallel then Limit(flag) else List(Text)) + ("    cf.cond_br " + chosen + targets)
+Limit(flag Text) Texts
+	Doubling.Limit("%f2ok1")(1) is "    %f2few = arith.cmpf olt, %f2n, %f2pt : f64"
+	Doubling.Limit("%f2ok1").Last is "    %f2fast = arith.andi %f2ok1, %f2few : i1"
 	prefix = "%f" + position
 	threshold = "    " + prefix + "pt = arith.constant " + MlirCost(function, position).Threshold + ".0 : f64"
 	few = "    " + prefix + "few = arith.cmpf olt, " + prefix + "n, " + prefix + "pt : f64"
@@ -30,12 +30,12 @@ Packable Texts
 	loops = MlirLoops(function, position)
 	mutable names = loops.Collection is "List(Number)" then List(Text) + MlirFastLoop.Iterated else List(Text)
 	for MlirKernel(function, position).Sources
-		if MlirLayout(function).Represented(MlirKinds(function).VariableKind(position, value)) is "List(Number)"
+		if MlirLayout(function).Represent(MlirKinds(function).VariableKind(position, value)) is "List(Number)"
 			names = names + value
 	names.Length > 3 then List(Text) else names
-Keyed(name Text, index Number) Texts
-	Summing.Keyed("numbers", 1).Last is "    %f1s2 = arith.addi %f1s1, %f1w1 : i64"
-	Summing.Keyed("for", 0).First is "    %f1k_for = func.call @strict_list_holder(%f1v) : (f64) -> !llvm.ptr"
+Key(name Text, index Number) Texts
+	Summing.Key("numbers", 1).Last is "    %f1s2 = arith.addi %f1s1, %f1w1 : i64"
+	Summing.Key("for", 0).First is "    %f1k_for = func.call @strict_list_holder(%f1v) : (f64) -> !llvm.ptr"
 	prefix = "%f" + position
 	list = name is MlirFastLoop.Iterated then prefix + "v" else prefix + "l_" + name
 	holder = prefix + "k_" + name
@@ -45,9 +45,9 @@ Keyed(name Text, index Number) Texts
 	shift = at + "m" + index + " = arith.constant " + 6 * index + " : i64"
 	shifted = at + "w" + index + " = arith.shli " + prefix + "q" + index + ", " + prefix + "m" + index + " : i64"
 	sum = at + "s" + (index + 1) + " = arith.addi " + prefix + "s" + index + ", " + prefix + "w" + index + " : i64"
-	(held, packed) + Brained(name, index) + (shift, shifted, sum)
-Brained(name Text, index Number) Texts
-	Summing.Brained("numbers", 1)(1) is "    %f1brain_numbers = arith.cmpi eq, %f1packed1, %f1brainformat1 : i64"
+	(held, packed) + Brain(name, index) + (shift, shifted, sum)
+Brain(name Text, index Number) Texts
+	Summing.Brain("numbers", 1)(1) is "    %f1brain_numbers = arith.cmpi eq, %f1packed1, %f1brainformat1 : i64"
 	prefix = "%f" + position
 	flag = prefix + "brain_" + name
 	formats = (prefix + "brainformat" + index, prefix + "halfformat" + index)
@@ -61,9 +61,9 @@ Case(source Number) Texts
 	first = Widths.Length * source
 	for Widths
 		Target(value * scale, first + index)
-Shared(count Number) Texts
-	Summing.Shared(2) is ("1040: ^fkloop1fast", "2080: ^flloop1fast", "520: ^fmloop1fast")
-	Summing.Shared(1).Length is 0
+Share(count Number) Texts
+	Summing.Share(2) is ("1040: ^fkloop1fast", "2080: ^flloop1fast", "520: ^fmloop1fast")
+	Summing.Share(1).Length is 0
 	if count < 2
 		return List(Text)
 	scale = (WidthBase ^ count - 1) / (WidthBase - 1)
@@ -76,16 +76,16 @@ Target(key Number, number Number) Text
 Cases(count Number) Texts
 	Summing.Cases(2).Length is 35
 	"2052: ^fuloop1fast" is in Summing.Cases(2)
-	mutable cases = Shared(count)
+	mutable cases = Share(count)
 	for count
 		cases = cases + Case(index)
 	first = Widths.Length * count + SharedWidths.Length
-	for Mixed(count)
+	for Mix(count)
 		cases = cases + Target(value, first + index)
 	cases
-Mixed(count Number) Numbers
-	Summing.Mixed(2).Length is 22
-	Summing.Mixed(3).Length is 0
+Mix(count Number) Numbers
+	Summing.Mix(2).Length is 22
+	Summing.Mix(3).Length is 0
 	if count is not 2
 		return List(Number)
 	for Widths.Length * Widths.Length
@@ -101,7 +101,7 @@ Dispatched Texts
 		return List(Text)
 	mutable lines = List(Text) + ("  ^floop" + position + "packed:", "    %f" + position + "s0 = arith.constant 0 : i64")
 	for names
-		lines = lines + Keyed(value, index)
+		lines = lines + Key(value, index)
 	cases = Text.Combine(Cases(names.Length), ", ")
 	targets = "[default: ^loop" + position + "generic, 0: ^floop" + position + "fast, " + cases
 	lines + ("    cf.switch %f" + position + "s" + names.Length + " : i64, " + targets + "]") + Variants
@@ -121,7 +121,7 @@ Packings(names Texts) Texts
 	if names.Length > 1
 		for SharedWidths
 			packings = packings + Text.Combine(Pairs(names, value), " ")
-	for Mixed(names.Length)
+	for Mix(names.Length)
 		packings = packings + (names(0) + " " + value % WidthBase + " " + names(1) + " " + (value / WidthBase).Floor)
 	packings
 Variant(packing Text, number Number) Texts
@@ -129,8 +129,8 @@ Variant(packing Text, number Number) Texts
 	packed = MlirFunction(function.types, function.type, function.method, function.lineSlots, position, packing)
 	single = MlirSingle(packed, position)
 	copied = single.IsSingle then single.Copied else MlirFastLoop(packed, position).Copied
-	finished = MlirCounter(function, position).Finished(Letters(number))
-	MlirKernel(function, position).Renamed(copied, Letters(number)) + finished
+	finished = MlirCounter(function, position).Finish(Letters(number))
+	MlirKernel(function, position).Rename(copied, Letters(number)) + finished
 Pairs(names Texts, width Number) Texts
 	Summing.Pairs(("for", "numbers"), 16) is ("for 16", "numbers 16")
 	for names

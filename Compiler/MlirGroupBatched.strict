@@ -33,24 +33,24 @@ Body Texts
 Head Texts
 	groupCall = MlirDeviceStatements(function, function.Group)
 	target = "%r" + function.method.instructions(function.Group).payload(0)
-	saved = MlirGrouped(function, function.Group).Saved(target, "%groupMemo", "q")
-	before = MlirDevice(function, position).Emitted(position + 1, function.Group)
+	saved = MlirGrouped(function, function.Group).Save(target, "%groupMemo", "q")
+	before = MlirDevice(function, position).Emit(position + 1, function.Group)
 	body = PlainStarted + before + groupCall.Labeled + groupCall.Emitted + saved
-	HeadStart + MlirBatched(function, position).Computed(body, "quadHead")
+	HeadStart + MlirBatched(function, position).Compute(body, "quadHead")
 Phase(label Text, done Text, loading Boolean) Texts
 	batched = MlirBatched(function, position)
 	entry = "    cf.br ^" + label + "(%batchFirst, %batchZero : i64, i64)"
 	header = "  ^" + label + "(%" + label + "_at: i64, %" + label + "_batchIndex: i64):"
-	body = batched.Computed(PlainStarted + Emitted(loading), label)
-	next = batched.Advanced(label, label + "_batchIndex", label + "_at", done)
+	body = batched.Compute(PlainStarted + Emit(loading), label)
+	next = batched.Advance(label, label + "_batchIndex", label + "_at", done)
 	(entry, header, "    cf.br ^" + label + "_body") + body + next
-Emitted(loading Boolean) Texts
+Emit(loading Boolean) Texts
 	mutable lines = List(Mutable(Text))
 	reads = MlirBatchReads(function, position)
 	target = "%r" + function.method.instructions(function.Group).payload(0)
-	groupRead = loading then List(Text) else MlirGrouped(function, function.Group).Saved("%groupMemo", target, "m")
+	groupRead = loading then List(Text) else MlirGrouped(function, function.Group).Save("%groupMemo", target, "m")
 	for Range(position + 1, function.method.LoopEndOf(position))
-		step = loading then reads.Prefetched(value) else reads.Computed(value)
+		step = loading then reads.Prefetch(value) else reads.Compute(value)
 		lines = lines + (value is function.Group then groupRead else step)
 	lines
 PlainStarted Texts

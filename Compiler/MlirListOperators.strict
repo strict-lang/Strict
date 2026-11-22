@@ -25,7 +25,7 @@ IsOperation Boolean
 IsList(register Number) Boolean
 	MlirListOperators(Mixed, 2).IsList(0)
 	MlirListOperators(Mixed, 2).IsList(1) is false
-	MlirLayout(function).Represented(MlirKinds(function).KindOf(position, register)).StartsWith("List(")
+	MlirLayout(function).Represent(MlirKinds(function).KindOf(position, register)).StartsWith("List(")
 ElementSuffix(register Number) Text
 	MlirListOperators(Mixed, 2).ElementSuffix(0) is "number"
 	MlirListOperators(Worded, 2).ElementSuffix(0) is "text"
@@ -40,13 +40,13 @@ Helper(entry InstructionEntry) Text
 	if entry.kind is InstructionType.Subtract
 		return isList then "strict_list_without" else "strict_list_removed"
 	if entry.kind is InstructionType.Add
-		return Added(entry, isList)
+		return Add(entry, isList)
 	division = entry.kind is InstructionType.Modulo then "strict_list_modulo" else "strict_list_divided"
 	operation = entry.kind is InstructionType.Multiply then "strict_list_times" else division
 	isList then operation else operation + "_number"
-Added(entry InstructionEntry, isList Boolean) Text
-	MlirListOperators(Mixed, 5).Added(Arithmetic(5), false) is "strict_list_prepend"
-	MlirListOperators(Downcast, 2).Added(Downcast.method.instructions(2), true) is "strict_list_downcast"
+Add(entry InstructionEntry, isList Boolean) Text
+	MlirListOperators(Mixed, 5).Add(Arithmetic(5), false) is "strict_list_prepend"
+	MlirListOperators(Downcast, 2).Add(Downcast.method.instructions(2), true) is "strict_list_downcast"
 	if IsList(entry.payload(1)) is false
 		return "strict_list_prepend"
 	isNumbers = ElementSuffix(entry.payload(1)) is "number"
@@ -72,15 +72,15 @@ Seeding(entry InstructionEntry) Texts
 		return List(Text)
 	seed = MlirLists(function, position).Temp("s")
 	List(Text) + function.Load(seed, "%v_" + MlirAppended(function, position).Seed)
-Operated(entry InstructionEntry) Texts
-	MlirListOperators(MlirLists.Listed, 4).Operated(Steps(4)).Length is 4
-	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operated(Steps(5)), "").IndexOf("strict_list_concat") > 0
-	MlirListOperators(MlirAppended.Filling.function, 4).Operated(MlirAppended.Added(0))(3).IndexOf("_seeded(") > 0
+Operate(entry InstructionEntry) Texts
+	MlirListOperators(MlirLists.Listed, 4).Operate(Steps(4)).Length is 4
+	Text.Combine(MlirListOperators(MlirLists.Listed, 5).Operate(Steps(5)), "").IndexOf("strict_list_concat") > 0
+	MlirListOperators(MlirAppended.Filling.function, 4).Operate(MlirAppended.Added(0))(3).IndexOf("_seeded(") > 0
 	names = MlirLists(function, position)
 	result = names.Temp("c")
 	kinds = MlirKinds(function)
-	element = MlirLayout(function).Represented(kinds.ElementKind(kinds.KindOf(position, entry.payload(1))))
-	call = MlirMemory(function, position).Passed(result, Helper(entry), Operands(entry), element)
+	element = MlirLayout(function).Represent(kinds.ElementKind(kinds.KindOf(position, entry.payload(1))))
+	call = MlirMemory(function, position).Pass(result, Helper(entry), Operands(entry), element)
 	left = function.Load(names.Temp("a"), "%r" + entry.payload(1))
 	right = RightOperand(entry, IsList(entry.payload(2)))
 	(List(Text) + left + right) + Seeding(entry) + call + function.Store(result, "%r" + entry.payload(3))
@@ -94,5 +94,5 @@ RightOperand(entry InstructionEntry, isList Boolean) Texts
 	helper = isList then "strict_list_texts" else "strict_number_text"
 	names = MlirLists(function, position)
 	raw = function.Load(names.Temp(needsTexts then "br" else "b"), "%r" + entry.payload(2))
-	converted = MlirMemory(function, position).Called(names.Temp("b"), helper, List(Text) + names.Temp("br"))
+	converted = MlirMemory(function, position).Call(names.Temp("b"), helper, List(Text) + names.Temp("br"))
 	needsTexts then (raw, converted) else List(Text) + raw

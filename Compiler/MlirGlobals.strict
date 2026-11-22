@@ -100,7 +100,7 @@ PrintGlobal(function MlirFunction, position Number, entry InstructionEntry) Text
 	Counted.PrintGlobal(MlirCalls.Shapes, 3, MlirCalls.Shapes.method.instructions(3)).StartsWith("  llvm")
 	constants = MlirConstants(function, position)
 	hasValue = entry.payload(1) is 1
-	content = constants.Escaped(entry.texts(0), true) + (hasValue then "%s" else "") + "\\0A\\00"
+	content = constants.Escape(entry.texts(0), true) + (hasValue then "%s" else "") + "\\0A\\00"
 	length = constants.EscapedLength(entry.texts(0), true) + (hasValue then 4 else 2)
 	name = "@s" + function.Symbol + "_" + position
 	"  llvm.mlir.global internal constant " + name + "(\"" + content + "\") : !llvm.array<" + length + " x i8>"

@@ -22,10 +22,10 @@ Cleaned Text
 	cut = aligned >= 0 then aligned else marked
 	mutable kept = cut >= 0 then line.Substring(0, cut) else line
 	for Wrapped
-		kept = Unwrapped(kept, value)
+		kept = Unwrap(kept, value)
 	kept
-Unwrapped(text Text, word Text) Text
-	Adding.Unwrapped("ptr captures(none) %1, ptr captures(none) %2", "captures(") is "ptr  %1, ptr  %2"
+Unwrap(text Text, word Text) Text
+	Adding.Unwrap("ptr captures(none) %1, ptr captures(none) %2", "captures(") is "ptr  %1, ptr  %2"
 	MetalInstruction("%5 = load i128, ptr %3", true).Memory is ""
 	MetalInstruction("%5 = load float, float* %3", true).Memory is ""
 	MetalInstruction("%5 = getelementptr float, ptr %3", true).Memory is ""
@@ -35,7 +35,7 @@ Unwrapped(text Text, word Text) Text
 	if start < 0
 		return text
 	end = text.IndexOf(")", start)
-	Unwrapped(text.Substring(0, start) + text.Substring(end + 1, text.Length - end - 1), word)
+	Unwrap(text.Substring(0, start) + text.Substring(end + 1, text.Length - end - 1), word)
 Words Texts
 	Adding.Words is ("%12", "=", "add", "i32", "%11", "%8")
 	MetalInstruction("%8 = call noundef range(i32 0, 1024) i32 @f()", true).Words is ("%8", "=", "call", "i32", "@f()")
