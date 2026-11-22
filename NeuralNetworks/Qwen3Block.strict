@@ -130,4 +130,5 @@ Output(input Numbers, sequences Number) Numbers
 	experts.Added(Normalized(attended, 0, attended.Length, mlpNorm), attended)
 Merged(sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Merged(1).Length is 8
-	hybrid.Gated(Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences, starts = starts).Merged)
+	attending = Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences)
+	hybrid.Gated(starts.Length is 0 then attending.Merged else MaskedAttention(attending, starts).Merged)
