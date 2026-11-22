@@ -151,7 +151,7 @@ Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.MacOS).IndexOf("llvm.func @strict_opendir(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
-	NativeBuild(false).Mlir("module {\n" + CpuNotice + "\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
+	NativeBuild(false).Mlir("module {\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
 	runtime = Released(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
 	system = Text.Combine(Platform.Runtime(platform, root), "\n")
 	body = program.Substring(0, program.Length - 1)
