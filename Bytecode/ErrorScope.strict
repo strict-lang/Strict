@@ -8,8 +8,8 @@ constant Unused = ", use the value (condition, comparison, assignment, argument 
 constant Ignoring = ", check the Error to keep the change: if call is Error"
 constant Mutated = CodeBlock.Empty.Declare("a", "Count").Declare("a" + MutableMarker, "mutable")
 constant Counting = ErrorScope(ValueCodegen(TypeInference(KnownTypes.Sample, TypeInference.Limits), KnownTypes.NoMembers, CallTarget.Plain))
-constant Reassigning = BodyParser("Run", "\tmutable a = 1", "\ta = Greet").Block(1, 1)
-constant Adding = BodyParser("Run", "\tmutable a = 1", "\ta = a + 1").Block(1, 1)
+constant Reassigning = BodyParser("Run", "\tmutable a = 1", "\ta = Greet").Method(1)
+constant Adding = BodyParser("Run", "\tmutable a = 1", "\ta = a + 1").Method(1)
 constant Increment = SyntaxNode("Member", "Increment", SyntaxNode("Identifier", "a"))
 constant Numbered = CodeBlock.Empty.Declare("a", "Numbers")
 constant Scalar = CodeBlock.Empty.Declare("a", "Number")
@@ -42,7 +42,7 @@ Prepared(body SyntaxNode, block CodeBlock) CodeBlock
 			prepared = Fallible(value, prepared)
 	prepared
 Reassigned(node SyntaxNode) Texts
-	Plain.Reassigned(BodyParser("Run", "\tmutable a = 1", "\tfor 2", "\t\ta = Greet").Block(1, 1)) is ("a")
+	Plain.Reassigned(BodyParser("Run", "\tmutable a = 1", "\tfor 2", "\t\ta = Greet").Method(1)) is ("a")
 	constant safe = ("Number", "Text", "Boolean", "Not", "Negate")
 	if node.Kind is "Reassignment" and node.children(0).Kind is "Identifier"
 		assigned = node.children(1)
