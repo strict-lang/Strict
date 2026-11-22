@@ -19,5 +19,5 @@ Ran(folder Text)
 	logger.Log(Prompt + tokenizer.Decoded(generated))
 	logger.Log("Qwen3-Coder-30B-A3B loaded in " + (loaded - started).Round(1) + " s, " + milliseconds + " ms per token")
 Downloaded(path Text) slow
-	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"").Failed
+	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"").HasFailed
 		return Error("DownloadFailed: " + Address + Weights)

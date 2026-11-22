@@ -26,11 +26,11 @@ Numeric(name Text, default Number) Number
 	number = text to Number
 	isExact = number is Error then false else number.IsFinite and number to Text is text
 	isExact then number else Error("InvalidNumber: " + Spelled(name) + " " + text)
-Flag(name Text, default Boolean) Boolean
-	Sample.Flag("jsonOutput", false)
-	Sample.Flag("width", false) is false
-	CommandLine(List(Text) + "--json_output=false", List(Text) + "jsonOutput").Flag("jsonOutput", true) is false
-	CommandLine(("--json_output", "false"), List(Text) + "jsonOutput").Flag("jsonOutput", false) is false
+HasFlag(name Text, default Boolean) Boolean
+	Sample.HasFlag("jsonOutput", false)
+	Sample.HasFlag("width", false) is false
+	CommandLine(List(Text) + "--json_output=false", List(Text) + "jsonOutput").HasFlag("jsonOutput", true) is false
+	CommandLine(("--json_output", "false"), List(Text) + "jsonOutput").HasFlag("jsonOutput", false) is false
 	option = Spelled(name)
 	at = arguments.Index(option)
 	if at >= 0

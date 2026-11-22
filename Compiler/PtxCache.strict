@@ -76,7 +76,7 @@ Kept(tools Toolchain, kept Text) Text
 	output = tools.Quoted(base + ".gpu.kept.mlir")
 	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
 	ran = ToolRunner(tools.Located("mlir-opt")).Execute(input + privatized + " --symbol-dce -o " + output)
-	ran.Failed then "mlir-opt failed: " + ran.error else ""
+	ran.HasFailed then "mlir-opt failed: " + ran.error else ""
 Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf("sm_120") > 0
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf(PtxLibraries.Layout) > 0

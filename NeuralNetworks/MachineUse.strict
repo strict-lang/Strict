@@ -114,7 +114,7 @@ Device Numbers slow
 	Sample.Device.Length is 3
 	result = Process.RunTool("nvidia-smi", Query)
 	parts = result.Output.Split("\n").First.Split(",")
-	result.Failed or parts.Length < 3 then (0, 0, 0) else Measured(parts)
+	result.HasFailed or parts.Length < 3 then (0, 0, 0) else Measured(parts)
 Measured(parts Texts) Numbers
 	Sample.Measured(("24564", " 24049", " 3")) is (24564 * Mebibyte, 24049 * Mebibyte, 3)
 	(parts(0).Trim to Number * Mebibyte, parts(1).Trim to Number * Mebibyte, parts(2).Trim to Number)

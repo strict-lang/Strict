@@ -93,7 +93,7 @@ Installing(missing Texts) Text
 	File(script).Write(Text.Combine(InstallLines(missing), "\n"))
 	started = Process.RunTool(isWindows then "cmd" else "sh", Launch(script))
 	where = isWindows then " in a new window" else " in the background (" + root + "/Tools/install.log)"
-	problem = started.Failed then ", could not start it: " + started.error else ""
+	problem = started.HasFailed then ", could not start it: " + started.error else ""
 	Text.Combine(missing, ", ") + " not found, installing them with " + script + where + problem
 Built(base Text, executable Text) Text
 	OnWindows.Built("Compiler/output/missing", "missing.exe").StartsWith("mlir-opt failed")
@@ -107,7 +107,7 @@ Built(base Text, executable Text) Text
 		return resource
 	linking = Inputs(base) + files + resource + " -o " + Quoted(executable) + Optimized.Replace("native", cpu) + system
 	linked = ToolRunner(Located("clang")).Execute(linking, "Linking")
-	linked.Failed then "clang failed: " + linked.error + linked.Output else "Built " + executable
+	linked.HasFailed then "clang failed: " + linked.error + linked.Output else "Built " + executable
 Inputs(base Text) Text
 	OnLinux.Inputs("Compiler/output/missing") is "\"Compiler/output/missing.ll\""
 	if (platform is Platform.Windows and File(base + ".ll").Exists is false) is false
@@ -139,7 +139,7 @@ PartsCompiled(base Text) Boolean
 		if File(part).Exists and File(part + ".o").Exists is false
 			compiling.Add(Bitcode(part))
 	for ToolRunner(Located("clang")).ExecuteAll(compiling, "Host clang (" + compiling.Length + " jobs)")
-		if value.Failed
+		if value.HasFailed
 			Logger.Log("clang failed (exit " + value.exitCode + "): " + value.Output + value.error)
 			return false
 	true
@@ -165,11 +165,11 @@ Lowered(base Text, kept = "", parts = 1) Text
 	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
 	lowering = Quoted(base + ".mlir") + privatized + MlirSplit.Passes + " -o " + Quoted(base + ".llvm.mlir")
 	lowered = ToolRunner(Located("mlir-opt")).Execute(lowering)
-	if lowered.Failed
+	if lowered.HasFailed
 		return "mlir-opt failed: " + lowered.error
 	translation = MlirSplit.Translating + Quoted(base + ".llvm.mlir") + " -o " + Quoted(base + ".ll")
 	translated = ToolRunner(Located("mlir-translate")).Execute(translation)
-	translated.Failed then "mlir-translate failed: " + translated.error else ""
+	translated.HasFailed then "mlir-translate failed: " + translated.error else ""
 Quoted(path Text) Text
 	OnWindows.Quoted("a b") is "\"a b\""
 	"\"" + path + "\""

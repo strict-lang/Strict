@@ -56,7 +56,7 @@ Fetched(repository Text, type Text) Text
 	Provided(local, type)
 Downloaded(url Text, file Text)
 	Repositories("artifacts").Downloaded("https://missing.invalid/a", "Compiler/output/a") is Error
-	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + url + "\"").Failed
+	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + file + "\" \"" + url + "\"").HasFailed
 		return Error("DownloadFailed: " + url)
 Copied(folder Text, type Text) Text slow
 	Repositories("artifacts").Copied("Examples/NativeAdd", "Adder") is "artifacts/NativeAdd"
@@ -69,7 +69,7 @@ Copied(folder Text, type Text) Text slow
 	Provided(local, type)
 Fetch(url Text) Texts
 	token = Process.RunTool("gh", "auth token")
-	isAuthorized = token.Succeeded and token.Output.Trim is not ""
+	isAuthorized = token.HasSucceeded and token.Output.Trim is not ""
 	header = isAuthorized then "-H \"Authorization: Bearer " + token.Output.Trim + "\" " else ""
 	Process.RunTool("curl", "-sfL " + header + "\"" + url + "\"").Output.Split("\n")
 Linked(lines Texts) Texts

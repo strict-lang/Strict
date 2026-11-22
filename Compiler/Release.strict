@@ -112,7 +112,7 @@ Content(target Text)
 	if File(builder).Exists is false
 		return Synced(source, target)
 	built = BuiltContent(builder, source, target)
-	if built.Failed
+	if built.HasFailed
 		logger.Log("Content build failed: " + builder + " " + built.error + built.Output)
 		return Error("ContentBuildFailed")
 BuiltContent(builder Text, source Text, target Text) ProcessResult
@@ -120,7 +120,7 @@ BuiltContent(builder Text, source Text, target Text) ProcessResult
 	exe = tools.Executable(TypeSource.Root + "/Strict")
 	isCurrent = NativeCache("build", (builder, TypeSource.Root)).IsCurrent
 	compiled = isCurrent then ProcessResult(0, "", "") else ToolRunner(exe).Execute("build \"" + builder + "\"")
-	if compiled.Failed
+	if compiled.HasFailed
 		return compiled
 	ToolRunner(tools.Executable(Parent + "/ContentBuild")).Execute("\"" + source + "\" \"" + target + "\"")
 Copied(source Text, target Text)

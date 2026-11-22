@@ -63,7 +63,7 @@ Finished(result ProcessResult, output Text, target Text, options Text) Text
 	Adding.Finished(ProcessResult(1, "", "no"), "Compiler/output/Cut.1.o", "Compiler/output/Cut.o", "") is Failing
 	File("Compiler/output/Cut.o.lock").Exists is false
 	failure = "clang failed for " + target + ": " + result.error
-	built = result.Failed then failure else "Built " + sources.Placed(output, target)
+	built = result.HasFailed then failure else "Built " + sources.Placed(output, target)
 	File(target + ".built.nativecache").Write(built)
 	File(target + ".lock").Delete
 	if built is "Built " + target

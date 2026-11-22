@@ -20,7 +20,7 @@ Sdk Text
 	if tools.platform is not Platform.MacOS
 		return ""
 	result = ToolRunner("xcrun").Execute("--sdk " + SdkName + " --show-sdk-path")
-	result.Failed then "" else result.Output.Trim
+	result.HasFailed then "" else result.Output.Trim
 Compiled(base Text) Text
 	IOSBuild(Toolchain.OnWindows).Compiled("Compiler/output/missing").StartsWith("mlir-opt failed")
 	lowered = tools.Lowered(base)
@@ -28,7 +28,7 @@ Compiled(base Text) Text
 		return lowered
 	arguments = "-c " + tools.Quoted(base + ".ll") + " -o " + tools.Quoted(base + ".ios.o")
 	compiled = ToolRunner(tools.Located("clang")).Execute(arguments + Architecture)
-	compiled.Failed then "iOS clang failed: " + compiled.error + compiled.Output else ""
+	compiled.HasFailed then "iOS clang failed: " + compiled.error + compiled.Output else ""
 Objects(base Text, sdk Text) Texts
 	IOSBuild(Toolchain.OnWindows).Objects("Compiler/output/missing", "") is List(Text)
 	sources = NativeSources(tools.natives)
@@ -45,7 +45,7 @@ Objects(base Text, sdk Text) Texts
 Object(source Text, target Text, flags Text) Text
 	arguments = "--sdk " + SdkName + " clang -c " + tools.Quoted(source) + " -o " + tools.Quoted(target) + flags
 	compiled = ToolRunner("xcrun").Execute(arguments)
-	compiled.Failed then "iOS clang failed: " + compiled.error + compiled.Output else target
+	compiled.HasFailed then "iOS clang failed: " + compiled.error + compiled.Output else target
 Linked(base Text) Text
 	IOSBuild(Toolchain.OnWindows).Linked("Compiler/output/missing").StartsWith("mlir-opt failed")
 	compiled = Compiled(base)
@@ -63,7 +63,7 @@ Archived(base Text, objects Texts) Text
 	for objects
 		arguments = arguments + " " + tools.Quoted(value)
 	result = ToolRunner(tools.Located("llvm-ar")).Execute(arguments)
-	if result.Failed
+	if result.HasFailed
 		return "iOS llvm-ar failed: " + result.error + result.Output
 	File(building).Rename(Executable(base))
 	failed = "iOS archive could not replace " + Executable(base)

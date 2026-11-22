@@ -20,7 +20,7 @@ Linked(base Text, tools Toolchain, library MlirLibrary) Text
 	target = Toolchain.Quoted(Target(base, Platform.Current))
 	linking = tools.Quoted(base + ".ll") + " -o " + target + Toolchain.Optimized + Shared(library)
 	linked = ToolRunner(tools.Located("clang")).Execute(linking)
-	linked.Failed then "clang failed: " + linked.error else ""
+	linked.HasFailed then "clang failed: " + linked.error else ""
 Target(base Text, platform Number) Text
 	LibraryBuild.Target("./Games/Policy", Platform.Windows) is "./Games/Policy.dll"
 	LibraryBuild.Target("./Games/Policy", Platform.Linux) is "./Games/libPolicy.so"

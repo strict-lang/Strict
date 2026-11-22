@@ -103,6 +103,6 @@ Ran(tool Text, arguments Texts, tools Toolchain) Text
 	if arguments.Length is 0
 		return ""
 	for ToolRunner(tools.Located(tool)).ExecuteAll(arguments, tool)
-		if value.Failed
+		if value.HasFailed
 			return tool + " failed: " + value.error
 	""

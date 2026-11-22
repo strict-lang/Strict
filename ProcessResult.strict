@@ -3,9 +3,9 @@ has Output Text
 has error Text
 has Seconds Number = 0
 has ProcessorSeconds Number = 0
-Succeeded Boolean
+HasSucceeded Boolean
 	exitCode is 0
-Failed Boolean
+HasFailed Boolean
 	exitCode is not 0
 to Text
-	Succeeded then "ok exit=0" else "fail exit=" + exitCode to Text + " " + error
+	HasSucceeded then "ok exit=0" else "fail exit=" + exitCode to Text + " " + error

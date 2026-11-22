@@ -46,11 +46,11 @@ Completed(icon Text)
 	if File(Contents + "/MacOS/" + Name).Exists is false
 		return Error("ExecutableMissing")
 	File(Contents + "/Info.plist").Write(Text.Combine(Plist, "\n"))
-	if ToolRunner("sips").Execute(Converting(icon)).Failed
+	if ToolRunner("sips").Execute(Converting(icon)).HasFailed
 		logger.Log("sips could not convert " + icon)
 	identity = Identity(ToolRunner("security").Execute("find-identity -v -p codesigning").Output)
 	app = Contents.Substring(0, Contents.Length - 9)
 	signed = ToolRunner("codesign").Execute(Signing(identity, app))
-	logger.Log(signed.Failed then "codesign failed: " + signed.error else "Signed " + app + " (" + identity + ")")
-	if signed.Failed
+	logger.Log(signed.HasFailed then "codesign failed: " + signed.error else "Signed " + app + " (" + identity + ")")
+	if signed.HasFailed
 		return Error("CodesignFailed")

@@ -23,7 +23,7 @@ Downloaded(path Text, address Text) Text slow
 	if File(path).Exists is false
 		partial = path + ".part"
 		download = Process.RunTool("curl", "-sfL --create-dirs -o \"" + partial + "\" \"" + address + "\"")
-		if download.Failed
+		if download.HasFailed
 			return Error("Corpus download failed for " + path + ": " + download to Text)
 		File(partial).Rename(path)
 	Text.Combine(File(path).ReadLines, "\n")

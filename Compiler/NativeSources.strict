@@ -113,7 +113,7 @@ Resource(base Text, platform Number, root Text) Text
 	compiler = Toolchain(platform, root).Located("llvm-rc")
 	compiled = ToolRunner(compiler).Execute("/FO \"" + base + ".res\" \"" + base + ".rc\"")
 	File(base + ".rc").Delete
-	compiled.Failed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
+	compiled.HasFailed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
 LinuxLinked(base Text, program Text, root Text) Text
 	Adding.LinuxLinked("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
 	tools = Toolchain(Platform.Windows, root)
@@ -126,7 +126,7 @@ LinuxLinked(base Text, program Text, root Text) Text
 	output = " -o " + tools.Quoted(tools.WslPath(program)) + libraries
 	Release(base).Created(Path(program).PathOnly.text)
 	linked = ToolRunner("wsl").Execute(linkage + sources + output)
-	linked.Failed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
+	linked.HasFailed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
 Wsl(flags Text, tools Toolchain) Text
 	Adding.Wsl(" -DX -IC:/s/a C:/s/b.c -lm", Toolchain.OnWindows) is " -DX -I\"/mnt/c/s/a\" \"/mnt/c/s/b.c\" -lm"
 	mutable converted = ""

@@ -11,7 +11,7 @@ Built(base Text) Text
 	if linux.PartsCompiled(base + ".linux") is false
 		return "clang failed for " + base + ".linux"
 	compiled = ToolRunner(tools.Located("ld.lld")).Execute(LinuxBuild(linux).Relocatable(base + ".linux"))
-	if compiled.Failed
+	if compiled.HasFailed
 		return "ld.lld failed: " + compiled.error
 	NativeSources(tools.natives).LinuxLinked(base, BuildOutput.Released(base, "Linux"), tools.root)
 Relocatable(base Text) Text

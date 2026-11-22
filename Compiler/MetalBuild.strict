@@ -5,7 +5,7 @@ Source(base Text) Text
 	output = " -o " + tools.Quoted(base + ".gpu.opt.ll")
 	arguments = Optimized + tools.Quoted(base + ".gpu.ll") + output
 	optimized = ToolRunner(tools.Located("clang")).Execute(arguments)
-	if optimized.Failed
+	if optimized.HasFailed
 		return "clang failed: " + optimized.error
 	prelude = File(tools.root + "/Compiler/MetalPrelude.metal").ReadLines
 	Text.Combine(MetalShader(File(base + ".gpu.opt.ll").ReadLines).Source(prelude), "\n")

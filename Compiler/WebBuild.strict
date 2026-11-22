@@ -21,7 +21,7 @@ Linked(base Text, executable Text) Text
 	inputs = tools.PartObjects(base + ".web") + sources + Mirrored(folder, base) + Scripted(base) + page + Runtime
 	output = " -o " + tools.Quoted(executable) + Options + Thinned(base) + " -O1"
 	linked = ToolRunner(tools.Located("emcc")).Execute(inputs + output)
-	linked.Failed then "emcc failed: " + linked.error else Optimized(executable)
+	linked.HasFailed then "emcc failed: " + linked.error else Optimized(executable)
 Thinned(base Text) Text
 	Options.IndexOf("--closure 1") >= 0 and Options.IndexOf("--profiling-funcs") is -1
 	Missing.Thinned("a").EndsWith(" -Wl,--thinlto-cache-dir=\"a.web.lto\"")
@@ -38,7 +38,7 @@ Optimized(executable Text) Text
 	wasm = tools.Quoted(executable.Replace(".html", ".wasm"))
 	optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
 	optimized = ToolRunner(tools.Located("wasm-opt")).Execute(optimizing)
-	optimized.Failed then "wasm-opt failed: " + optimized.error else Iconed(executable)
+	optimized.HasFailed then "wasm-opt failed: " + optimized.error else Iconed(executable)
 Iconed(executable Text) Text
 	page = Text.Combine(File(executable).ReadLines, "\n")
 	source = executable.Replace("/Release/Web/", "/obj/").Replace(".html", "")

@@ -9,11 +9,11 @@ IsAvailable Boolean
 	ToolRunner("noSuchStrictTool").IsAvailable is false
 	Process.Find(name).IsAvailable
 Execute(arguments Text, phase = "") ProcessResult
-	ToolRunner("noSuchStrictTool").Execute("").Failed
+	ToolRunner("noSuchStrictTool").Execute("").HasFailed
 	Echo.Execute(Echoed + "a").Output.IndexOf("\r") is -1
 	ExecuteAll(List(Text) + arguments, phase).First
 ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
-	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.Failed
+	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.HasFailed
 	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
 	tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
 	started = Process.Elapsed
@@ -28,7 +28,7 @@ Retried(result ProcessResult, arguments Text) ProcessResult
 Cleaned(result ProcessResult) ProcessResult
 	Echo.Cleaned(ProcessResult(0, "a\r\n", "")).Output is "a\n"
 	Echo.Cleaned(ProcessResult(127, "", "")).error is "Tool " + Echo.name + " exited 127 without output"
-	silent = result.Failed and result.Output is "" and result.error is ""
+	silent = result.HasFailed and result.Output is "" and result.error is ""
 	error = silent then "Tool " + name + " exited " + result.exitCode + " without output" else result.error
 	ProcessResult(result.exitCode, result.Output.Replace("\r", ""), error.Replace("\r", ""))
 IsCrash(exitCode Number) Boolean

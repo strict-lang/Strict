@@ -81,7 +81,7 @@ IsGitNewer(stamp Number) Boolean
 	if File(root + "/.git/HEAD").Exists is false
 		return false
 	result = Process.RunTool("git", "-C \"" + root + "\" log -1 --format=%ct")
-	parsed = result.Succeeded then result.Output.Trim to Number else 0
+	parsed = result.HasSucceeded then result.Output.Trim to Number else 0
 	parsed is not Error and parsed > stamp
 IsSkipped(arguments Texts) Boolean
 	SelfBuild(".", "strict.exe").IsSkipped(("build", "Strict.strict"))

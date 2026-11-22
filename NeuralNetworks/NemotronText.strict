@@ -5,7 +5,7 @@ constant Prompt = "The capital of France is"
 constant Count = 48
 Run(arguments Texts)
 	if File(Folder + Name).Exists is false
-		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + Name + "\" \"" + Address + Name + "\"").Failed
+		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + Name + "\" \"" + Address + Name + "\"").HasFailed
 			return Error("DownloadFailed: " + Address + Name)
 	if MachineUse.Weights("NemotronText", Folder + Name).Admitted
 		Ran(arguments)

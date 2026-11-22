@@ -47,11 +47,11 @@ Linked(base Text) Text
 	output = " -o " + tools.Quoted(Executable(base)) + Flags + Toolchain.Optimization
 	arguments = tools.Quoted(base + ".android.o") + sources + output
 	linked = ToolRunner(compiler).Execute(arguments)
-	linked.Failed then "Android clang failed: " + linked.error + linked.Output else "Built " + Executable(base)
+	linked.HasFailed then "Android clang failed: " + linked.error + linked.Output else "Built " + Executable(base)
 Compiled(base Text) Text
 	lowered = tools.Lowered(base)
 	if lowered is not ""
 		return lowered
 	arguments = "-c " + tools.Quoted(base + ".ll") + " -o " + tools.Quoted(base + ".android.o")
 	compiled = ToolRunner(tools.Located("clang")).Execute(arguments + Architecture + Toolchain.Optimization)
-	compiled.Failed then "clang failed: " + compiled.error + compiled.Output else ""
+	compiled.HasFailed then "clang failed: " + compiled.error + compiled.Output else ""

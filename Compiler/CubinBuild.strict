@@ -41,7 +41,7 @@ Cubins(ptxas Text, base Text, stem Text) Texts
 		output = tools.Quoted(stem + "." + value + ".cubin")
 		arguments.Add("-arch=" + value + splitting + tools.Quoted(base + source) + " -o " + output)
 	for ToolRunner(ptxas).ExecuteAll(arguments, "GPU cubins " + Path(base).FileName.text)
-		if value.Failed
+		if value.HasFailed
 			"ptxas failed: " + value.error
 Packed(stem Text, base Text) Text
 	Local.Packed("Compiler/output/missing", "Compiler/output/missing").StartsWith("fatbinary failed")
@@ -52,7 +52,7 @@ Packed(stem Text, base Text) Text
 	packed = ToolRunner(tools.Located("fatbinary")).Execute(arguments)
 	for Architectures
 		File(stem + "." + value + ".cubin").Delete
-	if packed.Failed
+	if packed.HasFailed
 		return "fatbinary failed: " + packed.error
 	File(stem + ".fatbin").Rename(base + ".fatbin")
 	""
