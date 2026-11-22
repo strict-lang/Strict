@@ -15,7 +15,7 @@ get(key Text) Json
 	open = Skip(0)
 	parts = Parts(open)
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
-		if Unquoted(parts(value * 2)) is key
+		if Unquote(parts(value * 2)) is key
 			return Slice(MemberValue(parts(value * 2)), parts(value * 2 + 1))
 	Json("")
 Keys Texts
@@ -24,7 +24,7 @@ Keys Texts
 	open = Skip(0)
 	parts = Parts(open)
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
-		Unquoted(parts(value * 2))
+		Unquote(parts(value * 2))
 Elements Jsons
 	Bones("bones").Elements.Length is 2
 	Bones.Elements(1) to Text is "true"
@@ -42,7 +42,7 @@ to Text
 	Json(" 82 ") to Text is "82"
 	(Json("\"\\u00e9\\ud83d\\ude00\"") to Text).Bytes is (195, 169, 240, 159, 152, 128)
 	start = Skip(0)
-	text.StartsWith("\"", start) then Unquoted(start) else text.Trim
+	text.StartsWith("\"", start) then Unquote(start) else text.Trim
 to Number
 	Json(" 82 ") to Number is 82
 	text.Trim to Number
@@ -100,6 +100,6 @@ Skip(position Number) Number
 Slice(start Number, finish Number) Json
 	Bones.Slice(11, 65).Elements.Length is 2
 	Json(text.Substring(start, finish - start))
-Unquoted(start Number) Text
-	Escaped.Unquoted(1) is "a\"b\ncA"
+Unquote(start Number) Text
+	Escaped.Unquote(1) is "a\"b\ncA"
 	JsonText(text.Substring(start + 1, StringEnd(start) - start - 2)).Unescaped
