@@ -172,9 +172,9 @@ Counted(block CodeBlock) CodeBlock
 Started(block CodeBlock, place Text) CodeBlock
 	named = block.Load(InstructionEntry.LoadText(block.register, place))
 	slow = named.Load(InstructionEntry.LoadBoolean(named.register, block.scope.TypeOf(" slow test") is not ""))
-	constant signature = ("Strict/Runtime/TestBudget", "Started", "Strict/Number", "place", "isSlow")
+	constant signature = ("Strict/Runtime/TestBudget", "Start", "Strict/Number", "place", "isSlow")
 	slow.Load(InstructionEntry.Invoke(slow.register, signature, (named.Result, slow.Result), -1)).Stored("started")
 Finished(block CodeBlock) CodeBlock
 	started = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "started"))
-	constant signature = ("Strict/Runtime/TestBudget", "Finished", "Strict/Number", "started")
+	constant signature = ("Strict/Runtime/TestBudget", "Finish", "Strict/Number", "started")
 	started.Load(InstructionEntry.Invoke(started.register, signature, List(Number) + started.Result, -1)).Stored("elapsed")

@@ -728,10 +728,6 @@
   // the slots of a VM frame (flag 256 on their block): writes into it are not counted, a copy of it is rooted too, a
   // reclaim treats its items like the stack that holds the frame, so a call no longer counts and drops every slot
   func.func private @strict_frameslots_root(%self: f64, %slots: f64) -> f64 {
-    %forwarded = func.call @strict_frameslots_rooted(%self, %slots) : (f64, f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_frameslots_rooted(%self: f64, %slots: f64) -> f64 {
     %rootedFlag = arith.constant 256 : i16
     %view = func.call @strict_ptr(%slots) : (f64) -> !llvm.ptr
     %object = llvm.ptrtoint %view : !llvm.ptr to i64
@@ -770,10 +766,6 @@
     return %result : i1
   }
   func.func private @strict_testbudget_start(%self: f64, %place: f64, %isSlow: f64) -> f64 {
-    %forwarded = func.call @strict_testbudget_started(%self, %place, %isSlow) : (f64, f64, f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_testbudget_started(%self: f64, %place: f64, %isSlow: f64) -> f64 {
     %limit = arith.constant 0.2 : f64
     %started = func.call @strict_test_begin(%self, %place, %isSlow, %limit) : (f64, f64, f64, f64) -> f64
     return %started : f64
@@ -781,10 +773,6 @@
   // the VM test runner starts every test with this (HostedBudget): like Started, and the watchdog also sees its wall
   // start (word 10 of its slot, word 11 is 1 once logged after 1 s, 2 once over 60 s), slow tests are watched too
   func.func private @strict_testbudget_watch(%self: f64, %place: f64, %isSlow: f64) -> f64 {
-    %forwarded = func.call @strict_testbudget_watched(%self, %place, %isSlow) : (f64, f64, f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_testbudget_watched(%self: f64, %place: f64, %isSlow: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %limit = arith.constant 0.2 : f64
@@ -994,10 +982,6 @@
     return %started : f64
   }
   func.func private @strict_testbudget_finish(%self: f64, %started: f64) -> f64 {
-    %forwarded = func.call @strict_testbudget_finished(%self, %started) : (f64, f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_testbudget_finished(%self: f64, %started: f64) -> f64 {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %true = arith.constant true
@@ -1161,15 +1145,11 @@
     return
   }
   // a whole command (strict test, check or build, or one request of a resident server) ends with an Error when it runs
-  // past this clock time (TestBudget.Limited, 0 is no limit): a compiler or a test child that loops can not stay for hours
+  // past this clock time (TestBudget.Limit, 0 is no limit): a compiler or a test child that loops can not stay for hours
   llvm.mlir.global internal @strict_command_until(0.0 : f64) : f64
   llvm.mlir.global internal @strict_command_message(0 : i64) : i64
   llvm.mlir.global internal @strict_command_output(0 : i64) : i64
   func.func private @strict_testbudget_limit(%self: f64, %seconds: f64, %message: f64) -> f64 {
-    %forwarded = func.call @strict_testbudget_limited(%self, %seconds, %message) : (f64, f64, f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_testbudget_limited(%self: f64, %seconds: f64, %message: f64) -> f64 {
     %none = arith.constant 0.0 : f64
     %untilSlot = llvm.mlir.addressof @strict_command_until : !llvm.ptr
     %isLimited = arith.cmpf ogt, %seconds, %none : f64
@@ -12182,7 +12162,7 @@
     cf.cond_br %isRooted, ^rooted, ^filled
   ^rooted:
     %zero = arith.constant 0.0 : f64
-    %rootedCopy = func.call @strict_frameslots_rooted(%zero, %copy) : (f64, f64) -> f64
+    %rootedCopy = func.call @strict_frameslots_root(%zero, %copy) : (f64, f64) -> f64
     cf.br ^filled
   ^filled:
     %from = func.call @strict_list_items(%list) : (f64) -> !llvm.ptr

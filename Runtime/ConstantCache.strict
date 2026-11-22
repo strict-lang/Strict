@@ -1,12 +1,12 @@
 has entries List(VmValue)
 At(index Number) VmValue
 	entries(index)
-Stored(index Number, element VmValue)
+Store(index Number, element VmValue)
 	Error("ConstantCache writes require the native runtime: " + index + " " + element.kind)
 Host(call Invocation) VmValue
 	cache = ConstantCache(call.Instance.Member(0).items)
 	index = call.Arguments.First.number
 	if call.MethodName is "At"
 		return cache.At(index)
-	cache.Stored(index, call.Arguments.Last)
+	cache.Store(index, call.Arguments.Last)
 	VmValue.None

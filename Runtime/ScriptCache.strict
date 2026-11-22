@@ -127,9 +127,9 @@ IsExecuted(entry TypeEntry, arguments List(VmValue)) Boolean
 	nextTypes = (List(TypeEntry) + resolved) + base
 	if machine.prototypes.entries.Length is 0
 		return Machine(nextTypes, ConstantCache(List(VmValue)), folder).Prepared.IsCompleted(entry.Name, arguments)
-	machine.prototypes.Stored(0, Natives(nextTypes).Fresh(resolved))
+	machine.prototypes.Store(0, Natives(nextTypes).Fresh(resolved))
 	prepared = Machine(nextTypes, machine.prototypes, folder, false, machine.sources)
-	machine.prototypes.Stored(0, Constants(prepared).Fill(0))
+	machine.prototypes.Store(0, Constants(prepared).Fill(0))
 	prepared.IsCompleted(entry.Name, arguments)
 Ran(entry TypeEntry, main TypeCodegen, arguments List(VmValue)) ScriptCache
 	if IsHit(entry)

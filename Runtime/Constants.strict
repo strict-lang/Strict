@@ -43,7 +43,7 @@ Compute(route Number, method MethodEntry, call Invocation) VmValue
 Save(route Number, slot Number, result VmValue)
 	prototype = machine.prototypes.At(route)
 	items = Storage(machine.types).Replace(prototype.items, slot, result)
-	machine.prototypes.Stored(route, VmValue(prototype, items = items))
+	machine.prototypes.Store(route, VmValue(prototype, items = items))
 Member(type TypeEntry, slot Number) VmValue
 	route = type.Name is in machine.places then machine.places(type.Name) else Resolver(machine.types).Position(type)
 	isPrepared = route >= 0 and route < machine.prototypes.entries.Length
@@ -56,7 +56,7 @@ SeedMachine(cache Dictionary(Text, VmValue)) Machine
 			cached = cache(value.Name)
 			proto = machine.prototypes.At(index)
 			if cached.items.Length is proto.items.Length
-				machine.prototypes.Stored(index, VmValue(proto, items = Merge(proto.items, cached.items)))
+				machine.prototypes.Store(index, VmValue(proto, items = Merge(proto.items, cached.items)))
 	machine
 Merge(current List(VmValue), cached List(VmValue)) List(VmValue)
 	Constants(Machine.Hello.Prepared).Merge(List(VmValue) + Unset, List(VmValue) + VmValue.OfNumber(7)).First.number is 7

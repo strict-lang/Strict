@@ -5,7 +5,7 @@ constant Directed = ("TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlo
 constant Uncaptured = Invocation(InstructionEntry.Invoke(1, ("Strict/Logger", "Capture", "Strict/Text", "isCapturing"), 0, -1), VmValue.OfBoolean(false), VmValue("Strict/Logger", 0, "", VmValue.OfText("")))
 constant Starting = Invocation(InstructionEntry.Invoke(1, ("Strict/Process", "Start", "Strict/Number", "arguments"), 0, -1), VmValue.OfText(""), VmValue("Strict/Process", 0, "", VmValue.OfText("")))
 constant Sampling = Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/Sampler", "IsTaken", "Strict/Boolean", "tick"), List(Number) + 0, -1), List(VmValue) + VmValue.OfNumber(-5), VmValue.None)
-constant Rooting = Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/FrameSlots", "Rooted", "Strict/List(VmValue)", "slots"), List(Number) + 0, -1), List(VmValue) + Frame.Listed(7), VmValue.None)
+constant Rooting = Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/FrameSlots", "Root", "Strict/List(VmValue)", "slots"), List(Number) + 0, -1), List(VmValue) + Frame.Listed(7), VmValue.None)
 constant Collecting = Invocation(InstructionEntry.Invoke(0, ("Strict/Process", "Collect", "None"), List(Number), -1), List(VmValue), VmValue.None)
 Seconds Number
 	HostedProcess(Running).Seconds is Process.ToolSeconds
@@ -41,7 +41,7 @@ Direct VmValue
 		return VmValue.OfBoolean(Sampler.IsTaken(call.Arguments.First.number))
 	if TypeEntry.ShortName(call.TypeName) is in ("Logger", "Strict")
 		return Captured
-	call.MethodName is in ("At", "Stored", "Store") then ConstantCache.Host(call) else HostedBudget(call).Result
+	call.MethodName is in ("At", "Store") then ConstantCache.Host(call) else HostedBudget(call).Result
 Captured VmValue
 	HostedProcess(Uncaptured).Captured.text is ""
 	isLogger = TypeEntry.ShortName(call.TypeName) is "Logger"

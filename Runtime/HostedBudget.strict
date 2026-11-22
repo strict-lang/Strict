@@ -1,9 +1,9 @@
 has call Invocation
 Result VmValue
-	TestBudget.Finished(TestBudget.Started("a", false) + TestBudget.Finished(0) * 0) < 9 + TestBudget.Started("", true) * 0
+	TestBudget.Finish(TestBudget.Start("a", false) + TestBudget.Finish(0) * 0) < 9 + TestBudget.Start("", true) * 0
 	arguments = call.Arguments
-	if call.MethodName is in ("Started", "Watched", "Start", "Watch")
-		return VmValue.OfNumber(TestBudget.Watched(arguments(0).text, arguments(1).IsTrue))
+	if call.MethodName is in ("Start", "Watch")
+		return VmValue.OfNumber(TestBudget.Watch(arguments(0).text, arguments(1).IsTrue))
 	if call.MethodName is "Entered"
 		return VmValue.OfNumber(TestBudget.Entered)
 	if call.MethodName is "Expired"
@@ -18,4 +18,4 @@ Measure(arguments List(VmValue)) VmValue
 	if call.MethodName is "Busy"
 		return VmValue.OfNumber(TestBudget.Busy(arguments(0).number, arguments(1).number))
 	elapsed = arguments(0).number
-	VmValue.OfNumber(call.MethodName is "Overrun" then SlowTests.Overrun(elapsed) else TestBudget.Finished(elapsed))
+	VmValue.OfNumber(call.MethodName is "Overrun" then SlowTests.Overrun(elapsed) else TestBudget.Finish(elapsed))

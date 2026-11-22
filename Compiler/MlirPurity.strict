@@ -125,7 +125,7 @@ IsAllowed(inspected MlirFunction, at Number, callees List(MlirFunction)) Boolean
 	Doubling.IsExternalSafe("Directory", "Delete") is false
 	Doubling.IsExternalSafe("Process", "RunTools") is false
 	Doubling.IsExternalSafe("TestBudget", "Expired")
-	Doubling.IsExternalSafe("TestBudget", "Started") is false
+	Doubling.IsExternalSafe("TestBudget", "Start") is false
 	decoder = PayloadDecoder(inspected.method.instructions(at))
 	isNever = IsExternalSafe(TypeEntry.ShortName(decoder.Text(1)), decoder.Text(2)) is false
 	isNever is false and (callees.Length is 0 or MlirForeign(callees.First).IsForeign is false)

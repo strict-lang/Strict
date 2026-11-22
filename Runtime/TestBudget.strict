@@ -1,6 +1,6 @@
-Started(place Text, isSlow Boolean) Number
+Start(place Text, isSlow Boolean) Number
 	isSlow is false and place.Length is 0 then Error("Unit test must have a description") else Process.Elapsed
-Finished(started Number) Number
+Finish(started Number) Number
 	(Process.Elapsed - started) * 1000
 Entered Number
 	Process.Elapsed
@@ -9,6 +9,6 @@ Expired Text
 	""
 Overran(elapsed Number, place Text) Text
 Overrun(elapsed Number) Number
-Watched(place Text, isSlow Boolean) Number
+Watch(place Text, isSlow Boolean) Number
 Busy(depth Number, step Number) Number
-Limited(seconds Number, message Text)
+Limit(seconds Number, message Text)

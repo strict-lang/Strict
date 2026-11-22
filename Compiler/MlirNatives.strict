@@ -127,7 +127,7 @@ TypeHelper(kind Text, name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "Sin") is "strict_degrees_sin"
 	MlirNatives(Texts, 1).TypeHelper("Memo", "Keep") is "strict_memo_keep"
 	MlirNatives(Texts, 1).TypeHelper("Strict", "Test") is ""
-	if kind is "ConstantCache" and name is in ("At", "Stored", "Store")
+	if kind is "ConstantCache" and name is in ("At", "Store")
 		return name is "At" then "strict_list_get" else "strict_list_set"
 	isHosted = kind is in Hosted.Kinds and kind is not "Strict" then kind + "." + name is in Hosted.Methods else false
 	if isHosted is false and (kind is not "Memo" or name.StartsWith(TestCodegen.Runner))
@@ -136,7 +136,7 @@ TypeHelper(kind Text, name Text) Text
 GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "ReadBytes") is "strict_file_readbytes"
 	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "At") is "strict_list_get"
-	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Stored") is "strict_list_set"
+	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Store") is "strict_list_set"
 	MlirNatives(Texts, 1).TypeHelper("Degrees", "At") is ""
 	MlirNatives(Texts, 1).TypeHelper("ConstantCache", "Other") is ""
 	MlirNatives(Texts, 1).TypeHelper("Memo", "$TestsTook") is ""

@@ -76,7 +76,7 @@ GenerateAnswer(resident Resident, request Text, socket Number, arguments Texts, 
 	Socket.Output(socket)
 	isCode = Scripted.IsRun(arguments)
 	answer = Log(CommandLimit(arguments).Armed, isCode then last else Answer(last, known = last.Fresh(folder)))
-	TestBudget.Limited(0, "")
+	TestBudget.Limit(0, "")
 	Socket.Output(0)
 	if isMoved
 		Directory.Change(home)
