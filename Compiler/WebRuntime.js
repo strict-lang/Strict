@@ -1049,7 +1049,7 @@ addToLibrary({
 		await strictWebGpuThrottled(bytes);
 	},
 	// the buffer of a kept handle: rows of a file (strict_webfile_rows), rows joined only from files and whole borrows of
-	// them get it on their first use, once, again after GpuMemory.Evicted gave it back (strict_webgpu_evicted)
+	// them get it on their first use, once, again after GpuMemory.Evict gave it back (strict_webgpu_evicted)
 	$strictWebGpuPlaced__deps: ['$strictWebGpu', '$strictWebFile', '$strictWebGpuCreated'],
 	$strictWebGpuPlaced: (handle) => {
 		const lazy = strictWebGpu.lazy[handle];
@@ -1179,7 +1179,7 @@ addToLibrary({
 			strictWebGpu.buffers, strictWebGpu.halves, strictWebGpu.uploads, strictWebGpu.sixteens, strictWebGpu.lent])
 			delete kept[handle];
 	},
-	// GpuMemory.Evicted gives back the buffers of rows read from files and of rows joined only from them, their next use
+	// GpuMemory.Evict gives back the buffers of rows read from files and of rows joined only from them, their next use
 	// uploads them again from the file (kept in the origin private file system): MossWeb's Moss and the 9B encoder did not
 	// fit next to each other in Firefox
 	strict_webgpu_evicted__deps: ['$strictWebGpu', '$strictWebGpuFlush'],
@@ -1194,7 +1194,7 @@ addToLibrary({
 			strictWebGpu.lazy[handle] = Object.assign({}, record);
 		}
 	},
-	// GpuMemory.Released and Evicted destroy the pooled buffers of finished kernels and the free failure flags after the
+	// GpuMemory.Trim and Evict destroy the pooled buffers of finished kernels and the free failure flags after the
 	// commands still to be submitted (Firefox ran out of memory loading Moss with the encoder's buffers pooled)
 	strict_webgpu_trimmed__deps: ['$strictWebGpuTrim'],
 	strict_webgpu_trimmed: () => strictWebGpuTrim(),

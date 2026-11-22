@@ -1,7 +1,7 @@
-Released
-Evicted
-Yielded
-Finished
+Trim
+Evict
+Yield
+Finish
 Held Number
 	GpuMemory.Held >= 0
 	0

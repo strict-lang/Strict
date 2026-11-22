@@ -1150,13 +1150,13 @@
     llvm.call @strict_webgpu_release(%handle32) : (i32) -> ()
     return
   }
-  // GpuMemory.Released and Evicted (strict_gpu_trim_unused) also destroy the WebGPU buffers kept for reuse
+  // GpuMemory.Trim and Evict (strict_gpu_trim_unused) also destroy the WebGPU buffers kept for reuse
   llvm.func @strict_webgpu_trimmed()
   func.func private @strict_gpu_web_trim() {
     llvm.call @strict_webgpu_trimmed() : () -> ()
     return
   }
-  // GpuMemory.Evicted also gives back the WebGPU buffers of rows read from files, they are uploaded again when used
+  // GpuMemory.Evict also gives back the WebGPU buffers of rows read from files, they are uploaded again when used
   llvm.func @strict_webgpu_evicted()
   func.func private @strict_gpu_web_evict() {
     llvm.call @strict_webgpu_evicted() : () -> ()

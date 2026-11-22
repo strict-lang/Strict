@@ -145,8 +145,7 @@ GpuHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("Gpu", "Require") is "strict_gpu_require"
 	if name.StartsWith(TestCodegen.Runner)
 		return ""
-	trimmed = name is in ("Released", "Trim") then "trim_unused" else name.Lower
-	"strict_gpu_" + (name is in ("Evicted", "Evict") then "evict_all" else trimmed)
+	"strict_gpu_" + (name is "Trim" then "trim_unused" else (name is "Evict" then "evict_all" else name.Lower))
 Validated(name Text) Text
 	MlirNatives(MlirValidated.Kept.function, 2).Validated("Validated") is "strict_validated"
 	MlirNatives(MlirValidated.Changed.function, 2).Validated("Validated") is ""
@@ -155,8 +154,8 @@ Validated(name Text) Text
 TextHelper(name Text) Text
 	MlirNatives(Texts, 1).TypeHelper("File", "WriteLines") is "strict_file_writelines"
 	MlirNatives(Texts, 1).TypeHelper("File", "Modified") is "strict_file_modified"
-	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Released") is "strict_gpu_trim_unused"
-	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Evicted") is "strict_gpu_evict_all"
+	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Trim") is "strict_gpu_trim_unused"
+	MlirNatives(Texts, 1).TypeHelper("GpuMemory", "Evict") is "strict_gpu_evict_all"
 	MlirNatives(Texts, 1).TypeHelper("Process", "Collect") is "strict_process_collect"
 	MlirNatives(Texts, 1).Helper("Strict/File", "Length", 0) is "strict_file_length"
 	MlirNatives(Texts, 1).TextHelper("Upper") is "strict_text_upper"

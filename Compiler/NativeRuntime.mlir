@@ -21206,7 +21206,7 @@
     %released = arith.maxsi %after, %none : i64
     return %released : i64
   }
-  // `GpuMemory.Released`: lists whose counts are gone give their blocks back and the unused pool blocks are released,
+  // `GpuMemory.Trim`: lists whose counts are gone give their blocks back and the unused pool blocks are released,
   // live tensor copies stay; never a collection (`Process.Collected` is the one for stage boundaries); the budget is
   // measured again at the next allocation, a resident server sees the memory a neighbour gave back since a refused
   // allocation lowered it
@@ -21251,16 +21251,8 @@
   ^done(%result: f64):
     return %result : f64
   }
-  // `GpuMemory.Yielded`: evict every device copy, then give the GPU lock back even when this process still holds more than 1 GB
+  // `GpuMemory.Yield`: evict every device copy, then give the GPU lock back even when this process still holds more than 1 GB
   func.func private @strict_gpu_yield(%self: f64) -> f64 {
-    %forwarded = func.call @strict_gpu_yielded(%self) : (f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_gpu_finish(%self: f64) -> f64 {
-    %forwarded = func.call @strict_gpu_finished(%self) : (f64) -> f64
-    return %forwarded : f64
-  }
-  func.func private @strict_gpu_yielded(%self: f64) -> f64 {
     %released = func.call @strict_gpu_evict_all(%self) : (f64) -> f64
     %none = arith.constant 0 : i64
     %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
@@ -21496,9 +21488,9 @@
     %broken = arith.constant -2.0 : f64
     return %broken : f64
   }
-  // `GpuMemory.Finished`: waits for the GPU work queued so far (a graph being captured is launched first) without a
+  // `GpuMemory.Finish`: waits for the GPU work queued so far (a graph being captured is launched first) without a
   // collection or trim, 0 also without a GPU (it is not opened for this)
-  func.func private @strict_gpu_finished(%self: f64) -> f64 {
+  func.func private @strict_gpu_finish(%self: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
     %one = arith.constant 1 : i64
     %stateSlot = llvm.mlir.addressof @strict_gpu_state : !llvm.ptr
@@ -21649,7 +21641,7 @@
   // prepared launches (they need them): weights used in turn every step (more blocks than fit) keep all but the ones streamed
   // through the same memory, evicting the least recently used would evict the next block every time; rows with a pinned
   // copy go first (only them when spilledOnly), so the streamed ones stay the same; true when one went (the list uploads
-  // again at its next use); a window of -1 keeps none of the last uses (GpuMemory.Evicted between jobs)
+  // again at its next use); a window of -1 keeps none of the last uses (GpuMemory.Evict between jobs)
   func.func private @strict_gpu_evicted(%needed: i64, %spilledOnly: i1, %window: i64, %headroom: i64) -> i1 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64

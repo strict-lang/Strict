@@ -1,21 +1,21 @@
 has lines Texts
-constant Evicted = Inlines(("A Text", "\tlet evicted = GpuMemory.Evicted", "\tevicted is Error then \"\" else answer"))
-constant Returned = Inlines(("A Text", "\tif GpuMemory.Evicted is Error", "\t\treturn \"\"", "\tanswer", "Run"))
-constant Ordered = Inlines(("A Text", "\tlet answer = Run(1)", "\tGpuMemory.Evicted is Error then \"\" else answer"))
+constant Evicted = Inlines(("A Text", "\tlet evicted = GpuMemory.Evict", "\tevicted is Error then \"\" else answer"))
+constant Returned = Inlines(("A Text", "\tif GpuMemory.Evict is Error", "\t\treturn \"\"", "\tanswer", "Run"))
+constant Ordered = Inlines(("A Text", "\tlet answer = Run(1)", "\tGpuMemory.Evict is Error then \"\" else answer"))
 constant Padding = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 constant Nested = "\t\treturn a then 1 else 2"
 constant Keywords = ("let", "mutable", "for", "if", "else", "return", "ignore")
 constant Totaled = Inlines(("Run", "\ttotal = 1", "\tLog(total)"))
 Issues ValidationIssues
-	Evicted.Issues.First to Text is "SingleUseLetMustBeInlined: evicted, use GpuMemory.Evicted in the next line"
-	Returned.Issues.First to Text is "IfReturnMustBeThenElse: GpuMemory.Evicted is Error then \"\" else answer"
+	Evicted.Issues.First to Text is "SingleUseLetMustBeInlined: evicted, use GpuMemory.Evict in the next line"
+	Returned.Issues.First to Text is "IfReturnMustBeThenElse: GpuMemory.Evict is Error then \"\" else answer"
 	Evicted.Issues.First.Line is 2 and Returned.Issues.First.Line is 2 and Ordered.Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		issues = issues + LetIssues(index) + ReturnIssues(index)
 	issues
 Line(at Number) Text
-	Evicted.Line(1) is "\tlet evicted = GpuMemory.Evicted" and Evicted.Line(3) is ""
+	Evicted.Line(1) is "\tlet evicted = GpuMemory.Evict" and Evicted.Line(3) is ""
 	at < lines.Length then lines(at) else ""
 LetIssues(at Number) ValidationIssues
 	Evicted.LetIssues(1).Length is 1 and Evicted.LetIssues(2).Length is 0
@@ -91,8 +91,8 @@ IsRebound(inlined Text, next Texts, name Text) Boolean
 	isIndexed or isRepeated or next.First is "for" and Uses(tokens, "value") + Uses(tokens, "index") > 0
 Value(line Text) Text
 	Inlines(("Run", "\tx", "\tx")).IsInlinable(1) is false
-	Evicted.Value("\tlet evicted = GpuMemory.Evicted") is "GpuMemory.Evicted"
-	Evicted.Value("\tevicted = GpuMemory.Evicted") is "GpuMemory.Evicted"
+	Evicted.Value("\tlet evicted = GpuMemory.Evict") is "GpuMemory.Evict"
+	Evicted.Value("\tevicted = GpuMemory.Evict") is "GpuMemory.Evict"
 	Evicted.Value("\tmutable count = 1") is ""
 	trimmed = line.Trim
 	tokens = Tokenizer(trimmed).Tokens
@@ -157,7 +157,7 @@ Header(at Number) Text
 			return lines(value)
 	""
 Merge(at Number) Text
-	Returned.Merge(1) is "GpuMemory.Evicted is Error then \"\" else answer"
+	Returned.Merge(1) is "GpuMemory.Evict is Error then \"\" else answer"
 	Inlines(("R Number", "\tif done", "\t\treturn 1", "\t1", "\t2")).Merge(1) is ""
 	Inlines(("Run", "\tfor done", "\t\treturn 1", "\t1")).Merge(1) is ""
 	Inlines(("R Number", "\tif done", "\t\tLog(1)", "\t1")).Merge(1) is ""
