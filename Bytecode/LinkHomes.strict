@@ -2,12 +2,14 @@ has round LinkRound
 constant Single = LinkHomes(LinkRound.Single)
 Homing(signed Texts) LinkRound
 	Single.Homing(List(Text) + "Strict/Missing:Go").linker.Homes("Strict/Missing") is BinaryLinks.Unknown
+	LinkHomes(LinkRound.Cached).Homing(List(Text) + "Strict/Logger:").linker.Homes.Length is 0
 	stamps = round.linker.Sourced.Indexed
 	mutable homes = round.linker.Homes
 	mutable places = round.linker.Places
+	fresh = LinkFresh(round, LinkFresh.Unplaced)
 	for signed
 		type = Signature(value).Type
-		if type is not in homes and type.IndexOf("(") < 0
+		if type is not in homes and type.IndexOf("(") < 0 and fresh.Covering(value) is ""
 			file = BinaryFile(FileCompiler.Normalized(round.linker.SourcePath(type)))
 			homes(type) = BinaryLinks(file).Owned(file.Head(File(file.Path).ReadBytes), stamps)
 			if file.source is in stamps and stamps(file.source) > 0
