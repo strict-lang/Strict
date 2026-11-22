@@ -6,19 +6,31 @@
 
 [Watch the SCrunch demo](https://strict-lang.org/img/SCrunchDemo.mp4): how `.strict` code is written, tested while typing and run.
 
-## A fast, low level engine for AI to write
+## Simple to read code for humans and computers alike
 
-Strict is a small programming language that AI can write, read and change as reliably as people can. Every type is one file, every method starts with its own tests, values are immutable and there is exactly one way to solve each problem, so generated code is checked by `strict check` and its tests within seconds instead of being reviewed line by line.
+**Fastest native speed in the universe out of the box.** Cost: fewer features, unproven, still volatile. For the amount of code you write, no language comes close: highly optimized low level code, splits loops over all cores or into GPU kernels and rewrites slow parts automatically. Games, math, LLMs, and image and video generation can run faster than C, Rust, PyTorch, llama.cpp and game engines.
 
-Strict is meant as the DNA of a program: a compact, exact and fast low level layer whose rules a computer can fully understand, verify and evolve. The long term goal is a higher level language on top of it in which computers design and write whole programs, generating, testing and discarding millions of lines in real time.
+The published site can lag this repository. Games, charts and the docs are there:
+
+- [LLM](https://strict-lang.org/#llm): about 10% faster than llama.cpp, including Qwen3-8B, Qwen3.5 9B with multi token prediction, Qwen3-Coder-30B and Qwen3.8 27B
+- [Moss image generation](https://strict-lang.org/#generation): 3-4x faster than ComfyUI ([try it in the browser](https://strict-lang.org/moss/MossWeb.html))
+- [H3 video generation](https://strict-lang.org/#generation): about 2x faster, and [H3 image generation](https://strict-lang.org/#generation): 2-4x faster
+- [Leibniz benchmark](https://strict-lang.org/#leibniz): 2x faster than C on the official AMD EPYC runner, 4x on an i9-13900KF
+- [Performance](https://strict-lang.org/#performance): game-engine stress tests, some rendering benchmarks 2-10x faster than Unity, plus image blur and [FractalZoomer](https://strict-lang.org/games/FractalZoomer/FractalZoomer.html)
+- [Games](https://strict-lang.org/#games): Quillhop, Racing Game, Tiny Bat, FractalZoomer and the smaller games play in the browser. SoulCraft, Arena Wars and WebWars are on the way
+
+Language docs: [Getting Started](https://strict-lang.org/docs/GettingStarted), [Overview](https://strict-lang.org/docs/Overview), [Benchmarks](https://strict-lang.org/docs/Benchmarks), [Projects](https://strict-lang.org/docs/Projects), [Platforms](https://strict-lang.org/docs/Platforms).
+
+Every type is one `.strict` file, and the file name is the type name. Members come first (`has celsius Number`). A method such as `ToFahrenheit Number` starts with the tests that show how to use it (`TemperatureConverter(100).ToFahrenheit is 212`), then the implementation. Values are immutable, and there is one way to write each thing, so `strict check` and those tests accept or reject generated code without a line-by-line review. [The same example is in the docs](https://strict-lang.org/docs/Overview#a-first-look).
+
+Almost every unit test finishes in well under a millisecond. That is why a large codebase can run many millions of mutation tests in seconds: each mutant is one tiny change, and the tests that catch it are already that fast. Strict is the exact low level layer under a higher level system that is not released yet, [Ben](https://github.com/strict-lang/Ben) and TestSolver. Their goal is millions of lines of code and tests per second, and solving new programming problems in a few seconds, 8 to 16 of them at once. Some searches try millions of variations and keep only what Strict accepts, so a world knowledge base of skills grows with the work. This is not an LLM. There is no pre-training. It is an expert system of knowledge and skills, and it becomes more useful the more it does and learns.
 
 What Strict does today:
-- **Self-hosted**: parser, type inference, validators, the Strict VM and the native code generator (MLIR and LLVM) are written in Strict, `strict` builds itself.
-- **Instant feedback**: `strict test` runs the inline tests on the Strict VM in memory, the VS Code extension shows passing lines and the values of each line while you type.
-- **Native speed**: SIMD, loops spread over all CPU cores, NVIDIA GPU kernels (tensor cores, no CUDA toolkit needed), AMD GPUs through HIP, Metal on macOS (experimental), WebAssembly for the browser.
-- **Real workloads**: GPT-2 and Qwen3 inference with the transformer logic written in Strict, image processing, neural network training, the DeltaEngine and SoulCraft games, C and C# libraries with generated bindings.
-
-Performance results, docs (Getting Started, Language Guide, Cheat Sheet) and the blog: https://strict-lang.org
+- **Self-hosted**: parser, type inference, validators, the Strict VM and the native code generator (MLIR and LLVM) are written in Strict, and `strict` builds itself.
+- **Sub-millisecond tests**: `strict test` runs the inline tests on the Strict VM. SCrunch in VS Code shows passing lines and the values of each line while you type. After the tests pass, mutation testing runs on the same VM.
+- **Native speed**: SIMD and AVX, automatic parallelization across CPU cores, NVIDIA GPUs with tensor cores (no CUDA toolkit needed), AMD GPUs through HIP, Metal on macOS, and WebAssembly for the browser.
+- **Platforms**: the same source builds for Windows, Linux, macOS, Android, iOS and the web. See [Platforms](https://strict-lang.org/docs/Platforms).
+- **Real workloads**: Qwen3.8 27B and the other Qwen3 models, Moss image generation, H3 image generation, H3 video generation, GPT-2, image processing, and the DeltaEngine games (SoulCraft, Arena Wars, WebWars, Quillhop, Racing Game, Rocket Commander, Forest, FractalZoomer, Blocks, Breakout, Artifex, Tiny Bat, GhostWars, Armies of Steel). C and C# libraries get generated bindings. The project list is on [strict-lang.org](https://strict-lang.org/docs/Projects).
 
 ![Strict Layers](https://strict-lang.org/img/StrictLayers.svg?sanitize=true)
 
@@ -123,7 +135,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 - A call of a method returning `Mutable(...)` as a statement (`numbers.Add(5)`) changes the `mutable` variable it is called on.
 - A method assigning a `mutable` member changes the instance it is called on, which has to be a `mutable` variable or member: `mutable ticker = Ticker(0)`, then `ticker.Next` twice gives 1 and 2 (`ChangingCallNeedsMutableVariable` otherwise). A change of an element or of a member of a variable (`rows(0).Add(5)`, `holder.ticker.Next`) would be lost and is reported the same way: assign the changed element or call it in a method of the owning type.
 - A parameter whose type has changing methods is a reference: `ColorValue(random)` with `mutable random = PseudoRandom(7)` advances `random` itself (its `from(random PseudoRandom)` calls `random.Get(0, 1)` three times), a value that is no mutable variable is passed as a copy.
-- A type name is its default instance (members with their defaults), a new one every time: `Bag.Count` called from another type calls Count on a new `Bag`, `Ticker.Next` gives 1 each time (keep a `mutable ticker = Ticker` to continue), constants and methods using no members need no instance. A member without a default takes the caller's variable, parameter or member of the same name, never a member of the caller's members, and stays unset without one. `logger` is that console `Logger` in every method. Declare `has logger` and pass it to `from` only when a type needs a different logger.
+- A type name is its default instance (members with their defaults), a new one every time: `Bag.Count` called from another type calls Count on a new `Bag`, `Ticker.Next` gives 1 each time (keep a `mutable ticker = Ticker` to continue), constants and methods using no members need no instance. A member without a default takes the caller's variable, parameter or member of the same name, never a member of the caller's members, and stays unset without one. `logger` is the console `Logger` in every method. A different logger is passed into `from`, and you can define that logger yourself.
 - A custom `from` keeps the constructor of the members when their counts differ: `ColorValue(random)` and `ColorValue(0.5, 0, 0)`.
 - Values never change: `list + element` gives a new list. The runtime reuses the old memory in place since the old version is not used anymore (using it again forces a copy, that is bad code).
 
@@ -139,7 +151,7 @@ Builds, checks, folder tests on the VM, VS Code typing checks and value tracing 
 
 Details are in the README of each package. Open bugs and speed work go into `bugs.md` and `performance.md` while there are any, larger ideas are in [ideas.md](ideas.md).
 
-Design decisions: an immutable expression tree (static analysis only), validation before execution, tests that live with the code and disappear from the bytecode, strict rules first and then hardware speed. Only code that is actually called is parsed, validated, tested and executed, so millions of generated lines can be checked and discarded almost immediately.
+Design decisions: an immutable expression tree (static analysis only), validation before execution, tests that live with the code and disappear from the bytecode, strict rules first and then hardware speed. Only code that is actually called is parsed, validated, tested and executed. Unit tests are fast enough that millions of mutations finish in seconds. Millions of lines of code and tests per second is the goal of Ben and TestSolver, the higher level system on top, which is not released yet.
 
 ## Examples (from Number.strict, Text.strict and List.strict)
 ```
