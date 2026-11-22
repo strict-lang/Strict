@@ -483,7 +483,7 @@ static double requested(const char* method, const char* url, const char* body, c
 #endif
 #endif
 
-STRICT_EXPORT double Http_Requested(double self, double method, double url, double body, double headerLines,
+STRICT_EXPORT double Http_Request(double self, double method, double url, double body, double headerLines,
 	double seconds, double maximum)
 {
 	return valid_url(text_of(url)) ? requested(text_of(method), text_of(url), text_of(body), text_of(headerLines),
@@ -562,7 +562,7 @@ static int thread_started(size_t slot)
 static int thread_started(size_t slot) { worked(slot); return 1; }
 #endif
 
-STRICT_EXPORT double Http_Started(double self, double method, double url, double body, double headerLines,
+STRICT_EXPORT double Http_Start(double self, double method, double url, double body, double headerLines,
 	double seconds, double maximum)
 {
 	if (!valid_url(text_of(url)))
@@ -593,7 +593,7 @@ STRICT_EXPORT double Http_Started(double self, double method, double url, double
 	return strict_fail(copied ? "HttpFailed (no thread for the request)" : "NotEnoughMemory");
 }
 
-STRICT_EXPORT double Http_Polled(double self, double request)
+STRICT_EXPORT double Http_Poll(double self, double request)
 {
 	uint64_t number = request >= 1 && request < 1e15 ? (uint64_t)request : 0;
 	size_t slot = number ? (size_t)((number - 1) % REQUESTS) : 0;
