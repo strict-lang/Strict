@@ -603,6 +603,7 @@
   }
   llvm.func @SetUnhandledExceptionFilter(!llvm.ptr) -> !llvm.ptr
   llvm.mlir.global internal constant @strict_access_text("\79\00\00\00\00\00\00\00\79\00\00\00\00\00\00\00Error: AccessViolation, the program read or wrote memory it does not own (an instance used as a list or a missing value)\0A\00") : !llvm.array<138 x i8>
+  llvm.mlir.global internal constant @strict_access_where("\22\00\00\00\00\00\00\00\22\00\00\00\00\00\00\00  at instruction %p, address %llx\0A\00") : !llvm.array<51 x i8>
   // an access violation nothing handled (the driver handles its own first) is reported instead of ending silently
   llvm.func @strict_crash_handler(%pointers: !llvm.ptr) -> i32 {
     %record = llvm.load %pointers : !llvm.ptr -> !llvm.ptr
@@ -610,6 +611,13 @@
     %textLengths = llvm.mlir.addressof @strict_access_text : !llvm.ptr
     %text = llvm.getelementptr %textLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %printed = llvm.call @printf(%text) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr) -> i32
+    %instructionSlot = llvm.getelementptr %record[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %instruction = llvm.load %instructionSlot : !llvm.ptr -> !llvm.ptr
+    %addressSlot = llvm.getelementptr %record[40] : (!llvm.ptr) -> !llvm.ptr, i8
+    %address = llvm.load %addressSlot : !llvm.ptr -> i64
+    %whereLengths = llvm.mlir.addressof @strict_access_where : !llvm.ptr
+    %where = llvm.getelementptr %whereLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %placed = llvm.call @printf(%where, %instruction, %address) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, !llvm.ptr, i64) -> i32
     func.call @strict_places_print() : () -> ()
     llvm.call @strict_crash_log(%text) : (!llvm.ptr) -> ()
     %null = llvm.mlir.zero : !llvm.ptr
