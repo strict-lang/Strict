@@ -19,11 +19,9 @@ Optimized List(InstructionEntry)
 	Stored.Optimized.Length is 4
 	Printed.Optimized(1).texts(0) is "a"
 	Blocked.instructions.Length is 5 and Rewritten.instructions.Length is 6
-	mutable result = List(Mutable(InstructionEntry))
 	for instructions
 		if Source(index) < 0
-			result.Add(Remap(value, index))
-	result
+			Remap(value, index)
 Source(load Number) Number
 	Twice.Source(1) is 0
 	Twice.Source(2) is -1
@@ -77,10 +75,8 @@ Reads(entry InstructionEntry) Numbers
 	Twice.Reads(AddBoth) is (0, 1)
 	Twice.Reads(AddCall) is (0, 1)
 	Twice.Reads(InstructionEntry.Print("b")) is List(Number)
-	mutable registers = List(Mutable(Number))
 	for ReadPositions(entry)
-		registers.Add(entry.payload(value))
-	registers
+		entry.payload(value)
 ReadPositions(entry InstructionEntry) Numbers
 	Twice.ReadPositions(AddBoth) is (1, 2)
 	Twice.ReadPositions(Indexed) is List(Number) + 1

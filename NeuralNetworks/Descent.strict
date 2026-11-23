@@ -45,10 +45,8 @@ MeanLayer(probes List(Network), layer Number) Layer
 	Layer(rows, MeanBias(probes, layer), probes.First.layers(layer).activation)
 MeanLayers(probes List(Network)) List(Layer)
 	Descent(Network.Pair).MeanLayers(Both).Last.weights.First is MeanOut
-	mutable layers = List(Mutable(Layer))
 	for probes.First.layers
-		layers.Add(MeanLayer(probes, index))
-	layers
+		MeanLayer(probes, index)
 Average(probes List(Network)) Network
 	Descent(Network.Pair).Average(Both).layers.Last.weights.First is MeanOut
 	Network(MeanLayers(probes))

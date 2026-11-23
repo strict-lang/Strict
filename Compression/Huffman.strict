@@ -41,11 +41,9 @@ Counts(lengths Numbers) Numbers
 Sort(lengths Numbers) Numbers
 	Sample.Sort((2, 1, 3, 3)) is (1, 0, 2, 3)
 	Sample.Sort((0, 2, 0, 1)) is (3, 1)
-	mutable sorted = List(Mutable(Number))
 	for length, symbolLength in Range(1, CodeLengthCount), lengths
 		if symbolLength is length
-			sorted.Add(index)
-	sorted
+			index
 Decode(stream Inflate, position Number) Symbol
 	Sample.Decode(Inflate(List(Number) + 6), 1) is Symbol(2, 3)
 	Longest.Decode(Inflate((1, 0)), 0) is Symbol(9, 16)

@@ -153,11 +153,9 @@ Shift(source Text) Numbers
 	Doubling.Shift("numbers").Length is 0
 	Offsetting.Shift("numbers") is (8, 13)
 	Offsetting.Shift("other").Length is 0
-	mutable reads = List(Mutable(Number))
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if Offsets(value).Length > 0 and function.method.instructions(value).texts(0) is source
-			reads.Add(value)
-	reads
+			value
 Sources Texts
 	Doubling.Sources is ("numbers")
 	FlatReading.Sources.Length is 0

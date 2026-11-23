@@ -70,11 +70,9 @@ Filter(candidates Texts, params Texts) Texts
 			value
 PassedArgs(args Numbers, sub List(MlirFunction), guards MlirGuards) Texts
 	MlirCalleeGuards(MlirGuards.Shifted, 6).PassedArgs(List(Number), List(MlirFunction), Shifts).Length is 0
-	mutable names = List(Text)
 	for args
 		if sub.Length > 0 and index < sub.First.method.parameters.Length and guards.IsWhole("%r" + value)
-			names = names + sub.First.method.parameters(index).Name
-	names
+			sub.First.method.parameters(index).Name
 WithWhole(callee MlirFunction) MlirFunction
 	MlirCalleeGuards(MlirDevice.Doubling.function, 4).WithWhole(MlirGuards.Shifted).Whole.Length is 0
 	entry = function.method.instructions(at)

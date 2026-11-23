@@ -50,11 +50,9 @@ Declarations(body Texts) Texts
 	for Regex("[A-Za-z_][A-Za-z0-9_]*").FindAll(Text.Combine(body, "\n"))
 		if value is not in words
 			words.Add(value, true)
-	mutable kept = List(Text)
 	for Declarations
 		if (value is "var flag = false;" then "flag" else value.Substring(4, value.IndexOf(":") - 4)) is in words
-			kept = kept + value
-	kept
+			value
 Declarations Texts
 	Twice.Declarations.First is "var flag = false;"
 	"var v_numberl: vec2<u32>;" is in Twice.Declarations

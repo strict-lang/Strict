@@ -79,11 +79,9 @@ HasMethodBody Boolean
 ConstantIssues ValidationIssues
 	TypeValidator(TypeShape("has number = 17 + 4", "Run", "\tnumber"), ("Add", "Remove")).ConstantIssues.Length is 1
 	Computed.ConstantIssues.First to Text is "UseConstantHere: number"
-	mutable issues = List(Mutable(ValidationIssue))
 	for shape.lines
 		if IsComputedMember(value)
-			issues.Add(ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, index + 1))
-	issues
+			ValidationIssue("UseConstantHere", HeaderTokens(Tokenizer(value).Tokens).MemberName, index + 1)
 IsComputedMember(line Text) Boolean
 	Sample.IsComputedMember("has number = 17 + 4") and Sample.IsComputedMember("mutable count = 3 + 4")
 	Sample.IsComputedMember("has scale = 1") is false

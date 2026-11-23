@@ -65,11 +65,9 @@ Pick(owner Text, lines = List(Text)) Texts
 	Doubling.Pick("member") is ("has number")
 	Doubling.Pick("method") is ("Twice(count Number) Number", "\tcount * 2")
 	items = lines.Length > 0 then lines else Lines
-	mutable picked = List(Mutable(Text))
 	for items
 		if value.Trim is not "" and Owner(items, index) is owner
-			picked.Add(owner is "run" then "\t" + value else value)
-	picked
+			owner is "run" then "\t" + value else value
 FindNames(lines Texts, at Number) Texts
 	Doubling.FindNames(Doubling.Lines, 1) is ("twice")
 	Doubling.FindNames(Doubling.Lines, 3) is ("count")
@@ -135,11 +133,9 @@ Store(source Text) Texts slow
 	File(Path).InMemory(source)
 	File(Path).ReadLines
 Members(root Text, lines = List(Text)) Texts slow
-	mutable members = List(Mutable(Text))
 	for Want(lines)
 		if File(root + "/" + value.Capitalize + ".strict").Exists or File(value.Capitalize + ".strict").Exists
-			members.Add(value)
-	members
+			value
 Load(root Text) List(TypeEntry) slow
 	if Store(Source(Members(root))).Length is 0
 		return List(TypeEntry)

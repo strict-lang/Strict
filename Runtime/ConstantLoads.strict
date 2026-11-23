@@ -43,11 +43,9 @@ Mark(entry InstructionEntry, at Number, index Number) InstructionEntry
 Decoded List(VmValue)
 	Ones.Decoded.First to Text is "(1, 1.5)"
 	Pair.Decoded.Length is 5 and Pair.Decoded(4) to Text is "(2)"
-	mutable decoded = List(Mutable(VmValue))
 	for type, method, entry in types, type.methods, method.instructions
 		if At(entry) >= 0
-			decoded.Add(PayloadDecoder(entry).Value(At(entry)))
-	decoded
+			PayloadDecoder(entry).Value(At(entry))
 Count(type TypeEntry) Number
 	Pair.Count(Pair.types.First) is 3
 	mutable count = 0

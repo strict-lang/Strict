@@ -54,6 +54,8 @@ IsLast(at Number) Boolean
 Element(line Text, name Text, depth Number) Text
 	Mapped.Element("		doubled.Add(value * 2)", "doubled", 2) is "value * 2"
 	Mapped.Element("			evens = evens + value", "evens", 3) is "value" and Mapped.Element("		x = y", "x", 2) is ""
+	Mapped.Element("		all = all + (a) + (b)", "all", 2) is ""
+	Mapped.Element("		all = all + a + B(a)", "all", 2) is "" and Mapped.Element("		all.Add(a + 1)", "all", 2) is "a + 1"
 	Mapped.Element("		sums = sums + (sums.Last + value)", "sums", 2) is ""
 	indent = BodyParser.Indent(line)
 	code = line.Trim
@@ -61,4 +63,13 @@ Element(line Text, name Text, depth Number) Text
 	added = isAdded then code.Substring(name.Length + 5, code.Length - name.Length - 6) else ""
 	joined = code.StartsWith(name + " = " + name + " + ") then code.Substring(name.Length * 2 + 6) else ""
 	element = added is "" then joined else added
-	indent is depth and name is not in Tokenizer(element).Tokens then element else ""
+	isListed = element.StartsWith("(") or IsSeveral(joined)
+	indent is depth and isListed is false and name is not in Tokenizer(element).Tokens then element else ""
+IsSeveral(joined Text) Boolean
+	Mapped.IsSeveral("a + B(a)") and Mapped.IsSeveral("B(a + 1)") is false and Mapped.IsSeveral("") is false
+	mutable depth = 0
+	for Tokenizer(joined).Tokens
+		depth = value is "(" then depth + 1 else value is ")" then depth - 1 else depth
+		if depth is 0 and value is "+"
+			return true
+	false

@@ -23,10 +23,8 @@ Edges List(Numbers)
 	if calls.Length is functions.Length
 		return calls
 	symbols = Symbols(functions)
-	mutable edges = List(Mutable(Numbers))
 	for functions
-		edges.Add(Indexes(MlirModule(value.types, "").Callees(value), symbols))
-	edges
+		Indexes(MlirModule(value.types, "").Callees(value), symbols)
 Indexes(callees List(MlirFunction), symbols Texts) Numbers
 	Looping.Indexes(Looping.functions, ("Looped_Again_0", "Looped_Run_0")) is (1, 0)
 	for callees

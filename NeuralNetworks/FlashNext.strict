@@ -26,10 +26,8 @@ Loaded(path Text, bits = 8) FlashNext slow
 	FlashNext(loaded, model, Ngrams.Loaded(model), mixer, ple, mixed, model.Rows("output.weight"), rotary, Silence(width))
 Layers(model Gguf, count Number) List(FlashLayer) slow
 	Tiny.Layers(Tiny.source, 2).Length is 2
-	mutable loaded = List(Mutable(FlashLayer))
 	for count
-		loaded.Add(FlashLayer.Loaded(model, index))
-	loaded
+		FlashLayer.Loaded(model, index)
 Rope(model Gguf, attending Qwen3Block) Qwen3 slow
 	Tiny.rope.rotary is 16
 	architecture = model.Value("general.architecture")

@@ -43,11 +43,9 @@ Lines Texts
 Checks Texts
 	Halving.Checks.Length is 0
 	Quads.Checks.Last.EndsWith("wk12")
-	mutable checks = List(Mutable(Text))
 	for function.method.instructions
 		if value.kind is in Bounded
-			checks.Add(Name("wk", index))
-	checks
+			Name("wk", index)
 IsGrown Boolean
 	Halving.IsGrown is false
 	Quads.IsGrown

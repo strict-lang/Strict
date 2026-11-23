@@ -114,10 +114,8 @@ MutableParameterIssues ValidationIssues
 	Sample.MutableParameterIssues.Length is 1
 	Sample.MutableParameterIssues.First.Line is 1
 	Sample.MutableParameterIssues.First.ruleName is "ParameterMustNotBeMutableReturnTheChangedValue"
-	mutable issues = List(Mutable(ValidationIssue))
 	for header.MutableParameters
-		issues.Add(ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, line))
-	issues
+		ValidationIssue("ParameterMustNotBeMutableReturnTheChangedValue", value, line)
 IsLooping Boolean
 	Looping.IsLooping
 	Sample.IsLooping is false

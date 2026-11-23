@@ -144,18 +144,14 @@ ParameterNames Texts
 	HeaderTokens(Tokenizer("Add(other Number, mutable count) Mutable(List)").Tokens).ParameterNames is ("other", "count")
 	HeaderTokens(Tokenizer("Link(entries List(Entry), depth Number)").Tokens).ParameterNames is ("entries", "depth")
 	HeaderTokens("Run", "Number").ParameterNames.Length is 0
-	mutable names = List(Mutable(Text))
 	for ParametersEnd
 		if IsParameterStart(index)
-			names.Add(tokens(index))
-	names
+			tokens(index)
 ParameterTypes Texts
 	HeaderTokens(Tokenizer("Add(x Number, mutable count, t = \"a\")").Tokens).ParameterTypes is ("Number", "Count", "Text")
-	mutable types = List(Mutable(Text))
 	for ParametersEnd
 		if IsParameterStart(index)
-			types.Add(ParameterType(index))
-	types
+			ParameterType(index)
 ParameterType(position Number) Text
 	HeaderTokens("Add", "(", "x", "Number", ")").ParameterType(2) is "Number"
 	HeaderTokens("Add", "(", "x", "=", "\"a\"", ")").ParameterType(2) is "Text"
@@ -176,8 +172,6 @@ ReturnsSlow Boolean
 	tokens.Last is in Trailing
 MutableParameters Texts
 	HeaderTokens(Tokenizer("Add(x, mutable list) Mutable(List)").Tokens).MutableParameters is ("list")
-	mutable names = List(Mutable(Text))
 	for ParametersEnd
 		if tokens(index - 1) is "mutable"
-			names.Add(tokens(index))
-	names
+			tokens(index)

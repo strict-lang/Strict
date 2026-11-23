@@ -137,11 +137,9 @@ FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Tex
 	out = RunBuilt(folder, name, code, "", LogEnv, "frames " + frames, "")
 	if out is Error
 		return out
-	mutable cols = List(Text)
 	for out.Lines
 		if value.StartsWith("Collection: ")
-			cols = cols + value
-	cols
+			value
 HasFramesEnded(cols Texts, needMultiple Boolean) Boolean
 	mutable seenTrue = false
 	mutable trueCount = 0
