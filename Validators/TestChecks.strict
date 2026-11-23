@@ -14,10 +14,11 @@ constant Reading = TestChecks(Branched.lines, List(Text) + "Reader.Sign", "Reade
 Issues List(ValidationIssue)
 	Locking.Issues.First to Text is "IsTrueIsNotNeeded: Started.Locked.over" + Hint
 	Locking.Issues.Length is 2
+	Branched.Issues.Length is 1 and Reading.Issues.Length is 0
 	mutable issues = List(Mutable(ValidationIssue))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
-			issues = issues + Leading(index)
+			issues = issues + Leading(index) + Place(index)
 	issues
 Place(header Number) List(ValidationIssue)
 	Parked.Place(0).Length is 0 and Parked.Place(4).Length is 0 and Locking.Place(1).Length is 0

@@ -64,7 +64,8 @@ Check(folder Text, root Text, known Texts) Number slow
 	inference = ResolveCheck.Inference(reached)
 	sure = SureMethods(inference).Collect(reached)
 	reaching = InputOutputs(inference).Collect(reached, InputOutputs.Slowly)
-	Report(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching)).Sum
+	branching = InputOutputs(inference).Collect(reached, InputOutputs.Natively)
+	Report(problems - "") + Counts(files, mutations, isBase, duplicates, inference, (sure, reaching, branching)).Sum
 Parse(files Texts, problems Texts) Texts
 	ValidateCheck.Parse(("A.strict", "B.strict"), ("EmptyLineIsNotAllowed", "")) is ("B.strict")
 	for files
@@ -80,7 +81,7 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		typeName = Path(value).FileName.RemoveExtension.text
 		found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
 		reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
-		tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
+		tested = TestChecks(lines, known(2), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
 		looped = AccumulatedLoops(lines, typeName, inference).Issues + TestFiles(value, lines, known(1)).Issues
 		Log(value, found + reached + tested + looped) + Resolve(value, inference)
 Resolve(path Text, inference Expressions/TypeInference) Number slow
