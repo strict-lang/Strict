@@ -23,6 +23,7 @@ Normalize(scales Numbers) BFloat16s
 	for input.Length
 		input(index) * scales((index / weights.Length).Floor) * weights(index % weights.Length)
 Fill(count Number, number Number) Numbers
+	Fill(2, 3) is (3, 3)
 	for count
 		number
 GpuCheck Number slow

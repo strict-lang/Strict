@@ -15,5 +15,6 @@ Modulated BFloat16s
 		factor = scales((index / width).Floor) * weights(channel) * (1 + modulation(scaling + channel))
 		input(index) * factor + modulation(shifts + channel)
 Zeros(count Number, number Number) Numbers
+	Zeros(2, 0) is (0, 0)
 	for count
 		number

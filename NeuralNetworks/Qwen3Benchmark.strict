@@ -5,7 +5,7 @@ constant TailShare = 0.95
 Run(path Text, bits Number, count Number, repeats = 1, batch = 1, cacheBits = 32, temperature = 0)
 	if MachineUse.Weights("Qwen3Benchmark", path).IsAdmitted
 		Benchmark(path, bits, count, repeats, batch, cacheBits, temperature)
-Benchmark(path Text, bits Number, count Number, repeats Number, batch Number, cacheBits Number, temperature Number)
+Benchmark(path Text, bits Number, count Number, repeats Number, batch Number, cacheBits Number, temperature Number) slow
 	tokenizer = Gpt2Tokens.Loaded(Gguf(path))
 	started = Process.Elapsed
 	model = Qwen3(Qwen3.Loaded(path, bits), cacheBits = cacheBits)

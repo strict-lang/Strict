@@ -30,6 +30,7 @@ Scales Float32s
 		first = (index * size / width).Floor * 2 * width + start + index * size
 		Normalization.Scale(Normalization.Square(combined, first, size), size, epsilon)
 Ones(count Number, number Number) Numbers
+	Ones(2, 1) is (1, 1)
 	for count
 		number
 GpuCheck Number slow

@@ -37,14 +37,17 @@ IsValid Boolean
 	order = degree >= 0 and degree <= 4 and degree.Floor is degree
 	order and ridge >= 0 and ridge.IsFinite and blend >= 0 and blend <= 1
 Design(coords Numbers) List(Numbers)
+	Line.Design((0, 1)) is ((1, 0), (1, 1))
 	for coords
 		Basis(value)
 Gram(design List(Numbers)) Numbers
+	Line.Gram(Line.Design((0, 1))) is (2, 1, 1, 1)
 	for (degree + 1) * (degree + 1)
 		row = (index / (degree + 1)).Floor
 		column = index % (degree + 1)
 		Cell(design, row, column) + (row is column then ridge else 0)
 Cell(design List(Numbers), row Number, column Number) Number
+	Line.Cell(Line.Design((0, 2)), 1, 1) is 4
 	mutable sum = 0
 	for design
 		sum = sum + value(row) * value(column)

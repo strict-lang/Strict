@@ -10,11 +10,14 @@ Solved Numbers
 	for right.Length
 		rows(index * (right.Length + 1) + right.Length)
 Augmented Numbers
+	Pair.Augmented is (2, -1, 1, -1, 1, 1)
 	for right.Length * (right.Length + 1)
 		row = (index / (right.Length + 1)).Floor
 		column = index % (right.Length + 1)
 		column is right.Length then right(row) else matrix(row * right.Length + column)
 Reduce(rows Numbers, pivot Number) Numbers
+	Pair.Reduce(Pair.Augmented, 0) is (1, -0.5, 0.5, 0, 0.5, 1.5)
+	SpectralSolve((0, 0, 0, 0), (1, 1)).Reduce((0, 0, 1, 0, 0, 1), 0) is Error
 	width = right.Length + 1
 	start = pivot * width
 	diagonal = rows(start + pivot)

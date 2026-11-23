@@ -1,4 +1,5 @@
 AllocateMany Number
+	AllocateMany is 20000
 	mutable values = List(Mutable(Number))
 	constant Allocations = 20000
 	for Allocations
