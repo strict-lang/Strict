@@ -5,28 +5,36 @@ Run
 	ParseHeaders
 	ParseBodyExpressions
 ParseHeaders
+	ParseHeaders is not Error
 	constant headers = ("Run", "Add Number", "GetName Text", "IsDone Boolean")
 	for headers
 		logger.Log(ClassifyHeader(value))
 ClassifyHeader(header Text) Text
+	ClassifyHeader("Run") is "Method: Run (no return type)"
+	ClassifyHeader("Add Number") is "Method: Add returns Number"
 	methodName = ExtractMethodName(header)
 	returnType = ExtractReturnType(header)
 	if returnType is ""
 		return "Method: " + methodName + " (no return type)"
 	"Method: " + methodName + " returns " + returnType
 ExtractMethodName(header Text) Text
+	ExtractMethodName("Add Number") is "Add" and ExtractMethodName("Run") is "Run"
 	spacePos = header.IndexOf(" ")
 	spacePos > 0 then header.Substring(0, spacePos) else header
 ExtractReturnType(header Text) Text
+	ExtractReturnType("Add Number") is "Number" and ExtractReturnType("Run") is ""
 	spacePos = header.IndexOf(" ")
 	spacePos > 0 then header.Substring(spacePos + 1, header.characters.Length - spacePos - 1) else ""
 ParseBodyExpressions
+	ParseBodyExpressions is not Error
 	constant bodyLines = ("logger.Log(\"Hi\")", "return count + 1", "if count > 0", "for items", "mutable total = 0")
 	logger.Log("Body expression types:")
 	for bodyLines
 		logger.Log("> " + ClassifyBodyLine(value))
 	logger.Log("> " + ClassifyReassignment("total = total + value"))
 ClassifyBodyLine(line Text) Text
+	ClassifyBodyLine("a.Log(b)") is "MethodCall: a.Log(b)"
+	ClassifyBodyLine("return count + 1") is "Return: count + 1" and ClassifyBodyLine("x") is "Expression: x"
 	if line.IndexOf(".") > 0
 		return "MethodCall: " + line
 	for Keywords
@@ -34,4 +42,5 @@ ClassifyBodyLine(line Text) Text
 			return Labels(index) + ": " + ParseExpressions.ExtractAfterKeyword(line, value.Length)
 	"Expression: " + line
 ClassifyReassignment(line Text) Text
+	ClassifyReassignment("a = b") is "Reassignment: a = b" and ClassifyReassignment("a") is "Expression: a"
 	line.IndexOf(" = ") > 0 then "Reassignment: " + line else "Expression: " + line

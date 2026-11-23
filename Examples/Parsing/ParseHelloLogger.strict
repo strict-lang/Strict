@@ -5,16 +5,21 @@ Run
 		logger.Log(ClassifyLine(value))
 	LogMethodLines
 LogMethodLines
+	LogMethodLines is not Error
 	constant methodLines = ("Run", "\tlogger.Log(\"Hi\")", "Add(other) Number")
 	for methodLines
 		logger.Log(ClassifyLine(value))
 IsMember(line Text) Boolean
+	IsMember("has a") and IsMember("mutable a = 1") and IsMember("constant A = 1") and IsMember("Run") is false
 	line.StartsWith("has ") then true else line.StartsWith("mutable ") then true else line.StartsWith("constant ")
 IsBody(line Text) Boolean
 	line.StartsWith("\t")
 ClassifyLine(line Text) Text
+	ClassifyLine("has a") is "Member(has): has a" and ClassifyLine("Run") is "Method: Run"
+	ClassifyLine("\tx") is "Body: \tx"
 	if IsMember(line)
 		return "Member(" + MemberKind(line) + "): " + line
 	IsBody(line) then "Body: " + line else "Method: " + line
 MemberKind(line Text) Text
+	MemberKind("has a") is "has" and MemberKind("mutable a = 1") is "mutable" and MemberKind("constant A") is "constant"
 	line.StartsWith("has ") then "has" else line.StartsWith("mutable ") then "mutable" else "constant"

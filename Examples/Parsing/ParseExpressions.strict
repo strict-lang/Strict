@@ -3,16 +3,20 @@ Run
 	LogMembers
 	ParseMethodBodies
 LogMembers
+	LogMembers is not Error
 	constant memberLines = ("has logger", "mutable count = 0")
 	logger.Log("Members:")
 	for memberLines
 		logger.Log("> " + ClassifyMember(value))
 ParseMethodBodies
+	ParseMethodBodies is not Error
 	constant bodyLines = ("logger.Log(\"Hi\")", "return total", "if count > 0", "for items", "mutable count = 5")
 	logger.Log("Method body expressions:")
 	for bodyLines
 		logger.Log("> " + ClassifyExpression(value))
 ClassifyMember(line Text) Text
+	ClassifyMember("has logger") is "has member: logger"
+	ClassifyMember("mutable count") is "mutable member: count" and ClassifyMember("constant Max") is "constant member: Max"
 	if line.StartsWith("has ")
 		return "has member: " + ExtractAfterKeyword(line, 4)
 	if line.StartsWith("mutable ")
@@ -22,6 +26,9 @@ ExtractAfterKeyword(line Text, keywordLength Number) Text
 	ExtractAfterKeyword("has logger", 4) is "logger"
 	line.Substring(keywordLength, line.characters.Length - keywordLength)
 ClassifyExpression(line Text) Text
+	ClassifyExpression("a.Log(b)") is "MethodCall: a.Log(b)" and ClassifyExpression("return total") is "Return: total"
+	ClassifyExpression("if a") is "If: condition=a" and ClassifyExpression("for items") is "For: iterator=items"
+	ClassifyExpression("mutable a") is "Declaration: a" and ClassifyExpression("x") is "Expression: x"
 	if line.IndexOf(".") > 0
 		return "MethodCall: " + ParseMethodCall(line)
 	if line.StartsWith("return ")
