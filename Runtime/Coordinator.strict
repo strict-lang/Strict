@@ -7,6 +7,7 @@ mutable busyJob Text = ""
 mutable busyLabel Text = ""
 mutable isEnding Boolean = false
 mutable busyVram Number = 0
+constant Waiting = ("need", "job", "label", "4", "8", "2", "4", "0", "wait")
 constant LockNeed = 2147483648
 constant LockHeld = 1073741824
 constant StaleSeconds = 16
@@ -90,6 +91,8 @@ Hold(words Texts) Text
 		return busyLabel is "exit" then "exit" else "free"
 	"ok"
 Admit(need Need, seen MachineView) Text
+	Coordinator.Admit(Need.Parsed(Waiting), MachineView.Wide) is "go\tjob\t0"
+	Coordinator.Admit(Admission.BigNeed, Admission.SmallMachine).StartsWith("refused")
 	verdict = Admission.Verdict(need, seen)
 	if verdict is "go"
 		busyJob = need.job

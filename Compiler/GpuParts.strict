@@ -5,6 +5,7 @@ Types Texts
 	Sample.Types is List(Text) + "A"
 	Kernels.Unique
 Kernels Texts
+	Sample.Kernels.Length is 1
 	for functions
 		if value.IsKernel and value.name is in owned
 			value.Library
@@ -37,6 +38,7 @@ Traverse(own List(GpuFunction), devices List(GpuFunction)) Texts
 		at = at + 1
 	reached
 Want(callers List(GpuFunction), known Texts) Texts
+	Sample.Want(Sample.functions, List(Text)).Length is 0
 	mutable wanted = List(Text)
 	for callers
 		wanted = wanted + Known(value.Called, known)

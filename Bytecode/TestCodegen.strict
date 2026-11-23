@@ -45,6 +45,8 @@ Runs(methods List(MethodEntry)) List(MethodEntry)
 		if value.Name is in ("Run", DefaultInstance.Starter)
 			value
 Reachable(known List(MethodEntry), methods List(MethodEntry)) List(MethodEntry)
+	Even.Reachable(Even.types.Entry.methods, List(MethodEntry)).Length is 0
+	Even.Reachable(Even.types.Entry.methods, Even.types.Entry.methods).Length is 1
 	targets = TypeEntry(types.fullName, List(MemberEntry), methods).Invoked
 	mutable added = List(Mutable(MethodEntry))
 	for known

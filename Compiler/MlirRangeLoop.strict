@@ -55,6 +55,8 @@ Slice(label Text) Texts
 	branch = "    cf.cond_br " + Temp("m") + ", " + label + "body, " + label + "lat"
 	(fit, wide, narrow, kept, reset, enter, "  " + label + ":", load, step, check, branch, "  " + label + "body:")
 Head(label Text, isRange Boolean, kind Text) Texts
+	Ranging.Head("^a", true, "i64").Length is 7
+	Ranging.Head("^a", false, "f64")(4) is "    %t3m = arith.cmpf olt, %t3k, %t3n : f64"
 	zero = isRange then Temp("iz") else "%zero"
 	limit = isRange then Temp("ni") else Temp("n")
 	math = isRange then "cmpi slt" else "cmpf olt"

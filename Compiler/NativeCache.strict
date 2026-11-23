@@ -72,6 +72,7 @@ Files Texts slow
 	"./Examples/NativeAdd/native/Adder.c" is in Adding.Inputs(Adding.Files)
 	SourceFiles(rest(1)).Of(FileCompiler.Normalize(rest(0)))
 Folders(sources Texts) Texts
+	NativeCache("build", ("Math/Vector3.strict", ".")).Folders(("a/b.strict", "a/c.strict", "d/e.strict")) is ("a", "d")
 	mutable folders = List(Text)
 	for sources
 		folders = folders + Path(value).PathOnly.text

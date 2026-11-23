@@ -2,6 +2,7 @@ constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
 IsDetailed Boolean
 	IsRequested
 Report(phase Text, started Number)
+	Report("a", Process.Elapsed) is not Error
 	elapsed = Process.Elapsed - started
 	if IsDetailed or elapsed >= 3
 		logger.Log((IsDetailed then "[build] " + phase else phase) + ": " + elapsed.Round(IsDetailed then 4 else 2) + " s")
@@ -40,6 +41,8 @@ Program(module MlirModule, base Text, root Text, build NativeBuild) Text
 	Report("GPU preparation", before)
 	program
 Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") TypeEntry
+	Entry(TypeCodegen("Strict/A", ("Run Number", "\t1"), ValueCodegen.NoTypes, List(Text)), false, true).Name is "A"
+	Entry(TypeCodegen("Strict/A", ("Run Number", "\t1"), ValueCodegen.NoTypes, List(Text)), true, true).methods.Length is 2
 	started = Process.Elapsed
 	entry = withTests then TestCodegen(main, isQuiet, selection).Entry else main.Entry
 	Report("Frontend / main codegen (" + entry.methods.Length + " methods)", started)

@@ -45,6 +45,7 @@ Phase(label Text, done Text, loading Boolean) Texts
 	next = batched.Advance(label, label + "_batchIndex", label + "_at", done)
 	(entry, header, "    cf.br ^" + label + "_body") + body + next
 Emit(loading Boolean) Texts
+	Sample.Emit(true).Length is 55 and Sample.Emit(false).Length is 26
 	mutable lines = List(Mutable(Text))
 	reads = MlirBatchReads(function, position)
 	target = "%r" + function.method.instructions(function.Group).payload(0)

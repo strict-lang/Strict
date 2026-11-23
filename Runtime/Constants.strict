@@ -49,6 +49,7 @@ Member(type TypeEntry, slot Number) VmValue
 	isPrepared = route >= 0 and route < machine.prototypes.entries.Length
 	isPrepared then Value(route, slot) else Natives.Initial(type.members(slot))
 SeedMachine(cache Dictionary(Text, VmValue)) Machine
+	Constants(Listing).SeedMachine(Dictionary(Text, VmValue)).types.Length is 1
 	if cache.Length is 0
 		return machine
 	for machine.types
@@ -64,6 +65,7 @@ Merge(current List(VmValue), cached List(VmValue)) List(VmValue)
 		keep = value.kind is "$Constant" and cached(index).kind is not in ("$Constant", "$Computing")
 		keep and cached(index).kind is not in VmValue.ErrorKinds then cached(index) else value
 Record(cache Dictionary(Text, VmValue)) Dictionary(Text, VmValue)
+	Constants(Listing).Record(Dictionary(Text, VmValue)).Length is 0
 	mutable result = cache
 	for machine.types
 		proto = machine.prototypes.At(index)
