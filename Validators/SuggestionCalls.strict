@@ -3,24 +3,35 @@ has header HeaderTokens
 has values Scope
 has known KnownTypes
 constant Operators = ("+", "-", "*", "/", "%", "and", "or", "xor", "is")
+constant Counting = SuggestionCalls("Count", HeaderTokens(Tokenizer("Doubled(times Number) Count").Tokens), Scope(("times", "start"), ("Number", "Count")), KnownTypes.Sample)
+constant Naming = SuggestionCalls("Count", HeaderTokens(Tokenizer("Named(first Text) Text").Tokens), Scope(("first", "last"), ("Text", "Text")), KnownTypes.Sample)
+constant Checking = SuggestionCalls("Count", HeaderTokens(Tokenizer("IsBig(size Number) Boolean").Tokens), Scope("size", "Number"), KnownTypes.Sample)
+constant Plus = KnownTypes(List(Text) + "Number", List(Scope) + KnownTypes.NoMembers, List(Scope) + Scope("+", "Number"), List(Scope) + Scope(("+", "+ types"), ("other", "Number")))
+constant Adding = SuggestionCalls("A", HeaderTokens(Tokenizer("Add(a Number, b Number) Number").Tokens), Scope(("a", "b"), ("Number", "Number")), Plus)
 Candidates Texts
+	Counting.Candidates is ("start", "Increment", "Twice(times)")
+	Adding.Candidates is ("a", "b", "a + a", "a + b", "b + a", "b + b")
 	mutable found = Calls(true)
 	for values.names
 		if values.types(index) is header.ReturnType
 			found = found + value
 	Unique(found + Binary + Calls(false) + Compared)
 Binary Texts
+	Adding.Binary is ("a + a", "a + b", "b + a", "b + b") and Counting.Binary.Length is 0
 	mutable found = List(Mutable(Text))
 	for values.names
 		found = found + Operations(value, values.types(index)) + Join(value, values.types(index))
 	found
 Join(left Text, type Text) Texts
+	Naming.Join("first", "Text") is ("first + first", "first + last")
+	Counting.Join("times", "Number").Length is 0
 	if type is not "Text" or header.ReturnType is not "Text"
 		return List(Text)
 	for values.names
 		if values.types(index) is "Text"
 			left + " + " + value
 Compared Texts
+	Checking.Compared is ("size % 2 is 0", "size is 0", "size > 0") and Counting.Compared.Length is 0
 	if header.ReturnType is not "Boolean"
 		return List(Text)
 	mutable found = List(Mutable(Text))
@@ -29,6 +40,7 @@ Compared Texts
 			found = found + (value + " % 2 is 0", value + " is 0", value + " > 0")
 	found
 Operations(left Text, type Text) Texts
+	Adding.Operations("a", "Number") is ("a + a", "a + b") and Counting.Operations("times", "Number").Length is 0
 	mutable found = List(Mutable(Text))
 	methods = known.MethodsOf(type)
 	for methods.names
@@ -40,11 +52,14 @@ Operations(left Text, type Text) Texts
 					found = found + (left + " " + operator + " " + value)
 	found
 Receivers Texts
+	Counting.Receivers is ("start", "times", "Count")
 	mutable receivers = List(Mutable(Text))
 	for Range(header.ParameterNames.Length, values.names.Length)
 		receivers.Add(values.names(value))
 	receivers + header.ParameterNames + own
 Calls(sameName Boolean) Texts
+	Counting.Calls(false) is ("Increment", "Twice(times)", "Increment", "Twice(times)")
+	Counting.Calls(true).Length is 0
 	mutable calls = List(Mutable(Text))
 	for Receivers
 		declared = values.TypeOf(value)
@@ -52,6 +67,8 @@ Calls(sameName Boolean) Texts
 		calls = calls + Receiver(value, declared is "" then value else declared, sameName) + listed
 	calls
 Receiver(receiver Text, type Text, sameName Boolean) Texts
+	Counting.Receiver("start", "Count", false) is ("Increment", "Twice(times)")
+	Counting.Receiver("start", "Count", true).Length is 0
 	mutable calls = List(Mutable(Text))
 	for known.MethodsOf(type).names
 		recursive = type is own and value is header.tokens.First
@@ -66,6 +83,8 @@ IsNamed(name Text) Boolean
 	named = Tokenizer.IsWordCharacter(first) and Tokenizer.IsDigit(first) is false
 	named and name is not in DefaultCheck.Keywords and name is not "Run"
 Call(prefix Text, type Text, name Text, receiver Text) Text
+	Counting.Call("start.Twice", "Count", "Twice", "start") is "start.Twice(times)"
+	Counting.Call("Increment", "Count", "Increment", "start") is "Increment"
 	scope = known.ParameterScope(type)
 	parameters = known.ParameterNames(scope.TypeOf(name + " types"))
 	required = scope.TypeOf(name + " required") to Number
@@ -77,16 +96,20 @@ Call(prefix Text, type Text, name Text, receiver Text) Text
 		arguments.Add(matched)
 	FormatCall(prefix, arguments)
 Argument(type Text, used Texts) Text
+	Counting.Argument("Number", List(Text)) is "times" and Counting.Argument("Number", "times") is ""
 	for values.names
 		if values.types(index) is type and value is not in used
 			return value
 	""
 FormatCall(prefix Text, arguments Texts) Text
+	Counting.FormatCall("a", List(Text)) is "a" and Counting.FormatCall("a", ("b", "c")) is "a(b, c)"
 	arguments.Length is 0 then prefix else prefix + "(" + Text.Combine(arguments, ", ") + ")"
 Stem(name Text) Text
+	Counting.Stem("Doubled") is "doubl" and Counting.Stem("Run") is "run"
 	lower = name.Lower
 	lower.EndsWith("ed") then lower.Substring(0, lower.Length - 2) else lower
 Unique(candidates Texts) Texts
+	Counting.Unique(("a", "b", "a")) is ("a", "b")
 	constant MaxSuggestions = 64
 	mutable found = List(Mutable(Text))
 	for candidates

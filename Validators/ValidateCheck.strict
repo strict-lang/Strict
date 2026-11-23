@@ -85,6 +85,7 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 Resolve(path Text, inference Expressions/TypeInference) Number slow
 	Report(ResolveCheck.Resolve(path, inference))
 Report(issues Texts) Number
+	Report(List(Text)) is 0
 	for issues
 		logger.Log(value)
 	issues.Length
@@ -100,6 +101,7 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
 	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
 Log(path Text, found List(ValidationIssue)) Number
+	Log("A.strict", List(ValidationIssue)) is 0
 	for found
 		logger.Log(ResolveCheck.Locate(path, value.Line, value to Text))
 	found.Length

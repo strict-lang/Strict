@@ -2,6 +2,9 @@ has path Text
 has root Text
 has lines Texts
 has inference TypeInference
+constant Doubling = Suggestions("A.strict", ".", ("has count Number", "Double(times Number) Number", "\tDouble(2) is 4", "\ttimes * 2", "Run", "\tlet a = 1", "\ta"), TypeInference.NoInference)
+constant Doubled = HeaderTokens(Tokenizer(Doubling.lines(1)).Tokens)
+constant Building = Suggestions("A.strict", ".", ("has count Number", "from(number Number)", "\tnumber", "Twice Number", "\tTwice is 2"), TypeInference.NoInference)
 Run(name Text, files Texts) Number
 	header = Header(name)
 	if header < 0
@@ -16,18 +19,22 @@ Run(name Text, files Texts) Number
 		Logger.Log("Suggestion: " + value)
 	0
 Header(name Text) Number
+	Doubling.Header("Double") is 1 and Doubling.Header("5") is 4 and Doubling.Header("Missing") is Number.NotFound
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
 			if Tokenizer(value).Tokens.First is name or (index + 1) to Text is name
 				return index
 	Number.NotFound
 Candidates(method HeaderTokens) Texts
+	Doubling.Candidates(Doubled) is ("times", "count")
+	Building.Candidates(HeaderTokens(Tokenizer(Building.lines(1)).Tokens)) is ("count = number")
 	members = TypeShape(lines).MemberScope
 	if method.tokens.First is not "from" or members.names.Length is not 1
 		return Search(method).Candidates
 	for Search(HeaderTokens(method.tokens + members.types.First)).Candidates
 		members.names.First + " = " + value
 Search(header HeaderTokens) SuggestionCalls
+	Doubling.Search(Doubled).Candidates is ("times", "count")
 	members = TypeShape(lines).MemberScope
 	parameters = Scope(header.ParameterNames, header.ParameterTypes)
 	values = header.tokens.First is "from" then parameters else parameters.WithAll(members.names, members.types)
@@ -37,6 +44,7 @@ Tests(header Number) Texts
 	extended = SyntaxNode("Body", "", BodyParser(lines).Method(header + 1).children + MethodCodegen.One)
 	SyntaxNode("Body", "", TestLines(code.Generator).Tests(extended, CodeBlock.Empty)).Lines("\t")
 WithBody(header Number) Texts
+	Doubling.WithBody(1)(3) is "\t0" and Doubling.WithBody(1).Length is 7
 	mutable changed = List(Mutable(Text))
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
@@ -45,6 +53,8 @@ WithBody(header Number) Texts
 			changed.Add(value)
 	changed
 Method(header Number, selected Number) Texts
+	Doubling.Method(1, 1) is ("Double(times Number) Number", "\tDouble(2) is 4", "\t0")
+	Doubling.Method(4, 1) is ("Run", "\tlet a = 1", "\ta") and Building.Method(3, 1).Length is 0
 	if header is selected
 		return (List(Text) + lines(header)) + Tests(header) + "\t0"
 	first = header + Tests(header).Length + 1

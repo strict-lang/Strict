@@ -1,6 +1,7 @@
 has inference Expressions/TypeInference = TypeInference.NoInference
 constant Booleans = List(Text) + "Boolean.strict"
 constant Dictionaries = List(Text) + "Dictionary.strict"
+constant Sending = ("Next Number", "\tlow + 1", "Send(x Number)", "\tSend(1) is 1", "\tLog(x)")
 Collect(paths Texts) Texts slow
 	SureMethods.Collect(List(Text)).Length is 0
 	"Boolean.xor" is in SureMethods(ResolveCheck.Inference(Booleans)).Collect(Booleans)
@@ -30,6 +31,7 @@ Parse(paths Texts, contents List(Texts)) List(Texts)
 	for paths
 		Records(Path(value).FileName.RemoveExtension.text, contents(index))
 Records(type Text, lines Texts) Texts
+	SureMethods.Records("A", Sending) is ("A.Next|Unknown.+")
 	shape = TypeShape(lines)
 	statements = MethodBodies(type, shape, inference).Statements
 	for lines
@@ -37,6 +39,7 @@ Records(type Text, lines Texts) Texts
 			name = Tokenizer(value).Tokens.First
 			type + "." + name + "|" + Text.Combine(Used(type, statements, lines, index) - (type + "." + name), ",")
 Used(type Text, statements ScopedStatements, lines Texts, header Number) Texts
+	SureMethods.Used("A", MethodBodies("A", TypeShape(Sending), inference).Statements, Sending, 0) is ("Unknown.+")
 	last = FileCheck.LastLine(lines, header)
 	mutable keys = List(Mutable(Text))
 	for statements

@@ -2,6 +2,10 @@ has main TypeCodegen
 has header HeaderTokens
 has root Text
 has path Text
+constant Twiced = MethodEntry("Twice", List(MemberEntry), "Strict/Number", List(InstructionEntry))
+constant Suggested = MethodEntry("$Suggestion0", List(MemberEntry), "Strict/Number", List(InstructionEntry) + InstructionEntry.LoadNumber(0, 7))
+constant Offered = List(TypeEntry) + TypeEntry("Strict/A", List(MemberEntry), (Twiced, Suggested))
+constant Changing = SuggestionTests(TypeCodegen("Strict/A", ("Twice Number", "\t2"), ValueCodegen.NoTypes, List(Text)), HeaderTokens(Tokenizer("Twice Number").Tokens), ".", "A.strict")
 Passing(candidates Texts) Texts slow
 	if candidates.Length is 0
 		return List(Text)
@@ -31,6 +35,8 @@ Compile(body Text, index Number) MethodEntry
 	optimized = LoadReuse(code.instructions).Optimized
 	MethodEntry("$Suggestion" + index, main.Parameters(header), main.Declare(header), optimized)
 Change(types List(TypeEntry), candidate Number) List(TypeEntry)
+	Changing.Change(Offered, 0).First.methods.First.instructions.Length is 1
+	Changing.Change(Offered, 1).First.methods.First.instructions.Length is 0
 	mutable methods = types.First.methods
 	mutable replacement = methods.First
 	for methods
