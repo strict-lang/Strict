@@ -1,9 +1,13 @@
 has function MlirFunction
 has position Number
+constant Signed = MlirBatchSign(MlirFunction(MlirBatched.Paired.function, Float = "f32"), 2)
+constant Lengthed = InstructionEntry.Invoke(9, ("Strict/List(Number)", "Length", "Strict/Number"), List(Number), -1)
+constant Going = InstructionEntry.Invoke(9, ("Strict/A", "Go", "Strict/Number"), List(Number), -1)
 IsNonnegative(at Number, register Number) Boolean
 	writer = MlirKinds(function).Writer(at, register)
 	writer > position and IsWritten(writer)
 IsWritten(at Number) Boolean
+	Signed.IsWritten(3) and Signed.IsWritten(5) and Signed.IsWritten(6) and Signed.IsWritten(4) is false
 	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.LoadVariableToRegister
 		return IsVariable(at, entry.texts(0))
@@ -12,11 +16,14 @@ IsWritten(at Number) Boolean
 		return MlirWholeValues(at).IsWhole(number) and number.number >= 0
 	entry.kind is InstructionType.Invoke then IsCalled(at, entry) else IsCalculated(at, entry)
 IsVariable(at Number, name Text) Boolean
+	Signed.IsVariable(3, "index") and Signed.IsVariable(3, "other") is false
 	stored = MlirKinds(function).Store(at, name)
 	if stored > position
 		return IsNonnegative(stored, function.method.instructions(stored).payload(0))
 	name is in ("index", "value") or name is in MlirBatchLinear(function, position).Parameters
 IsCalculated(at Number, entry InstructionEntry) Boolean
+	Signed.IsCalculated(6, Signed.function.method.instructions(6))
+	Signed.IsCalculated(4, Signed.function.method.instructions(4)) is false
 	if entry.kind is not in (InstructionType.Add, InstructionType.Multiply, InstructionType.Divide, InstructionType.Modulo)
 		return false
 	left = IsNonnegative(at, entry.payload(1))
@@ -24,6 +31,7 @@ IsCalculated(at Number, entry InstructionEntry) Boolean
 		return left and MlirBatchLinear(function, position).IsDivisor(at, entry.payload(2))
 	left and IsNonnegative(at, entry.payload(2))
 IsCalled(at Number, entry InstructionEntry) Boolean
+	Signed.IsCalled(5, Lengthed) and Signed.IsCalled(5, Going) is false
 	if entry.texts(1) is "Length"
 		return true
 	if entry.texts(1) is not "Floor"

@@ -1,10 +1,15 @@
 has function MlirFunction
 has position Number
+constant Joined = TypeCodegen("Strict/A", ("Run(path Text) Text", "\tText.Combine(File(path).ReadLines, \"\\n\")"), ValueCodegen.NoTypes, List(Text)).Entry
+constant Reading = MlirReadText(MlirFunction(List(TypeEntry) + Joined, Joined, Joined.methods.First), 4)
+constant Steps = Reading.function.method.instructions
 Helper(helper Text) Text
+	Reading.Helper("strict_file_read_lines") is "strict_file_read_lines" and Reading.Helper("x") is "x"
 	if helper is "strict_file_read_lines" and IsRead
 		return "strict_file_joined"
 	helper is "strict_text_combine" and IsJoin then "strict_file_joined_result" else helper
 IsRead Boolean
+	Reading.IsRead is false and MlirReadText(Reading.function, -1).IsRead is false
 	steps = function.method.instructions
 	if position < 0 or position + 3 >= steps.Length
 		return false
@@ -14,6 +19,7 @@ IsRead Boolean
 	check = steps(position + 1)
 	Matches(read, check, steps(position + 2), steps(position + 3)) and IsUnused(read.payload(0), position + 3)
 Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry, join InstructionEntry) Boolean
+	Reading.Matches(Steps(4), Steps(6), Steps(6), Steps(7)) is false
 	if check.kind is not InstructionType.CheckError or check.payload(0) is not read.payload(0)
 		return false
 	if literal.kind is not InstructionType.LoadConstantToRegister
@@ -22,6 +28,7 @@ Matches(read InstructionEntry, check InstructionEntry, literal InstructionEntry,
 		return false
 	LoadReuse(function.method.instructions).Reads(join) is (read.payload(0), literal.payload(0))
 IsUnused(register Number, joined Number) Boolean
+	Reading.IsUnused(Steps(4).payload(0), 7)
 	steps = function.method.instructions
 	if LoadReuse(steps).Write(steps(joined)) is register
 		return true
@@ -31,6 +38,7 @@ IsUnused(register Number, joined Number) Boolean
 			return result > 0
 	true
 Outcome(entry InstructionEntry, register Number) Number
+	Reading.Outcome(Steps(9), 99) is 1 and Reading.Outcome(Steps(7), Steps(4).payload(0)) is Number.NotFound
 	reuse = LoadReuse(function.method.instructions)
 	if register is in reuse.Reads(entry)
 		return Number.NotFound
@@ -38,6 +46,7 @@ Outcome(entry InstructionEntry, register Number) Number
 		return 1
 	reuse.IsBoundary(entry) and entry.kind is not InstructionType.CheckError then Number.NotFound else 0
 IsCall(entry InstructionEntry, owner Text, name Text) Boolean
+	Reading.IsCall(Steps(4), "File", "ReadLines") and Reading.IsCall(Steps(6), "File", "ReadLines") is false
 	if entry.kind is not InstructionType.Invoke or entry.texts.Length < 3
 		return false
 	TypeEntry.ShortName(entry.texts(0)) is owner and entry.texts(1) is name
