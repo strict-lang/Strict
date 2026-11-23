@@ -45,6 +45,7 @@ IsReporting(entry InstructionEntry, isReporting Boolean) Boolean
 		return isReporting
 	entry.texts(0).StartsWith("Test failed: ") or isReporting and entry.texts(0) is not "  got: "
 Log(position Number, slots List(VmValue))
+	Reporting.Log(0, List(VmValue)) is not Error
 	for Logs(position, slots)
 		logger.Log(value)
 Logs(position Number, slots List(VmValue)) Texts

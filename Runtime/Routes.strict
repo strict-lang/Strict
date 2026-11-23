@@ -1,4 +1,5 @@
 has types List(TypeEntry)
+constant Read = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "x")
 constant Doubling = Routes(List(TypeEntry) + Machine.Doubler)
 constant Placeholding = Routes(List(TypeEntry) + TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry) + InlineRules.Adding + MethodEntry(InlineRules.Placeholder, Name = "OperatingSystem", declaredType = "Strict/Text")))
 constant Leading = Routes(List(TypeEntry) + TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry) + MethodEntry(InlineRules.Placeholder, Name = "OperatingSystem", declaredType = "Strict/Text")))
@@ -68,6 +69,8 @@ IsPlaceholder(method MethodEntry) Boolean
 	Doubling.IsPlaceholder(Failing) and Doubling.IsPlaceholder(Branching) is false
 	IsFailing(method) or IsInert(method)
 IsInert(method MethodEntry) Boolean
+	Doubling.IsInert(MethodEntry("A", List(MemberEntry), "None", List(InstructionEntry)))
+	Doubling.IsInert(MethodEntry("A", List(MemberEntry), "None", List(InstructionEntry) + Read)) is false
 	for method.instructions
 		isRead = value.kind is InstructionType.LoadVariableToRegister and value.texts.First is not "value"
 		kind = value.kind

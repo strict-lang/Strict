@@ -1,9 +1,14 @@
 has entries List(VmValue)
+constant Holding = VmValue("Strict/Runtime/ConstantCache", 0, "", VmValue.OfList(VmValue.OfNumber(5)))
+constant AtCall = InstructionEntry.Invoke(1, ("Strict/Runtime/ConstantCache", "At", "Strict/Runtime/VmValue", "index"), 0, -1)
+constant StoreCall = InstructionEntry.Invoke(2, ("Strict/Runtime/ConstantCache", "Store", "None", "index", "element"), (0, 1), -1)
 At(index Number) VmValue
 	entries(index)
 Store(index Number, element VmValue)
 	Error("ConstantCache writes require the native runtime: " + index + " " + element.kind)
 Host(call Invocation) VmValue
+	ConstantCache.Host(Invocation(AtCall, VmValue.OfNumber(0), Holding)).number is 5
+	ConstantCache.Host(Invocation(StoreCall, (VmValue.OfNumber(0), VmValue.OfNumber(6)), Holding)) is Error
 	cache = ConstantCache(call.Instance.Member(0).items)
 	index = call.Arguments.First.number
 	if call.MethodName is "At"
