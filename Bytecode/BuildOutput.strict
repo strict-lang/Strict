@@ -66,3 +66,8 @@ Fresh(base Text, extension Text, sources Texts) Text
 	if released is "" or delivered is ""
 		return released is "" then delivered else released
 	File(released).Modified >= File(delivered).Modified then released else delivered
+Packages(folder Text) Texts
+	BuildOutput.Packages("Math").Length is 0 and BuildOutput.Packages("Examples").Length > 0
+	for Directory.Directories(folder).Sorted
+		if ResolveCheck.IsCode(Path(value).FileName.text, value)
+			value

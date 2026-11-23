@@ -96,10 +96,11 @@ Snapshot(paths Texts) Texts
 	lines
 Value(path Text) Text
 	NativeCache("build", ("Math/Vector3.strict", ".")).Value("Math/**") is "" + Directory.ReadModified("Math")
+	NativeCache("build", ("Math/Vector3.strict", ".")).Value("Math/") is ""
 	if path.EndsWith("/**")
 		return "" + Directory.ReadModified(path.Substring(0, path.Length - 3))
 	if path.EndsWith("/")
-		return Text.Combine(Directory.Directories(path).Sorted, "\t")
+		return Text.Combine(BuildOutput.Packages(path), "\t")
 	if path.EndsWith("/*") is false
 		return "" + File(path).Modified
 	folder = path.Substring(0, path.Length - 2)

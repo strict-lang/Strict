@@ -23,9 +23,17 @@ Reuse(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChe
 	mutable reused = 0
 	for keys
 		reused = value is in stored then reused + 1 else reused
-	checking = isChecked then ", each compared with a fresh emission" else ""
-	Logger.Log("Emission cache: " + reused + " of " + texts.Length + " functions reused" + checking)
+	report = Report(reused, texts.Length, isChecked)
+	if report is not ""
+		Logger.Log(report)
 	Pick(texts, keys, stored, isChecked)
+Report(reused Number, count Number, isChecked Boolean) Text
+	Counting.Report(0, 2, true) is ""
+	Counting.Report(1, 2, true) is "Emission cache: 1 of 2 functions reused, each compared with a fresh emission"
+	if reused is 0
+		return ""
+	checking = isChecked then ", each compared with a fresh emission" else ""
+	"Emission cache: " + reused + " of " + count + " functions reused" + checking
 Pick(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
 	for texts
 		Chosen(value, keys(index), stored, isChecked)
