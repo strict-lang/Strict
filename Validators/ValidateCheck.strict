@@ -81,7 +81,8 @@ Counts(files Texts, mutations Texts, isBase Boolean, duplicates Duplicates, infe
 		found = CheckFile(value, lines, typeName, mutations, isBase) + duplicates.Issues(value, lines)
 		reached = SureChecks(lines, known(0), typeName, inference).Issues + InputOutputs.Issues(value, lines, known(1))
 		tested = TestChecks(lines, known(1), typeName).Issues + ComposedMembers(lines, typeName, inference).Issues
-		Log(value, found + reached + tested + TestFiles(value, lines, known(1)).Issues) + Resolve(value, inference)
+		looped = AccumulatedLoops(lines, typeName, inference).Issues + TestFiles(value, lines, known(1)).Issues
+		Log(value, found + reached + tested + looped) + Resolve(value, inference)
 Resolve(path Text, inference Expressions/TypeInference) Number slow
 	Report(ResolveCheck.Resolve(path, inference))
 Report(issues Texts) Number
