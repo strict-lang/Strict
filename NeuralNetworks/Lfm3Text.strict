@@ -4,7 +4,7 @@ constant Count = 32
 constant Sequences = 32
 Run
 	Respond(Weights, 8)
-Respond(weights Text, bits Number)
+Respond(weights Text, bits Number) slow
 	file = Gguf(weights)
 	tokenizer = Gpt2Tokens.Loaded(file)
 	started = Process.Elapsed
@@ -25,7 +25,7 @@ RunBatch(model Lfm3, tokenizer Gpt2Tokens, sequences Number)
 	tokens = Decode(prefilled.Copies(sequences), prefilled.Next, prompt.Length, sequences)
 	speed = (sequences * Count / (Process.Elapsed - started)).Round
 	logger.Log(sequences + " sequences: " + speed + " tokens per second, first:" + tokenizer.Decode(tokens))
-Decode(copies Lfm3, first Number, length Number, sequences Number) Numbers
+Decode(copies Lfm3, first Number, length Number, sequences Number) Numbers slow
 	mutable model = copies
 	mutable nexts = Same(first, sequences)
 	mutable firsts = List(Mutable(Number))
@@ -34,17 +34,17 @@ Decode(copies Lfm3, first Number, length Number, sequences Number) Numbers
 		model = model.Steps(nexts, Same(length + value, sequences))
 		nexts = model.Nexts
 	firsts
-Each(model Lfm3, tokenizer Gpt2Tokens)
+Each(model Lfm3, tokenizer Gpt2Tokens) slow
 	prompts = Encode(model, tokenizer)
 	tokens = Interleave(model.PrefilledEach(prompts), SequenceLength(prompts).Align(1), prompts.Length)
 	for prompts
 		single = Generate(model.Prefilled(value), value.Length)
 		batched = Pick(tokens, index, prompts.Length)
 		logger.Log((single is batched then "same batched: " else "DIFFERENT batched: ") + tokenizer.Decode(batched))
-Encode(model Lfm3, tokenizer Gpt2Tokens) List(Numbers)
+Encode(model Lfm3, tokenizer Gpt2Tokens) List(Numbers) slow
 	for Prompts
 		model.Prompt(tokenizer.Encode(value))
-Interleave(state Lfm3, length Number, sequences Number) Numbers
+Interleave(state Lfm3, length Number, sequences Number) Numbers slow
 	mutable model = state
 	mutable nexts = model.Nexts
 	mutable all = List(Number)
@@ -61,7 +61,7 @@ Same(number Number, count Number) Numbers
 	Lfm3Text.Same(3, 2) is (3, 3)
 	for count
 		number
-Generate(prefilled Lfm3, length Number) Numbers
+Generate(prefilled Lfm3, length Number) Numbers slow
 	mutable model = prefilled
 	mutable tokens = List(Mutable(Number))
 	for Count

@@ -49,10 +49,16 @@ IsHit(entry TypeEntry) Boolean
 			return false
 	true
 BaseRaw List(TypeEntry)
+	Sample.BaseRaw.Length is 0
+	ScriptCache(Sample, rawTypes = (TypeEntry.HelloLogger, TypeEntry.HelloLogger)).BaseRaw.Length is 1
 	rawTypes.Length > 1 then rawTypes.Slice(1, rawTypes.Length - 1) else List(TypeEntry)
 BaseResolved List(TypeEntry)
+	Sample.BaseResolved.Length is 0
+	ScriptCache(Sample, resolvedTypes = ScratchRun + ScratchRun).BaseResolved.Length is 1
 	resolvedTypes.Length > 1 then resolvedTypes.Slice(1, resolvedTypes.Length - 1) else List(TypeEntry)
 GenericsOf(knownTypes KnownTypes) Texts
+	Sample.GenericsOf(KnownTypes.Sample).Length is 0
+	Sample.GenericsOf(KnownTypes("G", Scope("x", "Generic"), KnownTypes.NoMembers, KnownTypes.NoMembers)) is ("G")
 	for knownTypes.names
 		if "Generic" is in knownTypes.members(index).types or "Generic" is in knownTypes.methods(index).types
 			value
@@ -92,9 +98,12 @@ MergedInference(lines Texts) TypeInference
 	merged = KnownTypes(types.names + "Scratch", members, types.methods + typedMethods, params, positions)
 	TypeInference(merged, inference.constants + shape.ConstantScope)
 EntryNames(entries List(TypeEntry)) Texts
+	Sample.EntryNames(ScratchRun) is ("Strict/Scratch")
 	for entries
 		value.Name
 MethodTargets(entries List(TypeEntry)) Texts
+	Sample.MethodTargets(ScratchRun + ScratchRun) is ("Strict/Scratch.Run")
+	Sample.MethodTargets(ScratchRun).Length is 0
 	mutable result = List(Mutable(Text))
 	for entries.Slice(1, entries.Length - 1)
 		entryName = value.Name
