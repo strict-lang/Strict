@@ -27820,6 +27820,8 @@
   }
   llvm.mlir.global internal constant @strict_gpu_tokens_name("strict_device_tokens\00strict_device_tokenss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_tokens_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_single_name("strict_device_token1\00strict_device_token1s\00") : !llvm.array<43 x i8>
+  llvm.mlir.global internal @strict_gpu_single_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_blocks_name("strict_device_blocks\00strict_device_blockss\00") : !llvm.array<43 x i8>
   llvm.mlir.global internal @strict_gpu_blocks_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_tiles_name("strict_device_tiles\00strict_device_tiless\00") : !llvm.array<41 x i8>
@@ -28309,8 +28311,14 @@
     %tokensSlot = llvm.mlir.addressof @strict_gpu_tokens_slot : !llvm.ptr
     %blocksName = llvm.mlir.addressof @strict_gpu_blocks_name : !llvm.ptr
     %blocksSlot = llvm.mlir.addressof @strict_gpu_blocks_slot : !llvm.ptr
-    %shortName = llvm.select %long, %blocksName, %tokensName : i1, !llvm.ptr
-    %shortSlot = llvm.select %long, %blocksSlot, %tokensSlot : i1, !llvm.ptr
+    %oneToken = arith.constant 1.0 : f64
+    %isSingle = arith.cmpf oeq, %tokens, %oneToken : f64
+    %singleName = llvm.mlir.addressof @strict_gpu_single_name : !llvm.ptr
+    %singleSlot = llvm.mlir.addressof @strict_gpu_single_slot : !llvm.ptr
+    %pairName = llvm.select %isSingle, %singleName, %tokensName : i1, !llvm.ptr
+    %pairSlot = llvm.select %isSingle, %singleSlot, %tokensSlot : i1, !llvm.ptr
+    %shortName = llvm.select %long, %blocksName, %pairName : i1, !llvm.ptr
+    %shortSlot = llvm.select %long, %blocksSlot, %pairSlot : i1, !llvm.ptr
     %tiled = func.call @strict_gpu_tiled(%rows, %input, %tokens, %width, %bases) : (f64, f64, f64, f64, f64) -> i1
     %tilesName = llvm.mlir.addressof @strict_gpu_tiles_name : !llvm.ptr
     %tilesSlot = llvm.mlir.addressof @strict_gpu_tiles_slot : !llvm.ptr

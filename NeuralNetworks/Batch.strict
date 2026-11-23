@@ -20,9 +20,8 @@ Sums(input Numbers) Numbers slow
 	Fours.Sums(Prompt)(637).IsNearlyEqual(5.001, 0.5)
 	Sixes.Sums(Prompt)(500).IsNearlyEqual(-3.413, 0.2)
 	Threes.Sums(Tokens)(255).IsNearlyEqual(-1.549, 0.2)
+	Fours.Sums(Tokens.Slice(0, 256)) is Layer(Fours.weights, Layer.Unbiased).Sums(Tokens.Slice(0, 256))
 	width = weights.First.Length
-	if input.Length is width and Process.OperatingSystem is not "Web"
-		return Layer(weights, biases).Sums(input)
 	rows = weights.Length
 	for rows * input.Length / width
 		Dot(weights(index % rows), 0, input, (index / rows).Floor * width) + biases(index % biases.Length)
