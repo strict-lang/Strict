@@ -736,7 +736,6 @@
     %bits = func.call @strict_bits(%global) : (!llvm.ptr) -> f64
     return %bits : f64
   }
-  llvm.func @system(!llvm.ptr) -> i32
   // runs a program with the console of this one (its output appears right away) and returns its exit code
   func.func private @strict_process_start(%path: f64, %arguments: f64) -> f64 {
     %pathLength = func.call @strict_text_long(%path) : (f64) -> f64
@@ -764,8 +763,42 @@
     %command = func.call @strict_text_concat(%program, %arguments) : (f64, f64) -> f64
     %placed = func.call @strict_folder_command(%command) : (f64) -> f64
     %commandText = func.call @strict_text_ptr(%placed) : (f64) -> !llvm.ptr
+    %shellLengths = llvm.mlir.addressof @strict_shell : !llvm.ptr
+    %shell = llvm.getelementptr %shellLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellNameLengths = llvm.mlir.addressof @strict_shell_name : !llvm.ptr
+    %shellName = llvm.getelementptr %shellNameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %shellCommandLengths = llvm.mlir.addressof @strict_shell_command : !llvm.ptr
+    %shellCommand = llvm.getelementptr %shellCommandLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %null = llvm.mlir.zero : !llvm.ptr
+    %one = arith.constant 1 : i64
+    %statusSlot = llvm.alloca %one x i32 : (i64) -> !llvm.ptr
+    llvm.store %none, %statusSlot : i32, !llvm.ptr
     func.call @strict_flush() : () -> ()
-    %status = llvm.call @system(%commandText) : (!llvm.ptr) -> i32
+    %child = llvm.call @fork() : () -> i32
+    %isChild = arith.cmpi eq, %child, %none : i32
+    cf.cond_br %isChild, ^child, ^parent
+  ^child:
+    // like a RunTool child it ends with its parent (PR_SET_PDEATHSIG, SIGKILL)
+    %pdeathOption = arith.constant 1 : i32
+    %pdeathSignal = arith.constant 9 : i64
+    %pdeathZero = arith.constant 0 : i64
+    %pdeathSet = llvm.call @prctl(%pdeathOption, %pdeathSignal, %pdeathZero, %pdeathZero, %pdeathZero) : (i32, i64, i64, i64, i64) -> i32
+    %executed = llvm.call @execl(%shell, %shellName, %shellCommand, %commandText, %null) vararg(!llvm.func<i32 (ptr, ptr, ...)>) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
+    %failure = arith.constant 127 : i32
+    llvm.call @_exit(%failure) : (i32) -> ()
+    llvm.unreachable
+  ^parent:
+    %notStarted = arith.cmpi slt, %child, %none : i32
+    cf.cond_br %notStarted, ^missing, ^wait
+  ^wait:
+    %ended = llvm.call @wait4(%child, %statusSlot, %none, %null) : (i32, !llvm.ptr, i32, !llvm.ptr) -> i32
+    %interrupted = arith.cmpi ne, %ended, %child : i32
+    %alive = llvm.call @kill(%child, %none) : (i32, i32) -> i32
+    %isAlive = arith.cmpi eq, %alive, %none : i32
+    %retry = arith.andi %interrupted, %isAlive : i1
+    cf.cond_br %retry, ^wait, ^exited
+  ^exited:
+    %status = llvm.load %statusSlot : !llvm.ptr -> i32
     %signal = arith.andi %status, %signals : i32
     %shifted = arith.shrui %status, %eight : i32
     %exited = arith.andi %shifted, %byte : i32

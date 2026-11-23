@@ -18,8 +18,8 @@ constant LoopLines = ("Spin Number slow", "	Loops.Spin is 1", "	started = Proces
 constant Pooled = ("set STRICT_THREADS=8&& ", "STRICT_THREADS=8 ")
 constant NoThreads = ("set STRICT_THREADS=& ", "env -u STRICT_THREADS ")
 constant ShortDeadline = ("set STRICT_SERVER=0&& set STRICT_DEADLINE=2&& ", "STRICT_SERVER=0 STRICT_DEADLINE=2 ")
-constant WindowsChild = "\"cmd\", \"/c ping -n 7 127.0.0.1 >nul && echo alive> "
-constant LinuxChild = "\"sh\", \"-c 'sleep 6; echo alive > "
+constant WindowsOrphans = ("logger.Log(Process.RunTool(\"cmd\", \"/c ping -n 7 127.0.0.1 >nul && echo alive> MARK\").exitCode to Text)", "logger.Log(Process.Find(\"cmd\").Start(\"/c ping -n 7 127.0.0.1 >nul && echo alive> MARK\") to Text)")
+constant LinuxOrphans = ("logger.Log(Process.RunTool(\"sh\", \"-c 'sleep 6; echo alive > MARK'\").exitCode to Text)", "logger.Log(Process.Find(\"sh\").Start(\"-c 'sleep 6; echo alive > MARK'\") to Text)")
 constant PassedLine = "Test passed: LazyFixture.Check is \"seven\""
 Run Number
 	folder = "obj/TestPolicy" + 1000000.Random.Floor
@@ -143,13 +143,13 @@ CheckShares(folder Text)
 CheckDeadline(folder Text)
 	File(folder + "/Loops.strict").Write(LoopLines)
 	looped = RunTests("test " + folder + "/Loops.strict Spin", ShortDeadline)
-	marker = folder + "/alive.txt"
-	child = Process.OperatingSystem is "Windows" then WindowsChild + marker + "\")" else LinuxChild + marker + "'\")"
-	File(folder + "/Orphan.strict").Write("result = Process.RunTool(" + child + "\nlogger.Log(result.exitCode to Text)")
-	parent = RunTests("run " + folder + "/Orphan.strict", ShortDeadline)
+	mutable parents = ""
+	for Process.OperatingSystem is "Windows" then WindowsOrphans else LinuxOrphans
+		File(folder + "/Orphan" + index + ".strict").Write(value.Replace("MARK", folder + "/alive.txt"))
+		parents = parents + RunTests("run " + folder + "/Orphan" + index + ".strict", ShortDeadline).Output
 	Process.Wait(8)
-	if File(marker).Exists
-		return Error("ChildOutlivedParent: " + parent.Output)
+	if File(folder + "/alive.txt").Exists
+		return Error("ChildOutlivedParent: " + parents)
 	CheckFail(looped, "ran past its limit of 2 s", "LoopingTestWithoutDeadline")
 SharedCount(output Text) Number
 	SharedCount("threads 2\nthreads 1\nx") is 1
