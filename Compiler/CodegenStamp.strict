@@ -14,10 +14,13 @@ Hashed Text
 Sources Texts
 	"./Compiler/MlirEquality.strict" is in CodegenStamp(".").Sources
 	"./Compiler/NativeRuntime.mlir" is in CodegenStamp(".").Sources
+	"./Compiler/CheckAudit.strict" is not in CodegenStamp(".").Sources
 	mutable files = Directory.Files(root, "*.strict") + Directory.Files(root + "/Compiler", "NativeRuntime*.mlir")
 	for Folders
 		files = Directory.Exists(root + "/" + value) then files + Directory.Files(root + "/" + value, "*.strict") else files
-	files
+	for files
+		if Path(value).FileName.text.StartsWith("Check") is false
+			value
 Pending(path Text)
 	Directory.Create("Compiler/output/Waiting") is not Error
 	Directory.Create("Compiler/output/Waiting/obj") is not Error
