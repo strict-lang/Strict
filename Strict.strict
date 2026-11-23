@@ -280,7 +280,7 @@ Native(command Text, rest Texts) Number slow
 	Strict.Native("test", ("Missing.strict", ".", "values", "other")) is 2
 	NativeCompiler.RunCommand((List(Text) + command) + rest)
 Format(path Text) Text slow
-	Strict.Format("Examples/HelloLogger.strict").StartsWith("has logger")
+	Strict.Format("Examples/HelloLogger.strict").StartsWith("Run\n\tlogger.Log(")
 	lines = RoundTrip.Tab(File(path).ReadLines)
 	broken = FileCompiler.Unparsable(lines)
 	if broken >= 0
