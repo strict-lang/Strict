@@ -1018,7 +1018,9 @@
     llvm.store %bits, %deadlineSlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
     return %now : f64
   ^untimed:
-    %started = func.call @strict_clock() : () -> f64
+    // a start on the wall clock is negative, so its Finish measures it there also after a nested test armed the test clock
+    %wallStarted = func.call @strict_clock() : () -> f64
+    %started = arith.negf %wallStarted : f64
     return %started : f64
   }
   func.func private @strict_testbudget_finish(%self: f64, %started: f64) -> f64 {
@@ -1083,7 +1085,13 @@
     %shift = llvm.load %shiftSlot atomic acquire {alignment = 8 : i64} : !llvm.ptr -> f64
     cf.br ^done(%shift, %now : f64, f64)
   ^done(%moved: f64, %ended: f64):
-    %passed = arith.subf %ended, %started : f64
+    %measuredZero = arith.constant 0.0 : f64
+    %isWallStart = arith.cmpf olt, %started, %measuredZero : f64
+    %wallFinished = func.call @strict_clock() : () -> f64
+    %wallBegun = arith.negf %started : f64
+    %measuredStart = arith.select %isWallStart, %wallBegun, %started : f64
+    %measuredEnd = arith.select %isWallStart, %wallFinished, %ended : f64
+    %passed = arith.subf %measuredEnd, %measuredStart : f64
     %seconds = arith.subf %passed, %moved : f64
     %thousand = arith.constant 1000.0 : f64
     %elapsed = arith.mulf %seconds, %thousand : f64

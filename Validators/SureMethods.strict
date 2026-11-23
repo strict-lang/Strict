@@ -9,7 +9,17 @@ Collect(paths Texts) Texts slow
 	mutable records = List(Mutable(Text))
 	for Parse(bases, InputOutputs.Read(bases))
 		records = records + value
-	Settle(records)
+	others = paths - bases
+	Settle(records) + Unfailing(others, InputOutputs.Read(others))
+Unfailing(paths Texts, contents List(Texts)) Texts
+	SureMethods.Unfailing(List(Text) + "A/Renderer.strict", List(Texts) + SureChecks.Drawing.lines) is ("Renderer.Drawn")
+	SureMethods.Unfailing(List(Text) + "Demo/Plain.strict", List(Texts) + ("Run", "\t1")).Length is 0
+	mutable keys = List(Mutable(Text))
+	for paths
+		lines = contents(index)
+		if Text.Combine(lines, " ").IndexOf(" Error then ") > 0
+			keys = keys + SureChecks(lines, List(Text), Path(value).FileName.RemoveExtension.text).Locals
+	keys
 Bases(paths Texts) Texts
 	SureMethods.Bases(("Number.strict", "Networking/Socket.strict")) is ("Number.strict")
 	for paths

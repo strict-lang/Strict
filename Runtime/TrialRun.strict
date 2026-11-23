@@ -2,7 +2,7 @@ has trial Trial
 constant Sample = Trial("has numbers Numbers\nWarmed Number\n\tWarmUp((1, 2, 3)).Warmed is 20\n\tnumbers.Sum + numbers.Length + numbers.Reverse.First + numbers.Maximum + (numbers.First - 5).Absolute + (numbers.First < 2 then 1 else 0)")
 constant Warm = TrialRun(Sample).Warmed
 constant Prepared = TrialMachine.Prepared(Warm.Types, FileCompiler.Normalize(Sample.Located))
-Tested Text slow
+Tested Text native
 	"Test passed: AddTwoNumbers(2, 3) is 5" is in TrialRun(Trial.Adding).Tested
 	if trial.Name is ""
 		return ""
@@ -14,6 +14,7 @@ Tested Text slow
 	output = started + logger.Capture(false)
 	answer is Error then output + answer to Text else output
 Warmed Answer slow
+	TestBudget.Finish(TestBudget.Start("outer", true) + TestBudget.Finish(TestBudget.Start("inner", false)) * 0) >= 0
 	Place
 	started = logger.Capture(true)
 	answer = RunTrial(Answer(0, Dictionary(Text, TypeEntry)), TrialMachine.None)
