@@ -175,13 +175,17 @@ Default(header HeaderTokens, position Number) List(InstructionEntry)
 	Hello.Default(HeaderTokens("Add", "(", "x", ")"), 2).Length is 0
 	Hello.Default(HeaderTokens(Tokenizer("Run(frames = 0 with value >= 0)").Tokens), 2).Length is 1
 	Hello.Default(HeaderTokens(Tokenizer("Run(name Text = \"a\")").Tokens), 2).Length is 1
+	Hello.Default(HeaderTokens(Tokenizer("Run(names = (\"a\", \"b\"), count = 1)").Tokens), 2).Length is 1
 	equals = header.tokens(position + 1) is "=" then position + 1 else position + 2
 	if equals >= header.tokens.Length or header.tokens(equals) is not "="
 		return List(InstructionEntry)
 	mutable end = -1
+	mutable depth = 0
 	for Range(equals + 1, header.tokens.Length)
-		if end is -1 and header.tokens(value) is in (",", ")", "with")
+		token = header.tokens(value)
+		if end is -1 and depth is 0 and token is in (",", ")", "with")
 			end = value
+		depth = token is "(" then depth + 1 else token is ")" then depth - 1 else depth
 	Initial(SyntaxParser(header.tokens).ParseRange(equals + 1, end))
 Concrete(type Text) Text
 	TypeCodegen("Strict/List(Number)", List(Text), NoTypes, List(Text)).Concrete("Generics") is "Numbers"
