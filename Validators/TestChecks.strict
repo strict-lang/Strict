@@ -10,6 +10,7 @@ constant Stops = TestChecks(("Locked Boolean", "\tStarted.Locked.over", "\tLocke
 constant Stopped = ValidationIssue("IsTrueIsNotNeeded", "Locked" + Hint, 3)
 constant Parked = TestChecks(("Half(number Number) Number", "	Half(4) is 2", "	Twice(4) is 8", "	number / 2", "Twice(number Number) Number", "	number * 2"))
 constant Branched = TestChecks(("Sign(number Number) Number", "	if number < 0", "		return -1", "	number"))
+constant Hosting = TestChecks(("Start(place Text) Number", "	place is \"\" then 1 else 0"), List(Text), "TestBudget")
 constant Reading = TestChecks(Branched.lines, List(Text) + "Reader.Sign", "Reader")
 Issues List(ValidationIssue)
 	Locking.Issues.First to Text is "IsTrueIsNotNeeded: Started.Locked.over" + Hint
@@ -34,9 +35,11 @@ Place(header Number) List(ValidationIssue)
 	untested = ValidationIssue("MethodWithBranchMustHaveTestOrBeIO", name + Branches, header + 1)
 	isUntested then issues + untested else issues
 IsInputOutput(header Number, name Text) Boolean
+	Hosting.IsInputOutput(0, "Start")
 	Reading.IsInputOutput(0, "Sign") and Branched.IsInputOutput(0, "Sign") is false and Branched.IsInputOutput(0, "Run")
 	marker = Tokenizer(lines(header)).Tokens.Last
-	name is "Run" or marker is "slow" or marker is "native" or typeName + "." + name is in reaching
+	isMarked = name is "Run" or marker is "slow" or marker is "native"
+	isMarked or typeName + "." + name is in reaching or typeName + "." + name is in Hosted.Methods
 Tests(header Number) Texts
 	Parked.Tests(0) is ("Half(4) is 2", "Twice(4) is 8") and Branched.Tests(0).Length is 0
 	TestChecks(("A Number", "	constant B = 1", "	A is B", "	2")).Tests(0) is ("A is B")
