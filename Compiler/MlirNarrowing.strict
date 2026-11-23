@@ -1,6 +1,7 @@
 has function MlirFunction
 has position Number
 constant Summing = MlirNarrowing(MlirKernel.Summing.function, 1)
+constant Compiling = MlirNarrowing(MlirFunction(Summing.function, types = List(TypeEntry) + MlirParallel.Compiling.function.types.First + Summing.function.types), 1)
 constant FewSummed = (List(InstructionEntry) + InstructionEntry.LoadNumber(0, 8)) + MlirKernel.Summed.Slice(1, 7)
 constant Few = MlirNarrowing(MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Sum", List(MemberEntry) + MlirLists.Items, "Strict/Number", FewSummed)), 1)
 constant FloatNumbers = MemberEntry("numbers", "Strict/List(Float32)", List(InstructionEntry), false)
@@ -92,7 +93,10 @@ IsCandidate Boolean
 	Listed.IsCandidate is false
 	MlirNarrowing(MlirKernel.Doubling.function, 2).IsCandidate is false
 	Forced.IsCandidate is false
-	if TypeEntry.IsBaseName(TypeEntry.ShortName(function.type.Name)) or MlirKernel(function, position).IsSimple is false
+	Summing.IsCandidate and Compiling.IsCandidate is false
+	if MlirCost(function, position).IsCompiler or TypeEntry.IsBaseName(TypeEntry.ShortName(function.type.Name))
+		return false
+	if MlirKernel(function, position).IsSimple is false
 		return false
 	for Range(position + 1, function.method.LoopEndOf(position))
 		if function.method.instructions(value).kind is not in MlirSingle.Allowed
