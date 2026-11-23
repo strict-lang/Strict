@@ -29,7 +29,7 @@ Package(program Text, isWeb = false, isCrossing = false, platform = -1, isReleas
 	if base.EndsWith(".test")
 		return
 	if isWeb
-		return Refresh(Parent + "/Release/Web", "", base, List(Text))
+		return Refresh(Parent + "/Release/Web", Parent + "/Release/Web/Content", base, List(Text))
 	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing or File(Parent + "/" + Label(base) + ".shell.html").Exists
 		NativePackage(isCrossing)
 NativePackage(isCrossing Boolean)
@@ -100,6 +100,9 @@ Sidecar(release Text)
 		if isWeb is false
 			PtxLibraries.Of(base).Place(base, value, release)
 Mirror(target Text)
+	Release("Compiler/output/A").Mirror("Compiler/output/Release/Web/Content") is not Error
+	if target.EndsWith("/Web/Content")
+		Content(Parent + "/Release/Content")
 	if target is not ""
 		Synce(Parent + "/Release/Content", target)
 Synce(source Text, target Text)
