@@ -60,4 +60,5 @@ Built Text
 	Process.Current.Built.Length is 19
 	""
 to Text
+	Process("a.exe") to Text is "Process(a.exe)" and Process("") to Text is "Process(missing)"
 	executable is "" then "Process(missing)" else "Process(" + executable + ")"

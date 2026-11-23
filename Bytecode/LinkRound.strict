@@ -44,6 +44,8 @@ Forward(targets Texts, seen Texts = List(Text)) Texts
 	fresh = (forwarded - seen - targets).Unique
 	forwarded + (fresh.Length is 0 then List(Text) else Forward(fresh, seen + targets))
 ForwardedTarget(target Text, indices Dictionary(Text, Number)) Text
+	Wrapping.ForwardedTarget("Strict/Character.Floor", Wrapping.Indices) is "Strict/Number.Floor"
+	Wrapping.ForwardedTarget("Strict/Missing.Floor", Wrapping.Indices) is ""
 	type = target.Substring(0, target.LastIndexOf("."))
 	method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
 	if type is in indices and IsForwarded(type, indices(type), method)
@@ -68,6 +70,7 @@ Indices Dictionary(Text, Number)
 			indices(names(index)) = index
 	indices
 TypeNames Texts
+	Wrapping.TypeNames is ("Strict/Bytecode/A", "Strict/Character", "Strict/Dictionary(Text)")
 	folder = Path(linker.main.fullName).PathOnly.text + "/"
 	for entries
 		value.Name.IndexOf("/") < 0 then folder + value.Name else value.Name
@@ -97,6 +100,9 @@ Unresolved Texts
 		if IsMissing(value, List(Text), positions)
 			value
 IsMissing(target Text, seen Texts, positions Dictionary(Text, Number)) Boolean
+	Wrapping.IsMissing("Strict/Character.to", List(Text), Wrapping.Indices) is false
+	Wrapping.IsMissing("Strict/Character.Floor", List(Text), Wrapping.Indices)
+	Single.IsMissing("Strict/Unknown.Run", List(Text), Single.Indices)
 	type = target.Substring(0, target.LastIndexOf("."))
 	method = target.Substring(type.Length + 1, target.Length - type.Length - 1)
 	hosted = TypeEntry.ShortName(type) + "." + method is in Hosted.Methods

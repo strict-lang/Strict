@@ -1,4 +1,5 @@
 constant Counting = TypeInference(KnownTypes.Sample, (KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Itemed = (TypeShape("Go Number", "	1"), TypeShape("has items Generics", "Go Number", "	1"))
 constant Stray = "A.strict:line 3: MembersMustComeBeforeMethods: constant B = 1"
 constant Joined = ("Names Texts", "\t\"a\" + \"b\"")
 constant Joining = MethodBodies("Demo", TypeShape(Joined), Counting)
@@ -91,6 +92,7 @@ Positions(names Texts) Dictionary(Text, Number)
 			positions(value) = index
 	positions
 TypeNames(files Texts) Texts
+	ResolveCheck.TypeNames(("Examples/Sum.strict", "Math/Vector2.strict")) is ("Sum", "Vector2")
 	for files
 		TypeName(value)
 Inference(files Texts) TypeInference
@@ -101,6 +103,7 @@ Shapes(files Texts) List(TypeShape)
 	for files
 		TypeShape(Fusion(File(value).ReadLines, Path(value).PathOnly.text).Fused)
 Generics(files Texts, shapes List(TypeShape)) Texts
+	ResolveCheck.Generics(("A.strict", "B.strict"), Itemed) is ("B")
 	for shapes
 		if value.UsesGenerics
 			TypeName(files(index))

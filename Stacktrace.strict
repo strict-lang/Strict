@@ -2,4 +2,6 @@ has Method
 has FilePath Text
 has Line Number
 to Text
+	(Error("A").Stacktraces(0) to Text).StartsWith("	at ")
+	Stacktrace(Error("A").Stacktraces(0).Method, "", 3) to Text is "	... (skipped 3 lines)"
 	FilePath is "" then "	... (skipped " + Line + " lines)" else "	at " + Method + " in " + FilePath + ":line " + Line

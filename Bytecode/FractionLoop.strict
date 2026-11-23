@@ -1,4 +1,8 @@
 constant Sample = BodyParser("Run", "\tmutable pi = 0", "\tfor Range(1, rounds + 1)", "\t\tpi = pi + (1 - 2 * (value % 2)) / (2 * value + 1)").Method(1).children(1)
+constant Odd = SyntaxParser(Tokenizer("2 * value + 1").Tokens).Parse
+constant Doubled = SyntaxParser(Tokenizer("2 * value").Tokens).Parse
+constant Next = SyntaxParser(Tokenizer("value + 1").Tokens).Parse
+constant One = SyntaxNode("Number", "1")
 constant PlainSum = BodyParser("Run", "\tmutable sum = 0", "\tfor Range(0, rounds)", "\t\tsum = sum + value").Method(1).children(1)
 Merge(loop SyntaxNode) SyntaxNode
 	FractionLoop.Merge(PlainSum).Kind is "For"
@@ -10,6 +14,8 @@ Merge(loop SyntaxNode) SyntaxNode
 	parts = (term.children(0) to Text) is "1 - 2 * (value % 2)" then Linear(term.children(1), "value") else ""
 	parts is "" or Bound(loop).Kind is not "Number" then loop else Build(loop, parts)
 Term(loop SyntaxNode) SyntaxNode
+	FractionLoop.Term(Sample) to Text is "(1 - 2 * (value % 2)) / (2 * value + 1)"
+	FractionLoop.Term(PlainSum) to Text is "value"
 	body = loop.Kind is "For" then loop.children.Last else loop
 	statement = body.Kind is "Body" then (body.children.Length is 1 then body.children(0) else loop) else body
 	if statement.Kind is not "Reassignment"
@@ -19,9 +25,12 @@ Term(loop SyntaxNode) SyntaxNode
 		return statement
 	sum.children(1)
 Bound(loop SyntaxNode) SyntaxNode
+	FractionLoop.Bound(Sample) to Text is "1" and FractionLoop.Bound(Odd).Kind is "Binary"
 	count = loop.Kind is "For" then loop.children(0) else loop
 	count.Kind is "Call" and count.text is "Range" and count.children.Length is 2 then count.children(0) else loop
 Linear(node SyntaxNode, name Text) Text
+	FractionLoop.Linear(Odd, "value") is "2*1" and FractionLoop.Linear(Doubled, "value") is "2*0"
+	FractionLoop.Linear(Next, "value") is "" and FractionLoop.Linear(One, "value") is ""
 	if node.Kind is "Binary" and node.text is "*"
 		product = Product(node, name)
 		return product is "" then "" else product + "*0"
@@ -29,16 +38,18 @@ Linear(node SyntaxNode, name Text) Text
 		return ""
 	left = node.children(0)
 	right = node.children(1)
-	product = left.Kind is "Binary" then Product(left, name) else Product(right, name)
+	product = left.Kind is "Binary" then Product(left, name) else right.Kind is "Binary" then Product(right, name) else ""
 	offset = left.Kind is "Number" then left.text else (right.Kind is "Number" then right.text else "")
 	product is "" or offset is "" then "" else product + "*" + offset
 Product(node SyntaxNode, name Text) Text
+	FractionLoop.Product(Doubled, "value") is "2" and FractionLoop.Product(Doubled, "x") is ""
 	left = node.children(0)
 	right = node.children(1)
 	if left.Kind is "Number" and right.Kind is "Identifier" and right.text is name
 		return left.text
 	right.Kind is "Number" and left.Kind is "Identifier" and left.text is name then right.text else ""
 Build(loop SyntaxNode, parts Text) SyntaxNode
+	FractionLoop.Build(Sample, "2*1").children.Length is 6
 	coefficient = parts.Split("*")(0)
 	offset = parts.Split("*")(1)
 	start = loop.children(0).children(0)
@@ -50,6 +61,7 @@ Build(loop SyntaxNode, parts Text) SyntaxNode
 	setup = Blocks(loop).children + (List(SyntaxNode) + Group(loop, start, coefficient, offset, factor))
 	SyntaxNode("Body", "", setup + (List(SyntaxNode) + Rest(loop, start)) + (List(SyntaxNode) + total))
 Blocks(loop SyntaxNode) SyntaxNode
+	FractionLoop.Blocks(Sample).children(0) to Text is "let blocks = ((rounds + 1 - 1) / 4).Floor()"
 	start = loop.children(0).children(0)
 	end = loop.children(0).children(1)
 	quarter = Bin("/", start.text is "0" then end else Bin("-", end, start), SyntaxNode("Number", "4"))
@@ -62,6 +74,7 @@ Blocks(loop SyntaxNode) SyntaxNode
 	two = SyntaxNode("Declaration", "let width", List(SyntaxNode) + width)
 	SyntaxNode("Body", "", (one, two, SyntaxNode("Declaration", "let extra", List(SyntaxNode) + extra)))
 Group(loop SyntaxNode, start SyntaxNode, coefficient Text, offset Text, factor Text) SyntaxNode
+	FractionLoop.Group(Sample, One, "2", "1", "-2").text is "slices"
 	parsed = BodyParser("Run", "\tvalue is 0 then extra else 0").Block(1, 1).children(0)
 	count = Bin("+", SyntaxNode("Identifier", "width"), parsed)
 	chosen = BodyParser("Run", "\tvalue is 0 then blocks - count else (2499 - value) * width").Block(1, 1)
@@ -97,9 +110,13 @@ Ratio(factor Text) SyntaxNode
 	prod = Bin("*", SyntaxNode("Identifier", "left"), SyntaxNode("Identifier", "right"))
 	Bin("/", Bin("*", SyntaxNode("Number", factor), sum), prod)
 Shift(start SyntaxNode, name Text) SyntaxNode
+	FractionLoop.Shift(SyntaxNode("Number", "0"), "v") to Text is "4 * v"
+	FractionLoop.Shift(One, "v") to Text is "1 + 4 * v"
 	span = Bin("*", SyntaxNode("Number", "4"), SyntaxNode("Identifier", name))
 	start.text is "0" then span else Bin("+", start, span)
 Scale(times Text, coefficient Text) SyntaxNode
+	FractionLoop.Scale("2", "2").text is "4" and FractionLoop.Scale("3", "2").text is "6"
+	FractionLoop.Scale("2", "3") to Text is "2 * 3"
 	if coefficient is "2" and times is "2"
 		return SyntaxNode("Number", "4")
 	if coefficient is "2" and times is "3"

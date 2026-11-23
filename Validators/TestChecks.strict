@@ -39,13 +39,17 @@ IsInputOutput(header Number, name Text) Boolean
 	name is "Run" or marker is "slow" or marker is "native" or typeName + "." + name is in reaching
 Tests(header Number) Texts
 	Parked.Tests(0) is ("Half(4) is 2", "Twice(4) is 8") and Branched.Tests(0).Length is 0
+	TestChecks(("A Number", "	constant B = 1", "	A is B", "	2")).Tests(0) is ("A is B")
+	TestChecks(("A Number", "	constant B = 1", "	constant C = 2", "	A is B", "	2")).Tests(0).Length is 0
 	last = FileCheck.LastLine(lines, header)
 	mutable tests = List(Mutable(Text))
 	for Range(header + 1, last > header then last else header + 1)
 		code = lines(value).Trim
-		if code is "" or Duplicates.IsTest(code) is false
+		isConstant = code.StartsWith("constant ") and lines(value - 1).Trim.StartsWith("constant ") is false
+		if isConstant is false and (code is "" or Duplicates.IsTest(code) is false)
 			return tests
-		tests.Add(code)
+		if isConstant is false
+			tests.Add(code)
 	tests
 IsBranching(header Number) Boolean
 	Branched.IsBranching(0) and Parked.IsBranching(4) is false

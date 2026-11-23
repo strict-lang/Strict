@@ -8,4 +8,6 @@ HasSucceeded Boolean
 HasFailed Boolean
 	exitCode is not 0
 to Text
+	ProcessResult(0, "", "") to Text is "ok exit=0"
+	ProcessResult(2, "", "bad") to Text is "fail exit=2 bad"
 	HasSucceeded then "ok exit=0" else "fail exit=" + exitCode to Text + " " + error
