@@ -25,6 +25,7 @@ constant Timing = MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Timed)
 constant Randomizing = MlirParallel(MlirFunction(Timing.function, method = MethodEntry(Timed, instructions = ValueLoop + RandomCall + WrittenLoopEnd)), 2)
 constant Effects = MlirPurity.Caching.function.method.instructions + InstructionEntry.Print("value") + InstructionEntry.Invoke(3, ("Strict/Runtime/Hosted", "Result", "Strict/Number"), List(Number), -1)
 constant Held = MlirParallel(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 2))), 2)
+constant Compiling = MlirParallel(MlirFunction(Held.function, types = List(TypeEntry) + TypeEntry("Strict", List(MemberEntry), List(MethodEntry)) + Rows), 2)
 constant Logging = MlirParallel(MlirFunction(List(TypeEntry) + Rows + MlirPurity.Hosting, Rows, MethodEntry(Timed, instructions = Timed.instructions.Slice(0, 4) + Effects + Timed.instructions.Slice(5, 2))), 2)
 IsParallel Boolean
 	Doubling.IsParallel and Logging.IsParallel and Randomizing.IsParallel and Timing.IsParallel is false
@@ -70,8 +71,10 @@ Enough Texts
 	Doubling.Enough.Last is "    %t2pb = arith.andi %t2pwc, %t2pww : i1"
 	Held.Enough(1) is "    %t2pwr = func.call @strict_parallel_forkable() : () -> i1"
 	Text.Combine(Held.Forked).IndexOf("forkable") > 0 and Text.Combine(Doubling.Forked).IndexOf("forkable") < 0
+	Text.Combine(Compiling.Forked).IndexOf("forkable") < 0
 	compared = "    " + Temp("pwc") + " = arith.cmpi sge, " + Temp("pn") + ", " + Temp("pt") + " : i64"
-	isGpu = MlirPurity(function, position).IsReachingGpu
+	isCompiler = function.types.Length > 0 then TypeEntry.ShortName(function.types.First.Name) is "Strict" else false
+	isGpu = isCompiler then false else MlirPurity(function, position).IsReachingGpu
 	flag = Temp(isGpu then "pwr" else "pww")
 	body = "    " + Temp("pwf") + " = func.constant @" + Symbol + " : " + Shape
 	called = "(" + Temp("pwf") + ", " + Temp("pn") + ") : (" + Shape + ", i64) -> i1"
