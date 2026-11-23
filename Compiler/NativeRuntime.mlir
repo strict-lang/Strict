@@ -3697,7 +3697,7 @@
     return
   }
   // all registers this thread holds references in are saved in this frame while it waits for a collection to end
-  func.func private @strict_gc_park() attributes {llvm.passthrough = ["noinline"]} {
+  func.func private @strict_gc_park() attributes {llvm.passthrough = ["noinline", ["disable-tail-calls", "true"]]} {
     llvm.call @llvm.eh.unwind.init() : () -> ()
     %stackPointer = llvm.call_intrinsic "llvm.stacksave.p0"() : () -> !llvm.ptr
     %low = llvm.ptrtoint %stackPointer : !llvm.ptr to i64
@@ -3821,7 +3821,7 @@
     return
   }
   // the caller of a pool job waits parked for its other chunks: a collection in one of them scans its stack meanwhile
-  func.func private @strict_pool_parked_wait(%count: i64) attributes {llvm.passthrough = ["noinline"]} {
+  func.func private @strict_pool_parked_wait(%count: i64) attributes {llvm.passthrough = ["noinline", ["disable-tail-calls", "true"]]} {
     llvm.call @llvm.eh.unwind.init() : () -> ()
     %stackPointer = llvm.call_intrinsic "llvm.stacksave.p0"() : () -> !llvm.ptr
     %low = llvm.ptrtoint %stackPointer : !llvm.ptr to i64
