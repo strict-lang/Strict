@@ -6,13 +6,17 @@ constant Filtered = AccumulatedLoops(("Evens(numbers Numbers) Numbers", "	Evens(
 constant Unique = AccumulatedLoops(("Kept(numbers Numbers) Numbers", "	Kept((1, 1)) is (1)", "	mutable kept = List(Number)", "	for numbers", "		if value is not in kept", "			kept = kept + value", "	kept"))
 constant Joining = ("Joined(texts Texts) Texts", "	Joined((\"a\")) is (\"a\")", "	mutable joined = List(Text)", "	for texts", "		joined = joined + texts", "	joined")
 constant Joined = AccumulatedLoops(Joining)
+constant OwnJoined = AccumulatedLoops(("All Texts", "	mutable all = List(Text)", "	for 2", "		all = all + Pair", "	all", "Pair Texts", "	(\"a\", \"b\")"))
 constant Summed = AccumulatedLoops(("Running(numbers Numbers) Numbers", "	Running((1, 2)) is (1, 3)", "	mutable sums = List(Number)", "	for numbers", "		sums = sums + (sums.Last + value)", "	sums"))
 Issues List(ValidationIssue)
 	Mapped.Issues.First to Text is "AccumulatingLoopMustBeForExpression: " + Mapped.Loop(2)
 	Mapped.Issues.First.Line is 3 and Filtered.Issues.First.Line is 3 and Summed.Issues.Length is 0
 	Unique.Issues.Length is 0 and Joined.Issues.Length is 0
+	OwnJoined.Issues.Length is 0
+	AccumulatedLoops(("A Texts", "	mutable all = List(Text) + B", "	for 2", "		all.Add(C)", "	all")).Issues.Length is 0
 	for lines
-		found = value.StartsWith("	mutable ") and value.IndexOf(" = List(") > 0 then Loop(index) else ""
+		isEmpty = value.IndexOf(" = List(") > 0 and value.IndexOf(") + ") < 0
+		found = value.StartsWith("	mutable ") and isEmpty then Loop(index) else ""
 		if found is not ""
 			ValidationIssue("AccumulatingLoopMustBeForExpression", found, index + 1)
 Loop(at Number) Text
@@ -31,9 +35,19 @@ IsJoined(at Number) Boolean
 	for MethodBodies(typeName, TypeShape(lines), inference).Statements
 		if value.line is at and value.statement.Kind is "Reassignment"
 			added = value.statement.children(1)
-			type = added.Kind is "Binary" then inference.TypeOf(added.children(1), value.scope, value.scope) else ""
+			inferred = added.Kind is "Binary" then inference.TypeOf(added.children(1), value.scope, value.scope) else ""
+			own = added.Kind is "Binary" then OwnType(added.children(1)) else ""
+			type = own is "" then inferred else own
 			return type is "" then false else type.StartsWith("List(") or inference.types.IsPlural(type)
 	false
+OwnType(node SyntaxNode) Text
+	OwnJoined.OwnType(SyntaxNode("Identifier", "Pair")) is "Texts"
+	OwnJoined.OwnType(SyntaxNode("Identifier", "Missing")) is ""
+	shape = TypeShape(lines)
+	for lines
+		if shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is node.text
+			return HeaderTokens(Tokenizer(value).Tokens).ReturnType
+	""
 IsLast(at Number) Boolean
 	Mapped.IsLast(5) and Mapped.IsLast(3) is false
 	at + 1 is lines.Length then true else lines(at + 1).StartsWith("	") is false
