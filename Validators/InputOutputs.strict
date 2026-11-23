@@ -1,4 +1,6 @@
 has inference Expressions/TypeInference = TypeInference.NoInference
+constant Slowly = List(Text) + "slow"
+constant Natively = ("slow", "native")
 constant Kinds = ("File", "Directory", "Process", "Socket", "Http")
 constant Traits = ("TextReader", "TextWriter", "BytesReader", "BytesWriter")
 constant Flagged = "InputOutputMustBeSlow: Reader.Loaded does file, directory, process or network input or output, end its header with slow"
@@ -13,12 +15,12 @@ constant Flagging = MethodBodies("Reader", TypeShape(Flags), Reading.inference)
 constant Constants = BodyParser(("Run", "\tconstant a = true", "\tconstant b = 1"))
 constant Reversed = ("Reader.Shown||Reader.Loaded", "Reader.Loaded||File.ReadLines", "File.ReadLines|slow|")
 constant Reached = ("File.ReadLines|slow|", "Reader.Loaded||File.ReadLines", "Reader.Shown||Reader.Loaded", "Reader.Twice||Number.+")
-Collect(paths Texts) Texts slow
-	InputOutputs.Collect(List(Text)).Length is 0
+Collect(paths Texts, markers Texts) Texts slow
+	InputOutputs.Collect(List(Text), Slowly).Length is 0
 	mutable records = List(Mutable(Text))
 	for Parse(paths, Read(paths))
 		records = records + value
-	Settle(records)
+	Settle(records, markers)
 Read(paths Texts) List(Texts) slow
 	InputOutputs.Read(List(Text) + "Validators/InputOutputs.strict").First.First.StartsWith("has inference")
 	for paths
@@ -32,8 +34,9 @@ Parse(paths Texts, contents List(Texts)) List(Texts)
 		Records(name is in Traits then "File" else name, contents(index))
 Records(type Text, lines Texts) Texts
 	Reading.Records("Reader", Loading) is ("Reader.Loaded||File.ReadLines", "Reader.Run||Reader.Loaded")
-	InputOutputs.Records("File", ("Name Text", "Exists Boolean slow")) is ("File.Name||", "File.Exists|slow|")
-	InputOutputs.Records("Reader", "Exists Boolean slow") is ("Reader.Exists||")
+	InputOutputs.Records("File", ("Name Text", "Exists Boolean slow")) is ("File.Name|native|", "File.Exists|slow|")
+	InputOutputs.Records("Reader", "Exists Boolean slow") is ("Reader.Exists|native|")
+	InputOutputs.Records("Window", ("Size Number", "	1")) is ("Window.Size||")
 	Reading.Records("Reader", Checking)(1) is "Reader.IsLoaded||List.Length,Reader.Loaded"
 	shape = TypeShape(lines)
 	bodies = MethodBodies(type, shape, inference)
@@ -41,8 +44,9 @@ Records(type Text, lines Texts) Texts
 	for lines
 		if shape.IsMethodHeader(value)
 			isSeed = HeaderTokens(Tokenizer(value).Tokens).ReturnsSlow and type is in Kinds
-			calls = Text.Combine(Used(bodies, statements, lines, index), ",")
-			type + "." + Tokenizer(value).Tokens.First + (isSeed then "|slow|" else "||") + calls
+			isNative = FileCheck.LastLine(lines, index) is index
+			marker = isSeed then "|slow|" else isNative then "|native|" else "||"
+			type + "." + Tokenizer(value).Tokens.First + marker + Text.Combine(Used(bodies, statements, lines, index), ",")
 Used(bodies MethodBodies, statements ScopedStatements, lines Texts, header Number) Texts
 	Reading.Used(Checks, Checks.Statements, Checking, 0).Length is 3
 	"Reader.Loaded" is in Reading.Used(Checks, Checks.Statements, Checking, 0)
@@ -62,11 +66,13 @@ IsTest(bodies MethodBodies, scoped ScopedStatement) Boolean
 	Reading.IsTest(Flagging, ScopedStatement(Constants.Statement(2, 1), KnownTypes.NoMembers, 2)) is false
 	isConstant = scoped.statement.text.StartsWith("constant ")
 	(scoped.statement.Kind is not "Declaration" or isConstant) and bodies.StatementType(scoped) is "Boolean"
-Settle(records Texts) Texts
-	InputOutputs.Settle(Reached) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
-	InputOutputs.Settle(List(Text) + "Reader.Loaded||File.ReadLines").Length is 0
-	InputOutputs.Settle(Reversed) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
-	mutable reaching = Seeds(records)
+Settle(records Texts, markers Texts) Texts
+	InputOutputs.Settle(Reached, Slowly) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
+	InputOutputs.Settle(List(Text) + "Reader.Loaded||File.ReadLines", Slowly).Length is 0
+	InputOutputs.Settle(Reversed, Slowly) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
+	InputOutputs.Settle(("A.Draw|native|", "B.Render||A.Draw"), Natively) is ("A.Draw", "B.Render")
+	InputOutputs.Settle(("A.Draw|native|", "B.Render||A.Draw"), Slowly).Length is 0
+	mutable reaching = Seeds(records, markers)
 	mutable added = reaching.Length
 	for as long as added > 0
 		added = 0
@@ -75,10 +81,10 @@ Settle(records Texts) Texts
 				reaching = reaching + SureMethods.Key(value)
 				added = added + 1
 	reaching
-Seeds(records Texts) Texts
-	InputOutputs.Seeds(Reached) is ("File.ReadLines")
+Seeds(records Texts, markers Texts) Texts
+	InputOutputs.Seeds(Reached, Slowly) is ("File.ReadLines")
 	for records
-		if value.Split("|")(1) is "slow"
+		if value.Split("|")(1) is in markers
 			SureMethods.Key(value)
 IsReaching(calls Texts, reaching Texts) Boolean
 	InputOutputs.IsReaching(("Number.+", "File.ReadLines"), "File.ReadLines")
