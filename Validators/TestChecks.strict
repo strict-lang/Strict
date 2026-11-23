@@ -2,7 +2,6 @@ has lines Texts
 has reaching Texts = List(Text)
 has typeName Text = ""
 constant Locking = TestChecks(("has over Boolean", "Locked Boolean", "\tStarted.Locked.over is true", "\tLocked is true", "\tover"))
-constant Moved = ", move it to the method it tests"
 constant Branches = ", write a test line for each branch"
 constant Hint = ", a passed test line is true already"
 constant Operators = (">", "<", ">=", "<=", "is", "+", "-", "*", "/", "%")
@@ -21,19 +20,13 @@ Issues List(ValidationIssue)
 			issues = issues + Leading(index)
 	issues
 Place(header Number) List(ValidationIssue)
-	Parked.Place(0).First to Text is "TestMustCallItsOwnMethod: Twice(4) is 8, move it to the method it tests"
-	Parked.Place(0).First.Line is 3 and Parked.Place(4).Length is 0 and Locking.Place(1).Length is 0
+	Parked.Place(0).Length is 0 and Parked.Place(4).Length is 0 and Locking.Place(1).Length is 0
 	Branched.Place(0).First to Text is "MethodWithBranchMustHaveTestOrBeIO: Sign, write a test line for each branch"
 	Reading.Place(0).Length is 0 and TestChecks(("Loaded Number slow", "	if a", "		1", "	2")).Place(0).Length is 0
 	name = Tokenizer(lines(header)).Tokens.First
-	tests = Tests(header)
-	mutable issues = List(Mutable(ValidationIssue))
-	for tests
-		if name is not in Tokenizer(value).Tokens and name is not "from"
-			issues.Add(ValidationIssue("TestMustCallItsOwnMethod", value + Moved, header + index + 2))
-	isUntested = tests.Length is 0 and IsInputOutput(header, name) is false and IsBranching(header)
+	isUntested = Tests(header).Length is 0 and IsInputOutput(header, name) is false and IsBranching(header)
 	untested = ValidationIssue("MethodWithBranchMustHaveTestOrBeIO", name + Branches, header + 1)
-	isUntested then issues + untested else issues
+	isUntested then List(ValidationIssue) + untested else List(ValidationIssue)
 IsInputOutput(header Number, name Text) Boolean
 	Hosting.IsInputOutput(0, "Start")
 	Reading.IsInputOutput(0, "Sign") and Branched.IsInputOutput(0, "Sign") is false and Branched.IsInputOutput(0, "Run")
