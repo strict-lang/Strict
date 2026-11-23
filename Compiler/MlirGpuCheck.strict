@@ -16,9 +16,11 @@ constant Words = MethodEntry(GpuNumberSamples.Ranged, instructions = Brief + Gpu
 constant Short = MlirGpuCheck(MlirFunction(MlirLoops.Ranging.function, method = Words), 3)
 constant Heading = MlirGpuCheck(MlirFunction(List(TypeEntry) + GpuChoiceSamples.Headed, GpuChoiceSamples.Headed, GpuChoiceSamples.Heading), 2)
 constant Rows = ("", "List(Number)", "List(Numbers)", "List(List(Number))")
+constant Compiled = MlirGpuCheck(MlirParallel.Compiling.function, 2)
 IsGpu Boolean
 	MlirGpuCheck(MlirLoops.Ranging.function, 3).IsGpu and Short.IsGpu is false
-	IsShort is false and IsKernelLoop
+	MlirGpuCheck(MlirParallel.Doubling.function, 2).IsGpu and Compiled.IsGpu is false
+	MlirCost(function, position).IsCompiler then false else IsShort is false and IsKernelLoop
 IsShort Boolean
 	Short.IsShort and Doubling.IsShort is false and MlirGpuCheck(MlirLoops.Ranging.function, 3).IsShort is false
 	opened = function.method.instructions(position)
