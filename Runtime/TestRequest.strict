@@ -3,6 +3,7 @@ constant Seeded = TestRequest(("Compiler/Seed.strict", ".", "unit"))
 constant Shown = TestRequest(("a.strict", ".", "shown"))
 constant Flags = ("native", "lines", "values", "trace", "profile", "sampled", "--no-recursive", "mutations", "full", "shown")
 Options Texts
+	TestRequest(("A.strict", ".")).Options.Length is 0 and TestRequest(("A.strict", ".", "unit")).Options is ("unit")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)
 Option Text
 	TestRequest(("a.strict", ".", "profile")).Option is "profile"

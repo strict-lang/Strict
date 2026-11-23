@@ -8,8 +8,8 @@ and(other) Boolean
 	(false and true) is false
 	value then other else false
 or(other) Boolean
-	true or false
 	(false or false) is false
+	true or false
 	false or true
 	value then true else other
 xor(other) Boolean

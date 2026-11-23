@@ -16,6 +16,7 @@ Message(done Number, elapsed Number) Text
 	shown = label is not "" and crossed and quarter < 4 and projected >= 3
 	shown then label + " " + quarter * QuarterPercent + "% " + elapsed.Round(1) + "s/" + projected.Round(1) + "s" else ""
 Report(done Number)
+	Completion("", 4, 0).Report(1) is not Error
 	message = Message(done, Process.Elapsed - started)
 	if message is not ""
 		logger.Log(message)

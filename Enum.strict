@@ -4,6 +4,9 @@ GetName(type) Text
 GetName(member Variable) Text
 	member.Name
 CompareTo(member Variable) Number
+	Enum(1).CompareTo(Variable("a", "Number" to Type, "2")) is -1
+	Enum(3).CompareTo(Variable("a", "Number" to Type, "2")) is 1
+	Enum(2).CompareTo(Variable("a", "Number" to Type, "2")) is 0
 	number = member.InitialValue to Number
 	value > number then 1 else value < number then -1 else 0
 Equals(member Variable) Boolean
