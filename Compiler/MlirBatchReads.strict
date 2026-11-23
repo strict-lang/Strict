@@ -1,7 +1,10 @@
 constant Storing = "    func.call @strict_device_cached_stored(%result, %batchFirst, %batchActive, %batchOutput, %results)"
 has function MlirFunction
 has position Number
+constant Reading = MlirBatchReads(MlirBatched.Single.function, 2)
+constant Steps = Reading.function.method.instructions
 Slots Texts
+	Reading.Slots.Length is 10 and Reading.Slots.Last.EndsWith("%cached7Private : !llvm.ptr<5> to !llvm.ptr")
 	mutable lines = Allocate("%batchOutput", "f32")
 	for MlirBatchCheck(function, position).Reads
 		lines = lines + Allocate("%indices" + value, "i64") + Allocate("%cached" + value, "f32")
@@ -11,6 +14,7 @@ Allocate(name Text, kind Text) Texts
 	constant typed = " : (i64) -> !llvm.ptr<5>"
 	(allocated + typed, "    " + name + " = llvm.addrspacecast " + name + "Private : !llvm.ptr<5> to !llvm.ptr")
 Prefetch(at Number) Texts
+	Reading.Prefetch(4).Length is 20 and Reading.Prefetch(6).Length is 14 and Reading.Prefetch(3).Length is 6
 	entry = function.method.instructions(at)
 	if entry.kind is InstructionType.IndexCall
 		return Save(at)
@@ -27,6 +31,7 @@ Save(at Number) Texts
 	constant typed = " : (!llvm.ptr, i64) -> !llvm.ptr, i64"
 	indexed + pointer + typed + MlirTyped.Integer.Store(temp + "position", temp + "Pointer")
 Loaded Texts
+	Reading.Loaded.Length is 8 and Reading.Loaded.Last.StartsWith("    func.call @strict_device_cached_four")
 	mutable lines = List(Mutable(Text))
 	for MlirBatchCheck(function, position).Reads
 		lines = lines + LoadedRead(value)
@@ -52,6 +57,8 @@ Compute(at Number) Texts
 		return Collect(at)
 	IsComputed(at, entry) then MlirDeviceStatements(function, at).Emitted else List(Text)
 IsComputed(at Number, entry InstructionEntry) Boolean
+	Reading.IsComputed(6, Steps(6)) is false and Reading.IsComputed(3, Steps(3)) is false
+	Reading.IsComputed(10, Steps(10))
 	feeding = MlirFeeding(function, at)
 	if entry.kind is in (InstructionType.StoreRegisterToVariable, InstructionType.StoreConstantToVariable)
 		return feeding.IsFloatedVariable(at, entry.texts.Last)
@@ -73,9 +80,11 @@ Collect(at Number) Texts
 Stored Texts
 	List(Text) + Storing + " : (!llvm.ptr, i64, i64, !llvm.ptr, i64) -> ()"
 LinearPrefetch(at Number) Texts
+	Reading.LinearPrefetch(4).Length is 32 and Reading.LinearPrefetch(6).Length is 14
 	emitted = Prefetch(at)
 	function.method.instructions(at).kind is not InstructionType.IndexCall then emitted else emitted + Fill(at)
 Fill(at Number) Texts
+	Reading.Fill(4).Length is 12 and Reading.Fill(4).First is "    %d4Next0Lane = arith.constant 1 : i64"
 	mutable lines = List(Mutable(Text))
 	for 3
 		prefix = "%d" + at + "Next" + index
