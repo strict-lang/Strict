@@ -7,6 +7,7 @@ constant Waiting = StatusCodes(("Wait Number", "\tfor as long as true", "\t\tLog
 constant Flagged = StatusCodes(("IsOn Number", "	IsOn is 1", "	state > 0 then 1 else 0"))
 constant Masked = StatusCodes(("HasMask Number", "	HasMask is 6", "	(a then 2 else 0) + (b then 4 else 0)"))
 constant Sized = StatusCodes(("Margin Number", "	Margin is 2", "	hasBorder then 2 else 0"))
+constant Native = StatusCodes(("IsDebug Number", "Open Number"))
 constant BooleanHint = ", return a Boolean (or Booleans) instead of numbers for true and false"
 constant Comparisons = ("is", "<", ">", "<=", ">=", "and", "or", "not", "=")
 constant Hint = ", return nothing, a Boolean, an Error or an enum instead of a status number"
@@ -123,9 +124,14 @@ Literals(result Text) Texts
 Booleans(at Number) ValidationIssues
 	Flagged.Booleans(0).First to Text is "BooleanMustNotBeNumber: IsOn returns state > 0 then 1 else 0" + BooleanHint
 	Flagged.Booleans(0).First.Line is 3 and Masked.Booleans(0).Length is 1 and Sized.Booleans(0).Length is 0
+	Native.Booleans(0).First to Text is "BooleanMustNotBeNumber: IsDebug returns a Number" + BooleanHint
+	Native.Booleans(1).Length is 0
 	StatusCodes(("Counted Number", "	Counted is 1", "	state > 0 then 1 else 0")).Booleans(0).Length is 0
 	name = Tokenizer(lines(at)).Tokens.First
 	isQuestion = IsQuestion(name)
+	unanswered = ValidationIssue("BooleanMustNotBeNumber", name + " returns a Number" + BooleanHint, at + 1)
+	if isQuestion and End(at) is at + 1
+		return List(ValidationIssue) + unanswered
 	for Results(at)
 		if isQuestion and IsBoolean(value)
 			ValidationIssue("BooleanMustNotBeNumber", name + " returns " + value + BooleanHint, at + index + 2)
