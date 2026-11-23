@@ -52,6 +52,7 @@ Run Number
 	Directory.Delete(folder)
 	0
 CheckedPatterns(src Text)
+	CheckedPatterns("") is Error
 	for ("strict_gpu_evicted", "strict_gpu_handed")
 		if "call @strict_gpu_active_has" is not in ExtractedFn(src, value)
 			return Error("Missing active-input check in " + value)
@@ -63,6 +64,7 @@ CheckedPatterns(src Text)
 			return Error("Missing slot[6] in " + value)
 	CheckedUploadCalls(src, ExtractedFn(src, "strict_gpu_obtain").Split("  ^ownCollect")(1))
 CheckedUploadCalls(src Text, collect Text)
+	CheckedUploadCalls("", "") is Error
 	lp = collect.IndexOf("call @strict_gpu_lend")
 	if lp < 0 or lp >= collect.IndexOf("call @strict_gpu_alloc")
 		return Error("Lend must precede alloc in obtain")
@@ -73,6 +75,8 @@ CheckedUploadCalls(src Text, collect Text)
 	if "call @strict_gpu_ahead_join" is not in ExtractedFn(src, "strict_gpu_capture")
 		return Error("capture missing")
 ExtractedFn(src Text, name Text) Text
+	ExtractedFn("", "a") is Error
+	ExtractedFn("\n  func.func private @a(x) {\n    y\n  }", "a").EndsWith("y\n  }")
 	marker = "\n  func.func private @" + name + "("
 	split = src.Split(marker)
 	split.Length < 2 then Error("MissingMlirFn: " + name) else marker + split(1).Split("\n  }")(0) + "\n  }"
@@ -118,6 +122,7 @@ KindTailEnd Text
 	out = out + "llvm.return\n}\n}"
 	Text.Combine(out, "\n")
 PoolMlirText(src Text) Texts
+	PoolMlirText("") is Error
 	mutable out = List(Text) + "module {"
 	for ExtractedGlobalsAndFns(src, PoolNames + "strict_gpu_trim", PoolGlobals).Split("\n")
 		out = out + value
@@ -129,6 +134,7 @@ PoolMlirText(src Text) Texts
 	out = out + "  %r = func.call @strict_gpu_trim_unused(%z) : (f64) -> f64\n  llvm.return %r : f64\n}\n}"
 	out
 ExtractedGlobalsAndFns(src Text, names Texts, globals Texts) Text
+	ExtractedGlobalsAndFns("  llvm.mlir.global internal @g(0) : i64", List(Text), List(Text) + "@g(").EndsWith(": i64")
 	mutable out = List(Text)
 	for names
 		out = out + ExtractedFn(src, value)

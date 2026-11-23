@@ -38,6 +38,7 @@ Check(folder Text)
 	cmd = "\"" + Process.Find("strict").executable + "\" test Math/Matrix.strict . native"
 	Report(Process.RunTool(exe, isWin then "\"" + cmd + "\"" else cmd, ToolSeconds), Process.Elapsed - started)
 Report(res ProcessResult, elapsed Number)
+	Report(ProcessResult(1, "", ""), 0) is Error and Report(ProcessResult(0, "PEAK:1", ""), 0) is not Error
 	if res.exitCode is not 0
 		return Error("Matrix native tests failed (" + res.exitCode + "): " + res.Output + res.error)
 	peakBytes = Text.Combine(Regex("PEAK:(\\d+)").Groups(res.Output), "") to Number

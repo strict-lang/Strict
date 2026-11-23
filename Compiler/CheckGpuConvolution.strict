@@ -32,6 +32,7 @@ Check(folder Text)
 		return Error("GpuConvolutionFailed: " + ran.Output + ran.error)
 	VerifiedOutput(ran.Output)
 VerifiedOutput(output Text)
+	VerifiedOutput("") is Error
 	for ("few", "wide", "middle")
 		found = Regex(value + " ([\\d.]+) ms, difference ([\\d.]+) of ([\\d.]+)").Groups(output)
 		if found.Length < 4

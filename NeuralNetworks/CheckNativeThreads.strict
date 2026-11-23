@@ -75,6 +75,7 @@ HarnessHead Texts
 	top = HeadA + HeadB + HeadC + TypesA + TypesB + TypesC
 	top + HelpersA + HelpersB + CheckRowsA + CheckRowsB + WriteSafeA + WriteSafeB
 HarnessBody Texts
+	HarnessBody.Length > 0
 	sync = Process.OperatingSystem is "Windows" then SyncWin else SyncNixA + SyncNixB + SyncNixC
 	body = WriteGgufA + WriteGgufB + WriteGgufC + sync + WorkersA + WorkersB + WorkersC
 	body + ExpertsA + ExpertsB + ExpertsC + ExpertsD

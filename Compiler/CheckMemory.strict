@@ -115,6 +115,8 @@ CheckChurnAndProducts(folder Text)
 	CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
 	CheckTickersAndFiles(folder)
 CheckedMaxHeap(matches Texts)
+	CheckedMaxHeap(List(Text)) is Error and CheckedMaxHeap(List(Text) + "heap 1") is not Error
+	CheckedMaxHeap(List(Text) + "heap 99") is Error
 	if matches.Length is 0
 		return Error("NoHeapLogged")
 	for matches
@@ -141,6 +143,7 @@ FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Tex
 		if value.StartsWith("Collection: ")
 			value
 HasFramesEnded(cols Texts, needMultiple Boolean) Boolean
+	HasFramesEnded(("a", "b, frame end"), false) and HasFramesEnded(("b, frame end", "a"), false) is false
 	mutable seenTrue = false
 	mutable trueCount = 0
 	for cols
@@ -152,6 +155,7 @@ HasFramesEnded(cols Texts, needMultiple Boolean) Boolean
 				return false
 	seenTrue and (not needMultiple or trueCount >= MinFrameEnds)
 HasWordsEnded(cols Texts) Boolean
+	HasWordsEnded(List(Text) + "x, frame end") and HasWordsEnded(List(Text) + "x") is false
 	if cols.Length > MaxWordCollections
 		return false
 	for cols
@@ -180,6 +184,7 @@ CheckTools(folder Text)
 	if ran is Error
 		return ran
 RepeatedLine(line Text, count Number) Texts
+	RepeatedLine("a", 2) is ("a", "a")
 	for count
 		line
 Build(folder Text, name Text, code Text, platform Text) Text

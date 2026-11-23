@@ -123,6 +123,7 @@ CheckProbe
 		return Error("InternalTestedAutomatically")
 	CheckPass(full, "Test passed: PolicyProbe.Delay", "ExplicitInternalProbe")
 ProbeLines Texts
+	ProbeLines.Length is WaitLines.Length
 	for WaitLines
 		value.Replace("Waiting", "PolicyProbe").Replace("0.04", "0.15")
 CheckShares(folder Text)
@@ -151,6 +152,7 @@ CheckDeadline(folder Text)
 		return Error("ChildOutlivedParent: " + parent.Output)
 	CheckFail(looped, "ran past its limit of 2 s", "LoopingTestWithoutDeadline")
 SharedCount(output Text) Number
+	SharedCount("threads 2\nthreads 1\nx") is 1
 	mutable count = 0
 	for output.Lines
 		if value.StartsWith("threads ") and value.Substring(8) to Number >= 2
@@ -162,8 +164,11 @@ RunTests(arguments Text, variables Texts) ProcessResult
 	cmd = variables(win then 0 else 1) + exe + arguments
 	Process.RunTool(win then "cmd" else "sh", win then "/c " + cmd else "-c \"" + cmd + "\"", ToolSeconds)
 CheckPass(res ProcessResult, needle Text, tag Text)
+	CheckPass(ProcessResult(0, "ok", ""), "ok", "A") is not Error and CheckPass(ProcessResult(1, "", ""), "", "A") is Error
 	if res.exitCode is not 0 or needle is not "" and needle is not in res.Output
 		return Error(tag + " failed: " + res.Output + res.error)
 CheckFail(res ProcessResult, needle Text, tag Text)
+	CheckFail(ProcessResult(1, "bad", ""), "bad", "A") is not Error
+	CheckFail(ProcessResult(0, "", ""), "x", "A") is Error
 	if res.exitCode is 0 or needle is not in (res.Output + res.error)
 		return Error(tag + " unexpectedly passed: " + res.Output + res.error)

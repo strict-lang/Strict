@@ -50,6 +50,7 @@ CheckHitLoop(program Text, exe Text, stamp Number)
 		if ("Compiler build cache hit:" is in hit) is not (value is "1") or File(exe).Modified is not stamp
 			return Error("CacheProfileFlagOrMtimeWrong: " + (hit to Text))
 CheckStages(buildOut Text)
+	CheckStages("") is Error
 	for StagesA + StagesB + StagesC
 		if value is not in buildOut
 			return Error(value + " missing:\n" + buildOut)

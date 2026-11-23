@@ -34,18 +34,22 @@ Check(folder Text, isNative Boolean) slow
 		return Error("DownloadCheckFailed: " + err)
 	logger.Log(results.Last.Output.Trim)
 ClientArgs(folder Text, isNative Boolean) Text
+	ClientArgs("f", true) is "run f/Client.strict f/port.txt f native" and ClientArgs("f", false).EndsWith("port.txt f")
 	"run " + folder + "/Client.strict " + folder + "/port.txt " + folder + (isNative then " native" else "")
 ServerLines Texts
 	ServerHead + ServerBody + PatchedReply(ReplyBytes)
 PatchedReply(reply Text) Texts
+	PatchedReply("x").Length is ServerReply.Length
 	for ServerReply
 		value.Replace("ReplyBytes", reply)
 ReplyBytes Text
 	Text.Combine(ReplyByteTexts, ", ")
 ReplyByteTexts Texts
+	ReplyByteTexts.Length > 0
 	for ByteEncoder.Empty.UnicodeBytes(ReplyText)
 		value to Number to Text
 ClientLines Texts
+	ClientLines.Length > 0
 	runs = ClientBuildA + ClientBuildB + ClientRunA + ClientRunB + ClientCheckA + ClientCheckB + ClientHelper
 	for ClientHead + ClientPatch + ClientWrite + ClientSave + runs
 		value.Replace("SRC", SourcePath).Replace("URL", OriginalUrl).Replace("DATA", OriginalData)

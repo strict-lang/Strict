@@ -38,6 +38,7 @@ RanConcurrent List(ProcessResult) slow
 	extension = Process.OperatingSystem is "Windows" then ".exe" else ""
 	Process.RunTools("Networking/obj/SocketChecks.test" + extension, EmptyArguments, ToolSeconds)
 EmptyArguments Texts
+	EmptyArguments.Length is Threads
 	for Threads
 		""
 CheckedThreads(folder Text) slow

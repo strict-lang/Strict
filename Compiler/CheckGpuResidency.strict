@@ -55,6 +55,7 @@ PrimaryCode Text
 PrimaryTail Text
 	ResE1 + "\n" + ResE2 + "\n" + ResF1 + "\n" + ResF2 + "\n" + ResG1 + "\n" + ResG2
 CheckedBytes(bytes Bytes)
+	CheckedBytes(File("Missing.bin").ReadBytes) is Error
 	if bytes.Length is not ByteCount
 		return Error("codes.bin wrong length: " + bytes.Length)
 	for ByteCount
@@ -105,6 +106,9 @@ BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean
 	logger.Log(ran.Output.Trim)
 	ran.exitCode is not 0 then Error("RunFailed " + name + ": " + ran.Output + ran.error) else ran.Output
 CheckedStrings(output Text, wants Texts, bans Texts)
+	CheckedStrings("a", List(Text) + "a", List(Text)) is not Error
+	CheckedStrings("a", List(Text) + "b", List(Text)) is Error
+	CheckedStrings("a", List(Text), List(Text) + "a") is Error
 	for wants
 		if value is not in output
 			return Error("Missing output: " + value + "\n" + output)
