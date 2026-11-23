@@ -2,6 +2,7 @@ has function MlirFunction
 has position Number
 constant Sample = MlirFormats(MlirFunction(MlirBiased.Biasing.function, Float = "f32", Guarded = 2), 2)
 Inputs Texts
+	Sample.Inputs is ("weights", "input", "biases")
 	for MlirGpuCheck(function, position).Free
 		if MlirDevice(function, position).IsList(value)
 			value
@@ -23,6 +24,7 @@ Format(at Number, total Number, format Number) Number
 	leading = format is 2 and at is 0 or format is 4 and at < total - 1 or format is 5 and at < 2
 	format is 1 or leading or format is 3 and at is total - 1 then MlirDoubles.BFloat16Format else Number.SingleBits
 Given(name Text, format Number) Texts
+	Sample.Given("input", -1).Length is 3 and Sample.Given("input", 0)(2) is "    %format_input = arith.constant 32 : i64"
 	source = "%f_" + name
 	target = "%v_" + name
 	if format < 0
@@ -32,7 +34,8 @@ Given(name Text, format Number) Texts
 	data = MlirTyped.Pointer.Store(source + "_d", target + "_d")
 	count = MlirTyped.Integer.Store(source + "_n", target + "_n")
 	(data, count, MlirTyped.Integer.Constant(fixed, bits to Text), MlirTyped.Integer.Store(fixed, target + "_b"))
-Kernels Texts
+Kernels Texts native
+	Sample.Kernels.First.StartsWith("  llvm.func @Tokens_Sums_4_gpu2sxf0(")
 	mutable lines = List(Mutable(Text))
 	for Count
 		lines = lines + MlirDevice(function, position, index).Kernel

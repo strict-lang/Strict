@@ -25,6 +25,7 @@ constant Gated = (InstructionEntry.Named(InstructionType.LoadVariableToRegister,
 constant Gating = CountStored + Gated + InstructionEntry.Jump(InstructionType.JumpToIdIfFalse, 0) + MethodCodegen.StoreConstant(InstructionEntry.LoadNumber(0, 1), "sum")
 constant SumLooped = CountLooped.Slice(1, 3) + Operands + InstructionEntry.Binary(InstructionType.Add, (2, 3, 10)) + SumAdded.Slice(1, 2) + SumReturned
 constant GatedSum = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntry(Quads.function.method, instructions = Gating + InstructionEntry.Jump(InstructionType.JumpEnd, 0) + SumLooped)), 4)
+constant Counted = MlirWholeSpan(MlirFunction(Quads.function, method = MethodEntry(Quads.function.method, instructions = Quad.Slice(0, 3) + InstructionEntry.LoopBegin(2, -1) + Quad.Slice(4, 13))), 4)
 constant Bounded = (InstructionType.Add, InstructionType.Subtract, InstructionType.Multiply)
 constant Openers = (InstructionType.LoopBegin, InstructionType.JumpToIdIfFalse, InstructionType.JumpToIdIfTrue)
 constant Closers = (InstructionType.LoopEnd, InstructionType.JumpEnd)
@@ -67,6 +68,8 @@ At(at Number) Texts
 		return Load(at)
 	entry.kind is in Bounded then Combine(at) else List(Text)
 EmitCount(at Number) Texts
+	Quads.EmitCount(3) is ("    %t4wn3 = arith.addf %t4wb1, %t4wb2 : f64")
+	Counted.EmitCount(3).First.IndexOf("llvm.intr.fabs") > 0
 	entry = function.method.instructions(at)
 	start = Source(entry.payload(0), at)
 	if entry.payload(1) is not 1
@@ -74,6 +77,7 @@ EmitCount(at Number) Texts
 	end = Source(entry.payload(2), at)
 	List(Text) + ("    " + Name("wn", at) + " = arith.addf " + start + ", " + end + " : f64")
 Load(at Number) Texts
+	Quads.Load(2) is ("    %t4wb2 = llvm.intr.fabs(%t4wl0) : (f64) -> f64") and Quads.Load(5).Length is 0
 	entry = function.method.instructions(at)
 	parameter = Parameter(entry.texts(0))
 	if parameter < 0 or entry.texts(0) is in ("value", "index")
@@ -128,6 +132,9 @@ Source(register Number, at Number) Text
 		return Variable(entry, writer)
 	entry.kind is in Bounded or entry.kind is in Constants then Name("wb", writer) else "%t" + position + "whlimit"
 Variable(entry InstructionEntry, at Number) Text
+	Quads.Variable(Quads.function.method.instructions(5), 5) is "%t4wn3"
+	Quads.Variable(Quads.function.method.instructions(2), 2) is "%t4wb2"
+	Quads.Variable(Quads.function.method.instructions(4), 4) is "%t4whlimit"
 	if entry.texts(0) is in ("value", "index")
 		return Name("wn", Loop(at))
 	if Parameter(entry.texts(0)) >= 0
