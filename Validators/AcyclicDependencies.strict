@@ -1,0 +1,75 @@
+has root Text
+constant Rule = "PackageDependenciesMustNotCycle"
+Issues(folders Texts) ValidationIssues slow
+	AcyclicDependencies(".").Issues(List(Text) + "Math").Length is 0
+	CycleIssues(Edges(folders))
+CycleIssues(edges Texts) ValidationIssues
+	AcyclicDependencies(".").CycleIssues(List(Text) + "A->B").Length is 0
+	AcyclicDependencies(".").CycleIssues(("A->B", "B->A")).First to Text is Rule + ": Cycle involves A->B"
+	for CycleEdges(edges)
+		ValidationIssue(Rule, "Cycle involves " + value, 1)
+CycleEdges(edges Texts) Texts
+	AcyclicDependencies(".").CycleEdges(("A->B", "B->C")).Length is 0
+	AcyclicDependencies(".").CycleEdges(("A->B", "B->A")) is ("A->B", "B->A")
+	AcyclicDependencies(".").CycleEdges(("A->B", "B->C", "C->A")).Length is 3
+	for edges
+		parts = value.Split("->")
+		if CanReach(edges, parts.Last, parts.First, List(Text))
+			value
+CanReach(edges Texts, current Text, target Text, seen Texts) Boolean
+	AcyclicDependencies(".").CanReach(("A->B", "B->C"), "A", "C", List(Text))
+	AcyclicDependencies(".").CanReach(("A->B", "B->C"), "C", "A", List(Text)) is false
+	if current is target
+		return true
+	if current is in seen
+		return false
+	for edges
+		parts = value.Split("->")
+		if parts.First is current and CanReach(edges, parts.Last, target, seen + current)
+			return true
+	false
+Edges(folders Texts) Texts slow
+	AcyclicDependencies(".").Edges(List(Text) + "Math").Length is 0
+	owners = Owners(folders)
+	mutable raw = List(Mutable(Text))
+	for folders
+		raw = raw + FolderEdges(value, owners)
+	raw.Unique
+FolderEdges(source Text, owners Dictionary(Text, Text)) Texts slow
+	AcyclicDependencies(".").FolderEdges("Math", Dictionary(("Number", "."))).Length > 0
+	mutable result = List(Mutable(Text))
+	for Directory.Files(source, "*.strict")
+		result = result + EdgeKeys(source, value, owners)
+	result
+EdgeKeys(source Text, file Text, owners Dictionary(Text, Text)) Texts slow
+	AcyclicDependencies(".").EdgeKeys("Math", "Math/Vector2.strict", Dictionary(("Number", "."))).First is "Math->."
+	mutable result = List(Mutable(Text))
+	for ProductionTypes(File(file).ReadLines)
+		if value is in owners
+			target = owners(value)
+			if target is not source
+				result.Add(source + "->" + target)
+	result
+Owners(folders Texts) Dictionary(Text, Text) slow
+	AcyclicDependencies(".").Owners(List(Text) + "Math")("Vector2") is "Math"
+	mutable owners = Dictionary(Text, Text)
+	for folders
+		folder = value
+		for Directory.Files(folder, "*.strict")
+			owners(Path(value).FileName.RemoveExtension.text) = folder
+	owners
+ProductionTypes(lines Texts) Texts
+	AcyclicDependencies(".").ProductionTypes(("Run Number", "\t1 is 1", "\tVector2(1, 2).X")) is ("Number", "Vector2")
+	shape = TypeShape(lines)
+	mutable kept = List(Mutable(Text))
+	mutable isTest = false
+	for lines
+		keep = value.StartsWith("\t") is false or isTest is false or IsLeadingTest(lines, index) is false
+		isTest = value.StartsWith("\t") is false then shape.IsMethodHeader(value) else keep is false
+		if keep
+			kept.Add(value)
+	Mentions(kept).Types
+IsLeadingTest(lines Texts, index Number) Boolean
+	AcyclicDependencies(".").IsLeadingTest(("Run", "\t1 is 1", "\t2"), 1)
+	AcyclicDependencies(".").IsLeadingTest(("Run", "\t1 is 1"), 1) is false
+	index + 1 < lines.Length and lines(index + 1).StartsWith("\t") and Duplicates.IsTest(lines(index).Trim)
