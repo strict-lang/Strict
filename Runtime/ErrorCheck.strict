@@ -1,4 +1,4 @@
-has entry Bytecode/InstructionEntry
+has entry Bytecode/Binary/InstructionEntry
 constant Returning = ErrorCheck(InstructionEntry(InstructionType.CheckError, List(Text), List(Number) + 0, 0, 0))
 constant Testing = ErrorCheck(InstructionEntry(InstructionType.CheckError, List(Text) + "tested", (0, 7, 8, 12)))
 Next(position Number, checked VmValue, length Number) Number

@@ -201,5 +201,5 @@ Concrete(type Text) Text
 	open is -1 then type.Replace("(Generic)", "") else (type is "Generic" then element else other)
 Local(type Text) Text
 	Hello.Local("Strict/Logger") is "Logger"
-	Hello.Local("Strict/Bytecode/Crc") is "Strict/Bytecode/Crc"
+	Hello.Local("Strict/Bytecode/Binary/Crc") is "Strict/Bytecode/Binary/Crc"
 	Path(type).PathOnly.text is Path(fullName).PathOnly.text then Path(type).FileName.text else type

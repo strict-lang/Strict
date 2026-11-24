@@ -1,4 +1,4 @@
-has entry Bytecode/InstructionEntry
+has entry Bytecode/Binary/InstructionEntry
 constant Ones = PayloadDecoder(InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 2, 1, 1, 3, 0, 0, 0, 0, 0, 0, 248, 63)))
 constant ElementStore = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "list(index)")
 constant Paired = PayloadDecoder(InstructionEntry.Invoke(1, ("Strict/Vector", "Scaled", "Strict/Number", "x", "y"), (0, 0), -1))

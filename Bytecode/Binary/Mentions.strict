@@ -44,12 +44,12 @@ Outer(tokens Texts) Texts
 	for tokens
 		if index > 1 and tokens(index - 1) is "." and tokens(index - 2) is "outer"
 			value
-Missing(files Texts) Texts
+Missing(files Texts) Texts slow
 	Typo.Missing(Directory.Files(".", "*.strict")) is ("Numbr")
 	Mentions(("Run", "\tVectr2(1, 2)")).Missing(Directory.Files(".", "*.strict")) is ("Vectr2")
 	Mentions(("has Size", "Run", "\tWidth + Area + Depth")).Missing(Directory.Files("Math", "*.strict")) is ("Depth")
 	Unknown(Names(files) + Compose(files))
-Compose(files Texts) Texts
+Compose(files Texts) Texts slow
 	Mentions(("has Size", "has logger")).Compose(("Math/Size.strict", "Logger.strict")).First is "Width"
 	members = TypeShape(lines).MemberScope.types
 	mutable names = List(Mutable(Text))
@@ -122,3 +122,4 @@ Hidden(path Text, type Text) Text
 		if shape.IsMethodHeader(value) and Tokenizer(value).Tokens.First is type
 			return ResolveCheck.Locate(path, index + 1, HiddenType + type + ", the method " + type + " hides the type")
 	""
+

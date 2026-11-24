@@ -1,5 +1,5 @@
 has machine Machine
-has method Bytecode/MethodEntry
+has method Bytecode/Binary/MethodEntry
 has owner Text = ""
 has depth Number = 0
 constant ThisSlot = 0

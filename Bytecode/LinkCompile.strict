@@ -2,9 +2,10 @@ has linker Linker
 constant Sample = LinkCompile(Linker.Sample)
 constant Housed = LinkCompile(Linker.Housed)
 constant Adding = TypeEntry("Strict/Logger", List(MemberEntry), List(MethodEntry) + MethodEntry.Logged)
+constant CrcName = "Strict/Bytecode/Binary/Crc"
 LinkedType(type Text, methods Texts, compiled TypeEntry) TypeEntry slow
 	Sample.LinkedType("Strict/Logger", List(Text), Sample.Compiling("Strict/Logger", List(Text))).Name is "Strict/Logger"
-	Sample.LinkedType("Strict/Bytecode/Crc", List(Text), Sample.Compiling("Strict/Bytecode/Crc", List(Text))).Name is "Crc"
+	Sample.LinkedType(CrcName, List(Text), Sample.Compiling(CrcName, List(Text))).Name is "Crc"
 	Housed.Home("Strict/Logger", List(Text) + "Missing").methods.Length is 0
 	Housed.Home("Strict/Bytecode/Logged", "Run").Name is "Logged"
 	homed = Assemble(type, methods, compiled)
@@ -29,7 +30,7 @@ IsCompiled(type Text, methods Texts) Boolean
 	Housed.IsCompiled("Strict/Logger", List(Text) + "Run") is false
 	methods.Length is 0 or Own(type).Name is "" or Absent(type, methods).Length > 0
 Compiling(type Text, methods Texts) TypeEntry slow
-	Sample.Compiling("Strict/Bytecode/Crc", List(Text)).Name is "Crc"
+	Sample.Compiling("Strict/Bytecode/Binary/Crc", List(Text)).Name is "Crc"
 	Housed.Compiling("Strict/Logger", List(Text) + "Run") is BinaryLinks.Unknown
 	IsCompiled(type, methods) then Compile(type, Absent(type, methods)) else BinaryLinks.Unknown
 Assemble(type Text, methods Texts, compiled TypeEntry) TypeEntry
@@ -49,12 +50,12 @@ Home(type Text, methods Texts) TypeEntry slow
 	Sample.Home("Strict/Logger", ("Log", "Reset")).methods.First.Name is "Log"
 	Assemble(type, methods, Compiling(type, methods))
 Compile(type Text, methods Texts) TypeEntry slow
-	Sample.Compile("Strict/Bytecode/Crc", List(Text)).methods.Length is 0
+	Sample.Compile("Strict/Bytecode/Binary/Crc", List(Text)).methods.Length is 0
 	Housed.Home("Strict/Logger", ("Run", "from")).methods.Length is 1
 	Housed.Home("Strict/Logger", List(Text) + "from").Name is "Strict/Logger"
 	Generate(type, Prepare(type, methods), methods)
 Prepare(type Text, methods Texts) Texts slow
-	Sample.Prepare("Strict/Bytecode/Crc", List(Text)).Length > 0
+	Sample.Prepare("Strict/Bytecode/Binary/Crc", List(Text)).Length > 0
 	folder = Path(linker.SourcePath(type)).PathOnly.text
 	source = Fusion(File(linker.SourcePath(type)).ReadLines, folder).Fused
 	generator = Automatic(source, TypeEntry.ShortName(type), Instantiation(linker.main.inference.types))

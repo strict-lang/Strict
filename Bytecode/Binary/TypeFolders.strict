@@ -3,7 +3,7 @@ has folders Dictionary(Text, Text)
 constant None = TypeFolders(Dictionary(Text, Text), Dictionary(Text, Text))
 constant Single = Dictionary(("A", "."))
 constant Mathematics = TypeFolders(Dictionary(("Vector2", "./Math")), Dictionary(("Vector2", "./Math"), ("Size", "../Other")))
-Of(root Text) TypeFolders
+Of(root Text) TypeFolders slow
 	"Vector2" is in TypeFolders.Of(".").locals and TypeFolders.Of(".").folders.Length >= TypeFolders.Of(".").locals.Length
 	None.IndexFolders(List(Text) + ".", Single).Length > Single.Length
 	local = IndexFolders(List(Text) + root, Dictionary(Text, Text))
@@ -13,20 +13,20 @@ Of(root Text) TypeFolders
 		if project(0) is project(0).Upper and project(0) is not project(0).Lower
 			parents = parents + ("../" + project)
 	TypeFolders(local, parents.Length is 0 then local else IndexFolders(parents, local))
-IndexFolders(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
+IndexFolders(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text) slow
 	"Vector2" is in None.IndexFolders(List(Text) + ".", Dictionary(Text, Text))
 	None.IndexFolders(List(Text) + "./Missing", Single).Length is 1
 	mutable map = known
 	for parents
 		map = IndexParent(value, map)
 	map
-IndexParent(parent Text, known Dictionary(Text, Text)) Dictionary(Text, Text)
+IndexParent(parent Text, known Dictionary(Text, Text)) Dictionary(Text, Text) slow
 	"Vector2" is in None.IndexParent(".", Dictionary(Text, Text))
 	mutable map = known
 	for Folders(parent)
 		map = IndexFolder(value, map)
 	map
-IndexFolder(folder Text, known Dictionary(Text, Text)) Dictionary(Text, Text)
+IndexFolder(folder Text, known Dictionary(Text, Text)) Dictionary(Text, Text) slow
 	"Vector2" is in None.IndexFolder("./Math", Dictionary(Text, Text))
 	mutable map = known
 	for Directory.Files(folder, "*.strict")
@@ -34,7 +34,7 @@ IndexFolder(folder Text, known Dictionary(Text, Text)) Dictionary(Text, Text)
 		if name is not in map
 			map(name) = folder
 	map
-Folders(parent Text) Texts
+Folders(parent Text) Texts slow
 	"./Math" is in None.Folders(".")
 	mutable result = List(Mutable(Text))
 	for Directory.Directories(parent)
@@ -43,7 +43,7 @@ Folders(parent Text) Texts
 			result.Add(parent + "/" + name)
 			result = result + Folders(parent + "/" + name)
 	result
-Files(types Texts) Texts
+Files(types Texts) Texts slow
 	TypeFolders.Of(".").Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	None.Files(List(Text) + "Vector2").Length is 0
 	local = Match(locals, types)
@@ -62,3 +62,4 @@ Match(indexed Dictionary(Text, Text), types Texts) Texts
 		if name is in indexed and indexed(name) is not in matched
 			matched.Add(indexed(name))
 	matched
+

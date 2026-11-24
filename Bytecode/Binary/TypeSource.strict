@@ -2,13 +2,13 @@ has entry TypeEntry
 constant Sizing = TypeSource(TypeEntry("Strict/Math/Size", List(MemberEntry), List(MethodEntry)))
 constant Projected = "Compiler/output/Projected"
 constant InternalPackages = ("Compiler", "Runtime", "Bytecode", "Expressions")
-Root Text
+Root Text slow
 	TypeSource.Root is "."
 	if File("Any.strict").Exists
 		return "."
 	folder = Path(Process.Current.executable.Replace("\\", "/")).PathOnly.text
 	File(folder + "/Any.strict").Exists then folder else Path(folder).PathOnly.text
-Locate(folder Text) Text
+Locate(folder Text) Text slow
 	Sizing.Locate("./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))).Locate("") is "List.strict"
 	TypeSource(TypeEntry.HelloLogger).Locate("./Examples") is "Examples/HelloLogger.strict"
@@ -21,7 +21,7 @@ Locate(folder Text) Text
 		return local
 	root = Root
 	root is "." or File(root + "/" + file).Exists is false then file else root + "/" + file
-Resolve(owner Text, folder Text) Text
+Resolve(owner Text, folder Text) Text slow
 	TypeSource.Resolve("Strict/Math/Size", "./Fonts") is "Math/Size.strict"
 	TypeSource(TypeEntry(owner, List(MemberEntry), List(MethodEntry))).Locate(folder)
 Location(methodName Text, file Text) Text
@@ -44,7 +44,7 @@ Absolute(path Text) Text
 	inside = slashed.StartsWith("./") then slashed.Substring(2) else slashed
 	current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
-Case(path Text) Text
+Case(path Text) Text slow
 	Sizing.Case("strict") is "Strict.strict" and Sizing.Case("Examples/sum.STRICT") is "Examples/Sum.strict"
 	Sizing.Case("Missing") is "Missing" and Sizing.Case("Examples") is "Examples"
 	slashed = path.Replace("\\", "/")
@@ -56,7 +56,7 @@ Case(path Text) Text
 		if file.Lower is wanted + ".strict"
 			return folder is "." then file else folder + "/" + file
 	path
-Project(path Text) Text
+Project(path Text) Text slow
 	Sizing.Project("Examples/Sum.strict") is ""
 	Directory.Create(Projected) is not Error and Directory.Exists(Projected)
 	Directory.Create(Projected + "/.git") is not Error and Directory.Exists(Projected + "/.git")
@@ -68,11 +68,11 @@ Project(path Text) Text
 	for as long as folder.Length > 3 and IsProject(folder) is false
 		folder = Path(folder).PathOnly.text
 	IsProject(folder) and folder.Lower is not Directory.Current.Replace("\\", "/").Lower then folder else ""
-IsProject(folder Text) Boolean
+IsProject(folder Text) Boolean slow
 	Sizing.IsProject(".")
 	Sizing.IsProject("Examples") is false
 	Directory.Exists(folder + "/.git") or File(folder + "/.git").Exists
-NativeFolder(path Text, root Text) Text
+NativeFolder(path Text, root Text) Text slow
 	TypeSource(TypeEntry("Gpu", List(MemberEntry), List(MethodEntry))).NativeFolder("Gpu.strict", ".") is "./native"
 	TypeSource(TypeEntry("Strict/P/T", List(MemberEntry), List(MethodEntry))).NativeFolder("A", "C:") is "C:/P/native"
 	source = File(entry.Source).Exists then entry.Source else root + "/" + entry.Source
@@ -91,3 +91,4 @@ IsInternal(fullName Text) Boolean
 	TypeSource.IsInternal("Strict/Runtime") is false
 	parts = fullName.Split("/")
 	parts.Length > 2 and parts(0) is "Strict" and parts(1) is in InternalPackages
+

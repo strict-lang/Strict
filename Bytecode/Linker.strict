@@ -12,10 +12,10 @@ constant CountRun = MethodEntry("Run", List(MemberEntry), "None", CountCall)
 constant Counted = TypeEntry("A", List(MemberEntry), List(MethodEntry) + CountRun)
 constant ForNumbers = MethodEntry("for", List(MemberEntry), "Strict/Iterator(Number)", List(InstructionEntry))
 constant Iterating = TypeEntry("A", List(MemberEntry), List(MethodEntry) + ForNumbers)
-constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.Logging, List(Text) + "Strict/Bytecode/MemberEntry"))
+constant Sample = Linker(".", TypeCodegen("Strict/Bytecode/FileCompiler", List(Text), ValueCodegen.Logging, List(Text) + "Strict/Bytecode/Binary/MemberEntry"))
 constant Hello = Linker(".", TypeCodegen.Hello)
 constant Reading = TypeEntry("A", List(MemberEntry) + MemberEntry("b", "Strict/List(Byte)", List(InstructionEntry), false), List(MethodEntry))
-constant Parameters = TypeEntry("Strict/Bytecode/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
+constant Parameters = TypeEntry("Strict/Bytecode/Binary/MethodEntry", List(MemberEntry) + MemberEntry("parameters", "Strict/List(MemberEntry)", List(InstructionEntry), false), List(MethodEntry))
 constant DictionaryCode = MethodEntry("Run", List(MemberEntry), "None", List(InstructionEntry) + InstructionEntry.Invoke(0, ("Strict/Dictionary(Number, Text)", "Code", "Strict/Text"), List(Number), -1))
 constant Knowing = Linker(Sample, Known = Dictionary(("Strict/Bytecode/HelloLogger:", TypeEntry.HelloLogger)))
 constant Housed = Linker(Sample, Homes = Dictionary(("Strict/Logger", TypeEntry.HelloLogger), ("Strict/Bytecode/Logged", TypeEntry.HelloLogger)))
@@ -147,7 +147,7 @@ Outside(type Text, rooted Text) Text
 			return value
 	rooted
 UsedTypes(entries List(TypeEntry)) Texts
-	Sample.UsedTypes(TypeEntry("A", Parameters.members, List(MethodEntry))).Last is "Strict/Bytecode/MemberEntry"
+	Sample.UsedTypes(TypeEntry("A", Parameters.members, List(MethodEntry))).Last is "Strict/Bytecode/Binary/MemberEntry"
 	Sample.UsedTypes(TypeEntry("Strict/X", Parameters.members, List(MethodEntry))).Last is "Strict/MemberEntry"
 	Sample.UsedTypes(Go) is List(Text)
 	Sample.UsedTypes(Reading) is ("Strict/List(Byte)", "Strict/Byte")
@@ -159,7 +159,7 @@ UsedTypes(entries List(TypeEntry)) Texts
 Elements(types Texts, package Text) Texts
 	Sample.Elements(List(Text) + "Strict/Pair(Byte)", "Strict") is ("Strict/Pair(Byte)")
 	Sample.Elements(("Strict/List(Byte)", "Strict/Text"), "Strict") is ("Strict/List(Byte)", "Strict/Byte", "Strict/Text")
-	Sample.UsedTypes(Parameters) is ("Strict/List(MemberEntry)", "Strict/Bytecode/MemberEntry")
+	Sample.UsedTypes(Parameters) is ("Strict/List(MemberEntry)", "Strict/Bytecode/Binary/MemberEntry")
 	Sample.Elements(List(Text) + "Strict/List(Character)", "Strict") is ("Strict/List(Character)", "Strict/Character")
 	constant listPrefix = "Strict/List("
 	mutable result = List(Mutable(Text))

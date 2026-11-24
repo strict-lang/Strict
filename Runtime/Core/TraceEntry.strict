@@ -1,4 +1,4 @@
-has method Bytecode/MethodEntry
+has method Bytecode/Binary/MethodEntry
 has owner Text
 has start Number
 constant MaxShown = 40
