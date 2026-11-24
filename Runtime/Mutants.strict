@@ -9,7 +9,7 @@ constant Unbudgeted = (Budgeted.First, InstructionEntry.Invoke(2, ("A", "Start",
 constant Twice = Machine.Doubler.methods.First
 constant Doubled = List(TypeEntry) + Machine.Doubler
 constant Started13 = Resolver(Sample.Replace(Doubled, Twice, Mutation.Twice.Mutant(13))).Resolved.First.methods.First
-constant Sample = Mutants("Examples/Fibonacci.strict")
+constant Sample = Mutants("Examples/Algorithms/Fibonacci.strict")
 constant Lined = MethodEntry(Twice, instructions = List(InstructionEntry) + InstructionEntry(InstructionEntry.Return(0), line = 2))
 constant Valued = TypeEntry(Machine.Doubler, members = List(MemberEntry) + MemberEntry("Twice", "Strict/Number", List(InstructionEntry), true), methods = List(MethodEntry) + Lined)
 constant Inputs = ("/File", "/Memo", "/Directory", "/Process", "/Logger", "/TextWriter", "/Time", "/Library", "/Http", "/Socket", "/Random", "/GpuMemory")

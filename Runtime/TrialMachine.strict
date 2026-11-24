@@ -4,9 +4,9 @@ has inputs Dictionary(Text, TypeEntry)
 constant None = TrialMachine(List(TypeEntry), Machine.Hello, Dictionary(Text, TypeEntry))
 constant IsReused = Process.Variable("STRICT_TRIAL_MACHINE") is not "0"
 constant Adding = FileCompiler.Compile("Examples/PureAdder.strict", ".", true)
-constant Counting = FileCompiler.Compile("Examples/FindNumberCount.strict", ".", true)
+constant Counting = FileCompiler.Compile("Examples/Collections/FindNumberCount.strict", ".", true)
 constant Added = TrialMachine.Prepared(Adding, "./Examples/PureAdder.strict")
-constant Counted = TrialMachine.Prepared(Counting, "./Examples/FindNumberCount.strict")
+constant Counted = TrialMachine.Prepared(Counting, "./Examples/Collections/FindNumberCount.strict")
 Prepared(types List(TypeEntry), path Text) TrialMachine slow
 	Counted.rewritten.Length is Counting.Length and Counted.machine.types.First.Name is Counting.First.Name
 	TrialMachine.Prepared(List(TypeEntry), "").rewritten.Length is 0
@@ -33,7 +33,7 @@ IsLacking(entry TypeEntry) Boolean slow
 Prepare(types List(TypeEntry), path Text) Machine slow
 	Counted.Prepare(Adding, "./Examples/PureAdder.strict").types.First.Name is Adding.First.Name
 	Counted.Prepare(Adding, "./Examples/PureAdder.strict").RunTests(Adding.First.Name) is 0
-	Counted.Prepare(Counting, "./Examples/FindNumberCount.strict").RunTests(Counting.First.Name) is 0
+	Counted.Prepare(Counting, "./Examples/Collections/FindNumberCount.strict").RunTests(Counting.First.Name) is 0
 	trial = types.First
 	others = rewritten.Slice(1, rewritten.Length - 1)
 	inlined = TypeEntry(trial, methods = Inliner(types).Methods(trial))
