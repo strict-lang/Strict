@@ -19857,22 +19857,41 @@
     %needed = arith.addi %bytes, %margin : i64
     %waitLimit = func.call @strict_gpu_wait_limit() : () -> f64
     %started = func.call @strict_clock() : () -> f64
-    cf.br ^check(%false : i1)
-  ^check(%said: i1):
+    cf.br ^check(%false, %false : i1, i1)
+  ^check(%said: i1, %collected: i1):
     %free = func.call @strict_gpu_others_free() : () -> i64
     %fits = arith.cmpi sge, %free, %needed : i64
-    cf.cond_br %fits, ^ok, ^short(%free : i64)
+    cf.cond_br %fits, ^ok, ^withOwn(%free, %said, %collected : i64, i1, i1)
+  ^withOwn(%freeBase: i64, %saidOwn: i1, %collectedOwn: i1):
+    %reclaimable = func.call @strict_gpu_reclaimable() : () -> i64
+    %effective = arith.addi %freeBase, %reclaimable : i64
+    %fitsOwn = arith.cmpi sge, %effective, %needed : i64
+    cf.cond_br %fitsOwn, ^ok, ^maybeCollect(%effective, %saidOwn, %collectedOwn : i64, i1, i1)
+  ^maybeCollect(%effNow: i64, %saidNow: i1, %collectedNow: i1):
+    cf.cond_br %collectedNow, ^short(%effNow, %saidNow : i64, i1), ^collect(%saidNow : i1)
+  ^collect(%saidCollect: i1):
+    func.call @strict_rc_reclaim() : () -> ()
+    %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
+    cf.cond_br %mayCollect, ^gc, ^recheck(%saidCollect : i1)
+  ^gc:
+    %gpuMemory = arith.constant 2 : i64
+    func.call @strict_gc_run_for(%true, %gpuMemory) : (i1, i64) -> ()
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^recheck(%saidCollect : i1)
+  ^recheck(%saidRecheck: i1):
+    cf.br ^check(%saidRecheck, %true : i1, i1)
   ^ok:
     %busySlot = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
     llvm.store %none, %busySlot : i64, !llvm.ptr
     return
-  ^short(%freeNow: i64):
+  ^short(%freeNow: i64, %saidShort: i1):
     %now = func.call @strict_clock() : () -> f64
     %elapsed = arith.subf %now, %started : f64
     %timedOut = arith.cmpf oge, %elapsed, %waitLimit : f64
-    cf.cond_br %timedOut, ^timeout(%freeNow : i64), ^checkSaid(%freeNow : i64)
-  ^checkSaid(%freeLog: i64):
-    cf.cond_br %said, ^wait, ^say(%freeLog : i64)
+    cf.cond_br %timedOut, ^timeout(%freeNow : i64), ^checkSaid(%freeNow, %saidShort : i64, i1)
+  ^checkSaid(%freeLog: i64, %saidCheck: i1):
+    cf.cond_br %saidCheck, ^wait, ^say(%freeLog : i64)
   ^say(%freeReport: i64):
     %megabyte = arith.constant 1048576 : i64
     %neededMb = arith.divui %needed, %megabyte : i64
@@ -19885,7 +19904,7 @@
     %self = arith.constant 0.0 : f64
     %pause = arith.constant 0.2 : f64
     %waited = func.call @strict_process_wait(%self, %pause) : (f64, f64) -> f64
-    cf.br ^check(%true : i1)
+    cf.br ^check(%true, %true : i1, i1)
   ^timeout(%freeFinal: i64):
     %mb = arith.constant 1048576 : i64
     %needMb = arith.divui %needed, %mb : i64
@@ -21964,12 +21983,12 @@
     return %released : i64
   }
   // the memory a collection can give back: free in the budget and in pool blocks of 16 MB and more
-  func.func private @strict_gpu_recoverable() -> i64 {
+  func.func private @strict_gpu_pool_reclaimable() -> i64 {
+    %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %classCount = arith.constant 64 : i64
-    %free = func.call @strict_gpu_free_memory() : () -> i64
     %firstOwn = arith.constant 16 : i64
-    cf.br ^class(%firstOwn, %free : i64, i64)
+    cf.br ^class(%firstOwn, %none : i64, i64)
   ^class(%class: i64, %total: i64):
     %more = arith.cmpi ult, %class, %classCount : i64
     cf.cond_br %more, ^add, ^done
@@ -21983,6 +22002,22 @@
     %next = arith.addi %class, %one : i64
     cf.br ^class(%next, %sum : i64, i64)
   ^done:
+    return %total : i64
+  }
+  func.func private @strict_gpu_reclaimable() -> i64 {
+    %pool = func.call @strict_gpu_pool_reclaimable() : () -> i64
+    %spilledSlot = llvm.mlir.addressof @strict_gpu_spilled_bytes : !llvm.ptr
+    %spilled = llvm.load %spilledSlot : !llvm.ptr -> i64
+    %hostedSlot = llvm.mlir.addressof @strict_gpu_hosted_bytes : !llvm.ptr
+    %hosted = llvm.load %hostedSlot : !llvm.ptr -> i64
+    %evictable = arith.addi %spilled, %hosted : i64
+    %total = arith.addi %pool, %evictable : i64
+    return %total : i64
+  }
+  func.func private @strict_gpu_recoverable() -> i64 {
+    %free = func.call @strict_gpu_free_memory() : () -> i64
+    %pool = func.call @strict_gpu_pool_reclaimable() : () -> i64
+    %total = arith.addi %free, %pool : i64
     return %total : i64
   }
   // drain and evict pinned rows first; only run a full collection before trimming pool blocks and cold host copies,

@@ -142,11 +142,20 @@ Resolve(line Text) Text
 	reply
 Connected Number
 	Coordinator("Compiler/output/MissingCoordinator").Connected is 0
-	port = File(Place).Exists then File(Place).ReadLines.First to Number else 0
-	if port is Error or port is 0
+	File("Compiler/output/StaleCoordinator").Write("59999") is not Error
+	Coordinator("Compiler/output/StaleCoordinator").Connected is 0
+	File("Compiler/output/StaleCoordinator").Exists is false
+	if File(Place).Exists is false
 		return NoSocket
-	socket = Socket.Connect("127.0.0.1", port)
-	socket is Error then NoSocket else socket
+	port = File(Place).ReadLines.First to Number
+	if port is Error or port is 0
+		File(Place).Delete
+		return NoSocket
+	socket = Socket.Try("127.0.0.1", port, 0.1)
+	if socket is Error
+		File(Place).Delete
+		return NoSocket
+	socket
 Linked Number
 	Coordinator("Compiler/output/MissingCoordinator").Connected is 0
 	existing = Connected

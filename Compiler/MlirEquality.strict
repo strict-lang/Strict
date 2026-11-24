@@ -17,6 +17,7 @@ constant NumberedInstructions = (InstructionEntry.LoadNumber(0, -3), ErrorCompar
 constant Numbered = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", NumberedInstructions))
 constant Failing = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", ErrorComparison))
 constant Greater = InstructionEntry.Binary(InstructionType.GreaterThan, (1, 1))
+constant EnumKind = TypeEntry("Kinds/Kind", List(MemberEntry) + MemberEntry("First", "Kinds/Kind", List(InstructionEntry), true), List(MethodEntry))
 constant Epilogue = ("    cf.br ^equal", "  ^equal:", "    return %one : f64", "  ^different:", "    return %zero : f64", "  }")
 constant CheckedLeft = ("  ^m0:", "    %t0a0 = llvm.getelementptr %pa[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0a0v = llvm.load %t0a0 : !llvm.ptr -> f64")
 constant CheckedRight = ("    %t0b0 = llvm.getelementptr %pb[0] : (!llvm.ptr) -> !llvm.ptr, f64", "    %t0b0v = llvm.load %t0b0 : !llvm.ptr -> f64")
@@ -149,11 +150,12 @@ IsKnown(kind Text) Boolean
 	MlirEquality(Same, 2).IsKnown("Number") is false
 	MlirEquality(MlirLayout.Wrapping.function, 0).IsKnown("Scaled") is false
 	MlirEquality(Same, 2).IsKnown("Range") is false
+	MlirEquality(MlirFunction(Same.types + EnumKind, MlirFunction.Shape, Same.method), 0).IsKnown("Kind") is false
 	if MlirLayout(function).IsStruct(kind) is false
 		return false
 	for function.types
 		if TypeEntry.ShortName(value.Name) is kind
-			return true
+			return MlirInstances(function, 0).Store(value).Length > 0
 	false
 Symbol(name Text) Text
 	MlirEquality(Same, 2).Symbol("Iterator(Number)") is "Iterator_Number_"

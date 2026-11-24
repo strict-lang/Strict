@@ -1,13 +1,18 @@
 has lines Texts
+has base Texts = List(Text)
 constant Project = ("./LogoApp/Scene.strict", "./WebWars/Scene.strict", "./WebWars/Unit.strict")
 constant Scenes = ("./LogoApp/Scene.strict", "./WebWars/Scene.strict")
 constant Both = TypeChoice(("has logo LogoApp/Scene", "has web WebWars/Scene", "Loaded Number", "\tweb.Units.Length"))
 constant Plain = TypeChoice(("Loaded Number", "\tScene.Units.Length"))
 constant Qualified = TypeChoice(("has scene WebWars/Scene", "Loaded Number", "\tscene.Units.Length"))
+constant Based = TypeChoice(("Loaded Number", "\tLibrary.Load"), List(Text) + "./Library.strict")
+constant Libraries = ("./Learning/Library.strict", "./Library.strict")
 Chosen(files Texts, source Text) Texts
 	Plain.Chosen(Project, "./LogoApp/Game.strict") is ("./LogoApp/Scene.strict", "./WebWars/Unit.strict")
 	Qualified.Chosen(Project, "./Content/Catalog.strict") is ("./WebWars/Scene.strict", "./WebWars/Unit.strict")
 	Plain.Chosen(Project, "./Content/Catalog.strict") is Project
+	Based.Chosen(Libraries, "./Solver/Solve.strict") is List(Text) + "./Library.strict"
+	Based.Chosen(Libraries, "./Learning/Trainer.strict") is List(Text) + "./Learning/Library.strict"
 	names = Names(files)
 	mutable counts = Dictionary(Text, Number)
 	for names
@@ -41,7 +46,16 @@ Best(candidates Texts, source Text) Text
 	for candidates
 		if Path(value.Replace("\\", "/")).PathOnly.text is folder
 			return value
-	""
+	Root(candidates)
+Root(candidates Texts) Text
+	Based.Root(Libraries) is "./Library.strict"
+	mutable rooted = ""
+	for candidates
+		if value is in base
+			if rooted is not ""
+				return ""
+			rooted = value
+	rooted
 Qualifying(candidates Texts) Texts
 	Qualified.IsQualified("x\\WebWars\\Scene.strict")
 	Both.Qualifying(Scenes) is Scenes
