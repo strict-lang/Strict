@@ -126,8 +126,8 @@ Escape(text Text, isFormat Boolean) Text
 	mutable pieces = List(Mutable(Text))
 	for ByteEncoder.Empty.UnicodeBytes(text)
 		isPlain = value >= Character.Space and value < Character.Delete and value is not in EscapedCodes
-		hex = "\\" + MetalValue("").Hex(value, 2)
-		pieces.Add(isPlain then Character(value) to Text else value is PercentSign then percent else hex)
+		escaped = isPlain or value is PercentSign then percent else "\\" + MetalValue("").Hex(value, 2)
+		pieces.Add(isPlain then Character(value) to Text else escaped)
 	Text.Combine(pieces, "")
 EscapedLength(text Text, isFormat Boolean) Number
 	MlirConstants(MlirTexts.Joined, 0).EscapedLength("a%", true) is 3

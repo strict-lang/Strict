@@ -100,12 +100,10 @@ Own(starts Numbers, owners Numbers, part Number) Texts
 	owned
 Body(start Number) Texts
 	Sample.Body(4) is ("    %r = func.call @B() : () -> f64", "    return %r : f64", "  }")
-	mutable body = List(Text)
 	for Range(start, lines.Length)
-		body = body + lines(value)
 		if lines(value) is "  }"
-			return body
-	body
+			return lines.Slice(start, value - start + 1)
+	lines.Slice(start, lines.Length - start)
 Public(header Text) Text
 	Sample.Public(Sample.lines(3)) is "  func.func @A() -> f64 {"
 	Sample.Public("  func.func @B() attributes {" + Internal + ", a} {") is "  func.func @B() attributes {a} {"
