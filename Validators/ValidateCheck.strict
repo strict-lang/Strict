@@ -2,9 +2,10 @@ constant EmptyPart = "Compiler/output/EmptyPart"
 Run(folder Text, root Text) Number
 	started = Process.Elapsed
 	mutations = Mutations(ResolveCheck.AllFiles(root))
+	sources = SourceFiles(root).WithProject
 	mutable issues = 0
 	for Parts(folder)
-		issues = issues + Validate(value, root, mutations)
+		issues = issues + Validate(value, root, mutations, sources)
 	BuildProfile.Report("Check validation", started)
 	before = Process.Elapsed
 	issues = issues + ProjectRules(root).Check(folder)
@@ -14,12 +15,12 @@ Run(folder Text, root Text) Number
 	failed = issues is 0 then Folders.TestFolder(folder, root) else 0
 	BuildProfile.Report("Check tests", tested)
 	issues + failed
-Validate(folder Text, root Text, mutations Texts) Number slow
+Validate(folder Text, root Text, mutations Texts, sources = SourceFiles(root)) Number slow
 	Directory.Create(EmptyPart) is not Error and ValidateCheck.Validate(EmptyPart, ".", List(Text)) is 0
 	File(EmptyPart + "/obj/Validated.stamp").Exists
 	if folder.EndsWith(".strict")
 		return Check(folder, root, mutations)
-	key = Key(folder, root, mutations)
+	key = Key(folder, root, mutations, sources)
 	stamp = File(folder + "/obj/Validated.stamp")
 	stamp.Exists and stamp.ReadText is key then 0 else Fresh(folder, root, mutations, key)
 Fresh(folder Text, root Text, mutations Texts, key Text) Number slow
@@ -37,10 +38,10 @@ Change(folder Text, key Text) slow
 		differing = key.Split("\n") - stamp.ReadLines
 		first = differing.Length > 0 then differing.First else "a removed line"
 		logger.Log("Validation of " + folder + " is stale, first changed: " + first)
-Key(folder Text, root Text, mutations Texts) Text slow
+Key(folder Text, root Text, mutations Texts, sources = SourceFiles(root)) Text slow
 	ValidateCheck.Key("Examples/LinkChain", ".", List(Text)).IndexOf("LinkChain.strict|") > 0
 	files = Files(folder)
-	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
+	reached = files.Length is 0 then files else sources.Of(files.First, files)
 	Stamp(reached + Directory.Files(root, "*.strict"), mutations)
 Stamp(paths Texts, mutations Texts) Text slow
 	ValidateCheck.Stamp(List(Text) + "Missing.strict", List(Text) + "Next").EndsWith("\nMissing.strict|0\nNext")

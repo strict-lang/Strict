@@ -1,4 +1,5 @@
 has root Text
+has projectFiles Texts = List(Text)
 constant Imaging = List(Text) + "./Compression/Deflate.strict"
 constant Plain = SourceFiles(".")
 constant Nothing = "-"
@@ -25,6 +26,8 @@ Folder(path Text) Texts
 	files
 IndexPaths(paths Texts) Texts
 	"./Math/Size.strict" is in SourceFiles(".").IndexPaths(List(Text) + "./Math/Vector2.strict")
+	if projectFiles.Length > 0
+		return projectFiles
 	project = File("./Any.strict").Exists then List(Text) else ResolveCheck.Tree(".")
 	mutable local = List(Mutable(Text))
 	for paths
@@ -33,6 +36,14 @@ IndexPaths(paths Texts) Texts
 	for project.Length > 0 then Add(project, local) else Folders(local, 3)
 		files = files + Directory.Files(value, "*.strict")
 	files
+WithProject SourceFiles
+	SourceFiles(".").WithProject.projectFiles.Length is 0
+	if File("./Any.strict").Exists
+		return SourceFiles(root, List(Text))
+	mutable files = List(Mutable(Text))
+	for ResolveCheck.Tree(".")
+		files = files + Directory.Files(value, "*.strict")
+	SourceFiles(root, files)
 Traverse(known Texts, frontier Texts, reached Texts, searched = List(Text), folders = TypeFolders.None) Texts slow
 	"./Compression/Inflate.strict" is in Plain.Traverse(Compressed, Imaging, List(Text))
 	if frontier.Length is 0
