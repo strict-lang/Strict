@@ -2031,6 +2031,52 @@
   ^done:
     return %keyPairs, %valuePairs : vector<16xi32>, vector<16xi32>
   }
+  // the state of the two rows of a lane before any position: no largest score and no sum yet
+  func.func private @strict_device_attention_started() -> vector<4xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c2 = llvm.mlir.constant(2 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %hidden = arith.constant -1.0e+30 : f32
+    %zero = arith.constant 0.0 : f32
+    %empty = llvm.mlir.undef : vector<4xf32>
+    %state0 = llvm.insertelement %hidden, %empty[%c0 : i32] : vector<4xf32>
+    %state1 = llvm.insertelement %zero, %state0[%c1 : i32] : vector<4xf32>
+    %state2 = llvm.insertelement %hidden, %state1[%c2 : i32] : vector<4xf32>
+    %started = llvm.insertelement %zero, %state2[%c3 : i32] : vector<4xf32>
+    return %started : vector<4xf32>
+  }
+  // the outputs and state of a warp after its chunks of 8 positions from chunkFirst to chunkEnd while decoding; the
+  // first keys and values are requested before the queries so both wait for memory together
+  func.func private @strict_device_attention_walked(%queries: !llvm.ptr, %queryBits: i64, %lowerQuery: i64, %upperQuery: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %chunkFirst: i32, %chunkEnd: i32, %positionLast: i32, %stride: i32, %base: i32, %size: i32, %row: i32, %quad: i32, %viewOffset: i32, %viewStride: i32, %lowerLast: i32, %upperLast: i32, %started: vector<4xf32>) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %c1 = llvm.mlir.constant(1 : i32) : i32
+    %c3 = llvm.mlir.constant(3 : i32) : i32
+    %attentionHalves = arith.constant false
+    %logarithm = arith.constant 1.44269504 : f32
+    %zeros = arith.constant dense<0.0> : vector<64xf32>
+    %anyChunk = arith.cmpi slt, %chunkFirst, %chunkEnd : i32
+    cf.cond_br %anyChunk, ^firstChunk, ^done(%zeros, %started : vector<64xf32>, vector<4xf32>)
+  ^firstChunk:
+    %firstStart = arith.shli %chunkFirst, %c3 : i32
+    %firstKeys, %firstValues = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %firstStart, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
+    %sizeFloat = arith.sitofp %size : i32 to f32
+    %root = llvm.call_intrinsic "llvm.sqrt.f32"(%sizeFloat) : (f32) -> f32
+    %scale = arith.divf %logarithm, %root : f32
+    %queryPairs = func.call @strict_device_attention_queries(%queries, %queryBits, %lowerQuery, %upperQuery, %size, %quad, %scale, %attentionHalves) : (!llvm.ptr, i64, i64, i64, i32, i32, f32, i1) -> vector<32xi32>
+    cf.br ^chunk(%chunkFirst, %zeros, %started, %firstKeys, %firstValues : i32, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>)
+  ^chunk(%chunk: i32, %outputs: vector<64xf32>, %state: vector<4xf32>, %keyPairs: vector<16xi32>, %valuePairs: vector<16xi32>):
+    %first = arith.shli %chunk, %c3 : i32
+    %newOutputs, %newState = func.call @strict_device_attention_chunk(%queryPairs, %outputs, %state, %keyPairs, %valuePairs, %first, %lowerLast, %upperLast, %size, %quad) : (vector<32xi32>, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>, i32, i32, i32, i32, i32) -> (vector<64xf32>, vector<4xf32>)
+    %chunkFollowing = arith.addi %chunk, %c1 : i32
+    %moreChunks = arith.cmpi slt, %chunkFollowing, %chunkEnd : i32
+    cf.cond_br %moreChunks, ^nextChunk, ^done(%newOutputs, %newState : vector<64xf32>, vector<4xf32>)
+  ^nextChunk:
+    %nextStart = arith.shli %chunkFollowing, %c3 : i32
+    %nextKeys, %nextValues = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %nextStart, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
+    cf.br ^chunk(%chunkFollowing, %newOutputs, %newState, %nextKeys, %nextValues : i32, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>)
+  ^done(%walked: vector<64xf32>, %walkedState: vector<4xf32>):
+    return %walked, %walkedState : vector<64xf32>, vector<4xf32>
+  }
   // 8 positions from first for a warp while decoding (key and value operands loaded before): the scores of the two
   // rows of a lane, the new largest scores and sums, the outputs rescaled and the shares times the values added
   // (positions after last hidden)
@@ -2387,9 +2433,9 @@
   // `Attention.Merged` of a few tokens (the rows of a group in tiles of 16, one per warp, up to 4 tiles verify drafts)
   // like flash decoding: the 8 warps of a block and the blocks of a tile split the positions 8 at a time, read keys and
   // values straight into the mma operands and merge their largest scores, sums and outputs, the 8 warps of the last
-  // block gather the blocks' parts (every 8th each) and merge them like their own
+  // block gather the blocks' parts (every 8th each) and merge them like their own; Qwen3-8B on a 4090 reads the
+  // positions at 85 % of the memory bandwidth, the rest is about 10 us per launch of merging (29 us at 2000 positions)
   func.func private @strict_device_attention_decode(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %causal: i1, %wide: i64, %viewOffset: i32, %viewStride: i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %attentionHalves = arith.constant false
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -2398,9 +2444,6 @@
     %c7 = llvm.mlir.constant(7 : i32) : i32
     %c8 = llvm.mlir.constant(8 : i32) : i32
     %c31 = llvm.mlir.constant(31 : i32) : i32
-    %hidden = arith.constant -1.0e+30 : f32
-    %zero = arith.constant 0.0 : f32
-    %logarithm = arith.constant 1.44269504 : f32
     %zeros = arith.constant dense<0.0> : vector<64xf32>
     %thread = func.call @strict_device_thread_index() : () -> i32
     %block = func.call @strict_device_block_index() : () -> i32
@@ -2447,27 +2490,9 @@
     %chunkFirst = arith.divui %workerChunks, %workers : i32
     %nextWorkerChunks = arith.addi %workerChunks, %chunks : i32
     %chunkEnd = arith.divui %nextWorkerChunks, %workers : i32
-    %sizeFloat = arith.sitofp %size : i32 to f32
-    %root = llvm.call_intrinsic "llvm.sqrt.f32"(%sizeFloat) : (f32) -> f32
-    %scale = arith.divf %logarithm, %root : f32
-    %queryPairs = func.call @strict_device_attention_queries(%queries, %queryBits, %lowerQuery, %upperQuery, %size, %quad, %scale, %attentionHalves) : (!llvm.ptr, i64, i64, i64, i32, i32, f32, i1) -> vector<32xi32>
-    %empty = llvm.mlir.undef : vector<4xf32>
-    %state0 = llvm.insertelement %hidden, %empty[%c0 : i32] : vector<4xf32>
-    %state1 = llvm.insertelement %zero, %state0[%c1 : i32] : vector<4xf32>
-    %state2 = llvm.insertelement %hidden, %state1[%c2 : i32] : vector<4xf32>
-    %started = llvm.insertelement %zero, %state2[%c3 : i32] : vector<4xf32>
-    cf.br ^chunk(%chunkFirst, %zeros, %started : i32, vector<64xf32>, vector<4xf32>)
-  ^chunk(%chunk: i32, %outputs: vector<64xf32>, %state: vector<4xf32>):
-    %moreChunks = arith.cmpi slt, %chunk, %chunkEnd : i32
-    cf.cond_br %moreChunks, ^chunkBody, ^merge
-  ^chunkBody:
-    %first = arith.shli %chunk, %c3 : i32
-    %keyPairs, %valuePairs = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %first, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
-    %newOutputs, %newState = func.call @strict_device_attention_chunk(%queryPairs, %outputs, %state, %keyPairs, %valuePairs, %first, %lowerLast, %upperLast, %size, %quad) : (vector<32xi32>, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>, i32, i32, i32, i32, i32) -> (vector<64xf32>, vector<4xf32>)
-    %chunkFollowing = arith.addi %chunk, %c1 : i32
-    cf.br ^chunk(%chunkFollowing, %newOutputs, %newState : i32, vector<64xf32>, vector<4xf32>)
-  ^merge:
-    %merged, %mergedState = func.call @strict_device_attention_warps(%outputs, %state, %warp, %lane) : (vector<64xf32>, vector<4xf32>, i32, i32) -> (vector<64xf32>, vector<4xf32>)
+    %started = func.call @strict_device_attention_started() : () -> vector<4xf32>
+    %warpOutputs, %warpState = func.call @strict_device_attention_walked(%queries, %queryBits, %lowerQuery, %upperQuery, %keys, %keyBits, %values, %valueBits, %chunkFirst, %chunkEnd, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride, %lowerLast, %upperLast, %started) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, vector<4xf32>) -> (vector<64xf32>, vector<4xf32>)
+    %merged, %mergedState = func.call @strict_device_attention_warps(%warpOutputs, %warpState, %warp, %lane) : (vector<64xf32>, vector<4xf32>, i32, i32) -> (vector<64xf32>, vector<4xf32>)
     %isFirstWarp = arith.cmpi eq, %warp, %c0 : i32
     %alone = arith.cmpi eq, %splits, %c1 : i32
     cf.cond_br %alone, ^single, ^shared
@@ -2491,7 +2516,7 @@
     %counters = llvm.mlir.addressof @strict_device_attention_counters : !llvm.ptr<1>
     %slot64 = arith.extui %slot : i32 to i64
     %counter = llvm.getelementptr %counters[0, %slot64] : (!llvm.ptr<1>, i64) -> !llvm.ptr<1>, !llvm.array<512 x i32>
-    %done = llvm.atomicrmw add %counter, %c1 acq_rel : !llvm.ptr<1>, i32
+    %done = llvm.atomicrmw add %counter, %c1 syncscope("device") acq_rel : !llvm.ptr<1>, i32
     %lastSplit = arith.subi %splits, %c1 : i32
     %isLast = arith.cmpi eq, %done, %lastSplit : i32
     %lastFlag = arith.extui %isLast : i1 to i32
@@ -4517,7 +4542,6 @@
     llvm.return
   }
   func.func private @strict_device_attention_short_decode(%result: !llvm.ptr, %queries: !llvm.ptr, %queryBits: i64, %keys: !llvm.ptr, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %heads: i32, %groups: i32, %size: i32, %sequences: i32, %tokens: i32, %positions: i32, %causal: i1, %wide: i64, %viewOffset: i32, %viewStride: i32) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %attentionHalves = arith.constant false
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
@@ -4528,10 +4552,6 @@
     %c8 = llvm.mlir.constant(8 : i32) : i32
     %c16 = llvm.mlir.constant(16 : i32) : i32
     %c31 = llvm.mlir.constant(31 : i32) : i32
-    %hidden = arith.constant -1.0e+30 : f32
-    %zero = arith.constant 0.0 : f32
-    %logarithm = arith.constant 1.44269504 : f32
-    %zeros = arith.constant dense<0.0> : vector<64xf32>
     %thread = func.call @strict_device_thread_index() : () -> i32
     %slot = func.call @strict_device_block_index() : () -> i32
     %warp = arith.shrui %thread, %c5 : i32
@@ -4567,26 +4587,8 @@
     %chunkFirst = arith.divui %workerChunks, %c4 : i32
     %nextWorkerChunks = arith.addi %workerChunks, %chunks : i32
     %chunkEnd = arith.divui %nextWorkerChunks, %c4 : i32
-    %sizeFloat = arith.sitofp %size : i32 to f32
-    %root = llvm.call_intrinsic "llvm.sqrt.f32"(%sizeFloat) : (f32) -> f32
-    %scale = arith.divf %logarithm, %root : f32
-    %queryPairs = func.call @strict_device_attention_queries(%queries, %queryBits, %lowerQuery, %upperQuery, %size, %quad, %scale, %attentionHalves) : (!llvm.ptr, i64, i64, i64, i32, i32, f32, i1) -> vector<32xi32>
-    %empty = llvm.mlir.undef : vector<4xf32>
-    %state0 = llvm.insertelement %hidden, %empty[%c0 : i32] : vector<4xf32>
-    %state1 = llvm.insertelement %zero, %state0[%c1 : i32] : vector<4xf32>
-    %state2 = llvm.insertelement %hidden, %state1[%c2 : i32] : vector<4xf32>
-    %started = llvm.insertelement %zero, %state2[%c3 : i32] : vector<4xf32>
-    cf.br ^chunk(%chunkFirst, %zeros, %started : i32, vector<64xf32>, vector<4xf32>)
-  ^chunk(%chunk: i32, %outputs: vector<64xf32>, %state: vector<4xf32>):
-    %moreChunks = arith.cmpi slt, %chunk, %chunkEnd : i32
-    cf.cond_br %moreChunks, ^chunkBody, ^merge
-  ^chunkBody:
-    %first = arith.shli %chunk, %c3 : i32
-    %keyPairs, %valuePairs = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %first, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
-    %newOutputs, %newState = func.call @strict_device_attention_chunk(%queryPairs, %outputs, %state, %keyPairs, %valuePairs, %first, %lowerLast, %upperLast, %size, %quad) : (vector<32xi32>, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>, i32, i32, i32, i32, i32) -> (vector<64xf32>, vector<4xf32>)
-    %chunkFollowing = arith.addi %chunk, %c1 : i32
-    cf.br ^chunk(%chunkFollowing, %newOutputs, %newState : i32, vector<64xf32>, vector<4xf32>)
-  ^merge:
+    %started = func.call @strict_device_attention_started() : () -> vector<4xf32>
+    %outputs, %state = func.call @strict_device_attention_walked(%queries, %queryBits, %lowerQuery, %upperQuery, %keys, %keyBits, %values, %valueBits, %chunkFirst, %chunkEnd, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride, %lowerLast, %upperLast, %started) : (!llvm.ptr, i64, i64, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, vector<4xf32>) -> (vector<64xf32>, vector<4xf32>)
     %isSender = arith.cmpi sgt, %warp, %c0 : i32
     cf.cond_br %isSender, ^send, ^sent
   ^send:

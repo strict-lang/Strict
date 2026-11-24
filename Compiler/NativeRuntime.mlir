@@ -18305,7 +18305,8 @@
   }
   // a kernel loop with at least 1/64 of the GPU minimum elements opens the GPU in a thread (strict_gpu_spawn per
   // platform) that loads the PTX, the state stays 3 (warming) until then, so the first big loop finds it ready; small
-  // loops never open it (strict.exe 276 to 41 MB peak memory and 0.8 to 0.5 s CPU for a 0.5 s test without the GPU)
+  // loops never open it (strict.exe 276 to 41 MB peak memory and 0.8 to 0.5 s CPU for a 0.5 s test without the GPU), so
+  // without Gpu.Require a first loop that is already big opens it itself (~149 ms on a 4090)
   llvm.mlir.global internal @strict_gpu_warm_ptx(0 : i64) : i64
   llvm.mlir.global internal constant @strict_gpu_warm_switch("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00STRICT_GPU_WARM\00") : !llvm.array<32 x i8>
   func.func private @strict_gpu_warm(%ptx: !llvm.ptr) {
@@ -19353,7 +19354,12 @@
     %minimum = func.call @strict_gpu_threshold() : () -> i64
     %never = arith.constant 9223372036854775807 : i64
     %isOff = arith.cmpi eq, %minimum, %never : i64
-    cf.cond_br %isOff, ^off, ^done
+    cf.cond_br %isOff, ^off, ^warm
+  ^warm:
+    // a program needing the GPU opens it while it loads its weights instead of in its first GPU loop (~149 ms)
+    %ptx = llvm.mlir.addressof @strict_gpu_ptx : !llvm.ptr
+    func.call @strict_gpu_warm(%ptx) : (!llvm.ptr) -> ()
+    cf.br ^done
   ^off:
     %offLengths = llvm.mlir.addressof @strict_gpu_off_text : !llvm.ptr
     %offText = llvm.getelementptr %offLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8

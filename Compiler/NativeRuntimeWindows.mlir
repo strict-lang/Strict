@@ -784,7 +784,7 @@
     %result = func.call @strict_text_sealed(%name) : (!llvm.ptr) -> f64
     return %result : f64
   }
-  func.func private @strict_inherited_file(%path: f64) -> !llvm.ptr {
+  func.func private @strict_inherited_file(%name: !llvm.ptr) -> !llvm.ptr {
     %write = arith.constant 1073741824 : i32
     %share = arith.constant 3 : i32
     %always = arith.constant 2 : i32
@@ -800,7 +800,6 @@
     llvm.store %length, %attributes : i32, !llvm.ptr
     %inheritSlot = llvm.getelementptr %attributes[16] : (!llvm.ptr) -> !llvm.ptr, i8
     llvm.store %inherit, %inheritSlot : i32, !llvm.ptr
-    %name = func.call @strict_named(%path) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %handle = llvm.call @CreateFileA(%name, %write, %share, %attributes, %always, %normal, %null) : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, !llvm.ptr) -> !llvm.ptr
     return %handle : !llvm.ptr
@@ -1049,10 +1048,15 @@
     %toolShareNumber = arith.sitofp %toolShare : i64 to f64
     %toolShareText = func.call @strict_number_text(%toolShareNumber) : (f64) -> f64
     %toolShareValue = func.call @strict_text_ptr(%toolShareText) : (f64) -> !llvm.ptr
+    %outputName = func.call @strict_named(%outputPath) : (f64) -> !llvm.ptr
+    %errorName = func.call @strict_named(%errorPath) : (f64) -> !llvm.ptr
+    %commandText = func.call @strict_text_ptr(%command) : (f64) -> !llvm.ptr
+    %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
+    %startedAt = func.call @strict_clock() : () -> f64
     %lock = llvm.mlir.addressof @strict_process_lock : !llvm.ptr
     llvm.call @AcquireSRWLockExclusive(%lock) : (!llvm.ptr) -> ()
-    %output = func.call @strict_inherited_file(%outputPath) : (f64) -> !llvm.ptr
-    %error = func.call @strict_inherited_file(%errorPath) : (f64) -> !llvm.ptr
+    %output = func.call @strict_inherited_file(%outputName) : (!llvm.ptr) -> !llvm.ptr
+    %error = func.call @strict_inherited_file(%errorName) : (!llvm.ptr) -> !llvm.ptr
     %startupWords = arith.constant 13 : i64
     %startup = llvm.alloca %startupWords x i64 : (i64) -> !llvm.ptr
     %startupZero = arith.constant 0 : i32
@@ -1069,11 +1073,8 @@
     llvm.store %error, %errorSlot : !llvm.ptr, !llvm.ptr
     %informationWords = arith.constant 3 : i64
     %information = llvm.alloca %informationWords x i64 : (i64) -> !llvm.ptr
-    %commandText = func.call @strict_text_ptr(%command) : (f64) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     func.call @strict_tool_environment(%toolShare, %toolShareValue) : (i64, !llvm.ptr) -> ()
-    %startedAt = func.call @strict_clock() : () -> f64
-    %startFolder = func.call @strict_folder_pointer() : () -> !llvm.ptr
     %started = llvm.call @CreateProcessA(%null, %commandText, %null, %null, %inherit, %suspended, %null, %startFolder, %startup, %information) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     func.call @strict_child_joined(%started, %information) : (i32, !llvm.ptr) -> ()
     func.call @strict_tool_environment(%toolShare, %null) : (i64, !llvm.ptr) -> ()
