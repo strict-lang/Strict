@@ -14,8 +14,7 @@ Benchmark(path Text, bits Number, count Number, repeats Number, batch Number, ca
 	logger.Log(Prompt + tokenizer.Decode(Sample(model.Prefilled(prompt, 0), prompt.Length, count, temperature)))
 	prefill = Fastest(model, prompt)
 	prefilled = model.Prefilled(prompt, 0)
-	first = prefilled.Next
-	durations = Durations(batch is 1 then prefilled else prefilled.Copies(batch), first, prompt.Length, count, batch)
+	durations = Durations(prefilled, prefilled.Next, prompt.Length, count, batch)
 	logger.Log(Report(prompt.Length, prefill, durations, batch) + ", loaded in " + (loaded - started).Round(1) + " s")
 Fastest(model Qwen3, prompt Numbers) Number slow
 	Qwen3Benchmark.Fastest(Qwen3.Tiny, (1, 2)) > 0
@@ -40,8 +39,8 @@ Repeat(tokens Numbers, repeats Number) Numbers
 		tokens(index % tokens.Length)
 Durations(model Qwen3, token Number, start Number, count Number, batch Number) Numbers slow
 	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 1).Length is 2
-	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0).Copies(2), 0, 1, 2, 2).Length is 2
-	mutable current = model
+	Qwen3Benchmark.Durations(Qwen3.Tiny.Step(1, 0), 0, 1, 2, 2).Length is 2
+	mutable current = batch is 1 then model else model.Copies(batch)
 	mutable chosen = Repeat(List(Number) + token, batch)
 	mutable last = Process.Elapsed
 	for count

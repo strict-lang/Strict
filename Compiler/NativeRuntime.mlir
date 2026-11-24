@@ -19869,7 +19869,7 @@
     cf.cond_br %busyTimedOut, ^done(%zero : i64), ^checkFree
   ^checkFree:
     %free = func.call @strict_gpu_free_memory() : () -> i64
-    %reserve = arith.constant 268435456 : i64
+    %reserve = arith.constant 67108864 : i64
     %needed = arith.addi %bytes, %reserve : i64
     %short = arith.cmpi ult, %free, %needed : i64
     cf.cond_br %short, ^release, ^allocate
@@ -21073,6 +21073,11 @@
     %topSlot = llvm.getelementptr %items[%top] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %device = llvm.load %topSlot : !llvm.ptr -> i64
     llvm.store %top, %countSlot : i64, !llvm.ptr
+    %reusedSize = func.call @strict_gpu_class_size(%class) : (i64) -> i64
+    %ownSinceReuse = llvm.mlir.addressof @strict_gpu_own_since : !llvm.ptr
+    %ownBeforeReuse = llvm.load %ownSinceReuse : !llvm.ptr -> i64
+    %ownAfterReuse = arith.addi %ownBeforeReuse, %reusedSize : i64
+    llvm.store %ownAfterReuse, %ownSinceReuse : i64, !llvm.ptr
     return %device : i64
   ^fresh:
     func.call @strict_rc_reclaim() : () -> ()
@@ -21128,20 +21133,26 @@
     %freeNow = func.call @strict_gpu_free_memory() : () -> i64
     %ownReserve = arith.constant 1073741824 : i64
     %ownHeadroom = arith.constant 67108864 : i64
+    %ownShortNeeded = arith.addi %size, %ownReserve : i64
     %ownNeeded = arith.addi %size, %ownHeadroom : i64
-    %isShort = arith.cmpi ult, %freeNow, %ownNeeded : i64
+    %isShort = arith.cmpi ult, %freeNow, %ownShortNeeded : i64
     cf.cond_br %isShort, ^ownLend, ^own
   ^ownLend:
     %borrowed = func.call @strict_gpu_lend(%class) : (i64) -> i64
     %hasBorrowed = arith.cmpi ne, %borrowed, %none : i64
     cf.cond_br %hasBorrowed, ^borrowed(%borrowed : i64), ^ownCheck
   ^borrowed(%lent: i64):
+    %ownSinceBorrow = llvm.mlir.addressof @strict_gpu_own_since : !llvm.ptr
+    %ownBeforeBorrow = llvm.load %ownSinceBorrow : !llvm.ptr -> i64
+    %ownAfterBorrow = arith.addi %ownBeforeBorrow, %size : i64
+    llvm.store %ownAfterBorrow, %ownSinceBorrow : i64, !llvm.ptr
     return %lent : i64
   ^ownCheck:
     %anyResiding, %markedResiding = func.call @strict_gpu_residing_class(%class) : (i64) -> (i1, i1)
     %ownSinceSlot = llvm.mlir.addressof @strict_gpu_own_since : !llvm.ptr
     %ownSince = llvm.load %ownSinceSlot : !llvm.ptr -> i64
-    %ownRecent = arith.cmpi ult, %ownSince, %ownReserve : i64
+    %ownStep = arith.constant 268435456 : i64
+    %ownRecent = arith.cmpi ult, %ownSince, %ownStep : i64
     %repeated = arith.andi %markedResiding, %ownRecent : i1
     %ownTrue = arith.constant true
     %notRepeated = arith.xori %repeated, %ownTrue : i1
@@ -21153,10 +21164,10 @@
     %collectStarted = func.call @strict_clock() : () -> f64
     %ownMemory = arith.constant 2 : i64
     func.call @strict_gc_run_for(%fully, %ownMemory) : (i1, i64) -> ()
-    %restarted = arith.select %fully, %none, %ownSince : i64
-    llvm.store %restarted, %ownSinceSlot : i64, !llvm.ptr
     %collectedCount = llvm.load %countSlot : !llvm.ptr -> i64
     %reusable = arith.cmpi sgt, %collectedCount, %none : i64
+    %restarted = arith.select %reusable, %none, %ownSince : i64
+    llvm.store %restarted, %ownSinceSlot : i64, !llvm.ptr
     func.call @strict_gpu_own_collected(%collectStarted, %reusable) : (f64, i1) -> ()
     cf.cond_br %reusable, ^again, ^ownRelend
   ^ownRelend:

@@ -60,7 +60,7 @@ Prologue Texts
 	Made.Construct(Making.instructions(1), MlirInstances.Outer, MlirOwned.Fresh) is MlirOwned.Fresh
 	Text.Combine(Made.Construct(Making.instructions(1), Maker, MlirOwned.Fresh)).Length is 510
 	Made.Prologue is Taking
-	Probing.IsRebuilt(ProbeMade, Probe) is false
+	Probing.IsRebuilt(ProbeMade, Probe)
 	MlirStructs(MlirInstances.Shapes, 0).Prologue.Length is 0
 	Consumes(0) then Taking else List(Text)
 IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
@@ -73,9 +73,8 @@ IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	checkedAt = MlirDestined(function, position).CheckedAt
 	checked = function.method.instructions(checkedAt)
 	next = MlirDestined(function, checkedAt).Next(checked)
-	isFull = MlirOwned(function, position).IsArgued(entry, owner)
 	isReturned = next.kind is InstructionType.Return and next.payload(0) is checked.payload(0)
-	isReturned and isFull and MlirConstants(function, position).IsConstant is false
+	isReturned and entry.texts(0) is owner.Name and MlirConstants(function, position).IsConstant is false
 Construct(entry InstructionEntry, owner TypeEntry, built Texts) Texts
 	Text.Combine(Made.Construct(Making.instructions(1), Maker, MlirOwned.Fresh)).IndexOf("%structDestination") > 0
 	MlirStructs(MlirInstances.Shapes, 1).Construct(MlirInstances.Built, Maker, MlirOwned.Fresh) is MlirOwned.Fresh
