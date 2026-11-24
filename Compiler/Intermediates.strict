@@ -93,7 +93,11 @@ Locally(target Text, command Text) Text
 	Intermediates.Locally("a.exe", "check Compiler").IndexOf("a.exe") > 0
 	Intermediates.Locally("a.exe", "build Runtime/Hosted.strict").IndexOf("check") < 0
 	quoted = "\"" + target + "\" " + command
-	IsWindows then "/c set STRICT_SERVER=0&& " + quoted else "-c \"STRICT_SERVER=0 " + quoted.Replace("\"", "'") + "\""
+	guard = command.StartsWith("check ") then "STRICT_GUARD=1" else ""
+	if IsWindows
+		return "/c set STRICT_SERVER=0&& " + (guard is "" then "" else "set " + guard + "&& ") + quoted
+	prefix = guard is "" then "STRICT_SERVER=0 " else "STRICT_SERVER=0 " + guard + " "
+	"-c \"" + prefix + quoted.Replace("\"", "'") + "\""
 Changes(executable Text) Texts slow
 	Intermediates.Changes("Compiler/output/Missing/strict.exe").Length is 0
 	Intermediates.Changes("./missing.exe").Length > 0

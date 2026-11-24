@@ -8,7 +8,8 @@ Run(folder Text, root Text) Number
 		issues = issues + Validate(value, root, mutations, sources)
 	BuildProfile.Report("Check validation", started)
 	before = Process.Elapsed
-	issues = issues + ProjectRules(root).Check(folder)
+	cycles = folder.EndsWith(".strict") then 0 else Log(folder, AcyclicDependencies(root).Issues(Parts(folder)))
+	issues = issues + (cycles < 0 then 0 else ProjectRules(root).Check(folder))
 	BuildProfile.Report("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
 	tested = Process.Elapsed
@@ -26,7 +27,8 @@ Validate(folder Text, root Text, mutations Texts, sources = SourceFiles(root)) N
 Fresh(folder Text, root Text, mutations Texts, key Text) Number slow
 	Directory.Create(EmptyPart) is not Error and ValidateCheck.Fresh(EmptyPart, ".", List(Text), "key") is 0
 	Change(folder, key)
-	issues = Check(folder, root, mutations)
+	limit = Process.Variable("STRICT_GUARD") is "1" then 0 else Log(folder, FolderFileLimit(folder).Issues)
+	issues = Check(folder, root, mutations) + limit
 	if issues is 0
 		Directory.Create(folder + "/obj")
 		File(folder + "/obj/Validated.stamp").Write(key)
