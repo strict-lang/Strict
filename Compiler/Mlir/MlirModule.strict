@@ -16,7 +16,7 @@ constant FloorCall = InstructionEntry.Invoke(0, ("Strict/Degrees", "Floor", "Str
 constant Caller = TypeEntry("Strict/Caller", List(MemberEntry), MethodEntry("Run", List(MemberEntry), "None", FloorCall))
 constant Floored = MlirModule((Caller, MlirLayout.Degrees, TypeEntry("Strict/Number", List(MemberEntry), List(MethodEntry) + Floor)), "Run")
 constant NoRun = MlirModule(List(TypeEntry) + TypeEntry("Strict/Empty", List(MemberEntry), List(MethodEntry)), "Tests")
-Text Text
+Text Text slow
 	Counters.Text.StartsWith("module {")
 	NoRun.Text.StartsWith("unsupported:")
 	started = Process.Elapsed
@@ -29,7 +29,7 @@ Text Text
 		return problem
 	counted = countedFiles.Length is 0 then functions else MlirLines.Instrument(functions, Mains, countedFiles)
 	Combine(Declare(counted, functions, edges), functions, counted)
-Problem(functions List(MlirFunction)) Text
+Problem(functions List(MlirFunction)) Text slow
 	Counters.Problem(Counters.Functions) is ""
 	NoRun.Problem(NoRun.Functions).StartsWith("unsupported: no Tests method")
 	if functions.First.method.instructions.Length is 0
@@ -41,7 +41,7 @@ Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	functions = MlirSafety(reachable, edges).Marked
 	BuildProfile.Report("Emission / safety", started)
 	functions
-Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts
+Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts slow
 	Counters.Declare(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	started = Process.Elapsed
@@ -53,7 +53,7 @@ Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbe
 	result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 	BuildProfile.Report("Emission / helpers", before)
 	result
-Emit(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts
+Emit(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts slow
 	Counters.Emit(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
 	EmissionCache(value, functions, recursive).Emit(texts)
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
@@ -62,7 +62,7 @@ Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) T
 	emitted = MlirEntry.Optimize(function.method, text)
 	whole = MlirWholeBody(function, functions).Lines
 	whole.Length is 0 then emitted else emitted + "\n" + outer.Text.Combine(whole, "\n")
-Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text
+Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) Text slow
 	Counters.Combine(List(Text), Counters.Functions, Counters.Functions).EndsWith("}")
 	Scaled.Text.IndexOf(WgslShader.Marker) < Shaded.Text.IndexOf(WgslShader.Marker)
 	table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
@@ -74,14 +74,14 @@ Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) T
 	host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
 	BuildProfile.Report("Emission / globals and assembly", before)
 	outer.Text.Combine((host, device, platform is Platform.Web then WgslShader.Scripts(functions) else "") - "", "\n")
-Functions List(MlirFunction)
+Functions List(MlirFunction) slow
 	Counters.Functions.Length is 1
 	Pair.Functions.Length is 2
 	Pair.Text.IndexOf("@Other_Run_0(%self1)") > 0
 	Floored.Functions.Last.Symbol is "Number_Floor_0"
 	Started.Functions.Last.Symbol is "Counter_$Start_0"
 	Linked.functions
-Linked MlirRecursion
+Linked MlirRecursion slow
 	Started.Linked.calls.Length is 2
 	mains = Entries
 	roots = mains + Starts(mains)
@@ -94,12 +94,12 @@ Starts(mains List(MlirFunction)) List(MlirFunction)
 		start = DefaultInstance.Start(value.type)
 		if index < entries and start.instructions.Length > 0
 			MlirFunction(value, method = start)
-Entries List(MlirFunction)
+Entries List(MlirFunction) slow
 	Pair.Entries.Last.Symbol is "Other_Run_0"
 	typeIndex = TypeIndex
 	for Range(0, entries)
 		MlirFunction(types, types(value), RunMethod(types(value)), typeIndex = typeIndex)
-TypeIndex Dictionary(Text, Number)
+TypeIndex Dictionary(Text, Number) slow
 	Counters.TypeIndex("Counter") is 0
 	Counters.TypeIndex("Strict/Counter") is 0
 	mutable indexed = Dictionary(Text, Number)

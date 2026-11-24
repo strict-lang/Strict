@@ -47,7 +47,7 @@ Token(piece Text) Text
 		if piece(value) is in Ends
 			return piece.Substring(0, value)
 	piece
-Change(base Text, flags Text) Numbers
+Change(base Text, flags Text) Numbers slow
 	PtxCache("Compiler/output/Unsplit-0").Save("", "stale") is not Error
 	Sample.Change("Compiler/output/Unsplit", "a").Length > 0
 	File("Compiler/output/Unsplit-0").Exists is false
@@ -58,7 +58,7 @@ Change(base Text, flags Text) Numbers
 		if IsRefreshed(part, flags, value)
 			changed.Add(value)
 	changed
-IsRefreshed(part Text, flags Text, index Number) Boolean
+IsRefreshed(part Text, flags Text, index Number) Boolean slow
 	Sample.IsRefreshed("Compiler/output/Refreshed", "a", Sample.owners.First)
 	File("Compiler/output/Refreshed.mlir").ReadLines.Length > 4
 	data = split.Data(index, shared, placed)
@@ -67,13 +67,13 @@ IsRefreshed(part Text, flags Text, index Number) Boolean
 		return false
 	File(part + ".mlir").Write(Part(index, data, owned))
 	true
-IsCurrent(part Text, key Text) Boolean
+IsCurrent(part Text, key Text) Boolean slow
 	PtxCache("Compiler/output/Current").Save((".o", ".owned"), ("compiled", "a")) is not Error
 	Sample.IsCurrent("Compiler/output/Current", "a")
 	Sample.IsCurrent("Compiler/output/Current", "b") is false
 	Sample.IsCurrent("Compiler/output/Absent", "a") is false
 	File(part + ".o").Exists and File(part + ".owned").Exists and PtxCache(part).Read(".owned") is key
-IsWritten(part Text, flags Text, owned Text) Boolean
+IsWritten(part Text, flags Text, owned Text) Boolean slow
 	PtxCache("Compiler/output/Keyed").Save(".o", "compiled") is not Error
 	Sample.IsWritten("Compiler/output/Keyed", "f", "") is false
 	File("Compiler/output/Keyed.o").Exists is false
@@ -86,7 +86,7 @@ IsWritten(part Text, flags Text, owned Text) Boolean
 	File(part + ".o").Delete
 	PtxCache(part).Save(".owned", flags + owned)
 	true
-Lower(base Text, tools Toolchain) Text
+Lower(base Text, tools Toolchain) Text slow
 	Sample.Lower("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	mutable optimizing = List(Text)
 	mutable translating = List(Text)
@@ -97,7 +97,7 @@ Lower(base Text, tools Toolchain) Text
 	File(base + ".ll").Delete
 	lowered = RunTool("mlir-opt", optimizing, tools)
 	lowered is "" then RunTool("mlir-translate", translating, tools) else lowered
-RunTool(tool Text, arguments Texts, tools Toolchain) Text
+RunTool(tool Text, arguments Texts, tools Toolchain) Text slow
 	Sample.RunTool("noSuchStrictTool", List(Text) + "", Toolchain.OnWindows).StartsWith("noSuchStrictTool failed")
 	Sample.RunTool("noSuchStrictTool", List(Text), Toolchain.OnWindows) is ""
 	if arguments.Length is 0

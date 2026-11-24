@@ -48,12 +48,12 @@ Write(library Text, ending Text, functions List(PtxFunction)) slow
 	composed = Compose(library, PtxMerge(old).Merge(PtxMerge(functions).In(library)))
 	if File(path).Exists is false or Text.Combine(File(path).ReadLines, "\n") is not composed
 		File(path).Write(composed)
-Compose(library Text, functions List(PtxFunction)) Text
+Compose(library Text, functions List(PtxFunction)) Text slow
 	Sample.Compose("A", Both.Slice(0, 1)).StartsWith("// strict library ptx/A needs ptx/Attention,ptx/Strict,\n" + Marker)
 	Sample.Compose("B", Both.Slice(1, 1)).StartsWith("// strict library ptx/B needs \n.func ")
 	head = "// strict library " + prefix + library + " needs " + Text.Combine(Stems(FindNeed(functions).Unique), "")
 	head + "\n" + Text.Combine(Prototypes(functions), "") + Marker + "\n" + Text.Combine(Bodies(functions), "")
-FindNeed(functions List(PtxFunction)) Texts
+FindNeed(functions List(PtxFunction)) Texts slow
 	Sample.FindNeed(Both) is ("Attention", "Strict")
 	mutable needs = List(Text)
 	for functions

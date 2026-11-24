@@ -7,7 +7,7 @@ constant ShapeFunction = ("    %f2 = func.constant @Shape_Run_0 : (f64) -> f64",
 constant ShapeStored = ("    %s2 = llvm.getelementptr %table[4] : (!llvm.ptr) -> !llvm.ptr, i64", "    llvm.store %c2, %s2 : !llvm.ptr, !llvm.ptr")
 constant ShapeNamed = ("    %w2 = llvm.mlir.addressof @wShape_Run_0 : !llvm.ptr", "    %n2 = llvm.getelementptr %s2[1] : (!llvm.ptr) -> !llvm.ptr, i64", "    llvm.store %w2, %n2 : !llvm.ptr, !llvm.ptr")
 constant Table = "  llvm.mlir.global internal @strict_places(dense<0> : tensor<"
-Lines Texts
+Lines Texts slow
 	Counted.Lines.Length is 14
 	files = Files
 	mutable lines = List(Mutable(Text))
@@ -42,7 +42,7 @@ Types(function MlirFunction) Texts
 	Counted.Types(MlirCalls.Shapes).First is "f64"
 	for function.Parameters
 		"f64"
-Files Dictionary(Text, Text)
+Files Dictionary(Text, Text) slow
 	MlirGlobals(List(MlirFunction) + MlirCalls.Shapes).Files(MlirCalls.Shapes.type.Name) is "Shape.strict"
 	mutable files = Dictionary(Text, Text)
 	for functions

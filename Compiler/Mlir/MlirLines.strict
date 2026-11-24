@@ -60,13 +60,13 @@ Framed Texts
 	MlirLines(Unlined).Framed.Length is 0
 	isFramed = function.type.IsRealtime and function.method.Name is "Present"
 	isFramed then List(Text) + "    func.call @strict_frame_ended() : () -> ()" else List(Text)
-Placed Texts
+Placed Texts slow
 	MlirLines(Lined).Placed is ("Shape.strict:2", "Shape.strict:3")
 	MlirLines(Lined, "Strict/Shape", "Examples/Shape.strict").Placed.First is "Examples/Shape.strict:2"
 	file = File(function.type)
 	for Numbers
 		file + ":" + value
-File(type TypeEntry) Text
+File(type TypeEntry) Text slow
 	MlirLines(Lined, ("A", "Strict/Shape"), ("A.strict", "C/B.strict")).File(Shaped) is "C/B.strict"
 	MlirLines(Lined, "A", "Math/A").File(TypeEntry("Size", List(MemberEntry), List(MethodEntry))) is "Math/Size.strict"
 	MlirLines(Lined).File(TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))) is "List.strict"
@@ -74,11 +74,11 @@ File(type TypeEntry) Text
 	if at >= 0
 		return mainFiles(at)
 	TypeSource(type).Locate(mainFiles.Length is 0 then "" else Path(mainFiles.First).PathOnly.text)
-Indexes(places Texts) Numbers
+Indexes(places Texts) Numbers slow
 	MlirLines(Unlined).Indexes(("Other.strict:1", "Shape.strict:3", "Shape.strict:2")) is (2, 1)
 	for Placed
 		places.Index(value)
-Places(functions List(MlirFunction), names Texts, files Texts) Texts
+Places(functions List(MlirFunction), names Texts, files Texts) Texts slow
 	MlirLines.Places((Lined, Unlined), "Strict/Shape", "Shape.strict") is ("Shape.strict:2", "Shape.strict:3")
 	mutable places = List(Mutable(Text))
 	for emitted, place in functions, MlirLines(emitted, names, files).Placed
@@ -95,14 +95,14 @@ Uncompile(functions List(MlirFunction), mains List(TypeEntry)) List(MlirFunction
 		if candidate.Symbol is not in symbols
 			uncompiled.Add(candidate)
 	uncompiled
-Instrument(functions List(MlirFunction), mains List(TypeEntry), files Texts) List(MlirFunction)
+Instrument(functions List(MlirFunction), mains List(TypeEntry), files Texts) List(MlirFunction) slow
 	MlirLines.Instrument(Shapes, List(TypeEntry) + MlirFunction.Shape, "Shape.strict").First.lineSlots is (0, 1)
 	Module.Text.IndexOf(Print) > 0
 	names = NativeFolder.Names(mains)
 	places = Places(functions + Uncompile(functions, mains), names, files)
 	for functions
 		MlirFunction(value.types, value.type, value.method, MlirLines(value, names, files).Indexes(places))
-Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts
+Table(functions List(MlirFunction), mains List(TypeEntry), files Texts) Texts slow
 	MlirLines.Table(Shapes, List(TypeEntry) + MlirFunction.Shape, "A.strict").First.IndexOf("tensor<6xf64>") > 0
 	places = Places(functions + Uncompile(functions, mains), NativeFolder.Names(mains), files)
 	size = places.Length * 3

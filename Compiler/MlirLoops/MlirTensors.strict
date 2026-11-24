@@ -140,12 +140,12 @@ Used(program Text) Texts
 	for Kinds
 		if program.IndexOf(Marker(value)) >= 0 or convolving and value is "Products"
 			value
-Drift(folder Text) Texts
+Drift(folder Text) Texts slow
 	Attending.Drift("NeuralNetworks").Length is 0
 	for Typed
 		if Declare(folder + "/" + value + ".strict") is not Stored(Kinds.Index(value))
 			value
-Declare(path Text) Texts
+Declare(path Text) Texts slow
 	Attending.Declare("NeuralNetworks/SituRotated.strict") is SituRotations
 	for File(path).ReadLines
 		if value.StartsWith("has ")

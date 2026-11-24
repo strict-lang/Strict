@@ -25,7 +25,7 @@ Run Number
 	Check(folder)
 	Directory.Delete(folder)
 	0
-Check(folder Text)
+Check(folder Text) slow
 	isWin = Process.OperatingSystem is "Windows"
 	cFile = folder + "/run.c"
 	exe = folder + "/run" + (isWin then ".exe" else "")

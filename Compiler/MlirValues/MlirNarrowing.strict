@@ -29,13 +29,13 @@ Format(kind Text) Number
 	MlirNarrowing.Format("List(Number)") is 0
 	plural = kind.StartsWith("List(") then kind.Substring(5, kind.Length - 6) + "s" else kind
 	plural is in PackedNames then Formats(PackedNames.Index(plural)) else 0
-Issues(functions List(MlirFunction)) Texts
+Issues(functions List(MlirFunction)) Texts slow
 	MlirNarrowing.Issues((Summing.function, MlirKernel.Doubling.function)) is List(Text) + Summing.Issue
 	mutable issues = List(Mutable(Text))
 	for functions
 		issues = issues + Find(value)
 	issues
-Find(inspected MlirFunction) Texts
+Find(inspected MlirFunction) Texts slow
 	MlirNarrowing.Find(Few.function).Length is 0
 	Text.Combine(MlirNarrowing.Find(MlirWideMembers.Sparking.function)).IndexOf("loops over Spark") > 0
 	for inspected.method.instructions
@@ -44,7 +44,7 @@ Find(inspected MlirFunction) Texts
 		issue = isLoop then wide + MlirGpuContract(inspected, index).Issue else ""
 		if issue is not ""
 			issue
-Issue Text
+Issue Text slow
 	Summing.Issue is "Shape.strict:line 0: " + Rule + ": Sum uses 64 bit numbers (numbers)" + Advice
 	Floats.Issue is ""
 	if IsCandidate is false
@@ -123,7 +123,7 @@ IsFew Boolean
 		return false
 	literal = PayloadDecoder(entry).Value(1)
 	literal.kind is not "Number" or literal.number < MlirCost(function, position).Threshold
-Problem(functions List(MlirFunction)) Text
+Problem(functions List(MlirFunction)) Text slow
 	MlirNarrowing.Problem(List(MlirFunction) + Few.function) is ""
 	MlirNarrowing.Problem(List(MlirFunction) + Summing.function) is "unsupported: loops\n" + Summing.Issue
 	issues = Issues(functions)

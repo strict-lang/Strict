@@ -17,7 +17,7 @@ Run Number
 	Check(folder)
 	Directory.Delete(folder)
 	0
-Check(folder Text)
+Check(folder Text) slow
 	isWin = Process.OperatingSystem is "Windows"
 	if PreparedData(folder, isWin) is Error
 		return Error("PrepareSafetensorsFailed")
@@ -26,7 +26,7 @@ Check(folder Text)
 	if built.exitCode is not 0
 		return Error("BuildFailed: " + built.Output + built.error)
 	VerifiedBuild(folder, isWin)
-VerifiedBuild(folder Text, isWin Boolean)
+VerifiedBuild(folder Text, isWin Boolean) slow
 	obj = folder + "/obj/AttentionBrains.runtime.ptx"
 	ptx = Text.Combine(File(File(obj).Exists then obj else folder + "/AttentionBrains.runtime.ptx").ReadLines, "\n")
 	if ptx is ""
@@ -37,7 +37,7 @@ VerifiedBuild(folder Text, isWin Boolean)
 	if ran.exitCode is not 0 or "attention 2113536 0 1" is not in ran.Output
 		return Error("AttentionFailed: " + ran.Output + ran.error)
 	logger.Log(ran.Output.Trim)
-PreparedData(folder Text, isWin Boolean)
+PreparedData(folder Text, isWin Boolean) slow
 	cFile = folder + "/gen.c"
 	exe = folder + "/gen" + (isWin then ".exe" else "")
 	File(cFile).Write(WriterA + WriterB + WriterC + WriterD + WriterE)
@@ -46,7 +46,7 @@ PreparedData(folder Text, isWin Boolean)
 		return Error("CompileGenFailed: " + comp.Output + comp.error)
 	if Process.RunTool(exe, "\"" + folder + "/attention.safetensors\"", WriteSeconds).exitCode is not 0
 		return Error("WriteDataFailed")
-RunGpu(folder Text, exe Text) ProcessResult
+RunGpu(folder Text, exe Text) ProcessResult slow
 	win = Process.OperatingSystem is "Windows"
 	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
 	cmd = "cd " + (win then "/d \"" + folder.Replace("/", "\\") else "\"" + folder) + "\" && " + env + exe

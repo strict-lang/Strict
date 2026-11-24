@@ -30,14 +30,14 @@ Run Number
 	Check(folder)
 	Directory.Delete(folder)
 	0
-Check(folder Text)
+Check(folder Text) slow
 	src = folder + "/KeptTokens.strict"
 	File(src).Write(ProgramA + ProgramB + ProgramC)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, BuildSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed: " + built.Output + built.error)
 	RanCases(folder)
-RanCases(folder Text)
+RanCases(folder Text) slow
 	win = Process.OperatingSystem is "Windows"
 	cFile = folder + "/check.c"
 	exe = folder + "/check" + (win then ".exe" else "")
@@ -47,7 +47,7 @@ RanCases(folder Text)
 	if comp.exitCode is not 0
 		return Error("CompileFailed: " + comp.Output + comp.error)
 	RunTokenCounts(folder, exe, win)
-RunTokenCounts(folder Text, exe Text, win Boolean)
+RunTokenCounts(folder Text, exe Text, win Boolean) slow
 	env = win then "set STRICT_GPU=all&& " else "STRICT_GPU=all "
 	target = "\"" + folder + "/KeptTokens" + (win then ".exe" else "") + "\""
 	for ("96", "20")

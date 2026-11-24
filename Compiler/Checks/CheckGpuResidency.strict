@@ -36,12 +36,12 @@ Run Number
 	Directory.Delete(folder)
 	logger.Log("A list computed on the GPU from numbers alone stays there until the CPU reads it")
 	0
-Check(folder Text)
+Check(folder Text) slow
 	CheckPrimary(folder)
 	CheckSmallAndPair(folder)
 	CheckSimpleAndOrbit(folder)
 	CheckViewingAndPending(folder)
-CheckPrimary(folder Text)
+CheckPrimary(folder Text) slow
 	out = BuiltAndRan(folder, "GpuResidency", PrimaryCode, true, true)
 	if out is Error
 		return out
@@ -61,7 +61,7 @@ CheckedBytes(bytes Bytes)
 	for ByteCount
 		if bytes(index) is not (index % ByteMod)
 			return Error("codes.bin byte mismatch at " + index)
-CheckSmallAndPair(folder Text)
+CheckSmallAndPair(folder Text) slow
 	small = BuiltAndRan(folder, "SmallGpu", SmallA + "\n" + SmallB + "\n" + SmallC, false, false)
 	if small is Error or "gpu kernels 2, doubled 6, opened 2" is not in small
 		return Error("SmallGpu failed: " + (small to Text))
@@ -69,7 +69,7 @@ CheckSmallAndPair(folder Text)
 	pair = BuiltAndRan(folder, "PairEscape", EscapeSrc, false, false)
 	if pair is Error or "gpu kernels 1, 64 3" is not in pair
 		return Error("PairEscape failed: " + (pair to Text))
-CheckSimpleAndOrbit(folder Text)
+CheckSimpleAndOrbit(folder Text) slow
 	simple = BuiltAndRan(folder, "SimpleRead", SimpleA + "\n" + SimpleB, false, false)
 	if simple is Error or "read 0 1.998" is not in simple
 		return Error("SimpleRead failed: " + (simple to Text))
@@ -77,7 +77,7 @@ CheckSimpleAndOrbit(folder Text)
 	orbit = BuiltAndRan(folder, "OrbitGpu", OrbitGpuSrc, false, false)
 	if orbit is Error or "gpu kernels 1, 3 6 32" is not in orbit
 		return Error("OrbitGpu failed: " + (orbit to Text))
-CheckViewingAndPending(folder Text)
+CheckViewingAndPending(folder Text) slow
 	File(folder + "/Pair.strict").Write(UpdatedPair.Split("\n"))
 	File(folder + "/Viewing.strict").Write((ViewA + ViewB).Split("\n"))
 	built = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/Viewing.strict", ToolSeconds)
@@ -92,7 +92,7 @@ CheckViewingAndPending(folder Text)
 	CheckedStrings(out, List(Text) + "halved 128 ", List(Text) + "Strict GPU download of 256 numbers")
 UpdatedPair Text
 	(PairA + "\n" + PairB).Replace("has imaginary Number\n", "has imaginary Number\nconstant Zero = Pair(0, 0)\n")
-BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean) Text
+BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean) Text slow
 	File(folder + "/" + name + ".strict").Write(code.Split("\n"))
 	built = Process.RunTool(Process.Find("strict").executable, "build " + folder + "/" + name + ".strict", ToolSeconds)
 	if built.exitCode is not 0

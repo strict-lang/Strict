@@ -14,7 +14,7 @@ constant Checked = FailureBranch + FailureReturned
 constant TextStored = ("    %text = func.call @strict_library_text(%value) : (f64) -> !llvm.ptr", "    llvm.store %text, %result : !llvm.ptr, !llvm.ptr")
 constant FlagStored = ("    %flag = arith.fptosi %value : f64 to i32", "    llvm.store %flag, %result : i32, !llvm.ptr")
 constant Finished = ("    %ok = arith.constant 0 : i32", "    return %ok : i32", "  }")
-Text Text
+Text Text slow
 	Policy.Text.StartsWith("module {")
 	Policy.Text.EndsWith("}")
 	Policy.Text.IndexOf("  func.func @Policy_Start(") > 0
@@ -66,7 +66,7 @@ Record(pointer Text, typeName Text, suffix Text) Texts
 		written = function.Store(Temp(suffix + "c" + index + "v"), Temp(suffix + "s" + index))
 		lines = lines + field + memory.Slot(Temp(suffix + "p"), index, suffix + "s" + index) + written
 	lines + memory.Bits(Temp(suffix + "p"), suffix)
-Fields(typeName Text) Texts
+Fields(typeName Text) Texts slow
 	Trades.Fields("Strict/Trade").Last is "    llvm.store %t0r1v, %t0o1 : f64, !llvm.ptr"
 	function = MlirFunction(types, MlirFunction(types, types.First, Total).TypeOf(typeName), Total)
 	memory = MlirMemory(function, 0)
@@ -93,7 +93,7 @@ Kind(typeName Text) Text
 		return name is "Text" then "!llvm.ptr" else "i32"
 	isList = LibraryLists(MlirLibrary(types)).Element(typeName) is not ""
 	name is "Number" then "f64" else IsRecord(typeName) or isList then "!llvm.ptr" else ""
-Wrapper(method MethodEntry) Texts
+Wrapper(method MethodEntry) Texts slow
 	Policy.Wrapper(Start).First is "  func.func @Policy_Start(%a0: !llvm.ptr, %a1: i32, %result: !llvm.ptr) -> i32 {"
 	Policy.Wrapper(Start).Index("    %v1 = arith.sitofp %a1 : i32 to f64") > 0
 	Trades.Wrapper(Total).First is "  func.func @Trade_Total(%instance: !llvm.ptr, %result: !llvm.ptr) -> i32 {"
@@ -109,7 +109,7 @@ Wrapper(method MethodEntry) Texts
 Instance Texts
 	Trades.Instance.Last is "    %self = arith.addf %t0instancef, %zero : f64"
 	Record("%instance", types.First.Name, "instance") + "    %self = arith.addf %t0instancef, %zero : f64"
-Call(method MethodEntry) Text
+Call(method MethodEntry) Text slow
 	Policy.Call(Start) is "    %value = func.call @Policy_Start_2(%self, %v0, %v1) : (f64, f64, f64) -> f64"
 	function = MlirFunction(types, types.First, method)
 	mutable operands = List(Text) + "%self"
@@ -118,7 +118,7 @@ Call(method MethodEntry) Text
 	signature = outer.Text.Combine(MlirCalls(function, 0).ArgumentTypes(operands.Length), ", ")
 	joined = outer.Text.Combine(operands, ", ")
 	"    %value = func.call @" + function.Symbol + "(" + joined + ") : (" + signature + ") -> f64"
-Argument(typeName Text, position Number) Texts
+Argument(typeName Text, position Number) Texts slow
 	Policy.Argument("Strict/Text", 0).Last.EndsWith("@strict_bits(%a0) : (!llvm.ptr) -> f64")
 	Policy.Argument("Strict/Numbers", 1).Last is "    %v1 = func.call @strict_library_list(%a1) : (!llvm.ptr) -> f64"
 	argument = "%a" + position
@@ -131,7 +131,7 @@ Argument(typeName Text, position Number) Texts
 	flag = kind is "i32" then "arith.sitofp " + argument + " : i32 to f64" else called
 	converted = kind is "f64" then "arith.addf " + argument + ", %zero : f64" else flag
 	List(Text) + ("    %v" + position + " = " + converted)
-Store(returnType Text) Texts
+Store(returnType Text) Texts slow
 	Policy.Store("Strict/Number").First.StartsWith("    llvm.store %value")
 	Policy.Store("Strict/List(Number)").First.IndexOf("@strict_library_numbers(%value)") > 0
 	LibraryLists.Book.library.Store("Strict/List(Trade)").Length is 3

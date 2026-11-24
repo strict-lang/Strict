@@ -64,7 +64,7 @@ Save(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
 		joined.Add(Separator + value + "\n" + emitted(index))
 	if isNew
 		File(module.Cached).Write(Text.Combine(joined, ""))
-Keys(texts List(MlirFunction)) Texts
+Keys(texts List(MlirFunction)) Texts slow
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
 	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")
 	shared = Share(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))

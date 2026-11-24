@@ -18,7 +18,7 @@ constant OtherWrites = Sparking.function.method.instructions.Slice(0, 4) + Instr
 constant Unlooped = MlirWideMembers(MlirFunction(Sparking.function.types, MlirFunction.Shape, MethodEntry(Sparking.function.method, instructions = OtherWrites)), 2)
 constant SizingSparks = MemberEntry("sparks", "Strict/List(Strict/Math/Sizing)", List(InstructionEntry), false)
 constant Pairs = MlirWideMembers(MlirFunction(Flaming.function.types, MlirFunction.Shape, MethodEntry(Sparking.function.method, parameters = List(MemberEntry) + SizingSparks)), 2)
-Issue Text
+Issue Text slow
 	Sparking.Issue.EndsWith(": VectorLoopMustUse32BitNumbers: Sparked loops over Spark with 64 bit numbers (size" + Advice)
 	MlirWideMembers(MlirParallel.Doubling.function, 2).Issue is ""
 	wide = IsCandidate then Wide(Element, "", 0) else List(Text)

@@ -50,7 +50,7 @@ Run Number
 	Directory.Delete(folder)
 	logger.Log("CheckMemory passed")
 	0
-CheckJobAndPressure(folder Text)
+CheckJobAndPressure(folder Text) slow
 	exe = Build(folder, "MemoryCheck", "Run Number\n\tProcess.Input.Length", "")
 	if exe is Error
 		return exe
@@ -64,7 +64,7 @@ CheckJobAndPressure(folder Text)
 	if "EXIT:1000" is not in r1.Output or not hasOom
 		return Error("JobOomFailed: " + r1.Output)
 	CheckHeaps(folder)
-CheckHeaps(folder Text)
+CheckHeaps(folder Text) slow
 	p1 = RunBuilt(folder, "MemoryPressure", FilledSrc + KeptSrc + PresSrc, "", "STRICT_HEAP=1024", "total 3720", "")
 	if p1 is Error
 		return p1
@@ -77,7 +77,7 @@ CheckHeaps(folder Text)
 	ran = RunBuilt(folder, "SmallPressure", FilledSrc + SmallA + SmallB1 + SmallB2, "", SmallEnv, "total 1757700", "")
 	if ran is Error
 		return ran
-CheckUncollect(folder Text)
+CheckUncollect(folder Text) slow
 	grown = (FilledSrc + (GrowA + GrowB)).Replace("Name", "GrownLists") + GrownRun
 	u1 = RunBuilt(folder, "GrownLists", grown, "", LogEnv, "total 8062000", "Collection: ")
 	if u1 is Error
@@ -90,7 +90,7 @@ CheckUncollect(folder Text)
 	large = RunBuilt(folder, "PassedLarge", pSrc, "", LogEnv, "total 2291430000", "Collection: ")
 	if large is Error
 		return large
-CheckCollections(folder Text)
+CheckCollections(folder Text) slow
 	trimOut = RunBuilt(folder, "TrimmedPool", FilledSrc + TrimA + TrimB, "", LogEnv, "total 192", "")
 	if trimOut is Error
 		return trimOut
@@ -101,7 +101,7 @@ CheckCollections(folder Text)
 	if handed is Error
 		return handed
 	CheckChurnAndProducts(folder)
-CheckChurnAndProducts(folder Text)
+CheckChurnAndProducts(folder Text) slow
 	churnExe = Build(folder, "Churning", FilledSrc + ChurnSrc, "")
 	cmd = "/c set " + ChurnEnv + "&& \"" + churnExe + "\""
 	churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
@@ -123,7 +123,7 @@ CheckedMaxHeap(matches Texts)
 		mb = Text.Combine(Regex("(\\d+)").Groups(value), "") to Number
 		if mb >= MaxHeap
 			return Error("HeapExceededLimit: " + mb)
-CheckTickersAndFiles(folder Text)
+CheckTickersAndFiles(folder Text) slow
 	f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
 	if f is Error or not HasFramesEnded(f, true)
 		return Error("FrameTickerWrong")
@@ -131,7 +131,7 @@ CheckTickersAndFiles(folder Text)
 	if w is Error or not HasWordsEnded(w)
 		return Error("WordTickerWrong")
 	CheckLongLines(folder)
-FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts
+FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts slow
 	elem = itemType.Substring(0, itemType.Length - 1)
 	hdr = "has size Number\nhas frame Number = 0\nhas kept " + itemType + " = List(" + elem + ")\n"
 	base = (hdr + TickerA + TickerB).Replace("NAME", name).Replace("TYPE", itemType).Replace("TWO", two)
@@ -162,7 +162,7 @@ HasWordsEnded(cols Texts) Boolean
 		if not value.EndsWith(", frame end")
 			return false
 	true
-CheckLongLines(folder Text)
+CheckLongLines(folder Text) slow
 	mutable word = "x"
 	for Doublings
 		word = word + word
@@ -174,7 +174,7 @@ CheckLongLines(folder Text)
 		return longOut
 	File(folder + "/tool.txt").Write(List(Text) + word.Substring(0, ToolWidth))
 	CheckTools(folder)
-CheckTools(folder Text)
+CheckTools(folder Text) slow
 	typed = folder.Replace("/", "\\\\") + "\\\\tool.txt"
 	mutable code = "has logger\nLines(count Number) Texts\n\tToolOutputs(Logger).Lines(1).Length is 1\n"
 	code = code + "\tfor count\n\t\t\"/c type " + typed + "\"\nRun\n\tmutable total = 0\n"
@@ -187,7 +187,7 @@ RepeatedLine(line Text, count Number) Texts
 	RepeatedLine("a", 2) is ("a", "a")
 	for count
 		line
-Build(folder Text, name Text, code Text, platform Text) Text
+Build(folder Text, name Text, code Text, platform Text) Text slow
 	src = folder + "/" + name + ".strict"
 	File(src).Write(code.Split("\n"))
 	arg = "build " + src + (platform is "" then "" else " " + platform)
@@ -195,7 +195,7 @@ Build(folder Text, name Text, code Text, platform Text) Text
 	if built.exitCode is not 0
 		return Error("BuildFailed " + name + ": " + built.Output + built.error)
 	platform is "" then folder + "/" + name + ".exe" else folder + "/Release/Web/" + name + ".js"
-RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, ban Text) Text
+RunBuilt(folder Text, name Text, code Text, platform Text, env Text, want Text, ban Text) Text slow
 	exe = Build(folder, name, code, platform)
 	if exe is Error
 		return exe

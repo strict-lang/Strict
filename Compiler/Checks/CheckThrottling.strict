@@ -23,14 +23,14 @@ Run Number
 	Directory.Delete(folder)
 	logger.Log("CheckThrottling passed")
 	0
-Check(folder Text)
+Check(folder Text) slow
 	src = folder + "/ThrottlingCheck.strict"
 	File(src).Write(ProbeLines)
 	built = Process.RunTool(Process.Find("strict").executable, "build " + src, ToolSeconds)
 	if built.exitCode is not 0
 		return Error("BuildFailed: " + built.Output + built.error)
 	CompiledAndRan(folder)
-CompiledAndRan(folder Text)
+CompiledAndRan(folder Text) slow
 	cFile = folder + "/check.c"
 	File(cFile).Write(CodeA + CodeB + CodeC + CodeD + CodeE + CodeF + CodeG + CodeH + CodeI + CodeJ)
 	checker = folder + "/check.exe"
