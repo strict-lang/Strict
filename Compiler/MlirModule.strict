@@ -145,9 +145,10 @@ Callees(function MlirFunction) List(MlirFunction)
 	callees
 Call(function MlirFunction, position Number) List(MlirFunction)
 	Counters.Call(Counters.Functions.First, 0).Length is 0
+	MlirModule(List(TypeEntry) + MlirTexts.Joined.type, "Run").Call(MlirTexts.Joined, 2).Length is 0
 	entry = function.method.instructions(position)
 	if entry.kind is not InstructionType.Invoke
-		return List(MlirFunction)
+		return MlirAutomatic(function).Conversions(position)
 	decoder = PayloadDecoder(entry)
 	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)

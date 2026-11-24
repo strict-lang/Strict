@@ -9553,6 +9553,7 @@
     func.call @strict_gc_mark_range(%spilled#0, %spilled#1) : (i64, i64) -> i64
     func.call @strict_gc_mark_threads(%from) : (i64) -> ()
     func.call @strict_gc_filling_marked() : () -> ()
+    func.call @strict_records_mark(%full) : (i1) -> ()
     func.call @strict_gc_drain_parallel() : () -> ()
     func.call @strict_span_swept(%full) : (i1) -> ()
     func.call @strict_rc_survived() : () -> ()
@@ -15020,13 +15021,147 @@
     return %list : f64
   }
   // the numbers of a list of number structs one after another (slots per element), for GPU loops reading such a list
+  llvm.mlir.global internal @strict_records_cache(dense<0> : tensor<64xi64>) : !llvm.array<64 x i64>
+  llvm.mlir.global internal @strict_records_next(0 : i64) : i64
+  func.func private @strict_records_slot(%index: i64) -> !llvm.ptr {
+    %four = arith.constant 4 : i64
+    %cache = llvm.mlir.addressof @strict_records_cache : !llvm.ptr
+    %offset = arith.muli %index, %four : i64
+    %slot = llvm.getelementptr %cache[0, %offset] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+    return %slot : !llvm.ptr
+  }
+  func.func private @strict_records_forget(%object: i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %entries = arith.constant 16 : i64
+    %down = arith.constant -1 : i32
+    cf.br ^loop(%none : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = func.call @strict_records_slot(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %matches = arith.cmpi eq, %stored, %object : i64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %matches, ^clear, ^loop(%next : i64)
+  ^clear:
+    %flatSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %flat = llvm.load %flatSlot : !llvm.ptr -> i64
+    %hasFlat = arith.cmpi ne, %flat, %none : i64
+    cf.cond_br %hasFlat, ^drop, ^zeroed
+  ^drop:
+    func.call @strict_rc_add(%flat, %none, %down) : (i64, i64, i32) -> ()
+    cf.br ^zeroed
+  ^zeroed:
+    llvm.store %none, %slot : i64, !llvm.ptr
+    llvm.store %none, %flatSlot : i64, !llvm.ptr
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_records_mark(%full: i1) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %eight = arith.constant 8 : i64
+    %entries = arith.constant 16 : i64
+    %true = arith.constant true
+    %young = arith.xori %full, %true : i1
+    cf.br ^loop(%none : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = func.call @strict_records_slot(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %used = arith.cmpi ne, %stored, %none : i64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %used, ^alive, ^loop(%next : i64)
+  ^alive:
+    %marked = func.call @strict_gc_is_marked(%stored) : (i64) -> i1
+    %keep = arith.ori %young, %marked : i1
+    cf.cond_br %keep, ^markFlat, ^loop(%next : i64)
+  ^markFlat:
+    %flatSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %flatAddr = llvm.ptrtoint %flatSlot : !llvm.ptr to i64
+    %flatEnd = arith.addi %flatAddr, %eight : i64
+    %markedBytes = func.call @strict_gc_mark_range(%flatAddr, %flatEnd) : (i64, i64) -> i64
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
+  func.func private @strict_records_sweep(%full: i1) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %entries = arith.constant 16 : i64
+    %down = arith.constant -1 : i32
+    %true = arith.constant true
+    %young = arith.xori %full, %true : i1
+    cf.br ^loop(%none : i64)
+  ^loop(%index: i64):
+    %more = arith.cmpi slt, %index, %entries : i64
+    cf.cond_br %more, ^check, ^done
+  ^check:
+    %slot = func.call @strict_records_slot(%index) : (i64) -> !llvm.ptr
+    %stored = llvm.load %slot : !llvm.ptr -> i64
+    %used = arith.cmpi ne, %stored, %none : i64
+    %next = arith.addi %index, %one : i64
+    cf.cond_br %used, ^alive, ^loop(%next : i64)
+  ^alive:
+    %marked = func.call @strict_gc_is_marked(%stored) : (i64) -> i1
+    %keep = arith.ori %young, %marked : i1
+    cf.cond_br %keep, ^note, ^clear
+  ^note:
+    func.call @strict_gpu_noted(%stored) : (i64) -> ()
+    cf.br ^loop(%next : i64)
+  ^clear:
+    %flatSlot = llvm.getelementptr %slot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %flat = llvm.load %flatSlot : !llvm.ptr -> i64
+    %hasFlat = arith.cmpi ne, %flat, %none : i64
+    cf.cond_br %hasFlat, ^drop, ^zeroed
+  ^drop:
+    func.call @strict_rc_add(%flat, %none, %down) : (i64, i64, i32) -> ()
+    cf.br ^zeroed
+  ^zeroed:
+    llvm.store %none, %slot : i64, !llvm.ptr
+    llvm.store %none, %flatSlot : i64, !llvm.ptr
+    cf.br ^loop(%next : i64)
+  ^done:
+    return
+  }
   func.func private @strict_records_flat(%list: f64, %slots: f64) -> f64 {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
     %eight = arith.constant 8 : i64
+    %entries = arith.constant 16 : i64
+    %listBits = arith.bitcast %list : f64 to i64
     %countNumber = func.call @strict_list_length(%list) : (f64) -> f64
     %count = arith.fptosi %countNumber : f64 to i64
     %slotCount = arith.fptosi %slots : f64 to i64
+    cf.br ^lookup(%none : i64)
+  ^lookup(%hitIndex: i64):
+    %moreHits = arith.cmpi slt, %hitIndex, %entries : i64
+    cf.cond_br %moreHits, ^checkHit, ^miss
+  ^checkHit:
+    %hitSlot = func.call @strict_records_slot(%hitIndex) : (i64) -> !llvm.ptr
+    %hitList = llvm.load %hitSlot : !llvm.ptr -> i64
+    %hitCountSlot = llvm.getelementptr %hitSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %hitCount = llvm.load %hitCountSlot : !llvm.ptr -> i64
+    %hitSlotsSlot = llvm.getelementptr %hitSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %hitSlots = llvm.load %hitSlotsSlot : !llvm.ptr -> i64
+    %sameList = arith.cmpi eq, %hitList, %listBits : i64
+    %sameCount = arith.cmpi eq, %hitCount, %count : i64
+    %sameSlots = arith.cmpi eq, %hitSlots, %slotCount : i64
+    %sameShape = arith.andi %sameCount, %sameSlots : i1
+    %matched = arith.andi %sameList, %sameShape : i1
+    %nextHit = arith.addi %hitIndex, %one : i64
+    cf.cond_br %matched, ^hit(%hitSlot : !llvm.ptr), ^lookup(%nextHit : i64)
+  ^hit(%foundSlot: !llvm.ptr):
+    %foundFlatSlot = llvm.getelementptr %foundSlot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %foundFlat = llvm.load %foundFlatSlot : !llvm.ptr -> i64
+    %cached = arith.bitcast %foundFlat : i64 to f64
+    return %cached : f64
+  ^miss:
     %bytes = arith.muli %slotCount, %eight : i64
     %total = arith.mulf %countNumber, %slots : f64
     %flat = func.call @strict_numbers_new(%total) : (f64) -> f64
@@ -15047,6 +15182,32 @@
     cf.br ^element(%next : i64)
   ^done:
     %filled = func.call @strict_list_filled(%flat, %total) : (f64, f64) -> f64
+    %flatBits = arith.bitcast %filled : f64 to i64
+    %nextCursor = llvm.mlir.addressof @strict_records_next : !llvm.ptr
+    %cursor = llvm.load %nextCursor : !llvm.ptr -> i64
+    %mask = arith.constant 15 : i64
+    %at = arith.andi %cursor, %mask : i64
+    %following = arith.addi %cursor, %one : i64
+    llvm.store %following, %nextCursor : i64, !llvm.ptr
+    %storeSlot = func.call @strict_records_slot(%at) : (i64) -> !llvm.ptr
+    %oldFlatSlot = llvm.getelementptr %storeSlot[3] : (!llvm.ptr) -> !llvm.ptr, i64
+    %oldFlat = llvm.load %oldFlatSlot : !llvm.ptr -> i64
+    %hasOld = arith.cmpi ne, %oldFlat, %none : i64
+    cf.cond_br %hasOld, ^evict, ^store
+  ^evict:
+    %down = arith.constant -1 : i32
+    func.call @strict_rc_add(%oldFlat, %none, %down) : (i64, i64, i32) -> ()
+    cf.br ^store
+  ^store:
+    %storeCountSlot = llvm.getelementptr %storeSlot[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %storeSlotsSlot = llvm.getelementptr %storeSlot[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %listBits, %storeSlot : i64, !llvm.ptr
+    llvm.store %count, %storeCountSlot : i64, !llvm.ptr
+    llvm.store %slotCount, %storeSlotsSlot : i64, !llvm.ptr
+    llvm.store %flatBits, %oldFlatSlot : i64, !llvm.ptr
+    %up = arith.constant 1 : i32
+    func.call @strict_rc_add(%flatBits, %none, %up) : (i64, i64, i32) -> ()
+    func.call @strict_gpu_noted(%listBits) : (i64) -> ()
     return %filled : f64
   }
   // the block of the element at index of such a list is the destination the next method building a struct takes
@@ -22880,7 +23041,10 @@
     %bits = llvm.load %owned#0 : !llvm.ptr -> i64
     %hit = arith.andi %bits, %owned#1 : i64
     %isNoted = arith.cmpi ne, %hit, %none : i64
-    cf.cond_br %isNoted, ^next(%none : i64), ^done
+    cf.cond_br %isNoted, ^forget, ^done
+  ^forget:
+    func.call @strict_records_forget(%object) : (i64) -> ()
+    cf.br ^next(%none : i64)
   ^next(%index: i64):
     %more = arith.cmpi slt, %index, %slots : i64
     cf.cond_br %more, ^spill, ^done
@@ -30197,6 +30361,7 @@
     cf.br ^next(%following : i64)
   ^done:
     func.call @strict_gpu_unspill_dead() : () -> ()
+    func.call @strict_records_sweep(%full) : (i1) -> ()
     func.call @strict_gpu_unmark_collected() : () -> ()
     func.call @strict_gpu_sweep_residents(%full) : (i1) -> ()
     return

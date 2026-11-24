@@ -132,3 +132,15 @@ Structure(kind Text) Text
 	Sample.Structure("Shape") is "strict_automatic_Shape"
 	equality = MlirEquality(function, 0)
 	equality.IsKnown(kind) then "strict_automatic_" + equality.Symbol(kind) else "skip"
+Conversions(position Number) List(MlirFunction)
+	MlirAutomatic(MlirTexts.Joined).Conversions(2).Length is 0
+	texts = MlirTexts(function, position)
+	entry = function.method.instructions(position)
+	summed = texts.IsSum then (entry.payload(1), entry.payload(2)) else List(Number)
+	for entry.kind is InstructionType.Print and entry.payload(1) is not 0 then summed + entry.payload(2) else summed
+		kind = texts.Printable(MlirKinds(function).KindOf(position, value))
+		if kind is not "Text" and texts.Helper(kind) is ""
+			type = function.TypeOf(kind)
+			method = type.Callee("to", 0, "Text", List(Text))
+			if method.instructions.Length > 0
+				MlirFunction(function.types, type, method, typeIndex = function.typeIndex)
