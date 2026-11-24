@@ -20579,7 +20579,11 @@
     %denseLanes = arith.constant -112 : i64
     %denseBlock = arith.constant 256 : i64
     %denseAttention = arith.cmpi eq, %lanes, %denseLanes : i64
-    %threads = arith.select %denseAttention, %denseBlock, %bytesThreads : i64
+    %denseThreads = arith.select %denseAttention, %denseBlock, %bytesThreads : i64
+    %shortLanes = arith.constant -160 : i64
+    %shortBlock = arith.constant 128 : i64
+    %shortAttention = arith.cmpi eq, %lanes, %shortLanes : i64
+    %threads = arith.select %shortAttention, %shortBlock, %denseThreads : i64
     cf.cond_br %missing, ^release, ^chosen
   ^chosen:
     %unpackedResult = arith.cmpi eq, %packed, %none : i64
@@ -25558,8 +25562,11 @@
     cf.br ^done(%convolutionThreads : i64)
   ^attentions:
     %attentionLanes = arith.constant 128 : i64
+    %shortAttentionLanes = arith.constant 160 : i64
     %attending = arith.cmpi eq, %perWarp, %attentionLanes : i64
-    cf.cond_br %attending, ^attention, ^bytes
+    %shortAttending = arith.cmpi eq, %perWarp, %shortAttentionLanes : i64
+    %anyAttending = arith.ori %attending, %shortAttending : i1
+    cf.cond_br %anyAttending, ^attention, ^bytes
   ^bytes:
     %bytesLanes = arith.constant 96 : i64
     %denseLanes = arith.constant 112 : i64
@@ -25658,11 +25665,19 @@
     %splits = arith.maxui %fewerParts, %one : i64
     %decodeBlocks = arith.muli %tileSlots, %splits : i64
     %blocks = arith.select %decoding, %decodeBlocks, %promptBlocks : i64
-    %threads = arith.muli %blocks, %perBlock : i64
+    %shortPositions = arith.constant 128 : i64
+    %isShortPositions = arith.cmpi sle, %positions, %shortPositions : i64
+    %shortDecoding = arith.andi %decoding, %isShortPositions : i1
+    %shortPerBlock = arith.constant 128 : i64
+    %shortThreads = arith.muli %tileSlots, %shortPerBlock : i64
+    %fullThreads = arith.muli %blocks, %perBlock : i64
+    %threads = arith.select %shortDecoding, %shortThreads, %fullThreads : i64
     return %threads : i64
   }
   llvm.mlir.global internal constant @strict_gpu_attention_name("strict_device_attention\00strict_device_attentions\00") : !llvm.array<49 x i8>
   llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_short_attention_name("strict_device_attention_short\00strict_device_attention_shorts\00") : !llvm.array<61 x i8>
+  llvm.mlir.global internal @strict_gpu_short_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_bytes_name("strict_device_bytes_attention\00strict_device_bytes_attentions\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal @strict_gpu_bytes_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_dense_name("strict_device_dense_attention\00strict_device_dense_attentions\00") : !llvm.array<61 x i8>
@@ -25952,12 +25967,27 @@
     %bytesDots = arith.select %anyBytes, %bothBits, %dots : i64
     %bytesOrName = llvm.select %bytesWanted, %bytesName, %name : i1, !llvm.ptr
     %bytesOrSlot = llvm.select %bytesWanted, %bytesSlot, %slot : i1, !llvm.ptr
-    %chosenName = llvm.select %denseWanted, %denseName, %bytesOrName : i1, !llvm.ptr
-    %chosenSlot = llvm.select %denseWanted, %denseSlot, %bytesOrSlot : i1, !llvm.ptr
+    %denseOrName = llvm.select %denseWanted, %denseName, %bytesOrName : i1, !llvm.ptr
+    %denseOrSlot = llvm.select %denseWanted, %denseSlot, %bytesOrSlot : i1, !llvm.ptr
     %byteLanes = arith.constant -96 : i64
     %denseLanes = arith.constant -112 : i64
+    %shortLanes = arith.constant -160 : i64
     %bytesOrLanes = arith.select %bytesWanted, %byteLanes, %lanes : i64
-    %chosenLanes = arith.select %denseWanted, %denseLanes, %bytesOrLanes : i64
+    %denseOrLanes = arith.select %denseWanted, %denseLanes, %bytesOrLanes : i64
+    %warpTokens = arith.divui %sixteen, %perGroup : i64
+    %two = arith.constant 2 : i64
+    %decodeTokens = arith.shli %warpTokens, %two : i64
+    %decoding = arith.cmpi sle, %tokens, %decodeTokens : i64
+    %shortPositions = arith.constant 128 : i64
+    %isShortPositions = arith.cmpi sle, %positions, %shortPositions : i64
+    %shortDecoding = arith.andi %decoding, %isShortPositions : i1
+    %notBytes = arith.xori %anyBytes, %denseTrue : i1
+    %shortWanted = arith.andi %shortDecoding, %notBytes : i1
+    %shortName = llvm.mlir.addressof @strict_gpu_short_attention_name : !llvm.ptr
+    %shortSlot = llvm.mlir.addressof @strict_gpu_short_attention_slot : !llvm.ptr
+    %chosenName = llvm.select %shortWanted, %shortName, %denseOrName : i1, !llvm.ptr
+    %chosenSlot = llvm.select %shortWanted, %shortSlot, %denseOrSlot : i1, !llvm.ptr
+    %chosenLanes = arith.select %shortWanted, %shortLanes, %denseOrLanes : i64
     %routedBytes = arith.andi %routingWanted, %bytesWanted : i1
     cf.cond_br %routedBytes, ^pooling, ^attending
   ^pooling:
