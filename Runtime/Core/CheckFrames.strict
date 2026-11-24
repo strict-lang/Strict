@@ -7,7 +7,7 @@ Run Number
 	result = Check(folder)
 	Directory.Delete(folder)
 	result is Error then result else 0
-Check(folder Text)
+Check(folder Text) slow
 	source = folder + "/FrameBudget.strict"
 	extension = Process.OperatingSystem is "Windows" then ".exe" else ""
 	if Directory.Create(folder) is Error
@@ -20,3 +20,4 @@ Check(folder Text)
 	logger.Log(ran.Output.Trim)
 	if ran.exitCode is not 0
 		return Error("FrameBudgetFailed: " + ran.exitCode + "\n" + ran.Output + ran.error)
+

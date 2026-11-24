@@ -45,7 +45,7 @@ Emitted Texts
 	if entry.kind is InstructionType.IndexCall
 		return MlirPacking(function, position).EmitIndex(entry, value)
 	MlirPairs(function, position).Append(entry, value)
-Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
+Literal(literal Runtime/Core/VmValue, slot Text, suffix Text) Texts
 	MlirLists(Listed, 0).Literal(Pair, "%v_a", "").Last is "    llvm.store %t0e1l, %v_a : f64, !llvm.ptr"
 	MlirLists(Listed, 0).Literal(VmValue.OfList(List(VmValue)), "%v_a", "").Length is 2
 	MlirLists(Literals, 0).Literal(Pair, "%r0", "").First is "    %t0g = llvm.mlir.addressof @lShape_Run_0_0 : !llvm.ptr"
@@ -58,7 +58,7 @@ Literal(literal Runtime/VmValue, slot Text, suffix Text) Texts
 	if suffix is not "" or MlirConstants(function, position).IsConstant is false
 		return Build(literal, suffix) + function.Store(result, slot)
 	Cache(Build(literal, suffix), result, "strict_list_pin") + function.Store(Temp("r"), slot)
-Build(literal Runtime/VmValue, suffix Text) Texts
+Build(literal Runtime/Core/VmValue, suffix Text) Texts
 	MlirLists(Literals, 0).Cache(List(Text), "%x", "pin").Index("    func.call @pin(%x) : (f64) -> ()") is 7
 	MlirLists(Listed, 0).Build(Pair, "").Last.IndexOf("%t0e1l = func.call @strict_list_add(%t0e0l, %t0e1xf)") > 0
 	Text.Combine(MlirLists(Listed, 0).Build(Pair, "")).Length is 469
@@ -97,7 +97,7 @@ Creat(count Number, suffix Text) Texts
 	size = MlirStatements(function, position).Hex(count + 4)
 	capacity = "    " + Temp(suffix + "q") + " = arith.constant " + size + " : f64"
 	(capacity, memory.Call(Temp(suffix + "l"), "strict_list_new", (Temp(suffix + "q"), "%zero")))
-Element(item Runtime/VmValue, index Number, element Text) Texts
+Element(item Runtime/Core/VmValue, index Number, element Text) Texts
 	MlirLists(Listed, 0).Element(VmValue.OfNumber(2), 0, "e0") is ("    %t0e0c = arith.constant 0x4000000000000000 : f64")
 	MlirLists(Listed, 0, "@dA_b").Element(VmValue.OfText("a"), 0, "e0").First.IndexOf(" @dA_b_0 ") > 0
 	Hoisting.Element(VmValue.OfList(List(VmValue)), 0, "e") is ("unsupported: nested List constant in Shape_Run_1")
@@ -108,7 +108,7 @@ Element(item Runtime/VmValue, index Number, element Text) Texts
 		return List(Text) + unsupported
 	number = MlirStatements(function, position).Hex(item.number)
 	List(Text) + ("    " + Temp(element + "c") + " = arith.constant " + number + " : f64")
-ElementName(item Runtime/VmValue, element Text) Text
+ElementName(item Runtime/Core/VmValue, element Text) Text
 	MlirLists(Listed, 0).ElementName(VmValue.OfText("a"), "e1") is "%t0e1xf"
 	MlirLists(Listed, 0).ElementName(VmValue.OfNumber(1), "e1") is "%t0e1c"
 	MlirLists(Literals, 0).Literal(VmValue.OfList(List(VmValue)), "%r0", "").Length is 2

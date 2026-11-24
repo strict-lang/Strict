@@ -54,16 +54,16 @@ Stamped Text
 Freed Text
 	Resident("Compiler/output", "2").Freed is "Compiler/output/obj/strict.free2"
 	root + Free + slot
-FreePort(request Text)
+FreePort(request Text) slow
 	Resident("Compiler/output/Missing").FreePort(Resident.Request("C:/a", List(Text) + "test", "1", "7")) is not Error
 	Resident("Compiler/output/Missing").FreePort("broken") is not Error
 	port = Claim(request) to Number
 	if port is not Error
 		File(Freed + "." + port).Rename(Freed)
-Send(socket Number, text Text)
+Send(socket Number, text Text) slow
 	Sample.Send(0, "a") is Error
 	Socket.Send(socket, ByteEncoder(List(Number)).UnicodeBytes(text))
-Receive(socket Number, ending Text) Text
+Receive(socket Number, ending Text) Text slow
 	Sample.Receive(0, "\n") is ""
 	mutable gathered = ""
 	mutable isOpen = true
@@ -74,7 +74,7 @@ Receive(socket Number, ending Text) Text
 		isOpen = isOpen and chunk is Error is false
 		gathered = isOpen then gathered + ByteEncoder(chunk).Spell(0, chunk.Length) else gathered
 	gathered
-Opened Number
+Opened Number slow
 	server = Socket.Local(0)
 	if server is Error
 		return server
@@ -82,7 +82,7 @@ Opened Number
 	File(Stamped).Write(port)
 	File(Freed).Write(port)
 	server
-Accept(server Number, built Number, limit = IdleSeconds) Number
+Accept(server Number, built Number, limit = IdleSeconds) Number slow
 	Sample.Accept(0, -1) is Unaccepted
 	Sample.Accept(Socket.Local(0), File(Process.Current.executable).Modified, 0) is Unaccepted
 	Sample.Accept(Socket.Local(0), File(Process.Current.executable).Modified, WakeSeconds) is Unaccepted
@@ -95,27 +95,27 @@ Accept(server Number, built Number, limit = IdleSeconds) Number
 			return waited is Error then Unaccepted else Take(server, built)
 		idle = idle + WakeSeconds
 	Unaccepted
-Take(server Number, built Number) Number
+Take(server Number, built Number) Number slow
 	socket = Socket.Accept(server)
 	if File(Process.Current.executable).Modified is built
 		return socket
 	End(socket, Refused)
 	Unaccepted
-ReadRequest(socket Number) Text
+ReadRequest(socket Number) Text slow
 	Forwarding.Sample.Loopback(3) is 3
 	Forwarding.Sample.Loopback(Refused) is Forwarding.Unserved
 	Send(socket, Greeting) is not Error then Receive(socket, Ending) else Unrequested
-Finish(socket Number, code Number)
+Finish(socket Number, code Number) slow
 	Sample.Finish(0, 1) is Error
 	if Send(socket, Exiting + code + "\n") is Error
 		Socket.Close(socket)
 		return Error("SendFailed")
 	Socket.Close(socket)
-End(socket Number, code Number)
+End(socket Number, code Number) slow
 	Sample.End(0, 1) is not Error
 	if Finish(socket, code) is Error
 		Socket.Close(socket)
-Close(server Number)
+Close(server Number) slow
 	Resident("Compiler/output/Missing").Close(0) is not Error
 	Sample.Opened > 0
 	Sample.Close(Socket.Local(0)) is not Error
@@ -125,3 +125,4 @@ Close(server Number)
 		stamp.Delete
 		File(Freed).Delete
 	Socket.Close(server)
+

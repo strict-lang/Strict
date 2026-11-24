@@ -47,7 +47,7 @@ ParameterGlobals Texts
 	Greets.ParameterGlobals.Length is 1
 	for ParameterTexts
 		MlirConstants(function, 0, "@dp" + index).TextGlobal(value, "")
-NameParameter(initial Runtime/VmValue) Text
+NameParameter(initial Runtime/Core/VmValue) Text
 	Greets.NameParameter(VmValue.OfText("Hi")) is "@dp0"
 	Greets.NameParameter(VmValue.OfNumber(1)) is ""
 	Joins.NameParameter(Pair) is "@dl0"
@@ -65,7 +65,7 @@ ElementGlobals Texts
 		for constants.TextElements(list)
 			lines.Add(constants.TextGlobal(list.items(value).text, "_" + value))
 	lines
-ParameterLists List(Runtime/VmValue)
+ParameterLists List(Runtime/Core/VmValue)
 	Joins.ParameterLists is (Pair)
 	Greets.ParameterLists.Length is 0
 	mutable lists = List(Mutable(VmValue))

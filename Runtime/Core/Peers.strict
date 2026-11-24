@@ -16,12 +16,12 @@ IsAny(name Text) Boolean
 	Peers.IsAny(Server) is false
 	Peers.IsAny("") is false
 	name is "any" or name is "Any"
-Probe(line Text) Texts
+Probe(line Text) Texts slow
 	Peers.Host("missing") is ""
 	for Named
 		if IsAnswered(value, line)
 			value
-IsAnswered(name Text, line Text) Boolean
+IsAnswered(name Text, line Text) Boolean slow
 	Peers.Host("missing") is ""
 	host = Host(name)
 	if host is ""
@@ -33,3 +33,4 @@ IsAnswered(name Text, line Text) Boolean
 	reply = Resident("").Receive(socket, "\n")
 	Socket.Close(socket)
 	reply.Trim.StartsWith("go")
+

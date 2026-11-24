@@ -185,7 +185,7 @@ ElementKind(container Text) Text
 	if represented is "Text"
 		return "Character"
 	represented.StartsWith("List(") then represented.Substring(5, represented.Length - 6) else "Number"
-ConstantKind(literal Runtime/VmValue, texts Texts) Text
+ConstantKind(literal Runtime/Core/VmValue, texts Texts) Text
 	Graded.ConstantKind(VmValue.OfList(VmValue.OfText("a"), VmValue.OfText("b")), ("a", "b")) is "List(Text)"
 	Graded.ConstantKind(VmValue.OfNumber(1), List(Text)) is "Number"
 	Graded.ConstantKind(VmValue.AnyError, List(Text)) is "Error"

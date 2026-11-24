@@ -2,7 +2,7 @@ has path Text
 has seconds Number = 0.2
 has part Text = ""
 has isWhole Boolean = false
-constant Starting = ("Strict/Runtime/TestBudget", "Start")
+constant Starting = ("Strict/Runtime/Core/TestBudget", "Start")
 constant Budget = InstructionEntry.Invoke(2, Starting + ("Strict/Number", "place", "isSlow"), (0, 1), -1)
 constant Budgeted = (InstructionEntry.LoadBoolean(1, false), Budget)
 constant Unbudgeted = (Budgeted.First, InstructionEntry.Invoke(2, ("A", "Start", "N", "x"), (0, 1), -1))

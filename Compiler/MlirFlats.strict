@@ -181,7 +181,7 @@ IsListed(kind Text) Boolean
 	MlirFlats(MlirPairs.Sample.function, 0).IsListed("Pairing")
 	MlirFlats(MlirCouples.Sample.function, 0).IsListed("Sizing") is false
 	MlirPairs(function, 0).IsListed(kind) or Count(kind) > 0
-Default(kind Text, initial Runtime/VmValue, slot Text, suffix Text) Texts
+Default(kind Text, initial Runtime/Core/VmValue, slot Text, suffix Text) Texts
 	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0").Last is "    llvm.store %t1d0f, %s : f64, !llvm.ptr"
 	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0")(7) is "    %t1d0fl = llvm.load %s : !llvm.ptr -> f64"
 	Sample.Default("Tripling", MlirPairs.Twice, "%s", "d0")(8).IndexOf("f = func.call @strict_flat_from_list(") is 9

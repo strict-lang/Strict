@@ -42,7 +42,7 @@ Temp(suffix Text) Text
 	MlirStatements(Loading.function, 1).Emitted is Branched
 	MlirStatements(Copy.function, 2).Emitted.Last is "    return %t2 : f64"
 	"%t" + position + suffix
-Literal(literal Runtime/VmValue, slot Text, suffix Text, named = "") Texts
+Literal(literal Runtime/Core/VmValue, slot Text, suffix Text, named = "") Texts
 	Copy.Literal(VmValue.OfNumber(1), "%r0", "").First is "    %t0c = arith.constant 0x3FF0000000000000 : f64"
 	Copy.Literal(VmValue.OfText("b"), "%s", "d0", "@dA_b").First.IndexOf(" @dA_b ") > 0
 	Copy.Literal(VmValue.AnyError, "%r0", "").First is "    %t0c = func.call @strict_any_error() : () -> f64"

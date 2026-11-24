@@ -19,12 +19,12 @@ IsConstant Boolean
 		return false
 	constant literal = Constant
 	literal.kind is "Text" or literal.kind is "List" and literal.items.Length > 0
-TextElements(literal Runtime/VmValue) Numbers
+TextElements(literal Runtime/Core/VmValue) Numbers
 	MlirConstants(MlirTexts.Joined, 0).TextElements(VmValue.OfList(VmValue.OfNumber(1), VmValue.OfText("a"))) is (1)
 	for literal.items
 		if value.kind is "Text"
 			index
-Constant Runtime/VmValue
+Constant Runtime/Core/VmValue
 	MlirConstants(MlirTexts.Joined, 0).Constant.text is "a%"
 	if position >= function.method.instructions.Length
 		member = MlirInstances(function, 0).ReferencedConstants(position - MlirInstances.MemberBase)

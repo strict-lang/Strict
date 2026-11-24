@@ -32,7 +32,7 @@ Run Number
 	Directory.Delete(folder)
 	logger.Log("Cached passes, unit deadlines, Slow selection, internal packages, Run order and shares passed")
 	0
-Check(folder Text)
+Check(folder Text) slow
 	CheckDeps(folder)
 	CheckBudget(folder)
 	CheckLazy(folder)
@@ -40,7 +40,7 @@ Check(folder Text)
 	CheckWaiting(folder)
 	CheckProbe
 	CheckShares(folder)
-CheckDeps(folder Text)
+CheckDeps(folder Text) slow
 	File(folder + "/Doubling.strict").Write(DoubleCode)
 	File(folder + "/Tripling.strict").Write(TripleCode)
 	File(folder + "/Sixfold.strict").Write(SixCode)
@@ -51,7 +51,7 @@ CheckDeps(folder Text)
 		return Error("UnchangedCallerFailed")
 	if RunTests("test " + folder + "/Sixfold.strict unit", Pooled).exitCode is 0
 		return Error("StaleCacheSurvivedChange")
-CheckBudget(folder Text)
+CheckBudget(folder Text) slow
 	File(folder + "/TestWork.strict").Write(PauseLines)
 	File(folder + "/OverBudget.strict").Write(("Delay Number", "	OverBudget.Delay is 1", "	TestWork.Pause"))
 	overSource = folder + "/OverBudget.strict"
@@ -61,12 +61,12 @@ CheckBudget(folder Text)
 	CheckFail(RunTests("build " + overSource, Pooled), DeadlineName, "OverBudgetBuild")
 	CheckFail(RunTests("test " + overSource + " unit native", Pooled), DeadlineName, "OverBudgetNative")
 	CheckSharedBudget(folder)
-CheckSharedBudget(folder Text)
+CheckSharedBudget(folder Text) slow
 	sharedSource = folder + "/SharedBudget.strict"
 	File(sharedSource).Write(SharedBudgetCode)
 	CheckPass(RunTests("test " + sharedSource + " unit", Pooled), "", "SharedVm")
 	CheckPass(RunTests("test " + sharedSource + " unit native", Pooled), "", "SharedNative")
-CheckLazy(folder Text)
+CheckLazy(folder Text) slow
 	File(folder + "/LazyFixture.strict").Write(LazyHead + LazyTail)
 	lazy = RunTests("test " + folder + "/LazyFixture.strict unit", Pooled)
 	if lazy.exitCode is not 0 or lazy.Output.Split("fixture computed").Length is not 2
@@ -76,13 +76,13 @@ CheckLazy(folder Text)
 	File(folder + "/SetupBudget.strict").Write(SetupBudgetCode)
 	CheckFail(RunTests("test " + folder + "/SetupBudget.strict unit", Pooled), DeadlineName, "SetupBudget")
 	CheckHangs(folder)
-CheckHangs(folder Text)
+CheckHangs(folder Text) slow
 	hangs = folder + "/Hangs.strict"
 	File(hangs).Write(HangLines)
 	CheckFail(RunTests("test " + hangs + " unit", Pooled), DeadlineName, "HangsVm")
 	CheckFail(RunTests("test " + hangs + " unit native", Pooled), DeadlineName, "HangsNative")
 	CheckFail(RunTests("check " + folder, Pooled), DeadlineName, "HangsCheck")
-CheckPolicy(folder Text)
+CheckPolicy(folder Text) slow
 	File(folder + "/Policy.strict").Write(PolicyHead + PolicyMid + PolicyTail)
 	source = folder + "/Policy.strict"
 	unit = RunTests("test " + source + " unit", Pooled)
@@ -93,7 +93,7 @@ CheckPolicy(folder Text)
 	if selected.exitCode is not 0 or "manual fixture" is in selected.Output
 		return Error("SelectedRanSlowTest: " + selected.Output)
 	CheckPolicyRun(source)
-CheckPolicyRun(source Text)
+CheckPolicyRun(source Text) slow
 	ran = RunTests(source, Pooled)
 	if ran.exitCode is not 0 or ran.Output.IndexOf("manual fixture") >= ran.Output.IndexOf("application")
 		return Error("ManualRunOrderWrong: " + ran.Output)
@@ -102,7 +102,7 @@ CheckPolicyRun(source Text)
 	badUnit = unitNat.exitCode is not 0 or "manual fixture" is in unitNat.Output
 	if badUnit or slowNat.exitCode is not 0 or "manual fixture" is not in slowNat.Output
 		return Error("NativeSlowSelectionWrong")
-CheckWaiting(folder Text)
+CheckWaiting(folder Text) slow
 	waitSource = folder + "/Waiting.strict"
 	File(waitSource).Write(WaitLines)
 	CheckPass(RunTests("test " + waitSource + " unit", Pooled), "", "WaitingVm")
@@ -111,7 +111,7 @@ CheckWaiting(folder Text)
 	if "All tests passed in Runtime/broken/Fine.strict" is not in broken.Output
 		return Error("BrokenFileStoppedFolder: " + broken.Output)
 	CheckFail(broken, "LoopBodyMissing", "BrokenFile")
-CheckProbe
+CheckProbe slow
 	File(ProbePath).Write(ProbeLines)
 	unitRes = RunTests("test " + ProbePath + " unit", Pooled)
 	natRes = RunTests("test " + ProbePath + " unit native", Pooled)
@@ -126,7 +126,7 @@ ProbeLines Texts
 	ProbeLines.Length is WaitLines.Length
 	for WaitLines
 		value.Replace("Waiting", "PolicyProbe").Replace("0.04", "0.15")
-CheckShares(folder Text)
+CheckShares(folder Text) slow
 	isWin = Process.OperatingSystem is "Windows"
 	tool = isWin then "cmd" else "sh"
 	line = isWin then "/c echo %STRICT_THREADS%" else "-c 'echo $STRICT_THREADS'"
@@ -140,7 +140,7 @@ CheckShares(folder Text)
 	if kept.exitCode is not 0 or kept.Output.Split("threads 8").Length is not 3
 		return Error("ExplicitThreadsNotKept: " + kept.Output)
 	CheckDeadline(folder)
-CheckDeadline(folder Text)
+CheckDeadline(folder Text) slow
 	File(folder + "/Loops.strict").Write(LoopLines)
 	looped = RunTests("test " + folder + "/Loops.strict Spin", ShortDeadline)
 	mutable parents = ""
@@ -158,7 +158,7 @@ SharedCount(output Text) Number
 		if value.StartsWith("threads ") and value.Substring(8) to Number >= 2
 			count = count + 1
 	count
-RunTests(arguments Text, variables Texts) ProcessResult
+RunTests(arguments Text, variables Texts) ProcessResult slow
 	win = Process.OperatingSystem is "Windows"
 	exe = "\"" + Process.Find("strict").executable + "\" "
 	cmd = variables(win then 0 else 1) + exe + arguments
@@ -172,3 +172,4 @@ CheckFail(res ProcessResult, needle Text, tag Text)
 	CheckFail(ProcessResult(0, "", ""), "x", "A") is Error
 	if res.exitCode is 0 or needle is not in (res.Output + res.error)
 		return Error(tag + " unexpectedly passed: " + res.Output + res.error)
+

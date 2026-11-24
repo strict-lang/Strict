@@ -1,8 +1,8 @@
 has call Invocation
-constant Overran = HostedBudget(Invocation(InstructionEntry.Invoke(2, ("Strict/Runtime/TestBudget", "Overran", "Strict/Text", "elapsed", "place"), (0, 1), -1), List(VmValue), VmValue.None))
-constant Busy = HostedBudget(Invocation(InstructionEntry.Invoke(2, ("Strict/Runtime/TestBudget", "Busy", "Strict/Number", "depth", "step"), (0, 1), -1), List(VmValue), VmValue.None))
-constant Overrun = HostedBudget(Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/TestBudget", "Overrun", "Strict/Number", "elapsed"), 0, -1), List(VmValue), VmValue.None))
-constant Finished = HostedBudget(Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/TestBudget", "Finish", "Strict/Number", "started"), 0, -1), List(VmValue), VmValue.None))
+constant Overran = HostedBudget(Invocation(InstructionEntry.Invoke(2, ("Strict/Runtime/Core/TestBudget", "Overran", "Strict/Text", "elapsed", "place"), (0, 1), -1), List(VmValue), VmValue.None))
+constant Busy = HostedBudget(Invocation(InstructionEntry.Invoke(2, ("Strict/Runtime/Core/TestBudget", "Busy", "Strict/Number", "depth", "step"), (0, 1), -1), List(VmValue), VmValue.None))
+constant Overrun = HostedBudget(Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/Core/TestBudget", "Overrun", "Strict/Number", "elapsed"), 0, -1), List(VmValue), VmValue.None))
+constant Finished = HostedBudget(Invocation(InstructionEntry.Invoke(1, ("Strict/Runtime/Core/TestBudget", "Finish", "Strict/Number", "started"), 0, -1), List(VmValue), VmValue.None))
 Result VmValue
 	TestBudget.Finish(TestBudget.Start("a", false) + TestBudget.Finish(0) * 0) < 9 + TestBudget.Start("", true) * 0
 	arguments = call.Arguments

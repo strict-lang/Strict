@@ -26,7 +26,7 @@ Store(source Text, given Text, slot Text, wanted Text) Texts
 		return List(Text) + ("    llvm.store " + source + ", " + slot + " : " + MapType(wanted) + ", !llvm.ptr")
 	stored = "    llvm.store " + source + "s, " + slot + " : " + MapType(wanted) + ", !llvm.ptr"
 	(Convert(source, given, wanted, source + "s"), stored)
-Constant(literal Runtime/VmValue, slot Text, wanted Text) Texts
+Constant(literal Runtime/Core/VmValue, slot Text, wanted Text) Texts
 	Sample.Constant(VmValue.OfNumber(4), "%r0", "i").Last is "    llvm.store %t3k, %r0 : i64, !llvm.ptr"
 	Sample.Constant(VmValue.OfNumber(0.5), "%r0", "f").Last is "    llvm.store %t3c, %r0 : f64, !llvm.ptr"
 	number = "    %t" + position + "c = arith.constant " + MlirStatements.Copy.Hex(literal.number) + " : f64"
@@ -46,7 +46,7 @@ Call(result Text, symbol Text, prefix Text, kinds Texts, returned Text, failed =
 Line(suffix Text, operation Text) Text
 	Sample.Line("z", "arith.constant 0 : i64") is "    %t3z = arith.constant 0 : i64"
 	"    %t" + position + suffix + " = " + operation
-IsWhole(literal Runtime/VmValue) Boolean
+IsWhole(literal Runtime/Core/VmValue) Boolean
 	Sample.IsWhole(VmValue.OfNumber(4))
 	Sample.IsWhole(VmValue.OfNumber(0.5)) is false
 	number = literal.number

@@ -3,8 +3,8 @@ has isQuiet Boolean = false
 has selection Text = ""
 constant Everything = "**"
 constant Unmarked = "*unit"
-constant Overran = ("Strict/Runtime/TestBudget", "Overran", "Strict/Text", "elapsed", "place")
-constant Overrun = ("Strict/Runtime/TestBudget", "Overrun", "Strict/Number", "elapsed")
+constant Overran = ("Strict/Runtime/Core/TestBudget", "Overran", "Strict/Text", "elapsed", "place")
+constant Overrun = ("Strict/Runtime/Core/TestBudget", "Overrun", "Strict/Number", "elapsed")
 constant Even = TestCodegen(TypeCodegen("Strict/Even", ("IsEven(number Number) Boolean", "\tIsEven(2) is true", "\tnumber % 2 is 0"), TypeCodegen.NoTypes, List(Text)))
 constant Inner = TypeCodegen(Even.types, fullName = "Strict/Compiler/Even")
 constant Inward = TestCodegen(Inner, false, Unmarked)
@@ -173,9 +173,9 @@ CountFailure(block CodeBlock) CodeBlock
 Start(block CodeBlock, place Text) CodeBlock
 	named = block.Load(InstructionEntry.LoadText(block.register, place))
 	slow = named.Load(InstructionEntry.LoadBoolean(named.register, block.scope.TypeOf(" slow test") is not ""))
-	constant signature = ("Strict/Runtime/TestBudget", "Start", "Strict/Number", "place", "isSlow")
+	constant signature = ("Strict/Runtime/Core/TestBudget", "Start", "Strict/Number", "place", "isSlow")
 	slow.Load(InstructionEntry.Invoke(slow.register, signature, (named.Result, slow.Result), -1)).Stored("started")
 Finish(block CodeBlock) CodeBlock
 	started = block.Load(InstructionEntry.Named(InstructionType.LoadVariableToRegister, block.register, "started"))
-	constant signature = ("Strict/Runtime/TestBudget", "Finish", "Strict/Number", "started")
+	constant signature = ("Strict/Runtime/Core/TestBudget", "Finish", "Strict/Number", "started")
 	started.Load(InstructionEntry.Invoke(started.register, signature, List(Number) + started.Result, -1)).Stored("elapsed")

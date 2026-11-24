@@ -1,6 +1,6 @@
 has entries List(VmValue)
 constant Holding = VmValue("Strict/Runtime/ConstantCache", 0, "", VmValue.OfList(VmValue.OfNumber(5)))
-constant AtCall = InstructionEntry.Invoke(1, ("Strict/Runtime/ConstantCache", "At", "Strict/Runtime/VmValue", "index"), 0, -1)
+constant AtCall = InstructionEntry.Invoke(1, ("Strict/Runtime/ConstantCache", "At", "Strict/Runtime/Core/VmValue", "index"), 0, -1)
 constant StoreCall = InstructionEntry.Invoke(2, ("Strict/Runtime/ConstantCache", "Store", "None", "index", "element"), (0, 1), -1)
 At(index Number) VmValue
 	entries(index)

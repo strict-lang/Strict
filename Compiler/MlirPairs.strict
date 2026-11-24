@@ -128,7 +128,7 @@ Write(name Text) Number
 		if earlier.kind is InstructionType.InvokeWriteToList and earlier.texts(0) is name
 			count = count + 1
 	count
-Default(initial Runtime/VmValue, slot Text, suffix Text) Texts
+Default(initial Runtime/Core/VmValue, slot Text, suffix Text) Texts
 	Sample.Default(VmValue.OfList(List(VmValue)), "%s", "d3") is ("    llvm.store %zero, %s : f64, !llvm.ptr")
 	Sample.Default(Twice, "%s", "d3").Length is 4
 	Sample.Default(Twice, "%s", "d3").First.StartsWith("    %t1d3dx")
