@@ -5,22 +5,31 @@ constant Output = CodegenStamp("Compiler/output")
 constant Waiting = CodegenStamp("Compiler/output/Waiting")
 constant Promoting = CodegenStamp("Compiler/output/Promoting")
 Hashed Text
-	CodegenStamp(".").Hashed is CodegenStamp(".").Hashed
-	CodegenStamp(".").Hashed is not Output.Hashed
+	Output.Hashed is Output.Hashed
+	Output.Hashed is not Waiting.Hashed
 	mutable sum = 0
 	for Sources
-		sum = (sum + HashCode(value + "|" + File(value).Modified).number % Range) % Range
+		sum = (sum + HashCode(value + "|" + File(value).ReadText).number % Range) % Range
 	sum to Text
 Sources Texts
 	"./Compiler/MlirEquality.strict" is in CodegenStamp(".").Sources
-	"./Compiler/NativeRuntime.mlir" is in CodegenStamp(".").Sources
+	"./Compiler/NativeRuntime.mlir" is not in CodegenStamp(".").Sources
 	"./Compiler/CheckAudit.strict" is not in CodegenStamp(".").Sources
-	mutable files = Directory.Files(root, "*.strict") + Directory.Files(root + "/Compiler", "NativeRuntime*.mlir")
+	"./Bytecode/FileCheck.strict" is not in CodegenStamp(".").Sources
+	mutable files = Directory.Files(root, "*.strict")
 	for Folders
 		files = Directory.Exists(root + "/" + value) then files + Directory.Files(root + "/" + value, "*.strict") else files
 	for files
-		if Path(value).FileName.text.StartsWith("Check") is false
+		if IsCodegen(value, Path(value).FileName.text)
 			value
+IsCodegen(path Text, name Text) Boolean
+	CodegenStamp(".").IsCodegen("./Compiler/MlirEquality.strict", "MlirEquality.strict")
+	CodegenStamp(".").IsCodegen("./Compiler/SelfBuild.strict", "SelfBuild.strict") is false
+	if name.StartsWith("Check") or name.EndsWith("Check.strict")
+		return false
+	if path.IndexOf("/Compiler/") >= 0
+		return name.StartsWith("Mlir") or name is "CallGraph.strict" or name is "EmissionCache.strict"
+	true
 Pending(path Text)
 	Directory.Create("Compiler/output/Waiting") is not Error
 	Directory.Create("Compiler/output/Waiting/obj") is not Error

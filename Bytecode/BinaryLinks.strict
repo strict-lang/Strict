@@ -141,7 +141,10 @@ Link(parts Texts) TypeEntry
 	if parts.Length is not 3 or File(path).Exists is false
 		return Unknown
 	entries = file.Head(File(path).ReadBytes)
-	file.IsCurrent(entries) then Select(Own(entries), parts(1), parts(2)) else Unknown
+	asked = parts(2) is "" then List(Text) else parts(2).Split(Separator)
+	current = entries.Length > 1 and entries(1).Name.EndsWith(".bytecode") and file.IsCurrent(entries)
+	selected = current then EntryDecoder.Of(entries(1).content).Select(parts(1), asked) else Unknown
+	selected.Name is "" then Unknown else selected
 Select(own TypeEntry, name Text, names Text) TypeEntry
 	User.Select(TypeEntry.HelloLogger, "A", "Run") is TypeEntry(TypeEntry.HelloLogger, Name = "A")
 	User.Select(TypeEntry.HelloLogger, "A", "").Name is "A"

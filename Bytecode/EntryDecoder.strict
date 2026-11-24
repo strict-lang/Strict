@@ -20,6 +20,38 @@ Type TypeEntry
 	EntryDecoder.Of(TypeEntry.Converting.Bytes).Type is TypeEntry.Converting
 	start = 1 + stream(0)
 	TypeEntry(names(stream(start)), Members(start + 1), Methods(After(start + 1)))
+Select(name Text, asked Texts) TypeEntry
+	Hello.Select("A", List(Text) + "Run").Name is "A"
+	Hello.Select("A", List(Text) + "Run").methods.Length is 1
+	Hello.Select("A", List(Text)).methods.Length is 0
+	Hello.Select("A", List(Text) + "Missing").Name is ""
+	start = 1 + stream(0)
+	methods = SelectedMethods(After(start + 1), asked)
+	empty = TypeEntry("", List(MemberEntry), List(MethodEntry))
+	HasAll(methods, asked) then TypeEntry(name, Members(start + 1), methods) else empty
+SelectedMethods(start Number, asked Texts) List(MethodEntry)
+	EntryDecoder((1, 4, 0, 1, 0, 0), ("Run", "None")).SelectedMethods(0, List(Text) + "Run").Length is 1
+	EntryDecoder((1, 4, 0, 1, 0, 0), ("Run", "None")).SelectedMethods(0, List(Text)).Length is 0
+	if asked.Length is 0
+		return List(MethodEntry)
+	mutable picked = List(Mutable(MethodEntry))
+	for Starts(start)
+		methodName = names(stream(value))
+		if methodName is in asked or methodName is "to" and "to " + TypeEntry.ShortName(names(stream(value + 1))) is in asked
+			picked.Add(Method(value))
+	picked
+HasAll(methods List(MethodEntry), asked Texts) Boolean
+	EntryDecoder.Of(TypeEntry.HelloLogger.Bytes).HasAll(TypeEntry.HelloLogger.methods, List(Text) + "Run")
+	EntryDecoder.Of(TypeEntry.HelloLogger.Bytes).HasAll(TypeEntry.HelloLogger.methods, List(Text) + "Missing") is false
+	for asked
+		askedName = value
+		mutable found = false
+		for methods
+			if value.Name is askedName or value.Name is "to" and "to " + TypeEntry.ShortName(value.returnType) is askedName
+				found = true
+		if found is false
+			return false
+	true
 Method(start Number) MethodEntry
 	EntryDecoder((0, 1, 0, 0), ("Run", "None")).Method(0).returnType is "None"
 	MethodEntry(names(stream(start)), Members(start + 2), names(stream(start + 1)), Instructions(After(start + 2)))
