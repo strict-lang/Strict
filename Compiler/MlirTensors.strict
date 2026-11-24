@@ -132,6 +132,8 @@ Used(program Text) Texts
 	Attending.Used("x @strict_gpu_hadamard(y") is ("Hadamard")
 	Attending.Used("x @strict_gpu_sylvester(y") is ("Sylvester")
 	Attending.Used("x @strict_gpu_convolution(y") is ("Products", "Convolution")
+	if program.IndexOf("@strict_gpu_") < 0
+		return List(Text)
 	convolving = program.IndexOf(Marker("Convolution")) >= 0
 	if program.IndexOf(Marker("Attention")) >= 0
 		return Kinds
