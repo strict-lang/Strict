@@ -12,22 +12,31 @@ CycleEdges(edges Texts) Texts
 	AcyclicDependencies(".").CycleEdges(("A->B", "B->C")).Length is 0
 	AcyclicDependencies(".").CycleEdges(("A->B", "B->A")) is ("A->B", "B->A")
 	AcyclicDependencies(".").CycleEdges(("A->B", "B->C", "C->A")).Length is 3
+	adjacency = Adjacency(edges)
 	for edges
 		parts = value.Split("->")
-		if CanReach(edges, parts.Last, parts.First, List(Text))
+		if IsReachable(adjacency, parts.Last, parts.First)
 			value
-CanReach(edges Texts, current Text, target Text, seen Texts) Boolean
-	AcyclicDependencies(".").CanReach(("A->B", "B->C"), "A", "C", List(Text))
-	AcyclicDependencies(".").CanReach(("A->B", "B->C"), "C", "A", List(Text)) is false
-	if current is target
-		return true
-	if current is in seen
-		return false
+Adjacency(edges Texts) Dictionary(Text, Texts)
+	AcyclicDependencies(".").Adjacency(("A->B", "A->C"))("A") is ("B", "C")
+	mutable map = Dictionary(Text, Texts)
 	for edges
 		parts = value.Split("->")
-		if parts.First is current and CanReach(edges, parts.Last, target, seen + current)
-			return true
-	false
+		existing = parts.First is in map then map(parts.First) else List(Text)
+		map(parts.First) = existing + parts.Last
+	map
+IsReachable(adjacency Dictionary(Text, Texts), start Text, target Text) Boolean
+	AcyclicDependencies(".").IsReachable(AcyclicDependencies(".").Adjacency(("A->B", "B->C")), "A", "C")
+	AcyclicDependencies(".").IsReachable(AcyclicDependencies(".").Adjacency(("A->B", "B->C")), "C", "A") is false
+	mutable queue = List(Mutable(Text)) + start
+	mutable seen = Dictionary(Text, Boolean)
+	for as long as queue.Length > 0
+		node = queue.First
+		queue = queue.Slice(1, queue.Length - 1)
+		if node is not in seen
+			seen(node) = true
+			queue = queue + (node is in adjacency then adjacency(node) else List(Text))
+	target is in seen
 Edges(folders Texts) Texts slow
 	AcyclicDependencies(".").Edges(List(Text) + "Math").Length is 0
 	owners = Owners(folders)
