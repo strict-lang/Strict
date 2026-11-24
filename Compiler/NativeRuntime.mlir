@@ -19624,9 +19624,122 @@
   // into shared memory and stall the whole computer), smaller ones run beside it; it is given back below 1 GB or at the
   // end of the process, the budget is measured again once it is taken (the other process gave its memory back)
   llvm.mlir.global internal @strict_gpu_lock_handle(0 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_lock_busy(0 : i64) : i64
+  llvm.mlir.global internal @strict_gpu_lock_message(dense<0> : tensor<600xi8>) : !llvm.array<600 x i8>
+  llvm.mlir.global internal constant @strict_gpu_wait_switch("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00STRICT_GPU_WAIT\00") : !llvm.array<32 x i8>
+  llvm.mlir.global internal constant @strict_gpu_busy_prefix("GpuBusy: \00") : !llvm.array<10 x i8>
   llvm.mlir.global internal constant @strict_gpu_lock_waiting("\21\00\00\00\00\00\00\00\21\00\00\00\00\00\00\00Waiting for the GPU: %s holds it\0A\00") : !llvm.array<50 x i8>
+  llvm.mlir.global internal constant @strict_gpu_budget_waiting("\32\00\00\00\00\00\00\00\32\00\00\00\00\00\00\00Waiting for the GPU: %lld MB needed, %lld MB free\0A\00") : !llvm.array<67 x i8>
+  llvm.mlir.global internal constant @strict_gpu_budget_busy("GpuBusy: %d MB needed on GPU\00") : !llvm.array<29 x i8>
+  func.func private @strict_gpu_islockfree(%self: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %true = arith.constant 1.0 : f64
+    %false = arith.constant 0.0 : f64
+    %others = func.call @strict_gpu_others_free() : () -> i64
+    %hasNvml = arith.cmpi sge, %others, %none : i64
+    cf.cond_br %hasNvml, ^nvml, ^fileLock
+  ^nvml:
+    %minFree = arith.constant 2147483648 : i64
+    %roomy = arith.cmpi sge, %others, %minFree : i64
+    %nvmlResult = arith.select %roomy, %true, %false : f64
+    return %nvmlResult : f64
+  ^fileLock:
+    %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
+    %handle = llvm.load %slot : !llvm.ptr -> i64
+    %held = arith.cmpi ne, %handle, %none : i64
+    cf.cond_br %held, ^free, ^probe
+  ^probe:
+    %size = arith.constant 600 : i64
+    %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
+    %tried = func.call @strict_gpu_lock_try(%buffer) : (!llvm.ptr) -> i64
+    %got = arith.cmpi ne, %tried, %none : i64
+    cf.cond_br %got, ^release, ^busy
+  ^release:
+    func.call @strict_gpu_lock_give(%tried) : (i64) -> ()
+    cf.br ^free
+  ^free:
+    return %true : f64
+  ^busy:
+    return %false : f64
+  }
+  func.func private @strict_gpu_wait_limit() -> f64 {
+    %zeroByte = arith.constant 0 : i8
+    %defaultLimit = arith.constant 120.0 : f64
+    %switchLengths = llvm.mlir.addressof @strict_gpu_wait_switch : !llvm.ptr
+    %switch = llvm.getelementptr %switchLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %setting = llvm.call @getenv(%switch) : (!llvm.ptr) -> !llvm.ptr
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %hasSetting = llvm.icmp "ne" %setting, %unset : !llvm.ptr
+    cf.cond_br %hasSetting, ^parseWait, ^done(%defaultLimit : f64)
+  ^parseWait:
+    %firstByte = llvm.load %setting : !llvm.ptr -> i8
+    %emptySetting = arith.cmpi eq, %firstByte, %zeroByte : i8
+    cf.cond_br %emptySetting, ^done(%defaultLimit : f64), ^parsedWait
+  ^parsedWait:
+    %parsedLimit = llvm.call @strtod(%setting, %unset) : (!llvm.ptr, !llvm.ptr) -> f64
+    cf.br ^done(%parsedLimit : f64)
+  ^done(%limit: f64):
+    return %limit : f64
+  }
+  func.func private @strict_gpu_budget_wait(%bytes: i64) {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %false = arith.constant false
+    %true = arith.constant true
+    %margin = arith.constant 1073741824 : i64
+    %needed = arith.addi %bytes, %margin : i64
+    %waitLimit = func.call @strict_gpu_wait_limit() : () -> f64
+    %started = func.call @strict_clock() : () -> f64
+    cf.br ^check(%false : i1)
+  ^check(%said: i1):
+    %free = func.call @strict_gpu_others_free() : () -> i64
+    %fits = arith.cmpi sge, %free, %needed : i64
+    cf.cond_br %fits, ^ok, ^short(%free : i64)
+  ^ok:
+    %busySlot = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    llvm.store %none, %busySlot : i64, !llvm.ptr
+    return
+  ^short(%freeNow: i64):
+    %now = func.call @strict_clock() : () -> f64
+    %elapsed = arith.subf %now, %started : f64
+    %timedOut = arith.cmpf oge, %elapsed, %waitLimit : f64
+    cf.cond_br %timedOut, ^timeout(%freeNow : i64), ^checkSaid(%freeNow : i64)
+  ^checkSaid(%freeLog: i64):
+    cf.cond_br %said, ^wait, ^say(%freeLog : i64)
+  ^say(%freeReport: i64):
+    %megabyte = arith.constant 1048576 : i64
+    %neededMb = arith.divui %needed, %megabyte : i64
+    %freeMb = arith.divui %freeReport, %megabyte : i64
+    %formatLengths = llvm.mlir.addressof @strict_gpu_budget_waiting : !llvm.ptr
+    %format = llvm.getelementptr %formatLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %printed = llvm.call @printf(%format, %neededMb, %freeMb) vararg(!llvm.func<i32 (ptr, ...)>) : (!llvm.ptr, i64, i64) -> i32
+    cf.br ^wait
+  ^wait:
+    %self = arith.constant 0.0 : f64
+    %pause = arith.constant 0.2 : f64
+    %waited = func.call @strict_process_wait(%self, %pause) : (f64, f64) -> f64
+    cf.br ^check(%true : i1)
+  ^timeout(%freeFinal: i64):
+    %mb = arith.constant 1048576 : i64
+    %needMb = arith.divui %needed, %mb : i64
+    %needMb32 = arith.trunci %needMb : i64 to i32
+    %message = llvm.mlir.addressof @strict_gpu_lock_message : !llvm.ptr
+    %busyFmt = llvm.mlir.addressof @strict_gpu_budget_busy : !llvm.ptr
+    %msgSize = arith.constant 600 : i64
+    %written = llvm.call @strict_print_integer(%message, %msgSize, %busyFmt, %needMb32) : (!llvm.ptr, i64, !llvm.ptr, i32) -> i32
+    %busyFlag = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    llvm.store %one, %busyFlag : i64, !llvm.ptr
+    return
+  }
   func.func private @strict_gpu_lock_ensure(%bytes: i64) {
     %none = arith.constant 0 : i64
+    %others = func.call @strict_gpu_others_free() : () -> i64
+    %hasNvml = arith.cmpi sge, %others, %none : i64
+    cf.cond_br %hasNvml, ^nvml, ^fileLock
+  ^nvml:
+    func.call @strict_gpu_budget_wait(%bytes) : (i64) -> ()
+    return
+  ^fileLock:
     %slot = llvm.mlir.addressof @strict_gpu_lock_handle : !llvm.ptr
     %handle = llvm.load %slot : !llvm.ptr -> i64
     %budget = llvm.mlir.addressof @strict_gpu_budget : !llvm.ptr
@@ -19640,18 +19753,26 @@
     cf.cond_br %needed, ^take, ^done
   ^take:
     %taken = func.call @strict_gpu_lock_take() : () -> i64
+    %got = arith.cmpi ne, %taken, %none : i64
+    cf.cond_br %got, ^taken, ^done
+  ^taken:
     llvm.store %taken, %slot : i64, !llvm.ptr
     llvm.store %none, %budget : i64, !llvm.ptr
     cf.br ^done
   ^done:
     return
   }
-  // tries the GPU lock every 0.2 s (strict_gpu_lock_try of the platform), says once who holds it
+  // tries the GPU lock every 0.2 s (strict_gpu_lock_try of the platform) up to STRICT_GPU_WAIT seconds (default 120 s),
+  // says once who holds it, and sets @strict_gpu_lock_busy on timeout
   func.func private @strict_gpu_lock_take() -> i64 {
     %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
     %size = arith.constant 600 : i64
     %false = arith.constant false
     %true = arith.constant true
+    %zeroByte = arith.constant 0 : i8
+    %waitLimit = func.call @strict_gpu_wait_limit() : () -> f64
+    %started = func.call @strict_clock() : () -> f64
     %buffer = llvm.alloca %size x i8 : (i64) -> !llvm.ptr
     cf.br ^try(%false : i1)
   ^try(%said: i1):
@@ -19659,8 +19780,15 @@
     %isHeld = arith.cmpi ne, %handle, %none : i64
     cf.cond_br %isHeld, ^held, ^busy
   ^held:
+    %busySlot = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    llvm.store %none, %busySlot : i64, !llvm.ptr
     return %handle : i64
   ^busy:
+    %now = func.call @strict_clock() : () -> f64
+    %elapsed = arith.subf %now, %started : f64
+    %timedOut = arith.cmpf oge, %elapsed, %waitLimit : f64
+    cf.cond_br %timedOut, ^timeout, ^checkSaid
+  ^checkSaid:
     cf.cond_br %said, ^wait, ^say
   ^say:
     %holder = func.call @strict_gpu_lock_holder(%buffer) : (!llvm.ptr) -> !llvm.ptr
@@ -19673,6 +19801,35 @@
     %pause = arith.constant 0.2 : f64
     %waited = func.call @strict_process_wait(%self, %pause) : (f64, f64) -> f64
     cf.br ^try(%true : i1)
+  ^timeout:
+    %timedHolder = func.call @strict_gpu_lock_holder(%buffer) : (!llvm.ptr) -> !llvm.ptr
+    %message = llvm.mlir.addressof @strict_gpu_lock_message : !llvm.ptr
+    %prefix = llvm.mlir.addressof @strict_gpu_busy_prefix : !llvm.ptr
+    %prefixBytes = arith.constant 9 : i64
+    "llvm.intr.memcpy"(%message, %prefix, %prefixBytes) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+    %maxCopy = arith.constant 580 : i64
+    cf.br ^copy(%none : i64)
+  ^copy(%index: i64):
+    %more = arith.cmpi slt, %index, %maxCopy : i64
+    cf.cond_br %more, ^copyByte, ^copyDone(%index : i64)
+  ^copyByte:
+    %src = llvm.getelementptr %timedHolder[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %ch = llvm.load %src : !llvm.ptr -> i8
+    %isEnd = arith.cmpi eq, %ch, %zeroByte : i8
+    cf.cond_br %isEnd, ^copyDone(%index : i64), ^storeByte(%ch : i8)
+  ^storeByte(%byte: i8):
+    %dstAt = arith.addi %prefixBytes, %index : i64
+    %dst = llvm.getelementptr %message[%dstAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %byte, %dst : i8, !llvm.ptr
+    %nextIndex = arith.addi %index, %one : i64
+    cf.br ^copy(%nextIndex : i64)
+  ^copyDone(%copied: i64):
+    %endAt = arith.addi %prefixBytes, %copied : i64
+    %endDst = llvm.getelementptr %message[%endAt] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    llvm.store %zeroByte, %endDst : i8, !llvm.ptr
+    %busyFlag = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    llvm.store %one, %busyFlag : i64, !llvm.ptr
+    return %none : i64
   }
   func.func private @strict_gpu_lock_check() {
     %none = arith.constant 0 : i64
@@ -19706,6 +19863,11 @@
     %zero32 = arith.constant 0 : i32
     %one = arith.constant 1 : i64
     func.call @strict_gpu_lock_ensure(%bytes) : (i64) -> ()
+    %busySlot = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    %isBusy = llvm.load %busySlot : !llvm.ptr -> i64
+    %busyTimedOut = arith.cmpi ne, %isBusy, %zero : i64
+    cf.cond_br %busyTimedOut, ^done(%zero : i64), ^checkFree
+  ^checkFree:
     %free = func.call @strict_gpu_free_memory() : () -> i64
     %reserve = arith.constant 268435456 : i64
     %needed = arith.addi %bytes, %reserve : i64
@@ -20622,6 +20784,11 @@
     %isPrepared = arith.andi %hasResident, %hasFailure : i1
     cf.cond_br %hasResident, ^asyncPrepared, ^asyncFull
   ^asyncFull:
+    %busySlot = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    %isBusy = llvm.load %busySlot : !llvm.ptr -> i64
+    %busyTimedOut = arith.cmpi ne, %isBusy, %none : i64
+    cf.cond_br %busyTimedOut, ^release, ^asyncFullReport
+  ^asyncFullReport:
     func.call @strict_gpu_full(%name, %singleBytes) : (!llvm.ptr, i64) -> ()
     cf.br ^release
   ^asyncPrepared:
@@ -20729,6 +20896,16 @@
     cf.br ^failed
   ^failed:
     llvm.store %previousActiveFrame, %activeFrameSlot : i64, !llvm.ptr
+    %busyFailedSlot = llvm.mlir.addressof @strict_gpu_lock_busy : !llvm.ptr
+    %isBusyFailed = llvm.load %busyFailedSlot : !llvm.ptr -> i64
+    %busyFailed = arith.cmpi ne, %isBusyFailed, %none : i64
+    cf.cond_br %busyFailed, ^busyError, ^failedZero
+  ^busyError:
+    llvm.store %none, %busyFailedSlot : i64, !llvm.ptr
+    %busyMessage = llvm.mlir.addressof @strict_gpu_lock_message : !llvm.ptr
+    %busyError = func.call @strict_error_named(%busyMessage) : (!llvm.ptr) -> f64
+    return %busyError : f64
+  ^failedZero:
     return %zero : f64
   }
   // device memory for lists computed on the GPU: blocks of strict_gpu_class_size bytes (256 << class up to 16 MB, then four
@@ -20950,7 +21127,8 @@
     // last layer's) is reused then, an allocation would give it back to the driver and allocate it again
     %freeNow = func.call @strict_gpu_free_memory() : () -> i64
     %ownReserve = arith.constant 1073741824 : i64
-    %ownNeeded = arith.addi %size, %ownReserve : i64
+    %ownHeadroom = arith.constant 67108864 : i64
+    %ownNeeded = arith.addi %size, %ownHeadroom : i64
     %isShort = arith.cmpi ult, %freeNow, %ownNeeded : i64
     cf.cond_br %isShort, ^ownLend, ^own
   ^ownLend:

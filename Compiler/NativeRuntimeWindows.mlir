@@ -1643,13 +1643,15 @@
     %named = llvm.call %bus(%busText, %busLength, %zero32) : !llvm.ptr, (!llvm.ptr, i32, i32) -> i32
     %handleSlot = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
     %found = llvm.call %device(%busText, %handleSlot) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
+    %setUp = arith.ori %initialized, %named : i32
+    %ready = arith.ori %setUp, %found : i32
+    %ok = arith.cmpi eq, %ready, %zero32 : i32
+    cf.cond_br %ok, ^measure, ^unknown
+  ^measure:
     %handle = llvm.load %handleSlot : !llvm.ptr -> !llvm.ptr
     %sizes = llvm.alloca %three x i64 : (i64) -> !llvm.ptr
     %read = llvm.call %memory(%handle, %sizes) : !llvm.ptr, (!llvm.ptr, !llvm.ptr) -> i32
-    %setUp = arith.ori %initialized, %named : i32
-    %asked = arith.ori %found, %read : i32
-    %statuses = arith.ori %setUp, %asked : i32
-    %failed = arith.cmpi ne, %statuses, %zero32 : i32
+    %failed = arith.cmpi ne, %read, %zero32 : i32
     cf.cond_br %failed, ^unknown, ^free
   ^free:
     %freeSlot = llvm.getelementptr %sizes[1] : (!llvm.ptr) -> !llvm.ptr, i64

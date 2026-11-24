@@ -12,6 +12,9 @@ Address(numbers Numbers) Number
 Available Number
 	GpuMemory.Available >= 0
 	0
+IsLockFree Boolean
+	GpuMemory.IsLockFree or GpuMemory.IsLockFree is false
+	true
 HostAvailable Number
 	GpuMemory.HostAvailable >= 0
 	0
