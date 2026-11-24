@@ -26012,7 +26012,7 @@
     %seven = arith.constant 7 : i64
     %parts = arith.shrui %positionsUp, %seven : i64
     %mostParts = arith.minui %parts, %sixteen : i64
-    %allPartials = arith.constant 512 : i64
+    %allPartials = arith.constant 128 : i64
     %partialsEach = arith.divui %allPartials, %tileSlots : i64
     %fewerParts = arith.minui %mostParts, %partialsEach : i64
     %splits = arith.maxui %fewerParts, %one : i64
@@ -26031,6 +26031,8 @@
   llvm.mlir.global internal @strict_gpu_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_short_attention_name("strict_device_attention_short\00strict_device_attention_shorts\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal @strict_gpu_short_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_long_attention_name("strict_device_attention_long\00strict_device_attention_longs\00") : !llvm.array<59 x i8>
+  llvm.mlir.global internal @strict_gpu_long_attention_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_bytes_name("strict_device_bytes_attention\00strict_device_bytes_attentions\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal @strict_gpu_bytes_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   llvm.mlir.global internal constant @strict_gpu_dense_name("strict_device_dense_attention\00strict_device_dense_attentions\00") : !llvm.array<61 x i8>
@@ -26336,10 +26338,15 @@
     %shortDecoding = arith.andi %decoding, %isShortPositions : i1
     %notBytes = arith.xori %anyBytes, %denseTrue : i1
     %shortWanted = arith.andi %shortDecoding, %notBytes : i1
+    %longDecoding = arith.andi %decoding, %notBytes : i1
     %shortName = llvm.mlir.addressof @strict_gpu_short_attention_name : !llvm.ptr
     %shortSlot = llvm.mlir.addressof @strict_gpu_short_attention_slot : !llvm.ptr
-    %chosenName = llvm.select %shortWanted, %shortName, %denseOrName : i1, !llvm.ptr
-    %chosenSlot = llvm.select %shortWanted, %shortSlot, %denseOrSlot : i1, !llvm.ptr
+    %longName = llvm.mlir.addressof @strict_gpu_long_attention_name : !llvm.ptr
+    %longSlot = llvm.mlir.addressof @strict_gpu_long_attention_slot : !llvm.ptr
+    %longOrDenseName = llvm.select %longDecoding, %longName, %denseOrName : i1, !llvm.ptr
+    %longOrDenseSlot = llvm.select %longDecoding, %longSlot, %denseOrSlot : i1, !llvm.ptr
+    %chosenName = llvm.select %shortWanted, %shortName, %longOrDenseName : i1, !llvm.ptr
+    %chosenSlot = llvm.select %shortWanted, %shortSlot, %longOrDenseSlot : i1, !llvm.ptr
     %chosenLanes = arith.select %shortWanted, %shortLanes, %denseOrLanes : i64
     %routedBytes = arith.andi %routingWanted, %bytesWanted : i1
     cf.cond_br %routedBytes, ^pooling, ^attending
@@ -28901,7 +28908,7 @@
     %false = arith.constant false
     %none = arith.constant 0 : i64
     %thirtyOne = arith.constant 31 : i64
-    %enough = arith.constant 64.0 : f64
+    %enough = arith.constant 32.0 : f64
     %zero = arith.constant 0.0 : f64
     %isLong = arith.cmpf oge, %tokens, %enough : f64
     %enabled = func.call @strict_gpu_dp4a() : () -> i1
@@ -28939,7 +28946,7 @@
     %false = arith.constant false
     %none = arith.constant 0 : i64
     %sixtyThree = arith.constant 63 : i64
-    %enough = arith.constant 64.0 : f64
+    %enough = arith.constant 32.0 : f64
     %zero = arith.constant 0.0 : f64
     %passSlot = llvm.mlir.addressof @strict_gpu_tokens_pass : !llvm.ptr
     %pass = llvm.load %passSlot : !llvm.ptr -> i64

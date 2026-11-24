@@ -2171,12 +2171,13 @@
     return %shown, %shownNext : f32, f32
   }
   // the outputs and state of another warp or block (the same rows and numbers in the same lanes) merged into these
-  func.func private @strict_device_attention_merge(%outputs: vector<64xf32>, %state: vector<4xf32>, %otherOutputs: vector<64xf32>, %otherState: vector<4xf32>) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+  func.func private @strict_device_attention_merge(%outputs: vector<64xf32>, %state: vector<4xf32>, %from: !llvm.ptr, %lane: i32, %fresh: i1) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32
     %c2 = llvm.mlir.constant(2 : i32) : i32
     %c3 = llvm.mlir.constant(3 : i32) : i32
-    %c64 = llvm.mlir.constant(64 : i32) : i32
+    %c16 = llvm.mlir.constant(16 : i32) : i32
+    %otherState = func.call @strict_device_attention_read_part(%from, %c16, %lane, %fresh) : (!llvm.ptr, i32, i32, i1) -> vector<4xf32>
     %lowerLargest = llvm.extractelement %state[%c0 : i32] : vector<4xf32>
     %lowerSum = llvm.extractelement %state[%c1 : i32] : vector<4xf32>
     %upperLargest = llvm.extractelement %state[%c2 : i32] : vector<4xf32>
@@ -2206,23 +2207,42 @@
     %state1 = llvm.insertelement %lowerTotal, %state0[%c1 : i32] : vector<4xf32>
     %state2 = llvm.insertelement %upper, %state1[%c2 : i32] : vector<4xf32>
     %merged = llvm.insertelement %upperTotal, %state2[%c3 : i32] : vector<4xf32>
-    cf.br ^number(%c0, %outputs : i32, vector<64xf32>)
-  ^number(%number: i32, %current: vector<64xf32>):
-    %more = arith.cmpi slt, %number, %c64 : i32
+    cf.br ^part(%c0, %outputs : i32, vector<64xf32>)
+  ^part(%part: i32, %current: vector<64xf32>):
+    %more = arith.cmpi slt, %part, %c16 : i32
     cf.cond_br %more, ^body, ^done
   ^body:
-    %inRow = arith.andi %number, %c3 : i32
-    %isLower = arith.cmpi slt, %inRow, %c2 : i32
-    %scale = arith.select %isLower, %lowerScale, %upperScale : f32
-    %otherScale = arith.select %isLower, %otherLowerScale, %otherUpperScale : f32
-    %output = llvm.extractelement %current[%number : i32] : vector<64xf32>
-    %otherOutput = llvm.extractelement %otherOutputs[%number : i32] : vector<64xf32>
-    %scaledOutput = arith.mulf %output, %scale : f32
-    %scaledOther = arith.mulf %otherOutput, %otherScale : f32
-    %sum = arith.addf %scaledOutput, %scaledOther : f32
-    %updated = llvm.insertelement %sum, %current[%number : i32] : vector<64xf32>
-    %following = arith.addi %number, %c1 : i32
-    llvm.br ^number(%following, %updated : i32, vector<64xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    %other = func.call @strict_device_attention_read_part(%from, %part, %lane, %fresh) : (!llvm.ptr, i32, i32, i1) -> vector<4xf32>
+    %first = arith.shli %part, %c2 : i32
+    %second = arith.addi %first, %c1 : i32
+    %third = arith.addi %first, %c2 : i32
+    %fourth = arith.addi %first, %c3 : i32
+    %output0 = llvm.extractelement %current[%first : i32] : vector<64xf32>
+    %output1 = llvm.extractelement %current[%second : i32] : vector<64xf32>
+    %output2 = llvm.extractelement %current[%third : i32] : vector<64xf32>
+    %output3 = llvm.extractelement %current[%fourth : i32] : vector<64xf32>
+    %other0 = llvm.extractelement %other[%c0 : i32] : vector<4xf32>
+    %other1 = llvm.extractelement %other[%c1 : i32] : vector<4xf32>
+    %other2 = llvm.extractelement %other[%c2 : i32] : vector<4xf32>
+    %other3 = llvm.extractelement %other[%c3 : i32] : vector<4xf32>
+    %scaled0 = arith.mulf %output0, %lowerScale : f32
+    %scaled1 = arith.mulf %output1, %lowerScale : f32
+    %scaled2 = arith.mulf %output2, %upperScale : f32
+    %scaled3 = arith.mulf %output3, %upperScale : f32
+    %scaledOther0 = arith.mulf %other0, %otherLowerScale : f32
+    %scaledOther1 = arith.mulf %other1, %otherLowerScale : f32
+    %scaledOther2 = arith.mulf %other2, %otherUpperScale : f32
+    %scaledOther3 = arith.mulf %other3, %otherUpperScale : f32
+    %sum0 = arith.addf %scaled0, %scaledOther0 : f32
+    %sum1 = arith.addf %scaled1, %scaledOther1 : f32
+    %sum2 = arith.addf %scaled2, %scaledOther2 : f32
+    %sum3 = arith.addf %scaled3, %scaledOther3 : f32
+    %with0 = llvm.insertelement %sum0, %current[%first : i32] : vector<64xf32>
+    %with1 = llvm.insertelement %sum1, %with0[%second : i32] : vector<64xf32>
+    %with2 = llvm.insertelement %sum2, %with1[%third : i32] : vector<64xf32>
+    %with3 = llvm.insertelement %sum3, %with2[%fourth : i32] : vector<64xf32>
+    %following = arith.addi %part, %c1 : i32
+    llvm.br ^part(%following, %with3 : i32, vector<64xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
   ^done:
     return %current, %merged : vector<64xf32>, vector<4xf32>
   }
@@ -2276,39 +2296,6 @@
     llvm.store %numbers, %slot {alignment = 16 : i64} : vector<4xf32>, !llvm.ptr
     return
   }
-  // the 64 outputs and the state of a lane written by strict_device_attention_put, fresh past the cache of the SM for
-  // the outputs of other blocks
-  func.func private @strict_device_attention_get(%from: !llvm.ptr, %lane: i32, %fresh: i1) -> (vector<64xf32>, vector<4xf32>) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
-    %c0 = llvm.mlir.constant(0 : i32) : i32
-    %c1 = llvm.mlir.constant(1 : i32) : i32
-    %c2 = llvm.mlir.constant(2 : i32) : i32
-    %c3 = llvm.mlir.constant(3 : i32) : i32
-    %c16 = llvm.mlir.constant(16 : i32) : i32
-    %outputs = arith.constant dense<0.0> : vector<64xf32>
-    cf.br ^part(%c0, %outputs : i32, vector<64xf32>)
-  ^part(%part: i32, %readOutputs: vector<64xf32>):
-    %more = arith.cmpi slt, %part, %c16 : i32
-    cf.cond_br %more, ^body, ^done
-  ^body:
-    %numbers = func.call @strict_device_attention_read_part(%from, %part, %lane, %fresh) : (!llvm.ptr, i32, i32, i1) -> vector<4xf32>
-    %first = arith.shli %part, %c2 : i32
-    %second = arith.addi %first, %c1 : i32
-    %third = arith.addi %first, %c2 : i32
-    %fourth = arith.addi %first, %c3 : i32
-    %number0 = llvm.extractelement %numbers[%c0 : i32] : vector<4xf32>
-    %number1 = llvm.extractelement %numbers[%c1 : i32] : vector<4xf32>
-    %number2 = llvm.extractelement %numbers[%c2 : i32] : vector<4xf32>
-    %number3 = llvm.extractelement %numbers[%c3 : i32] : vector<4xf32>
-    %with0 = llvm.insertelement %number0, %readOutputs[%first : i32] : vector<64xf32>
-    %with1 = llvm.insertelement %number1, %with0[%second : i32] : vector<64xf32>
-    %with2 = llvm.insertelement %number2, %with1[%third : i32] : vector<64xf32>
-    %with3 = llvm.insertelement %number3, %with2[%fourth : i32] : vector<64xf32>
-    %following = arith.addi %part, %c1 : i32
-    llvm.br ^part(%following, %with3 : i32, vector<64xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
-  ^done:
-    %state = func.call @strict_device_attention_read_part(%from, %c16, %lane, %fresh) : (!llvm.ptr, i32, i32, i1) -> vector<4xf32>
-    return %readOutputs, %state : vector<64xf32>, vector<4xf32>
-  }
   func.func private @strict_device_attention_read_part(%from: !llvm.ptr, %part: i32, %lane: i32, %fresh: i1) -> vector<4xf32> attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %slot = func.call @strict_device_attention_slot(%from, %part, %lane) : (!llvm.ptr, i32, i32) -> !llvm.ptr
     cf.cond_br %fresh, ^uncached, ^cached
@@ -2348,7 +2335,6 @@
     %more = arith.cmpi sgt, %receivers, %c0 : i32
     cf.cond_br %more, ^roundBody, ^done
   ^roundBody:
-    func.call @strict_device_barrier() : () -> ()
     %above = arith.cmpi sge, %warp, %receivers : i32
     %below = arith.cmpi slt, %warp, %active : i32
     %isSender = arith.andi %above, %below : i1
@@ -2370,12 +2356,15 @@
   ^receiveBody:
     %receiveStart = func.call @strict_device_attention_region(%region) : (i32) -> !llvm.ptr
     %cached = arith.constant false
-    %other, %otherState = func.call @strict_device_attention_get(%receiveStart, %lane, %cached) : (!llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
-    %merged, %mergedState = func.call @strict_device_attention_merge(%received, %receivedState, %other, %otherState) : (vector<64xf32>, vector<4xf32>, vector<64xf32>, vector<4xf32>) -> (vector<64xf32>, vector<4xf32>)
+    %merged, %mergedState = func.call @strict_device_attention_merge(%received, %receivedState, %receiveStart, %lane, %cached) : (vector<64xf32>, vector<4xf32>, !llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
     %regionNext = arith.addi %region, %receivers : i32
     cf.br ^receive(%regionNext, %merged, %mergedState : i32, vector<64xf32>, vector<4xf32>)
   ^roundNext(%next: vector<64xf32>, %nextState: vector<4xf32>):
     %receiversNext = arith.shrui %receivers, %c2 : i32
+    %another = arith.cmpi sgt, %receiversNext, %c0 : i32
+    cf.cond_br %another, ^syncNext, ^round(%receivers, %receiversNext, %next, %nextState : i32, i32, vector<64xf32>, vector<4xf32>)
+  ^syncNext:
+    func.call @strict_device_barrier() : () -> ()
     cf.br ^round(%receivers, %receiversNext, %next, %nextState : i32, i32, vector<64xf32>, vector<4xf32>)
   ^done:
     return %current, %currentState : vector<64xf32>, vector<4xf32>
@@ -2458,8 +2447,6 @@
     %chunkFirst = arith.divui %workerChunks, %workers : i32
     %nextWorkerChunks = arith.addi %workerChunks, %chunks : i32
     %chunkEnd = arith.divui %nextWorkerChunks, %workers : i32
-    %firstPosition = arith.shli %chunkFirst, %c3 : i32
-    %firstKeys, %firstValues = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %firstPosition, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
     %sizeFloat = arith.sitofp %size : i32 to f32
     %root = llvm.call_intrinsic "llvm.sqrt.f32"(%sizeFloat) : (f32) -> f32
     %scale = arith.divf %logarithm, %root : f32
@@ -2469,17 +2456,16 @@
     %state1 = llvm.insertelement %zero, %state0[%c1 : i32] : vector<4xf32>
     %state2 = llvm.insertelement %hidden, %state1[%c2 : i32] : vector<4xf32>
     %started = llvm.insertelement %zero, %state2[%c3 : i32] : vector<4xf32>
-    cf.br ^chunk(%chunkFirst, %zeros, %started, %firstKeys, %firstValues : i32, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>)
-  ^chunk(%chunk: i32, %outputs: vector<64xf32>, %state: vector<4xf32>, %keyPairs: vector<16xi32>, %valuePairs: vector<16xi32>):
+    cf.br ^chunk(%chunkFirst, %zeros, %started : i32, vector<64xf32>, vector<4xf32>)
+  ^chunk(%chunk: i32, %outputs: vector<64xf32>, %state: vector<4xf32>):
     %moreChunks = arith.cmpi slt, %chunk, %chunkEnd : i32
     cf.cond_br %moreChunks, ^chunkBody, ^merge
   ^chunkBody:
     %first = arith.shli %chunk, %c3 : i32
-    %chunkFollowing = arith.addi %chunk, %c1 : i32
-    %nextFirst = arith.shli %chunkFollowing, %c3 : i32
-    %nextKeys, %nextValues = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %nextFirst, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
+    %keyPairs, %valuePairs = func.call @strict_device_attention_operands(%keys, %keyBits, %values, %valueBits, %first, %positionLast, %stride, %base, %size, %row, %quad, %viewOffset, %viewStride) : (!llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i32, i32, i32) -> (vector<16xi32>, vector<16xi32>)
     %newOutputs, %newState = func.call @strict_device_attention_chunk(%queryPairs, %outputs, %state, %keyPairs, %valuePairs, %first, %lowerLast, %upperLast, %size, %quad) : (vector<32xi32>, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>, i32, i32, i32, i32, i32) -> (vector<64xf32>, vector<4xf32>)
-    cf.br ^chunk(%chunkFollowing, %newOutputs, %newState, %nextKeys, %nextValues : i32, vector<64xf32>, vector<4xf32>, vector<16xi32>, vector<16xi32>)
+    %chunkFollowing = arith.addi %chunk, %c1 : i32
+    cf.br ^chunk(%chunkFollowing, %newOutputs, %newState : i32, vector<64xf32>, vector<4xf32>)
   ^merge:
     %merged, %mergedState = func.call @strict_device_attention_warps(%outputs, %state, %warp, %lane) : (vector<64xf32>, vector<4xf32>, i32, i32) -> (vector<64xf32>, vector<4xf32>)
     %isFirstWarp = arith.cmpi eq, %warp, %c0 : i32
@@ -2532,8 +2518,7 @@
     %partAt = arith.addi %slotParts, %part : i32
     %partStart = func.call @strict_device_attention_partial(%partAt) : (i32) -> !llvm.ptr
     %fresh = arith.constant true
-    %partOutputs, %partState = func.call @strict_device_attention_get(%partStart, %lane, %fresh) : (!llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
-    %combined, %combinedState = func.call @strict_device_attention_merge(%gathered, %gatheredState, %partOutputs, %partState) : (vector<64xf32>, vector<4xf32>, vector<64xf32>, vector<4xf32>) -> (vector<64xf32>, vector<4xf32>)
+    %combined, %combinedState = func.call @strict_device_attention_merge(%gathered, %gatheredState, %partStart, %lane, %fresh) : (vector<64xf32>, vector<4xf32>, !llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
     %partFollowing = arith.addi %part, %c8 : i32
     cf.br ^gather(%partFollowing, %combined, %combinedState : i32, vector<64xf32>, vector<4xf32>)
   ^write(%final: vector<64xf32>, %finalState: vector<4xf32>):
@@ -4505,12 +4490,12 @@
     func.call @strict_device_bytes_run(%result, %wide, %dense, %failed, %queries, %queriesCount, %queriesBits, %keys, %keysCount, %keysBits, %values, %valuesBits, %heads, %sequences, %pooled, %pooledBits, %routing, %exact) : (!llvm.ptr, i64, i1, !llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, f64, f64, !llvm.ptr, i64, f64, f64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_attention(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %queries: !llvm.ptr, %queriesCount: i64, %queriesBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keysBits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %pooled: !llvm.ptr, %pooledCount: i64, %pooledBits: i64, %routing: f64, %exact: f64, %resultBits: i64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_attention(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %queries: !llvm.ptr, %queriesCount: i64, %queriesBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keysBits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %pooled: !llvm.ptr, %pooledCount: i64, %pooledBits: i64, %routing: f64, %exact: f64, %resultBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
     %wide = llvm.mlir.constant(64 : i64) : i64
     func.call @strict_device_attention_run(%result, %queries, %queriesCount, %queriesBits, %keys, %keysCount, %keysBits, %values, %valuesBits, %heads, %groups, %size, %sequences, %causal, %wide, %valueOffset, %valueStride, %pooled, %pooledBits, %routing, %exact) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, f64, f64, f64, f64, f64, i64, f64, f64, !llvm.ptr, i64, f64, f64) -> ()
     llvm.return
   }
-  llvm.func @strict_device_attentions(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %queries: !llvm.ptr, %queriesCount: i64, %queriesBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keysBits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %pooled: !llvm.ptr, %pooledCount: i64, %pooledBits: i64, %routing: f64, %exact: f64, %resultBits: i64) attributes {nvvm.kernel} {
+  llvm.func @strict_device_attentions(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %queries: !llvm.ptr, %queriesCount: i64, %queriesBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keysBits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %pooled: !llvm.ptr, %pooledCount: i64, %pooledBits: i64, %routing: f64, %exact: f64, %resultBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
     %wideBrain = llvm.mlir.constant(17 : i64) : i64
     %wideSingle = llvm.mlir.constant(32 : i64) : i64
     %isBrainResult = llvm.icmp "eq" %resultBits, %wideBrain : i64
@@ -4619,8 +4604,7 @@
   ^gatherBody:
     %receiveStart = func.call @strict_device_attention_region(%region) : (i32) -> !llvm.ptr
     %cached = arith.constant false
-    %other, %otherState = func.call @strict_device_attention_get(%receiveStart, %lane, %cached) : (!llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
-    %merged, %mergedState = func.call @strict_device_attention_merge(%gathered, %gatheredState, %other, %otherState) : (vector<64xf32>, vector<4xf32>, vector<64xf32>, vector<4xf32>) -> (vector<64xf32>, vector<4xf32>)
+    %merged, %mergedState = func.call @strict_device_attention_merge(%gathered, %gatheredState, %receiveStart, %lane, %cached) : (vector<64xf32>, vector<4xf32>, !llvm.ptr, i32, i1) -> (vector<64xf32>, vector<4xf32>)
     %nextRegion = arith.addi %region, %c1 : i32
     cf.br ^gather(%nextRegion, %merged, %mergedState : i32, vector<64xf32>, vector<4xf32>)
   ^write(%final: vector<64xf32>, %finalState: vector<4xf32>):
@@ -4681,5 +4665,59 @@
     %isBrainResult = llvm.icmp "eq" %resultBits, %wideBrain : i64
     %wide = llvm.select %isBrainResult, %wideBrain, %wideSingle : i1, i64
     func.call @strict_device_attention_short_run(%result, %queries, %queriesCount, %queriesBits, %keys, %keysCount, %keysBits, %values, %valuesBits, %heads, %groups, %size, %sequences, %causal, %wide, %valueOffset, %valueStride) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, f64, f64, f64, f64, f64, i64, f64, f64) -> ()
+    llvm.return
+  }
+  func.func private @strict_device_attention_long_run(%result: !llvm.ptr, %queries: !llvm.ptr, %queriesCount: i64, %queryBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keyBits: i64, %values: !llvm.ptr, %valueBits: i64, %headsNumber: f64, %groupsNumber: f64, %sizeNumber: f64, %sequencesNumber: f64, %causalNumber: f64, %wide: i64, %valueOffsetNumber: f64, %valueStrideNumber: f64) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
+    %zeroNumber = arith.constant 0.0 : f64
+    %causal = arith.cmpf une, %causalNumber, %zeroNumber : f64
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    %heads = arith.fptosi %headsNumber : f64 to i32
+    %groups = arith.fptosi %groupsNumber : f64 to i32
+    %size = arith.fptosi %sizeNumber : f64 to i32
+    %sequences = arith.fptosi %sequencesNumber : f64 to i32
+    %headsSize = arith.muli %heads, %size : i32
+    %sequenceQueries = arith.muli %headsSize, %sequences : i32
+    %queries32 = arith.trunci %queriesCount : i64 to i32
+    %tokens = arith.divui %queries32, %sequenceQueries : i32
+    %groupsSize = arith.muli %groups, %size : i32
+    %stride = arith.muli %groupsSize, %sequences : i32
+    %valueStart = arith.fptosi %valueOffsetNumber : f64 to i32
+    %requestedStep = arith.fptosi %valueStrideNumber : f64 to i32
+    %packedValues = arith.cmpi eq, %requestedStep, %c0 : i32
+    %valueStep = arith.select %packedValues, %stride, %requestedStep : i32
+    %keys32 = arith.trunci %keysCount : i64 to i32
+    %positions = arith.divui %keys32, %stride : i32
+    %wholeSize = llvm.mlir.constant(128 : i32) : i32
+    %wholeDecoding = arith.cmpi eq, %size, %wholeSize : i32
+    cf.cond_br %wholeDecoding, ^wholeDecode, ^anyDecode
+  ^wholeDecode:
+    %singleDecodeBits = arith.constant 32 : i64
+    %singleDecodeQueries = arith.cmpi eq, %queryBits, %singleDecodeBits : i64
+    %singleDecodeKeys = arith.cmpi eq, %keyBits, %singleDecodeBits : i64
+    %singleDecodeValues = arith.cmpi eq, %valueBits, %singleDecodeBits : i64
+    %singleDecodeLists = arith.andi %singleDecodeKeys, %singleDecodeValues : i1
+    %singleDecoding = arith.andi %singleDecodeQueries, %singleDecodeLists : i1
+    cf.cond_br %singleDecoding, ^singleDecode, ^bitsDecode
+  ^singleDecode:
+    func.call @strict_device_attention_decode(%result, %queries, %singleDecodeBits, %keys, %singleDecodeBits, %values, %singleDecodeBits, %heads, %groups, %wholeSize, %sequences, %tokens, %positions, %causal, %wide, %valueStart, %valueStep) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i64, i32, i32) -> ()
+    return
+  ^bitsDecode:
+    func.call @strict_device_attention_decode(%result, %queries, %queryBits, %keys, %keyBits, %values, %valueBits, %heads, %groups, %wholeSize, %sequences, %tokens, %positions, %causal, %wide, %valueStart, %valueStep) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i64, i32, i32) -> ()
+    return
+  ^anyDecode:
+    func.call @strict_device_attention_decode(%result, %queries, %queryBits, %keys, %keyBits, %values, %valueBits, %heads, %groups, %size, %sequences, %tokens, %positions, %causal, %wide, %valueStart, %valueStep) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, i64, i32, i32, i32, i32, i32, i32, i1, i64, i32, i32) -> ()
+    return
+  }
+  llvm.func @strict_device_attention_long(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %queries: !llvm.ptr, %queriesCount: i64, %queriesBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keysBits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %pooled: !llvm.ptr, %pooledCount: i64, %pooledBits: i64, %routing: f64, %exact: f64, %resultBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
+    %wide = llvm.mlir.constant(64 : i64) : i64
+    func.call @strict_device_attention_long_run(%result, %queries, %queriesCount, %queriesBits, %keys, %keysCount, %keysBits, %values, %valuesBits, %heads, %groups, %size, %sequences, %causal, %wide, %valueOffset, %valueStride) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, f64, f64, f64, f64, f64, i64, f64, f64) -> ()
+    llvm.return
+  }
+  llvm.func @strict_device_attention_longs(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %source: !llvm.ptr, %columns: i64, %bits: i64, %queries: !llvm.ptr, %queriesCount: i64, %queriesBits: i64, %keys: !llvm.ptr, %keysCount: i64, %keysBits: i64, %values: !llvm.ptr, %valuesCount: i64, %valuesBits: i64, %heads: f64, %groups: f64, %size: f64, %sequences: f64, %causal: f64, %valueOffset: f64, %valueStride: f64, %pooled: !llvm.ptr, %pooledCount: i64, %pooledBits: i64, %routing: f64, %exact: f64, %resultBits: i64) attributes {nvvm.kernel, nvvm.maxntid = array<i32: 256, 1, 1>, nvvm.minctasm = 1 : i32} {
+    %wideBrain = llvm.mlir.constant(17 : i64) : i64
+    %wideSingle = llvm.mlir.constant(32 : i64) : i64
+    %isBrainResult = llvm.icmp "eq" %resultBits, %wideBrain : i64
+    %wide = llvm.select %isBrainResult, %wideBrain, %wideSingle : i1, i64
+    func.call @strict_device_attention_long_run(%result, %queries, %queriesCount, %queriesBits, %keys, %keysCount, %keysBits, %values, %valuesBits, %heads, %groups, %size, %sequences, %causal, %wide, %valueOffset, %valueStride) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, !llvm.ptr, i64, f64, f64, f64, f64, f64, i64, f64, f64) -> ()
     llvm.return
   }

@@ -47,9 +47,8 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
 ## GPU
-- Qwen3-8B (Q4_K_M) decoding 32 sequences on the 4090 (24.2 ms median vs 7.55 ms for 1 sequence): profile attention over 32 caches against the batched projections.
-- The first big numeric loop of a process pays ~330 ms for first GPU context initialization.
-- Long-context decode attention (`strict_device_attention_decode`, `positions > 128`) is latency bound: ~8 us per call (4 blocks of 8 warps, 255 registers, merge barriers) and 24 us after 2000 positions for Qwen3-Coder 30B (48 calls/token).
+- First GPU context initialization: ~149 ms on 4090 (`STRICT_GPU_WARM=0`: `cuInit` + `cuDevicePrimaryCtxRetain` + PTX load), reduced to ~26 ms (`32.2 vs 6.43 ms`) by `strict_gpu_warm` when a `near` loop precedes the first GPU loop; remaining driver init only fires when the very first loop goes straight to GPU.
+- Long-context decode attention (`strict_device_attention_decode`, `positions > 128`): split `strict_device_attention_long` from prompt kernel, streamed `merge` 4 floats at a time, dropped KV operand double-buffering and Round-1 pre-barrier, and lowered `allPartials` to `128` (`255` regs with spills -> `233` regs, `0` spills; `Qwen3-8B` `b=32` `pos149` `0.133 -> 0.061 ms`). Further gains require 4-warp (`128`-thread) or `<= 128`-reg kernel for `Qwen3-Coder 30B` (`pos > 2000`).
 - Attention routing planner reads all pooled keys of a head in every block: compute moments once per head and scores as a small product kernel (dump plan lengths before trying again).
 - 16 bit lists: compiled loops index in 64 bits; use 32 bit index math where counts fit.
 - GPU memory: GPU-only lists cannot be spilled, so activations kept across streamed blocks take every byte from the weights.
