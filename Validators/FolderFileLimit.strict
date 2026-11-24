@@ -1,0 +1,14 @@
+has folder Text
+constant MaxFiles = 50
+constant TargetFiles = 24
+constant Rule = "FolderMustNotExceedFiftyFiles"
+Issues ValidationIssues slow
+	FolderFileLimit("Examples/ProjectRule").Issues.Length is 0
+	Check(Directory.Files(folder, "*.strict").Length)
+Check(count Number) ValidationIssues
+	FolderFileLimit("A").Check(MaxFiles).Length is 0
+	FolderFileLimit("A").Check(MaxFiles + 1).First to Text is Rule + ": A has 51 .strict files (limit 50, goal ~24)"
+	if count <= MaxFiles
+		return List(ValidationIssue)
+	details = folder + " has " + count + " .strict files (limit " + MaxFiles + ", goal ~" + TargetFiles + ")"
+	List(ValidationIssue) + ValidationIssue(Rule, details, 1)
