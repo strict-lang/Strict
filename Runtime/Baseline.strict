@@ -108,7 +108,7 @@ IsBase Boolean
 IsExcluded Boolean
 	Baseline(Mutants("Compiler/NativeBuild.strict")).IsExcluded
 	Baseline(Mutants(".\\Bytecode\\BinaryNames.strict")).IsExcluded
-	Baseline(Mutants("Expressions/Tokenizer.strict")).IsExcluded is false
+	Baseline(Mutants("Expressions/Syntax/Tokenizer.strict")).IsExcluded is false
 	Baseline(Mutants("Math/MlirLike.strict")).IsExcluded is false
 	Baseline(Mutants("Probe/MatrixSpeed.strict")).IsExcluded
 	Baseline(Mutants(".\\Runtime\\Frame.strict")).IsExcluded

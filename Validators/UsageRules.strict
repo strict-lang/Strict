@@ -1,4 +1,4 @@
-has header Expressions/HeaderTokens
+has header Expressions/Syntax/HeaderTokens
 has statements Expressions/SyntaxNodes
 has memberNames Texts
 has mutations Texts

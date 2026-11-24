@@ -1,7 +1,7 @@
 has instructions List(InstructionEntry)
 has register Number
 has nextId Number
-has scope Expressions/Scope
+has scope Expressions/Syntax/Scope
 constant Empty = CodeBlock(List(InstructionEntry), 0, 0, Scope(List(Text), List(Text)))
 constant SharedMarker = " shares"
 constant ErrorMarker = " error"

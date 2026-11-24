@@ -1,5 +1,5 @@
 has inference Expressions/TypeInference
-has methods Expressions/Scope
+has methods Expressions/Syntax/Scope
 has target CallTarget
 has isOptimizing Boolean = true
 constant NoNode = SyntaxNode("Identifier", "x")

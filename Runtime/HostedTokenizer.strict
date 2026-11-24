@@ -1,13 +1,13 @@
 has call Invocation
-constant Tokening = Invocation(InstructionEntry.Invoke(0, ("Strict/Expressions/Tokenizer", "Tokens", "Strict/List(Text)"), List(Number), 0), List(VmValue), VmValue.OfText("a + Size"))
-constant Naming = Invocation(Tokening, entry = InstructionEntry(Tokening.entry, texts = ("Strict/Expressions/Tokenizer", "Names", "Strict/List(Text)")))
-constant Lengthening = Invocation(Tokening, entry = InstructionEntry(Tokening.entry, texts = ("Strict/Expressions/Tokenizer", "WordLength", "Strict/Number")))
+constant Tokening = Invocation(InstructionEntry.Invoke(0, ("Strict/Expressions/Syntax/Tokenizer", "Tokens", "Strict/List(Text)"), List(Number), 0), List(VmValue), VmValue.OfText("a + Size"))
+constant Naming = Invocation(Tokening, entry = InstructionEntry(Tokening.entry, texts = ("Strict/Expressions/Syntax/Tokenizer", "Names", "Strict/List(Text)")))
+constant Lengthening = Invocation(Tokening, entry = InstructionEntry(Tokening.entry, texts = ("Strict/Expressions/Syntax/Tokenizer", "WordLength", "Strict/Number")))
 constant Other = Invocation(Tokening, entry = InstructionEntry(Tokening.entry, texts = ("Strict/Text", "Tokens", "Strict/List(Text)")))
 IsHosted Boolean
 	HostedTokenizer(Tokening).IsHosted and HostedTokenizer(Naming).IsHosted
 	HostedTokenizer(Lengthening).IsHosted is false
 	HostedTokenizer(HostedRegex.Matching).IsHosted is false and HostedTokenizer(Other).IsHosted is false
-	call.TypeName is "Strict/Expressions/Tokenizer" and call.MethodName is in ("Tokens", "Names")
+	call.TypeName is "Strict/Expressions/Syntax/Tokenizer" and call.MethodName is in ("Tokens", "Names")
 Result VmValue
 	HostedTokenizer(Tokening).Result.items.Length is 3
 	HostedTokenizer(Naming).Result.items.First.text is "Size"

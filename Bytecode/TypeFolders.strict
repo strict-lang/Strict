@@ -18,14 +18,31 @@ IndexFolders(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
 	None.IndexFolders(List(Text) + "./Missing", Single).Length is 1
 	mutable map = known
 	for parents
-		parent = value
-		for Directory.Directories(parent)
-			folder = parent + "/" + Path(value.Replace("\\", "/")).FileName.text
-			for Directory.Files(folder, "*.strict")
-				name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
-				if name is not in map
-					map(name) = folder
+		map = IndexParent(value, map)
 	map
+IndexParent(parent Text, known Dictionary(Text, Text)) Dictionary(Text, Text)
+	"Vector2" is in None.IndexParent(".", Dictionary(Text, Text))
+	mutable map = known
+	for Folders(parent)
+		map = IndexFolder(value, map)
+	map
+IndexFolder(folder Text, known Dictionary(Text, Text)) Dictionary(Text, Text)
+	"Vector2" is in None.IndexFolder("./Math", Dictionary(Text, Text))
+	mutable map = known
+	for Directory.Files(folder, "*.strict")
+		name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
+		if name is not in map
+			map(name) = folder
+	map
+Folders(parent Text) Texts
+	"./Math" is in None.Folders(".")
+	mutable result = List(Mutable(Text))
+	for Directory.Directories(parent)
+		name = Path(value.Replace("\\", "/")).FileName.text
+		if name is not in ("Release", "Tools") and name(0) is name(0).Upper and name(0) is not name(0).Lower
+			result.Add(parent + "/" + name)
+			result = result + Folders(parent + "/" + name)
+	result
 Files(types Texts) Texts
 	TypeFolders.Of(".").Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	None.Files(List(Text) + "Vector2").Length is 0
