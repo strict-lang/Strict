@@ -1,10 +1,16 @@
 has folder Text
 constant MaxFiles = 50
 constant TargetFiles = 24
+constant Marker = ".generated"
+constant Generated = "Compiler/output/Generated"
 constant Rule = "FolderMustNotExceedFiftyFiles"
 Issues ValidationIssues slow
 	FolderFileLimit("Examples/ProjectRule").Issues.Length is 0
-	Check(Directory.Files(folder, "*.strict").Length)
+	IsGenerated then List(ValidationIssue) else Check(Directory.Files(folder, "*.strict").Length)
+IsGenerated Boolean slow
+	Directory.Create(Generated) is not Error and File(Generated + "/" + Marker).Write("") is not Error
+	FolderFileLimit(Generated).IsGenerated and FolderFileLimit("Examples/ProjectRule").IsGenerated is false
+	File(folder + "/" + Marker).Exists
 Check(count Number) ValidationIssues
 	FolderFileLimit("A").Check(MaxFiles).Length is 0
 	FolderFileLimit("A").Check(MaxFiles + 1).First to Text is Rule + ": A has 51 .strict files (limit 50, goal ~24)"
