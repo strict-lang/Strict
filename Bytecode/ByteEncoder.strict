@@ -34,11 +34,11 @@ Integers Numbers
 	mutable number = 0
 	mutable scale = 1
 	for bytes
-		number = number + (value < SevenBitBase then value else value - SevenBitBase) * scale
-		scale = value < SevenBitBase then 1 else scale * SevenBitBase
 		if value < SevenBitBase
-			integers.Add(number)
-			number = 0
+			integers.Add(scale is 1 then value else number + value * scale)
+		else
+			number = (scale is 1 then 0 else number) + (value - SevenBitBase) * scale
+		scale = value < SevenBitBase then 1 else scale * SevenBitBase
 	integers
 Spell(start Number, length Number) Text
 	ByteEncoder(104, 105, 195, 164).Spell(2, 2).Bytes is (195, 164)
