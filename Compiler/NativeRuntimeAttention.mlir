@@ -2596,7 +2596,9 @@
     return
   }
   // strict_device_bytes_attention: 8 bit keys and values (size 128, a head per group, no causal mask) on the 8 bit
-  // tensor cores like Sol-Attn, a block of 128 threads per 64 tokens of a head; two tiles of 32 positions at a time go
+  // tensor cores like Sol-Attn, a block of 128 threads per 64 tokens of a head (a block of 256 threads loading the key
+  // blocks two neighbouring query blocks attend once for both was 4 % slower on H3 480x832: 11.4 against 10.95 ms, idle
+  // halves and one barrier for 8 warps per step cost more than the loads); two tiles of 32 positions at a time go
   // through four buffers by cp.async (the keys, the values 4736 bytes later, both laid out like
   // strict_device_attention_stored_eights), a routed block first plans its tiles (strict_device_bytes_planned)
   llvm.mlir.global internal @strict_device_bytes_tiles() {addr_space = 3 : i32, alignment = 16 : i64} : !llvm.array<37888 x i8>
@@ -3566,7 +3568,8 @@
   // the logarithm of its length and its mean value stand for its positions); the scratch is the third buffer of tiles:
   // the mean and variance per number of the pooled keys of the group at 0 and 128, the centroid at 256, threshold and
   // mean score at 1536 and 1538 (strict_device_attention_threshold), the scores of the key blocks at 512 (both by warps
-  // reading 8 rows of 128 pooled numbers at a time, the sums per warp in the fourth buffer); returns the plan's length
+  // reading 8 rows of 128 pooled numbers at a time, the sums per warp in the fourth buffer); returns the plan's length.
+  // Every block reads the pooled keys twice, H3 480x832 3.1 GB from L2 per launch (about 0.5 of 11 ms, 1 % of a step)
   func.func private @strict_device_bytes_planned(%pooled: !llvm.ptr, %routing: f32, %scale: f32, %queryBlock: i32, %group: i32, %sequence: i32, %heads: i32, %sequences: i32, %tokens: i32, %positions: i32, %thread: i32, %exact: i32) -> i32 attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["alwaysinline"]} {
     %c0 = llvm.mlir.constant(0 : i32) : i32
     %c1 = llvm.mlir.constant(1 : i32) : i32

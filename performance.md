@@ -46,14 +46,9 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
 ## GPU
-- Attention routing planner reads all pooled keys of a head in every block: compute moments once per head and scores as a small product kernel (dump plan lengths before trying again).
-- 16 bit lists: compiled loops index in 64 bits; use 32 bit index math where counts fit.
 - GPU memory: GPU-only lists cannot be spilled, so activations kept across streamed blocks take every byte from the weights.
 - GPU memory: a reference in a local stays alive after its last use in a callee-saved register or spill slot (conservative stack scan).
 - GPU memory: NVFP4 matrices (`TensorFile_Fours`) load as 8 bit rows (27 instead of 15.7 GB): keep e2m1 rows with their block scales on the GPU.
 - Loading with LoRAs (H3 11.3-12.4 s vs 6.4-6.5 s without): read the first matrix of each block during the last merge of the previous block, and avoid round-tripping every merged matrix to the GPU and back (22 GB each way).
 - WebGPU: `strict_convolution` runs at ~6 TFLOPS on a 3080 (30 peak).
-- GPU kernels: bounds, reduction and tail checks remain: extend the four-wide loads (`MlirBatched`) and fuse memory passes.
-- CUDA convolution: stages of 64 channels or 3 buffers once shared memory allows it (convolutions are 5.9 % of Moss).
-- Uniform branches in GPU loops: `tokens_blocks` switches on row bits per block, `products_run` runs bits chains per element, `strict_device_dots` has no bfloat16 arm, prompt attention masks every tile.
 - Small number types as kernel values: still on CPU for a `for` over `List(Complex)` (a list member with `value.Bits is 32` fails the build, index it instead), a `List(Complex)` result, a method returning `Complex` that has a loop or an early return, and list-backed types (`Vector2`, `Vector3`).
