@@ -26284,6 +26284,8 @@
   // takes, strict_device_attention_pools computes their pooled means first
   llvm.mlir.global internal constant @strict_gpu_attention_pooled_name("strict_device_attention_pooled\00strict_device_attention_pools\00") : !llvm.array<61 x i8>
   llvm.mlir.global internal @strict_gpu_attention_pooled_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
+  llvm.mlir.global internal constant @strict_gpu_attention_routes_name("strict_device_attention_routed\00strict_device_attention_routes\00") : !llvm.array<62 x i8>
+  llvm.mlir.global internal @strict_gpu_attention_routes_slot(dense<0> : tensor<2xi64>) : !llvm.array<2 x i64>
   // quantized: the keys of prompts of size 128 become 8 bit numbers with a scale per position and head (one quantize
   // launch), strict_device_attention then computes the scores with 8 bit products; with a head per group, no causal
   // mask and packed values those become 8 bit numbers too and strict_device_bytes_attention runs
@@ -26473,14 +26475,37 @@
     %groupBlocks = arith.muli %positionSize, %keyBlocks : i64
     %poolRows = arith.addi %groupBlocks, %groupBlocks : i64
     %queryRows = arith.muli %sequenceQueries, %keyBlocks : i64
-    %pooledCount = arith.addi %poolRows, %queryRows : i64
+    %poolBaseCount = arith.addi %poolRows, %queryRows : i64
+    %allHeads = arith.muli %headCount, %sequenceCount : i64
+    %tokensUp = arith.addi %tokens, %blocksSpare : i64
+    %queryBlocks = arith.shrui %tokensUp, %sixBits : i64
+    %momentsPerHead = arith.constant 256 : i64
+    %scoreBlocks = arith.muli %queryBlocks, %keyBlocks : i64
+    %perHeadRoutes = arith.addi %momentsPerHead, %scoreBlocks : i64
+    %routesCount = arith.muli %allHeads, %perHeadRoutes : i64
+    %pooledCount = arith.addi %poolBaseCount, %routesCount : i64
     %pooledName = llvm.mlir.addressof @strict_gpu_attention_pooled_name : !llvm.ptr
     %pooledKernelSlot = llvm.mlir.addressof @strict_gpu_attention_pooled_slot : !llvm.ptr
     %pooled = func.call @strict_gpu_run(%ptx, %pooledName, %pooledKernelSlot, %pooledCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %none, %lanes, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
     %hasPooled = arith.cmpf une, %pooled, %zero : f64
-    %pooledRouting = arith.select %hasPooled, %routing, %zero : f64
     %pooledList = arith.select %hasPooled, %pooled, %queries : f64
     llvm.store %pooledList, %pooledSlot : f64, !llvm.ptr
+    cf.cond_br %hasPooled, ^routes, ^routedDone(%zero : f64)
+  ^routes:
+    %sevenRoute = arith.constant 7 : i64
+    %threeRoute = arith.constant 3 : i64
+    %queryTilesUp = arith.addi %queryBlocks, %sevenRoute : i64
+    %queryTiles = arith.shrui %queryTilesUp, %threeRoute : i64
+    %routeBlocks = arith.muli %allHeads, %queryTiles : i64
+    %routeBlockThreads = arith.constant 256 : i64
+    %routeLaunchCount = arith.muli %routeBlocks, %routeBlockThreads : i64
+    %routesName = llvm.mlir.addressof @strict_gpu_attention_routes_name : !llvm.ptr
+    %routesKernelSlot = llvm.mlir.addressof @strict_gpu_attention_routes_slot : !llvm.ptr
+    %routes = func.call @strict_gpu_run(%ptx, %routesName, %routesKernelSlot, %routeLaunchCount, %zero, %none, %valuesSlots, %thirteen, %listsMask, %none, %none, %singleHead, %none, %integers, %noGuards1) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64, i64, i64) -> f64
+    %hasRoutes = arith.cmpf une, %routes, %zero : f64
+    %routedValue = arith.select %hasRoutes, %routing, %zero : f64
+    cf.br ^routedDone(%routedValue : f64)
+  ^routedDone(%pooledRouting: f64):
     llvm.store %pooledRouting, %routingSlot : f64, !llvm.ptr
     cf.br ^attending
   ^attending:
