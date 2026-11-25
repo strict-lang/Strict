@@ -83,13 +83,13 @@ Fingerprint(device Text, isTiling Boolean, builder DeviceBuild, kept Text) Text
 	PtxCache("Compiler/output/Keyed").Fingerprint("a", false, DeviceBuild.Local, "").IndexOf(PtxLibraries.Layout) > 0
 	tools = builder.tools
 	architectures = Text.Combine(CubinBuild.Architectures, " ") + " " + PtxLibraries.Layout
-	mutable key = device + "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept + " " + architectures
+	mutable suffix = "\n// " + DeviceBuild.Nvptx + " " + isTiling + " " + kept + " " + architectures
 	for ("clang", "mlir-opt", "mlir-translate")
 		path = Process.Find(tools.Locate(value)).executable
-		key = key + "\n// " + path + " " + File(path).Modified
+		suffix = suffix + "\n// " + path + " " + File(path).Modified
 	if tools.platform is Platform.MacOS
-		key = key + "\n// " + File(Process.Current.executable).Modified
-	key
+		suffix = suffix + "\n// " + File(Process.Current.executable).Modified
+	device + suffix
 Share(device Text, isTiling Boolean, builder DeviceBuild) Texts
 	Known.Save((".ptx", ".shared.mlir"), ("// known", Fingerprint("x", false, DeviceBuild.Missing, ""))) is not Error
 	Known.Share("x", false, DeviceBuild.Missing) is ("// known")

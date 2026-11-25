@@ -40,7 +40,7 @@ Combine(device Text, runtimes Texts, target = "Nvidia") Text
 	Local.Combine("module {\n}", Attending).IndexOf("@strict_gpu_run(") is -1
 	Local.Combine("module {\n}", Without).IndexOf("%widthRow = arith.minui %at, %count : i64") > 0
 	batched = device.IndexOf(MlirTokens.Marker) >= 0 then List(Text) + "Tokens" else List(Text)
-	device.Substring(0, device.Length - 1) + Runtime(("Device", target) + batched + runtimes) + "\n}"
+	device.Substring(0, device.Length - 1) + (Runtime(("Device", target) + batched + runtimes) + "\n}")
 Amd(device Text, runtimes Texts) Text
 	Local.Amd("module {\n}", Without).IndexOf("llvm.amdgcn.workitem.id.x") > 0
 	Local.Amd("module {\n}", Without).IndexOf("nvvm.kernel") is -1
@@ -134,8 +134,7 @@ Runtime(names Texts) Text
 	Local.Runtime(List(Text) + "Tokens").IndexOf("@strict_device_tokens(") > 0
 	mutable combined = ""
 	for names
-		path = tools.root + "/Compiler/NativeRuntime" + value + ".mlir"
-		combined = combined + "\n" + Text.Combine(File(path).ReadLines, "\n")
+		combined = combined + "\n" + File(tools.root + "/Compiler/NativeRuntime" + value + ".mlir").ReadText
 	combined
 Emb(host Text, ptx Texts, base Text) Text
 	Missing.Emb("module {\n}", List(Text) + "// a", Kernels).EndsWith("s\\001446433\\00\") : !llvm.array<21 x i8>\n}")
