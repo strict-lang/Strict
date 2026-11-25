@@ -46,7 +46,6 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
 ## GPU
-- GPU memory: GPU-only lists cannot be spilled, so activations kept across streamed blocks take every byte from the weights.
 - GPU memory: a reference in a local stays alive after its last use in a callee-saved register or spill slot (conservative stack scan): replaced owned GPU lists are freed now (strict_rc_dead), an owned local read once is not released at its last use. Releasing it after the call that reads it (MlirSpent for named locals stored once outside loops) changed the H3 480x832 video (PSNR 45 dB) and stage 1 and 2 compilers emitted different releases for it: find the release that frees a value still in use first.
 - GPU memory: NVFP4 matrices (`TensorFile_Fours`) load as 8 bit rows (27 instead of 15.7 GB): keep e2m1 rows with their block scales on the GPU.
 - Loading with LoRAs (H3 11.3-12.4 s vs 6.4-6.5 s without): read the first matrix of each block during the last merge of the previous block, and avoid round-tripping every merged matrix to the GPU and back (22 GB each way).

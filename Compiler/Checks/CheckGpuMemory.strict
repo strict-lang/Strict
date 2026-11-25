@@ -2,14 +2,18 @@ has logger
 constant HeapLimit = 2048
 constant ChurnSource = "Run\n\tmutable recent = Filled(16000000, 0)\n\tfor 40\n\t\trecent = Filled(16000000, recent(5) + 1)\n\tlogger.Log(\"last \" + recent(5))"
 constant ChurnEnvironment = "STRICT_GC_LOG=1&& set STRICT_GPU=all"
+constant KeptSource = "Run\n\tmutable kept = List(Numbers)\n\tfor 24\n\t\tkept = kept + Filled(128000000, index)\n"
+constant KeptLog = "\tlogger.Log(\"kept \" + kept.Length + \" first \" + kept(0)(5) + \" last \" + kept(23)(5))"
+constant SpillEnvironment = "STRICT_GPU=all&& set STRICT_GPU_WAIT=2"
 Run Number
 	folder = "Examples/GpuMemoryCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
 	churned = Churn(folder)
+	spilled = churned is Error then churned else Spill(folder)
 	Directory.Delete(folder)
-	if churned is Error
-		return churned
+	if spilled is Error
+		return spilled
 	logger.Log("CheckGpuMemory passed")
 	0
 Churn(folder Text) Text slow
@@ -19,3 +23,6 @@ Churn(folder Text) Text slow
 		return output
 	heap = CheckMemory.CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(output), HeapLimit)
 	heap is Error then heap else output
+Spill(folder Text) Text slow
+	source = CheckMemory.FilledSrc + KeptSource + KeptLog
+	CheckMemory.RunBuilt(folder, "GpuKept", source, "", SpillEnvironment, "kept 24 first 5 last 28", "")

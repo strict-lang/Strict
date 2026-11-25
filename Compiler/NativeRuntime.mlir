@@ -19856,6 +19856,70 @@
   ^done(%limit: f64):
     return %limit : f64
   }
+  // the program's own GPU-only results move to host memory while needed bytes are short: after the queued launches (an
+  // open capture ends and replays) each of 16 MB and more (smaller pool blocks never go back to the driver) not used
+  // by the current launch downloads unless its host copy is current, gives its block back and is a host list from
+  // then on (the next GPU loop uploads it again), then the freed blocks go back to the driver; returns the bytes freed
+  func.func private @strict_gpu_spill_residents(%needed: i64) -> i64 {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %three = arith.constant 3 : i64
+    %firstOwn = arith.constant 16 : i64
+    %webClass = arith.constant 255 : i64
+    %zero = arith.constant 0.0 : f64
+    %waiting = arith.constant false
+    func.call @strict_gpu_replay() : () -> ()
+    func.call @strict_gpu_synchronize() : () -> ()
+    cf.br ^entry(%none, %none : i64, i64)
+  ^entry(%index: i64, %given: i64):
+    %residing = llvm.mlir.addressof @strict_gpu_residing : !llvm.ptr
+    %usedSlot = llvm.getelementptr %residing[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.array<3 x i64>
+    %used = llvm.load %usedSlot : !llvm.ptr -> i64
+    %more = arith.cmpi slt, %index, %used : i64
+    %short = arith.cmpi ult, %given, %needed : i64
+    %going = arith.andi %more, %short : i1
+    cf.cond_br %going, ^candidate, ^trim(%given : i64)
+  ^candidate:
+    %entriesBits = llvm.load %residing : !llvm.ptr -> i64
+    %entries = llvm.inttoptr %entriesBits : i64 to !llvm.ptr
+    %offset = arith.muli %index, %three : i64
+    %entry = llvm.getelementptr %entries[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %object = llvm.load %entry : !llvm.ptr -> i64
+    %deviceSlot = llvm.getelementptr %entry[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %device = llvm.load %deviceSlot : !llvm.ptr -> i64
+    %classSlot = llvm.getelementptr %entry[2] : (!llvm.ptr) -> !llvm.ptr, i64
+    %class = llvm.load %classSlot : !llvm.ptr -> i64
+    %isWeb = arith.cmpi eq, %class, %webClass : i64
+    %isSmall = arith.cmpi ult, %class, %firstOwn : i64
+    %isActive = func.call @strict_gpu_active_has(%device) : (i64) -> i1
+    %kept = arith.ori %isWeb, %isSmall : i1
+    %skipped = arith.ori %kept, %isActive : i1
+    %following = arith.addi %index, %one : i64
+    cf.cond_br %skipped, ^entry(%following, %given : i64, i64), ^spill
+  ^spill:
+    %list = arith.bitcast %object : i64 to f64
+    %holder = func.call @strict_list_holder(%list) : (f64) -> !llvm.ptr
+    %dataSlot = llvm.getelementptr %holder[3] : (!llvm.ptr) -> !llvm.ptr, f64
+    %dataBits = llvm.load %dataSlot : !llvm.ptr -> f64
+    %missing = arith.cmpf oeq, %dataBits, %zero : f64
+    cf.cond_br %missing, ^download, ^forget
+  ^download:
+    %downloaded = func.call @strict_gpu_download(%holder) : (!llvm.ptr) -> !llvm.ptr
+    cf.br ^forget
+  ^forget:
+    %forgotten = func.call @strict_gpu_forget_resident(%object) : (i64) -> i1
+    %holderDevice = llvm.getelementptr %holder[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %none, %holderDevice : i64, !llvm.ptr
+    %size = func.call @strict_gpu_class_size(%class) : (i64) -> i64
+    %moreGiven = arith.addi %given, %size : i64
+    %nextIndex = arith.select %forgotten, %index, %following : i64
+    cf.br ^entry(%nextIndex, %moreGiven : i64, i64)
+  ^trim(%spilled: i64):
+    %released = func.call @strict_gpu_trim(%spilled, %none, %waiting) : (i64, i64, i1) -> i64
+    cf.br ^done(%released : i64)
+  ^done(%freed: i64):
+    return %freed : i64
+  }
   func.func private @strict_gpu_budget_wait(%bytes: i64) {
     %none = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -19876,7 +19940,13 @@
     %fitsOwn = arith.cmpi sge, %effective, %needed : i64
     cf.cond_br %fitsOwn, ^ok, ^maybeCollect(%effective, %saidOwn, %collectedOwn : i64, i1, i1)
   ^maybeCollect(%effNow: i64, %saidNow: i1, %collectedNow: i1):
-    cf.cond_br %collectedNow, ^short(%effNow, %saidNow : i64, i1), ^collect(%saidNow : i1)
+    cf.cond_br %collectedNow, ^spill(%effNow, %saidNow : i64, i1), ^collect(%saidNow : i1)
+  ^spill(%effSpill: i64, %saidSpill: i1):
+    %driverFree = func.call @strict_gpu_others_free() : () -> i64
+    %missingBytes = arith.subi %needed, %driverFree : i64
+    %spilled = func.call @strict_gpu_spill_residents(%missingBytes) : (i64) -> i64
+    %anySpilled = arith.cmpi ne, %spilled, %none : i64
+    cf.cond_br %anySpilled, ^check(%saidSpill, %true : i1, i1), ^short(%effSpill, %saidSpill : i64, i1)
   ^collect(%saidCollect: i1):
     func.call @strict_rc_reclaim() : () -> ()
     %mayCollect = func.call @strict_gpu_own_collectable() : () -> i1
