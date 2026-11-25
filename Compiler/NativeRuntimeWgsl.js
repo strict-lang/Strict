@@ -56,11 +56,17 @@ fn summed(sums: mat4x4<f32>, ins: vec4<f32>, outs: vec4<f32>) -> mat4x4<f32> {
 `;
 // Convolved.Summed: values, affine, weights, height, width, channels, outputs, swish, factor (strict_gpu_convolution),
 // a workgroup of 256 invocations per tile of 128 pixels of one parity and 128 outputs (8 by 8 sums each), the taps 16
-// at a time in workgroup memory; swish is the Activation kind of the normed values (5 swish, 2 relu, 6 linear), values
-// normed by strict_normed first come with 255
-const strictConvolution = (packed = false) => strictKernelBindings + strictSummed + `
-var<workgroup> tapped: array<vec4<f32>, 512>;
-var<workgroup> weighted: array<vec4<f32>, 512>;
+// at a time in workgroup memory (padded stride 132); swish is the Activation kind of the normed values (5 swish, 2 relu,
+// 6 linear), values normed by strict_normed first come with 255
+const strictConvolution = (half = false, packed = false) => {
+	const sc = half ? 'f16' : 'f32', zero = half ? '0.0h' : '0.0';
+	return (half ? 'enable f16;\n' : '') + strictKernelBindings + `
+fn summed_conv(sums: mat4x4<${sc}>, ins: vec4<${sc}>, outs: vec4<${sc}>) -> mat4x4<${sc}> {
+	return mat4x4<${sc}>(fma(ins, vec4<${sc}>(outs.x), sums[0]), fma(ins, vec4<${sc}>(outs.y), sums[1]),
+		fma(ins, vec4<${sc}>(outs.z), sums[2]), fma(ins, vec4<${sc}>(outs.w), sums[3]));
+}
+var<workgroup> tapped: array<${sc}, 2112>;
+var<workgroup> weighted: array<${sc}, 2112>;
 @compute @workgroup_size(256)
 fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) group: vec3<u32>) {
 	let width = places[9];
@@ -83,56 +89,107 @@ fn main(@builtin(local_invocation_index) local: u32, @builtin(workgroup_id) grou
 	let outputStart = tile % outputTiles * 128u;
 	let parityRow = parity / factor;
 	let parityColumn = parity % factor;
-	let weights = parity * outputs * taps;
+	let weightsBase = parity * outputs * taps;
 	let ownPixel = local / 16u;
 	let ownOutput = local % 16u;
-	let ownTap = local % 16u;
-	let firstItem = local / 16u;
-	var sums = mat4x4<f32>();
-	var moreOutputSums = mat4x4<f32>();
-	var morePixelSums = mat4x4<f32>();
-	var moreSums = mat4x4<f32>();
+	let kQuad = local % 4u;
+	let firstItem = local / 4u;
+	let valPlace = places[0];
+	let wPlace = places[4];
+	let valBase = valPlace & 0x0fffffffu;
+	let wBase = wPlace & 0x0fffffffu;
+	let fastBf16 = isNormed && (valPlace & 0xf8000000u) == 0x90000000u && (wPlace & 0xf8000000u) == 0xb0000000u && (channels & 3u) == 0u;
+	var pCoords: array<u32, 2>;
+	for (var load = 0u; load < 2u; load++) {
+		let px = pixelStart + firstItem + load * 64u;
+		pCoords[load] = select(0xffffffffu, ((px / inputWidth) << 16u) | (px % inputWidth), px < pixels);
+	}
+	var sums = mat4x4<${sc}>();
+	var moreOutputSums = mat4x4<${sc}>();
+	var morePixelSums = mat4x4<${sc}>();
+	var moreSums = mat4x4<${sc}>();
 	for (var start = 0u; start < taps; start += 16u) {
-		let tap = start + ownTap;
-		let position = tap / channels;
-		let channel = tap % channels;
-		let tapRow = i32(position / side + parityRow) - 1;
-		let tapColumn = i32(position % side + parityColumn) - 1;
-		for (var load = 0u; load < 8u; load++) {
-			let item = firstItem + load * 16u;
-			let slot = ownTap * 128u + item;
-			let pixel = pixelStart + item;
-			var value = 0.0;
-			let sourceRow = i32(pixel / inputWidth) + tapRow;
-			let sourceColumn = i32(pixel % inputWidth) + tapColumn;
-			let isInside = sourceRow >= 0 && sourceColumn >= 0 && sourceRow < i32(inputHeight) && sourceColumn < i32(inputWidth);
-			if (tap < taps && pixel < pixels && isInside) {
-				value = n_item(places[0], u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel);
-				if (!isNormed) {
-					let normed = value * n_item(places[2], channel) + n_item(places[2], channels + channel);
-					value = select(select(normed, max(normed, 0.0), activation == 2u), normed / (1.0 + exp(-normed)), activation == 5u);
+		let tap0 = start + kQuad * 4u;
+		if (fastBf16) {
+			let pos0 = tap0 / channels;
+			let ch0 = tap0 % channels;
+			let tapRow0 = i32(pos0 / side + parityRow) - 1;
+			let tapCol0 = i32(pos0 % side + parityColumn) - 1;
+			let tBase = kQuad * 4u;
+			for (var load = 0u; load < 2u; load++) {
+				let item = firstItem + load * 64u;
+				let pc = pCoords[load];
+				var u0 = 0u;
+				var u1 = 0u;
+				let sr = i32(pc >> 16u) + tapRow0;
+				let sc0 = i32(pc & 0xffffu) + tapCol0;
+				if (tap0 < taps && sr >= 0 && sc0 >= 0 && sr < i32(inputHeight) && sc0 < i32(inputWidth)) {
+					let idx = ((u32(sr) * inputWidth + u32(sc0)) * channels + ch0) / 2u + valBase;
+					u0 = bitcast<u32>(lists1[idx]);
+					u1 = bitcast<u32>(lists1[idx + 1u]);
+				}
+				tapped[(tBase + 0u) * 132u + item] = ${sc}(bitcast<f32>(u0 << 16u));
+				tapped[(tBase + 1u) * 132u + item] = ${sc}(bitcast<f32>(u0 & 0xffff0000u));
+				tapped[(tBase + 2u) * 132u + item] = ${sc}(bitcast<f32>(u1 << 16u));
+				tapped[(tBase + 3u) * 132u + item] = ${sc}(bitcast<f32>(u1 & 0xffff0000u));
+				let produced = outputStart + item;
+				var wu0 = 0u;
+				var wu1 = 0u;
+				if (tap0 < taps && produced < outputs) {
+					let widx = (weightsBase + produced * taps + tap0) / 2u + wBase;
+					wu0 = bitcast<u32>(lists3[widx]);
+					wu1 = bitcast<u32>(lists3[widx + 1u]);
+				}
+				weighted[(tBase + 0u) * 132u + item] = ${sc}(bitcast<f32>(wu0 << 16u));
+				weighted[(tBase + 1u) * 132u + item] = ${sc}(bitcast<f32>(wu0 & 0xffff0000u));
+				weighted[(tBase + 2u) * 132u + item] = ${sc}(bitcast<f32>(wu1 << 16u));
+				weighted[(tBase + 3u) * 132u + item] = ${sc}(bitcast<f32>(wu1 & 0xffff0000u));
+			}
+		} else {
+			for (var sub = 0u; sub < 4u; sub++) {
+				let tap = tap0 + sub;
+				let position = tap / channels;
+				let channel = tap % channels;
+				let tapRow = i32(position / side + parityRow) - 1;
+				let tapColumn = i32(position % side + parityColumn) - 1;
+				for (var load = 0u; load < 2u; load++) {
+					let item = firstItem + load * 64u;
+					let pc = pCoords[load];
+					var value = ${zero};
+					let sourceRow = i32(pc >> 16u) + tapRow;
+					let sourceColumn = i32(pc & 0xffffu) + tapColumn;
+					if (tap < taps && sourceRow >= 0 && sourceColumn >= 0 && sourceRow < i32(inputHeight) && sourceColumn < i32(inputWidth)) {
+						var vf = n_item(valPlace, u32(sourceRow * i32(inputWidth) + sourceColumn) * channels + channel);
+						if (!isNormed) {
+							let normed = vf * n_item(places[2], channel) + n_item(places[2], channels + channel);
+							vf = select(select(normed, max(normed, 0.0), activation == 2u), normed / (1.0 + exp(-normed)), activation == 5u);
+						}
+						value = ${sc}(vf);
+					}
+					tapped[(kQuad * 4u + sub) * 132u + item] = value;
+					let produced = outputStart + item;
+					var weight = ${zero};
+					if (tap < taps && produced < outputs) { weight = ${sc}(n_item(wPlace, weightsBase + produced * taps + tap)); }
+					weighted[(kQuad * 4u + sub) * 132u + item] = weight;
 				}
 			}
-			tapped[slot / 4u][slot % 4u] = value;
-			let produced = outputStart + item;
-			var weight = 0.0;
-			if (tap < taps && produced < outputs) { weight = n_item(places[4], weights + produced * taps + tap); }
-			weighted[slot / 4u][slot % 4u] = weight;
 		}
 		workgroupBarrier();
 		for (var at = 0u; at < 16u; at++) {
-			let ins = tapped[at * 32u + ownPixel * 2u];
-			let moreIns = tapped[at * 32u + ownPixel * 2u + 1u];
-			let outs = weighted[at * 32u + ownOutput * 2u];
-			let moreOuts = weighted[at * 32u + ownOutput * 2u + 1u];
-			sums = summed(sums, ins, outs);
-			moreOutputSums = summed(moreOutputSums, ins, moreOuts);
-			morePixelSums = summed(morePixelSums, moreIns, outs);
-			moreSums = summed(moreSums, moreIns, moreOuts);
+			let pBase = at * 132u + ownPixel * 8u;
+			let oBase = at * 132u + ownOutput * 8u;
+			let ins = vec4<${sc}>(tapped[pBase], tapped[pBase + 1u], tapped[pBase + 2u], tapped[pBase + 3u]);
+			let moreIns = vec4<${sc}>(tapped[pBase + 4u], tapped[pBase + 5u], tapped[pBase + 6u], tapped[pBase + 7u]);
+			let outs = vec4<${sc}>(weighted[oBase], weighted[oBase + 1u], weighted[oBase + 2u], weighted[oBase + 3u]);
+			let moreOuts = vec4<${sc}>(weighted[oBase + 4u], weighted[oBase + 5u], weighted[oBase + 6u], weighted[oBase + 7u]);
+			sums = summed_conv(sums, ins, outs);
+			moreOutputSums = summed_conv(moreOutputSums, ins, moreOuts);
+			morePixelSums = summed_conv(morePixelSums, moreIns, outs);
+			moreSums = summed_conv(moreSums, moreIns, moreOuts);
 		}
 		workgroupBarrier();
 	}
-	var blocks = array<mat4x4<f32>, 4>(sums, moreOutputSums, morePixelSums, moreSums);
+	var blocks = array<mat4x4<${sc}>, 4>(sums, moreOutputSums, morePixelSums, moreSums);
 	for (var row = 0u; row < 8u; row++) {
 		let pixel = pixelStart + ownPixel * 8u + row;
 		if (pixel >= pixels) { continue; }
@@ -141,18 +198,24 @@ ${packed ? `		for (var column = 0u; column < 8u; column += 2u) {
 			let produced = outputStart + ownOutput * 8u + column;
 			if (produced < outputs) {
 				let b = row / 4u * 2u + column / 4u;
-				output[(placed + produced) / 2u] = pack_bf16(blocks[b][column % 4u][row % 4u], blocks[b][(column + 1u) % 4u][row % 4u]);
+				output[(placed + produced) / 2u] = pack_bf16(f32(blocks[b][column % 4u][row % 4u]), f32(blocks[b][(column + 1u) % 4u][row % 4u]));
 			}
 		}` : `		for (var column = 0u; column < 8u; column++) {
 			let produced = outputStart + ownOutput * 8u + column;
-			if (produced < outputs) { output[placed + produced] = blocks[row / 4u * 2u + column / 4u][column % 4u][row % 4u]; }
+			if (produced < outputs) { output[placed + produced] = f32(blocks[row / 4u * 2u + column / 4u][column % 4u][row % 4u]); }
 		}`}
 	}
 }`;
-(Module['strictShaders'] ||= {})['strict_convolution'] = strictConvolution(false);
-Module['strictShaders']['strict_convolution_p17'] = strictConvolution(true);
+};
+(Module['strictShaders'] ||= {})['strict_convolution'] = strictConvolution(false, false);
+Module['strictShaders']['strict_convolution_p17'] = strictConvolution(false, true);
+Module['strictShaders']['strict_convolution_f16'] = strictConvolution(true, false);
+Module['strictShaders']['strict_convolution_f16_p17'] = strictConvolution(true, true);
+(Module['strictHalf'] ||= {})['strict_convolution'] = 'strict_convolution_f16';
 (Module['strictPacked'] ||= {})['strict_convolution'] = 'strict_convolution_p17';
+Module['strictPacked']['strict_convolution_f16'] = 'strict_convolution_f16_p17';
 (Module['strictCanPack'] ||= {})['strict_convolution'] = (places) => (places[13] & 1) === 0;
+Module['strictCanPack']['strict_convolution_f16'] = Module['strictCanPack']['strict_convolution'];
 // the tiles (one workgroup each) and how many of them go into one submit: about 4 billion multiplications, the
 // convolution at least 128 tiles (56 tiles of 4608 taps, fewer than the GPU has multiprocessors, made 360x640 of 512
 // channels take 2 s instead of 0.19; 16 billion for all made 720x1280 decodes slower and noisy)
@@ -162,6 +225,8 @@ Module['strictShaders']['strict_convolution_p17'] = strictConvolution(true);
 	return [factor * factor * Math.ceil(pixels / 128) * Math.ceil(places[13] / 128), Math.max(Math.floor(2 ** 32 / (16384 * taps)), 128)];
 };
 Module['strictKernelGroups']['strict_convolution_p17'] = Module['strictKernelGroups']['strict_convolution'];
+Module['strictKernelGroups']['strict_convolution_f16'] = Module['strictKernelGroups']['strict_convolution'];
+Module['strictKernelGroups']['strict_convolution_f16_p17'] = Module['strictKernelGroups']['strict_convolution'];
 // Products.Multiplied: left, right, batches, rows, inner, columns, then the start, batch, row and inner strides of left
 // and the start, batch, inner and column strides of right (strict_gpu_products): a workgroup of 256 invocations per
 // tile of 128 rows and 128 columns of one batch (8 by 8 sums each), the inner numbers 16 at a time in workgroup memory;
