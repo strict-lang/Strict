@@ -28,6 +28,7 @@ constant Counting = ("Count Number", "\tDrawn(1)")
 constant Running = ("Run", "\tDrawn(1)")
 constant Keeping = ("Return", "Declaration", "Reassignment", "Ignore")
 constant Calls = ("Call", "Member", "MethodCall", "Identifier")
+constant Measures = ReturnTypes(TypeInference(KnownTypes.Measured, KnownTypes.NoMemberPair))
 constant Unvalued = "ReturnTypeMismatch: Drawn has no return type, its call gives no value"
 Issue(scoped ScopedStatement, current Scope, lines Texts) Text
 	Naming.Issue(Joined, Named, Lines).StartsWith("ReturnTypeMismatch: a Text is returned for Texts")
@@ -48,12 +49,17 @@ Other(type Text, declared Text) Text
 	(Naming.Other("Number", "Number") + Naming.Other("Text", "None") + Naming.Other("Count", "Count")) is ""
 	(Naming.Other("Texts", "Texts") + Naming.Other("Unknown", "Number") + Naming.Other("Error", "Numbers")) is ""
 	Naming.Other("Characters", "Text") is ""
+	Measures.Other("F", "Number") is "ReturnTypeMismatch: a F is returned for Number"
+	Naming.Other("Count", "Number") is ""
 	types = inference.types
 	isRecord = TypeEntry.IsBaseName(type) is false and types.MembersOf(type).names.Length > 0
 	isUnlisted = types.IsPlural(declared) and isRecord and ListFits(types).IsList(type) is false
 	isSpelled = types.IsPlural(type) and types.ElementType(type) is types.ElementType(declared)
-	isBase = ArgumentTypes(inference).IsBaseMismatch(type, declared) and isSpelled is false
-	isWrong = type is not "Error" and declared is not "None" and (isBase or isUnlisted)
+	arguments = ArgumentTypes(inference)
+	isBase = arguments.IsBaseMismatch(type, declared) and isSpelled is false
+	isSingular = isRecord and types.IsPlural(type) is false and arguments.IsScalar(declared)
+	isUnwrapped = isSingular and declared is not in types.MembersOf(type).types
+	isWrong = type is not "Error" and declared is not "None" and (isBase or isUnlisted or isUnwrapped)
 	isWrong then "ReturnTypeMismatch: a " + type + " is returned for " + declared else ""
 Split(scoped ScopedStatement, current Scope, lines Texts) Text
 	Coupling.Split(Early, Finals, Making).EndsWith(" gives a Couple(Number, Number) or a Couple(Text, Number)")
