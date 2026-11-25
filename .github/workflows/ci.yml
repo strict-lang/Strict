@@ -57,7 +57,7 @@ jobs:
           sh Compiler/bootstrap.sh
       - name: The current strict (the seed builds it with its older code generation)
         run: |
-          ./strict build Strict.strict
+          ./strict build Cli/Strict.strict
       - name: Unit tests on the Strict VM, one folder after another (each runs its files on all cores)
         if: env.UNITS != ''
         run: |
@@ -117,7 +117,7 @@ jobs:
         run: Compiler\Bootstrap.cmd
       - name: The current strict (the seed builds it with its older code generation)
         run: |
-          ./strict.exe build Strict.strict
+          ./strict.exe build Cli/Strict.strict
       - name: Unit tests on the Strict VM, one folder after another (each runs its files on all cores)
         run: |
           failed=0

@@ -1,23 +1,4 @@
-constant Version = "1.0"
-constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant BuildWait = 90
-constant QuietSeconds = 5
-constant Informing = ("version", "--version", "help", "--help")
-constant RunHelp = List(Text) + "strict <file or Type> [arguments]  run the program natively (built first when outdated); a type without Run runs its native tests, not again while they passed and nothing changed"
-constant CodeHelp = ("strict run -c <code> [arguments]  run these lines on the Strict VM (short: strict -c <code>)", "strict run <file.strict> [args]   run a single .strict script file on the Strict VM")
-constant BuildHelp = ("strict build <file or Type>  compile a native executable without running tests (Name.test without Run)", "strict build [platform]    build the program named like this folder (in FractalZoomer/: FractalZoomer.strict)")
-constant PlatformHelp = ("strict build <file> linux  also the Linux executable (on Windows through WSL)", "strict build <file> web  build Name.html, .js and .wasm for the browser (Emscripten in Tools/emsdk)")
-constant AppHelp = ("strict build <file> android  build an arm64-v8a shared library and stage Release/Android (Android NDK)", "strict build <file> ios    build an arm64 iOS static archive and stage Release/iOS (native packages need Xcode)")
-constant BuildModeHelp = ("strict build <file> library  build a shared library of its public methods and a C# binding", "strict build <file> fast   quick build for this computer, GPU loops run on the CPU (not for NeuralNetworks or games)")
-constant TestHelp = ("strict test <file>         run the inline tests of every method on the Strict VM", "strict test <file> native  build and run its native tests explicitly")
-constant TestInputHelp = ("strict test <folder> --no-recursive  test only files directly in folder", "strict test <file> -       test the source read from standard input as <file>, nothing is written")
-constant LinesHelp = List(Text) + "strict test <file> lines   run them natively and print how often and how long each line ran (a folder: one build)"
-constant ValuesHelp = List(Text) + "strict test <file> values  run them on the Strict VM and print how often each line ran and the value it set"
-constant FullHelp = ("strict test <folder> full  remove its obj/ folders, then retest everything with Slow tests and all mutants", "strict build <file> full   remove the obj/ folders of its folder, then build everything again")
-constant SourceHelp = ("strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it")
-constant MaintenanceHelp = ("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
-constant SuggestHelp = List(Text) + "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source"
-constant Help = RunHelp + CodeHelp + BuildHelp + PlatformHelp + AppHelp + BuildModeHelp + TestHelp + TestInputHelp + LinesHelp + ValuesHelp + FullHelp + SourceHelp + MaintenanceHelp + SuggestHelp
 constant FirstTraceLines = 3
 constant LastTraceLines = 3
 constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
@@ -109,43 +90,21 @@ Shorten(trace Text) Text
 RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
 	folder = Directory.Current
 	head = arguments.Length > 0 then arguments(0) else ""
-	given = head is in Informing then List(Text) + head else Project(InsertMainFile(arguments))
+	given = head is in Command.Informing then List(Text) + head else Command.Project(Command.InsertMainFile(arguments))
 	command = given.Length > 0 then given(0) else "help"
-	rest = Clean(command, Root(command is in Commands then Rest(given) else given))
-	message = Message(command, rest)
+	rest = Command.Clean(command, Command.Root(command is in Command.Commands then Command.Rest(given) else given))
+	message = Command.Message(command, rest)
 	if message is not ""
 		logger.Log(message)
-		return Answer(command is in Informing then 0 else 2, known)
+		return Answer(command is in Command.Informing then 0 else 2, known)
 	if command is in ("build", "check", "update", "format", "suggest")
-		return command is "build" then Answer(Native(command, rest), known) else Tool(command, rest, known)
+		return command is "build" then Answer(Command.Native(command, rest), known) else Command.Tool(command, rest, known)
 	command is "test" then Examine(rest, known, inferred) else Answer(Launch(rest, folder), known)
-Clean(command Text, rest Texts) Texts slow
-	Strict.Clean("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
-	Strict.Clean("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
-	if "full" is not in rest
-		return rest
-	folder = Directory.Exists(rest(0)) then rest(0) else Path(rest(0)).PathOnly.text
-	target = folder is "" then "." else folder
-	logger.Log("Removed " + Folders.Clean(target) + " files in the obj folders of " + target)
-	command is "build" then rest - "full" else rest
-Message(command Text, rest Texts) Text slow
-	Strict.Message("version", List(Text)).StartsWith(Version + " 20")
-	Strict.Message("help", List(Text)).StartsWith("strict <file or Type> [arguments]  run")
-	Strict.Message("test", ("a.strict", ".")) is "a.strict not found"
-	Strict.Message("test", ("Compiler", ".")) is "" and Strict.Message("check", ("Compiler", ".")) is ""
-	Strict.Message("suggest", ("Strict.strict", ".")).StartsWith("strict <file or Type> [arguments]  run")
-	constant DateAndMinuteLength = 16
-	if command is in ("version", "--version")
-		return Version + " " + Process.Current.Built.Substring(0, DateAndMinuteLength)
-	if command is in Informing or rest.Length < (command is "suggest" then 3 else 2)
-		return Text.Combine(Help, "\n")
-	isFolder = command is "test" and Directory.Exists(rest(0))
-	command is in ("check", "update") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
 Examine(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
 	"nightly" is in rest then Answer(Nightly(rest), known) else Testing(rest, known, inferred)
 Nightly(rest Texts) Number slow
 	if File(rest(0)).Exists is false
-		return Folders.Nightly(rest(0), rest(1)) + Native("test", (rest(0), rest(1), "native"))
+		return Folders.Nightly(rest(0), rest(1)) + Command.Native("test", (rest(0), rest(1), "native"))
 	unit = Execute.Serve(rest(0), rest(1), true).code
 	unit > 0 then unit else Execute("*").Serve(rest(0), rest(1), true).code
 Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
@@ -159,78 +118,12 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 	if request.Option is in ("values", "trace", "profile", "sampled")
 		return Answer(Trace(request, rest), known)
 	execute = request.Executing(known, inferred)
-	request.Option is in ("lines", "native") then Answer(Native("test", rest), known) else execute.Serve(rest(0), rest(1))
-Test(text Text) Text slow
-	Trial(text).Ran
-Trace(request TestRequest, rest Texts) Number slow
-	trace = ValueTrace(request.Selection)
-	profile = Profile(request.Selection)
-	if request.Option is in ("profile", "sampled")
-		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sample(rest(0), rest(1))
-	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Trace(rest(0), rest(1))
-Root(arguments Texts) Texts slow
-	Strict.Root(List(Text) + "a.strict") is ("a.strict", ".")
-	Strict.Root(("a.strict", ".")) is ("a.strict", ".")
-	Strict.Root(("a.strict", "Compiler")) is ("a.strict", ".", "Compiler")
-	Strict.Root(("a.strict", "5")) is ("a.strict", ".", "5")
-	if arguments.Length is 0 or arguments.Length > 1 and File(arguments(1) + "/Any.strict").Exists
-		return arguments
-	(List(Text) + arguments(0) + TypeSource.Root) + Rest(arguments)
-FindMainFile(folder Text) Text slow
-	Strict.FindMainFile(".") is "Strict.strict"
-	Strict.FindMainFile("Missing") is ""
-	isCurrent = folder is "" or folder is "."
-	target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
-	clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
-	named = TypeSource.Case((isCurrent then "" else clean + "/") + Path(clean).FileName.text)
-	if File(named).Exists
-		return named
-	files = Directory.Files(isCurrent then "." else clean, "*.strict")
-	isCurrent and File("Strict.strict").Exists then "Strict.strict" else (files.Length is 1 then files.First else "")
-InsertMainFile(arguments Texts) Texts slow
-	Strict.InsertMainFile(("build", "web")) is ("build", "Strict.strict", "web")
-	Strict.InsertMainFile(List(Text) + "build") is ("build", "Strict.strict")
-	Strict.InsertMainFile(("build", ".", "windows")) is ("build", "Strict.strict", "windows")
-	Strict.InsertMainFile(("build", "Examples/Sum.strict")) is ("build", "Examples/Sum.strict")
-	Strict.InsertMainFile(("test", "Math")) is ("test", "Math")
-	Strict.InsertMainFile(("test", "native")) is ("test", "Strict.strict", "native")
-	Strict.Project(Strict.InsertMainFile(("build", "strict"))) is ("build", "Strict.strict")
-	main = FindMainFile(".")
-	if arguments.Length is 0
-		return main is "" or main is "Strict.strict" then arguments else List(Text) + main
-	arguments(0) is in ("build", "test") then Resolve(arguments, main) else arguments
-Resolve(arguments Texts, main Text) Texts slow
-	Strict.Resolve(("build", "."), "Strict.strict") is ("build", "Strict.strict")
-	Strict.Resolve(("test", "."), "Strict.strict") is ("test", ".")
-	Strict.Resolve(List(Text) + "test", "Strict.strict") is ("test", "Strict.strict")
-	given = arguments.Length > 1 then arguments(1) else ""
-	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
-		folder = FindMainFile(given)
-		return folder is "" then arguments else List(Text) + "build" + folder + arguments.Slice(2, arguments.Length - 2)
-	isSource = given is not "" and (File(TypeSource.Case(given)).Exists or Directory.Exists(given))
-	target = arguments(0) is "test" and main is "" then "." else main
-	isSource or target is "" then arguments else List(Text) + arguments(0) + target + Rest(arguments)
-Project(arguments Texts) Texts slow
-	Strict.Project(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
-	Strict.Project(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
-	Strict.Project(("build", "Examples/Sum", "web")) is ("build", "Examples/Sum.strict", "web")
-	at = arguments.Length > 0 and arguments(0) is in Commands then 1 else 0
-	source = TypeSource.Case(arguments.Length > at then arguments(at) else "")
-	project = source.EndsWith(".strict") or Directory.Exists(source) then TypeSource.Project(source) else ""
-	full = TypeSource.Absolute(source)
-	if project is not ""
-		Directory.Change(project)
-	for arguments
-		index is at then (project is "" then source else TypeSource.Relative(full)) else value
-Join(arguments Texts) Text
-	Strict.Join(("a b", "c")) is " \"a b\" c"
-	mutable joined = ""
-	for arguments
-		joined = joined + " " + (value.IndexOf(" ") >= 0 then "\"" + value + "\"" else value)
-	joined
+	if request.Option is in ("lines", "native")
+		return Answer(Command.Native("test", rest), known)
+	execute.Serve(rest(0), rest(1))
 Launch(rest Texts, folder Text) Number slow
 	if NativeBuild.IsProgram(rest(0)) is false
-		return Native("test", (rest(0), rest(1), "native"))
+		return Command.Native("test", (rest(0), rest(1), "native"))
 	base = NativeBuild.Output(rest(0), true)
 	extension = Toolchain(Platform.Current, rest(1)).Extension
 	cache = NativeCache("build", (rest(0), rest(1)))
@@ -241,7 +134,7 @@ Launch(rest Texts, folder Text) Number slow
 			return tested
 	Start(rest, folder, fresh)
 Retest(rest Texts) Number slow
-	quietUntil = Process.Elapsed + QuietSeconds
+	quietUntil = Process.Elapsed + Command.QuietSeconds
 	tested = Execute("", quietUntil = quietUntil).Serve(rest(0), rest(1)).code
 	if tested is 0 and Process.Elapsed >= quietUntil
 		logger.Log(Execute.Summary(0, rest(0)))
@@ -249,7 +142,7 @@ Retest(rest Texts) Number slow
 Compile(rest Texts, fresh Text) Number slow
 	if fresh is not ""
 		return 0
-	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
+	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Command.Native("build", (rest(0), rest(1)))
 Start(rest Texts, folder Text, fresh Text) Number slow
 	base = NativeBuild.Output(rest(0), true)
 	tools = Toolchain(Platform.Current, rest(1))
@@ -260,35 +153,12 @@ Start(rest Texts, folder Text, fresh Text) Number slow
 		logger.Log("Up to date: " + fresh)
 	target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
 	Directory.Change(folder)
-	Process(target).Start(Join(rest.Slice(2, rest.Length - 2)).Trim)
-Rest(arguments Texts) Texts
-	Strict.Rest(("test", "a", "b")) is ("a", "b")
-	for Range(1, arguments.Length)
-		arguments(value)
-Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
-	if command is "format"
-		logger.Log(Format(rest(0)))
-	if command is "update"
-		Update(Repositories("."), rest(0))
-	checked = command is "check" then Check(ValidateCheck, rest(0), rest(1)) else 0
-	Answer(command is "suggest" then Suggest(rest) else checked, known)
-Check(checker Validators/ValidateCheck, folder Text, root Text) Number slow
-	checker.Run(folder, root)
-Update(updater Bytecode/Repositories, folder Text) slow
-	logger.Log("Updated " + updater.Update(folder) + " packages in " + folder)
-Native(command Text, rest Texts) Number slow
-	Strict.Native("test", ("Missing.strict", ".", "values", "other")) is 2
-	NativeCompiler.RunCommand((List(Text) + command) + rest)
-Format(path Text) Text slow
-	Strict.Format("Examples/HelloLogger.strict").StartsWith("Run\n\tlogger.Log(")
-	lines = RoundTrip.Tab(File(path).ReadLines)
-	broken = FileCompiler.Unparsable(lines)
-	if broken >= 0
-		return Error(ResolveCheck.Locate(FileCompiler.Normalize(path), broken + 1, FileCheck.Problem(lines, broken)))
-	Text.Combine(RoundTrip.Format(lines), "\n")
-Suggest(rest Texts) Number slow
-	source = FileCompiler.Normalize(rest(0))
-	if rest.Length > 3 and rest(3) is "-"
-		File(source).InMemory(Process.Input)
-	files = SourceFiles(rest(1)).Of(source)
-	Suggestions(source, rest(1), File(source).ReadLines, ResolveCheck.Inference(files)).Run(rest(2), files)
+	Process(target).Start(Command.Join(rest.Slice(2, rest.Length - 2)).Trim)
+Test(text Text) Text slow
+	Trial(text).Ran
+Trace(request TestRequest, rest Texts) Number slow
+	trace = ValueTrace(request.Selection)
+	profile = Profile(request.Selection)
+	if request.Option is in ("profile", "sampled")
+		return request.Option is "profile" then profile.Run(rest(0), rest(1)) else profile.Sample(rest(0), rest(1))
+	request.Option is "values" then trace.Run(rest(0), rest(1)) else trace.Trace(rest(0), rest(1))
