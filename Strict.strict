@@ -1,7 +1,4 @@
 constant BuildWait = 90
-constant FirstTraceLines = 3
-constant LastTraceLines = 3
-constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
 Run(arguments Texts) Number
 	resident = Resident(Path(Process.Current.executable).PathOnly.text)
 	command = arguments.Length > 0 then arguments(0) else ""
@@ -66,7 +63,7 @@ Log(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
 	isCode = Scripted.IsRun(arguments)
 	answer = isCode then GenerateCodeAnswer(arguments, last) else RunForAnswer(arguments, last.known, last.inferred)
 	if answer is Error
-		logger.Log(Shorten(answer to Text))
+		logger.Log(Command.Shorten(answer to Text))
 		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
 	answer
 GenerateCodeAnswer(arguments Texts, last Answer) Answer slow
@@ -78,15 +75,6 @@ GenerateCodeAnswer(arguments Texts, last Answer) Answer slow
 		logger.Log(given + " not found")
 		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
 	Scripted(File(path).ReadText).RanWith(arguments, TypeSource.Root, last, path)
-Shorten(trace Text) Text
-	Strict.Shorten("Error: A\n\t1") is "Error: A\n\t1"
-	Strict.Shorten(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
-	logged = trace.LastIndexOf("\n\tat Strict.Logged ")
-	lines = (logged < 0 then trace else trace.Substring(0, logged)).Split("\n")
-	if lines.Length <= FirstTraceLines + LastTraceLines
-		return Text.Combine(lines, "\n")
-	gap = "\t... (skipped " + (lines.Length - FirstTraceLines - LastTraceLines) + " lines)"
-	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
 RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
 	folder = Directory.Current
 	head = arguments.Length > 0 then arguments(0) else ""
@@ -98,8 +86,25 @@ RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = In
 		logger.Log(message)
 		return Answer(command is in Command.Informing then 0 else 2, known)
 	if command is in ("build", "check", "update", "format", "suggest")
-		return command is "build" then Answer(Command.Native(command, rest), known) else Command.Tool(command, rest, known)
-	command is "test" then Examine(rest, known, inferred) else Answer(Launch(rest, folder), known)
+		return command is "build" then Answer(Command.Native(command, rest), known) else Tool(command, rest, known)
+	command is "test" then Examine(rest, known, inferred) else Answer(Command.Launch(rest, folder), known)
+Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
+	if command is "format"
+		logger.Log(Command.Format(rest(0)))
+	if command is "update"
+		Update(Repositories("."), rest(0))
+	checked = command is "check" then Check(ValidateCheck, rest(0), rest(1)) else 0
+	Answer(command is "suggest" then Suggest(rest) else checked, known)
+Suggest(rest Texts) Number slow
+	source = FileCompiler.Normalize(rest(0))
+	if rest.Length > 3 and rest(3) is "-"
+		File(source).InMemory(Process.Input)
+	files = SourceFiles(rest(1)).Of(source)
+	Suggestions(source, rest(1), File(source).ReadLines, ResolveCheck.Inference(files)).Run(rest(2), files)
+Check(checker Validators/ValidateCheck, folder Text, root Text) Number slow
+	checker.Run(folder, root)
+Update(updater Bytecode/Repositories, folder Text) slow
+	logger.Log("Updated " + updater.Update(folder) + " packages in " + folder)
 Examine(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
 	"nightly" is in rest then Answer(Nightly(rest), known) else Testing(rest, known, inferred)
 Nightly(rest Texts) Number slow
@@ -121,39 +126,6 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 	if request.Option is in ("lines", "native")
 		return Answer(Command.Native("test", rest), known)
 	execute.Serve(rest(0), rest(1))
-Launch(rest Texts, folder Text) Number slow
-	if NativeBuild.IsProgram(rest(0)) is false
-		return Command.Native("test", (rest(0), rest(1), "native"))
-	base = NativeBuild.Output(rest(0), true)
-	extension = Toolchain(Platform.Current, rest(1)).Extension
-	cache = NativeCache("build", (rest(0), rest(1)))
-	fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
-	if fresh is ""
-		tested = Retest(rest)
-		if tested is not 0
-			return tested
-	Start(rest, folder, fresh)
-Retest(rest Texts) Number slow
-	quietUntil = Process.Elapsed + Command.QuietSeconds
-	tested = Execute("", quietUntil = quietUntil).Serve(rest(0), rest(1)).code
-	if tested is 0 and Process.Elapsed >= quietUntil
-		logger.Log(Execute.Summary(0, rest(0)))
-	tested
-Compile(rest Texts, fresh Text) Number slow
-	if fresh is not ""
-		return 0
-	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Command.Native("build", (rest(0), rest(1)))
-Start(rest Texts, folder Text, fresh Text) Number slow
-	base = NativeBuild.Output(rest(0), true)
-	tools = Toolchain(Platform.Current, rest(1))
-	built = Compile(rest, fresh)
-	if built is not 0
-		return built
-	if fresh is not ""
-		logger.Log("Up to date: " + fresh)
-	target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
-	Directory.Change(folder)
-	Process(target).Start(Command.Join(rest.Slice(2, rest.Length - 2)).Trim)
 Test(text Text) Text slow
 	Trial(text).Ran
 Trace(request TestRequest, rest Texts) Number slow

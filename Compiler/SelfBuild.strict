@@ -5,7 +5,7 @@ constant CheckedFile = "/obj/Strict.checked"
 constant BuildLock = "/obj/Strict.selfbuild.lock"
 constant HoldFile = "/obj/Strict.hold"
 constant CompilerPackages = ("Compiler", "Compiler/Checks", "Compiler/Gpu", "Compiler/Mlir", "Compiler/MlirValues", "Compiler/MlirStructs", "Compiler/MlirLoops", "Compiler/MlirDevice")
-constant CorePackages = CompilerPackages + ("Bytecode", "Bytecode/Binary", "Bytecode/Optimize", "Cli", "Expressions", "Expressions/Syntax", "Runtime", "Runtime/Core", "Validators")
+constant CorePackages = CompilerPackages + ("Bytecode", "Bytecode/Binary", "Bytecode/Optimize", "Expressions", "Expressions/Syntax", "Runtime", "Runtime/Core", "Validators")
 constant ExtraPackages = ("Math", "Binary", "Compression", "Regex", "Json", "Networking", "NeuralNetworks")
 constant DaemonCommands = ("coordinator", "serve", "linked", "status", "stop")
 constant InfoCommands = ("help", "--help", "version", "--version")
@@ -31,14 +31,14 @@ IsBuilt(arguments Texts) Boolean slow
 		return false
 	home = Directory.Current
 	Directory.Change(root)
-	current = IsStale(arguments) is false or NativeCache("build", ("Cli/Strict.strict", ".")).IsCurrent
+	current = IsStale(arguments) is false or NativeCache("build", ("Strict.strict", ".")).IsCurrent
 	built = current then File(TargetExecutable).Modified > exeBefore else IsCoreRebuilt
 	Mark
 	Directory.Change(home)
 	IsUnlocked and built
 IsCoreRebuilt Boolean slow
 	logger.Log(Shown + " is older than Strict sources, rebuilding")
-	IsRebuilt(Process(TargetExecutable).Start("build Cli/Strict.strict ."))
+	IsRebuilt(Process(TargetExecutable).Start("build Strict.strict ."))
 IsRebuilt(code Number) Boolean
 	SelfBuild("a", "strict.exe").IsRebuilt(0)
 	SelfBuild("a", "strict.exe").IsRebuilt(3) is false
@@ -67,7 +67,7 @@ Mark
 	File(root + CheckedFile).Write("checked")
 IsStale(arguments Texts) Boolean
 	SelfBuild("Compiler/output/Missing", "strict.exe").IsStale(List(Text) + "test") is false
-	if File(root + "/Cli/Strict.strict").Exists is false or IsSkipped(arguments)
+	if File(root + "/Strict.strict").Exists is false or IsSkipped(arguments)
 		return false
 	exeTime = File(TargetExecutable).Modified
 	if exeTime is 0
@@ -85,7 +85,7 @@ IsGitNewer(stamp Number) Boolean
 	parsed = result.HasSucceeded then result.Output.Trim to Number else 0
 	parsed is not Error and parsed > stamp
 IsSkipped(arguments Texts) Boolean
-	SelfBuild(".", "strict.exe").IsSkipped(("build", "Cli/Strict.strict"))
+	SelfBuild(".", "strict.exe").IsSkipped(("build", "Strict.strict"))
 	SelfBuild(".", "strict.exe").IsSkipped(("build", "."))
 	SelfBuild(".", "strict.exe").IsSkipped(("build", "Examples/Sum.strict")) is false
 	command = arguments.Length > 0 then arguments(0) else ""
@@ -118,7 +118,7 @@ IsCoreTarget(target Text) Boolean
 	false
 NewestSource Number
 	SelfBuild("Compiler/output/Missing", "strict.exe").NewestSource is 0
-	mutable newest = File(root + "/Cli/Strict.strict").Modified
+	mutable newest = File(root + "/Strict.strict").Modified
 	newest = MaxModify(Directory.Files(root, "*.strict"), newest)
 	newest = MaxModify(Directory.Files(root + "/Compiler", "*.mlir"), newest)
 	for CorePackages + ExtraPackages

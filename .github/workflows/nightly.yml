@@ -38,7 +38,7 @@ jobs:
           sh Compiler/bootstrap.sh
       - name: The current strict (the seed builds it with its older code generation)
         run: |
-          ./strict build Cli/Strict.strict
+          ./strict build Strict.strict
       - name: Slow tests on the Strict VM and all tests including native ones built natively, one folder after another
         run: |
           failed=0

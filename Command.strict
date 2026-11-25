@@ -16,8 +16,20 @@ constant FullHelp = ("strict test <folder> full  remove its obj/ folders, then r
 constant SourceHelp = ("strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it")
 constant MaintenanceHelp = ("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
 constant SuggestHelp = List(Text) + "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source"
-constant Entry = "Cli/Strict.strict"
+constant Entry = "Strict.strict"
 constant Help = RunHelp + CodeHelp + BuildHelp + PlatformHelp + AppHelp + BuildModeHelp + TestHelp + TestInputHelp + LinesHelp + ValuesHelp + FullHelp + SourceHelp + MaintenanceHelp + SuggestHelp
+constant FirstTraceLines = 3
+constant LastTraceLines = 3
+constant LongTrace = "Error: A\n\t1\n\t2\n\t3\n\t4\n\t5\n\t6\n\tat Strict.Logged in Strict.strict:line 66"
+Shorten(trace Text) Text
+	Command.Shorten("Error: A\n\t1") is "Error: A\n\t1"
+	Command.Shorten(LongTrace) is "Error: A\n\t1\n\t2\n\t... (skipped 1 lines)\n\t4\n\t5\n\t6"
+	logged = trace.LastIndexOf("\n\tat Strict.Logged ")
+	lines = (logged < 0 then trace else trace.Substring(0, logged)).Split("\n")
+	if lines.Length <= FirstTraceLines + LastTraceLines
+		return Text.Combine(lines, "\n")
+	gap = "\t... (skipped " + (lines.Length - FirstTraceLines - LastTraceLines) + " lines)"
+	Text.Combine(lines.Slice(0, FirstTraceLines) + gap + lines.Slice(lines.Length - LastTraceLines, LastTraceLines), "\n")
 Clean(command Text, rest Texts) Texts slow
 	Command.Clean("build", ("Compiler/output/Clean/A.strict", ".", "full")).Last is "."
 	Command.Clean("test", ("Compiler/output/Clean", ".", "full")).Last is "full"
@@ -100,21 +112,43 @@ Join(arguments Texts) Text
 	for arguments
 		joined = joined + " " + (value.IndexOf(" ") >= 0 then "\"" + value + "\"" else value)
 	joined
+Launch(rest Texts, folder Text) Number slow
+	if NativeBuild.IsProgram(rest(0)) is false
+		return Native("test", (rest(0), rest(1), "native"))
+	base = NativeBuild.Output(rest(0), true)
+	extension = Toolchain(Platform.Current, rest(1)).Extension
+	cache = NativeCache("build", (rest(0), rest(1)))
+	fresh = cache.IsCurrent then BuildOutput.Fresh(base, extension, List(Text)) else ""
+	if fresh is ""
+		tested = Retest(rest)
+		if tested is not 0
+			return tested
+	Start(rest, folder, fresh)
+Retest(rest Texts) Number slow
+	quietUntil = Process.Elapsed + QuietSeconds
+	tested = Execute("", quietUntil = quietUntil).Serve(rest(0), rest(1)).code
+	if tested is 0 and Process.Elapsed >= quietUntil
+		logger.Log(Execute.Summary(0, rest(0)))
+	tested
+Compile(rest Texts, fresh Text) Number slow
+	if fresh is not ""
+		return 0
+	NativeCache("build", (rest(0), rest(1))).IsCurrent then 0 else Native("build", (rest(0), rest(1)))
+Start(rest Texts, folder Text, fresh Text) Number slow
+	base = NativeBuild.Output(rest(0), true)
+	tools = Toolchain(Platform.Current, rest(1))
+	built = Compile(rest, fresh)
+	if built is not 0
+		return built
+	if fresh is not ""
+		logger.Log("Up to date: " + fresh)
+	target = TypeSource.Absolute(fresh is "" then tools.Executable(base) else fresh)
+	Directory.Change(folder)
+	Process(target).Start(Join(rest.Slice(2, rest.Length - 2)).Trim)
 Rest(arguments Texts) Texts
 	Command.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
 		arguments(value)
-Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
-	if command is "format"
-		logger.Log(Format(rest(0)))
-	if command is "update"
-		Update(Repositories("."), rest(0))
-	checked = command is "check" then Check(ValidateCheck, rest(0), rest(1)) else 0
-	Answer(command is "suggest" then Suggest(rest) else checked, known)
-Check(checker Validators/ValidateCheck, folder Text, root Text) Number slow
-	checker.Run(folder, root)
-Update(updater Bytecode/Repositories, folder Text) slow
-	logger.Log("Updated " + updater.Update(folder) + " packages in " + folder)
 Native(command Text, rest Texts) Number slow
 	Command.Native("test", ("Missing.strict", ".", "values", "other")) is 2
 	NativeCompiler.RunCommand((List(Text) + command) + rest)
@@ -125,9 +159,3 @@ Format(path Text) Text slow
 	if broken >= 0
 		return Error(ResolveCheck.Locate(FileCompiler.Normalize(path), broken + 1, FileCheck.Problem(lines, broken)))
 	Text.Combine(RoundTrip.Format(lines), "\n")
-Suggest(rest Texts) Number slow
-	source = FileCompiler.Normalize(rest(0))
-	if rest.Length > 3 and rest(3) is "-"
-		File(source).InMemory(Process.Input)
-	files = SourceFiles(rest(1)).Of(source)
-	Suggestions(source, rest(1), File(source).ReadLines, ResolveCheck.Inference(files)).Run(rest(2), files)
