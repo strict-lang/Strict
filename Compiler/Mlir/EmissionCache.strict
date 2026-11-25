@@ -11,10 +11,22 @@ Emit(texts List(MlirFunction)) Texts slow
 	if module.Cached is ""
 		return Fresh(texts)
 	keys = Keys(texts)
-	stored = Stored
+	stored = Load(module.Cached)
 	emitted = Reuse(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
-	Save(keys, emitted, stored)
+	Save(keys, emitted, stored, module.Cached)
 	emitted
+Device(all List(MlirFunction)) Text slow
+	Counting.Device(MlirModule.Counters.Functions) is ""
+	if module.Cached is ""
+		return DeviceParts.Assemble(DeviceParts.Parts(all))
+	keys = Keys(all)
+	path = module.Cached + ".gpu"
+	stored = Load(path)
+	mutable parts = List(Mutable(Text))
+	for all
+		parts.Add(keys(index) is in stored then stored(keys(index)) else DeviceParts.Part(value))
+	Save(keys, parts, stored, path)
+	DeviceParts.Assemble(parts)
 Fresh(texts List(MlirFunction)) Texts
 	Counting.Fresh(MlirModule.Counters.Functions).Length is 1
 	for texts
@@ -44,8 +56,8 @@ Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked
 	if stored(key) is not fresh
 		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
 	fresh
-Stored Dictionary(Text, Text) slow
-	File(module.Cached).Exists then Parse(File(module.Cached).ReadText) else Dictionary(Text, Text)
+Load(path Text) Dictionary(Text, Text) slow
+	File(path).Exists then Parse(File(path).ReadText) else Dictionary(Text, Text)
 Parse(text Text) Dictionary(Text, Text)
 	Counting.Parse(Separator + "a\nx" + Separator + "b\ny").Length is 2
 	Counting.Parse(Separator + "a\nx" + Separator + "a\ny")("a") is "x"
@@ -56,14 +68,14 @@ Parse(text Text) Dictionary(Text, Text)
 		if key is not "" and key is not in stored
 			stored = stored.Add(key, value.Substring(end + 1))
 	stored
-Save(keys Texts, emitted Texts, stored Dictionary(Text, Text)) slow
+Save(keys Texts, emitted Texts, stored Dictionary(Text, Text), path Text) slow
 	mutable isNew = keys.Length is not stored.Length
 	mutable joined = List(Mutable(Text))
 	for keys
 		isNew = isNew or value is not in stored
 		joined.Add(Separator + value + "\n" + emitted(index))
 	if isNew
-		File(module.Cached).Write(Text.Combine(joined, ""))
+		File(path).Write(Text.Combine(joined, ""))
 Keys(texts List(MlirFunction)) Texts slow
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
 	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")

@@ -118,15 +118,7 @@ Globals Texts
 Module(functions List(MlirFunction)) Text
 	MlirGpu.Module(List(MlirFunction) + Doubling.function).StartsWith(Marker)
 	MlirGpu.Module(List(MlirFunction) + Timing.function) is ""
-	mutable kernels = List(Mutable(Text))
-	mutable callees = List(Mutable(MlirFunction))
-	for functions
-		kernels = kernels + Kernels(value)
-		callees = callees + Callees(value)
-	if kernels.Length is 0
-		return ""
-	header = (Marker, "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {")
-	Text.Combine(header + kernels + Functions(callees) + "}", "\n")
+	DeviceParts.Assemble(DeviceParts.Parts(functions))
 Export(device Text) Texts
 	MlirGpu.Export(MlirDevice.DoublingHeader + "\n  llvm.func @Rows_Twice_1_device(") is ("Rows_Doubled_1_gpu2")
 	MlirGpu.Export("x nvvm.kernel (\n  llvm.func @Twice(") is List(Text)

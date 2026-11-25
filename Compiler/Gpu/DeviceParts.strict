@@ -1,0 +1,36 @@
+constant KernelEnd = "\n// device callees\n"
+constant Separator = "\n// device callee\n"
+constant Header = "module attributes {llvm.target_triple = \"nvptx64-nvidia-cuda\"} {"
+constant Doubled = DeviceParts.Part(MlirGpu.Doubling.function)
+Part(function MlirFunction) Text
+	Doubled.StartsWith(MlirDevice.DoublingHeader)
+	DeviceParts.Part(MlirGpu.Timing.function) is ""
+	kernels = MlirGpu.Kernels(function)
+	callees = MlirGpu.Callees(function)
+	if kernels.Length is 0 and callees.Length is 0
+		return ""
+	mutable devices = List(Mutable(Text))
+	for callees
+		devices.Add(Text.Combine(MlirGpu.Functions(List(MlirFunction) + value), "\n"))
+	Text.Combine(kernels, "\n") + KernelEnd + Text.Combine(devices, Separator)
+Parts(functions List(MlirFunction)) Texts
+	DeviceParts.Parts(List(MlirFunction) + MlirGpu.Doubling.function) is (Doubled)
+	for functions
+		Part(value)
+Assemble(parts Texts) Text
+	DeviceParts.Assemble(List(Text) + "") is ""
+	DeviceParts.Assemble(List(Text) + Doubled).StartsWith(MlirGpu.Marker + "\n" + Header + "\n")
+	kernels = Kernels(parts)
+	kernels.Length is 0 then "" else Text.Combine((MlirGpu.Marker, Header) + kernels + Devices(parts) + "}", "\n")
+Kernels(parts Texts) Texts
+	DeviceParts.Kernels(("a" + KernelEnd + "b", "", KernelEnd)) is ("a")
+	for parts
+		if value is not "" and value.StartsWith(KernelEnd) is false
+			value.Split(KernelEnd).First
+Devices(parts Texts) Texts
+	DeviceParts.Devices(("a" + KernelEnd + "b" + Separator + "c", "x" + KernelEnd + "c")) is ("b", "c")
+	mutable callees = List(Mutable(Text))
+	for parts
+		if value is not ""
+			callees.Add(value.Split(KernelEnd).Last)
+	Text.Combine(callees, Separator).Split(Separator).Unique - ""

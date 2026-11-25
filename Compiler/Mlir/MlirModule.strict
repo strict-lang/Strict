@@ -67,7 +67,7 @@ Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) T
 	Scaled.Text.IndexOf(WgslShader.Marker) < Shaded.Text.IndexOf(WgslShader.Marker)
 	table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	started = Process.Elapsed
-	device = MlirGpu.Module(functions)
+	device = EmissionCache(value, functions, List(Text)).Device(functions)
 	BuildProfile.Report("Emission / GPU kernels", started)
 	before = Process.Elapsed
 	main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
