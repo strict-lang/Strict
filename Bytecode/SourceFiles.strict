@@ -53,7 +53,8 @@ Traverse(known Texts, frontier Texts, reached Texts, searched = List(Text), fold
 		names = names + Mention(value)
 	mentioned = names.Unique
 	unmatched = Mentions.Unmatch(mentioned, known) - searched
-	indexed = unmatched.Length is 0 or folders.folders.Length > 0 then folders else TypeFolders.Of(root)
+	local = unmatched.Length is 0 or folders.locals.Length > 0 then folders else TypeFolders.Local(root)
+	indexed = local.folders.Length > 0 or local.Unfound(unmatched).Length is 0 then local else local.Widened
 	grown = unmatched.Length is 0 then known else Add(known, TypeChoice(known).Unique(indexed.Files(unmatched)))
 	visited = Add(reached, frontier)
 	Traverse(grown, Matching(mentioned, grown) - visited, visited, searched + unmatched, indexed)

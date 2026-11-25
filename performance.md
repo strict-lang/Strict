@@ -20,7 +20,7 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 
 ## VM
 - A VM call of a small Strict method costs about 6 us: `Machine.Bound` a quarter of it (one `Member` call per member slot, Number has 12 with its constants, and a `strict_list_push` per slot), the body about 150 ns per instruction (`Frame.Finish`, `strict_list_set`, `strict_rc_container`).
-- VM calls dominate game logic (a member read through a method like `Vector2.X` is two calls): DeltaEngine's multi-tick simulation and content loading tests are Slow for it.
+- VM calls dominate game logic (a member read through a method like `Vector2.X` is two calls): DeltaEngine's multi-tick simulation and content loading tests are Slow for it. `position + Vector2(1, 2) * 0.75` costs about 20 us: `Rounding.Build` 30 % (every construction fills all 10 member items, 8 of them constants through `Natives.Initial`, decodes the parameter names and rounds X and Y through `Number.Rounded`), `Machine.Bound` 16 %.
 
 ## Compiled CPU loops, lists and texts
 - Serial loops still generic (`strict_hoisted_read`/`strict_list_read`, `strict_is_failure`, `strict_list_push`): gathers `table(value)`, calls that can fail or read lists (`MersenneTwister.Normals`), one thread of a parallel chunk, and raw `Tempered` calls (f64 body has two remainders, no whole-number version used).

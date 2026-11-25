@@ -3,16 +3,25 @@ has folders Dictionary(Text, Text)
 constant None = TypeFolders(Dictionary(Text, Text), Dictionary(Text, Text))
 constant Single = Dictionary(("A", "."))
 constant Mathematics = TypeFolders(Dictionary(("Vector2", "./Math")), Dictionary(("Vector2", "./Math"), ("Size", "../Other")))
-Of(root Text) TypeFolders slow
-	"Vector2" is in TypeFolders.Of(".").locals and TypeFolders.Of(".").folders.Length >= TypeFolders.Of(".").locals.Length
+Local(root Text) TypeFolders slow
+	"Vector2" is in TypeFolders.Local(".").locals
+	TypeFolders.Local(".").folders.Length is 0
 	None.IndexFolders(List(Text) + ".", Single).Length > Single.Length
-	local = IndexFolders(List(Text) + root, Dictionary(Text, Text))
+	TypeFolders(IndexFolders(List(Text) + root, Dictionary(Text, Text)), Dictionary(Text, Text))
+Widened TypeFolders slow
+	"Vector2" is in TypeFolders.Local(".").Widened.folders
+	TypeFolders.Local(".").Widened.folders.Length >= TypeFolders.Local(".").locals.Length
 	mutable parents = List(Text)
 	for Directory.Directories("..")
 		project = Path(value.Replace("\\", "/")).FileName.text
 		if project(0) is project(0).Upper and project(0) is not project(0).Lower
 			parents = parents + ("../" + project)
-	TypeFolders(local, parents.Length is 0 then local else IndexFolders(parents, local))
+	TypeFolders(locals, parents.Length is 0 then locals else IndexFolders(parents, locals))
+Unfound(types Texts) Texts
+	Mathematics.Unfound(("Vector2s", "Size")) is ("Size")
+	for types
+		if Match(locals, List(Text) + value).Length is 0
+			value
 IndexFolders(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text) slow
 	"Vector2" is in None.IndexFolders(List(Text) + ".", Dictionary(Text, Text))
 	None.IndexFolders(List(Text) + "./Missing", Single).Length is 1
@@ -44,11 +53,12 @@ Folders(parent Text) Texts slow
 			result = result + Folders(parent + "/" + name)
 	result
 Files(types Texts) Texts slow
-	TypeFolders.Of(".").Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
+	TypeFolders.Local(".").Widened.Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	None.Files(List(Text) + "Vector2").Length is 0
+	TypeFolders(Mathematics.locals, Dictionary(Text, Text)).Files(("Vector2", "Vector2s")).Length > 0
 	local = Match(locals, types)
 	mutable files = List(Mutable(Text))
-	for local.Length < types.Length then Match(folders, types) else local
+	for local.Length < types.Length and folders.Length > 0 then Match(folders, types) else local
 		files = files + Directory.Files(value, "*.strict")
 	files
 Match(indexed Dictionary(Text, Text), types Texts) Texts
