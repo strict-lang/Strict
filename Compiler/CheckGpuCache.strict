@@ -37,10 +37,6 @@ constant KM27 = "%n = llvm.add %c, %o : i64\nllvm.store %n, %cs : i64, ~p\nllvm.
 constant KM28 = "%sb = llvm.ptrtoint %s : ~p to i64\n%l = llvm.call @testLogged(%k, %sb, %d) : (i64, i64, i64) -> i32\nllvm.return %l : i32\n}\nllvm.func @testRecord(%e: ~p, %s: ~p) -> i32 {\n%k = ~mc(2 : i64) : i64"
 constant KM29 = "%eb = llvm.ptrtoint %e : ~p to i64\n%sb = llvm.ptrtoint %s : ~p to i64\n%l = llvm.call @testLogged(%k, %eb, %sb) : (i64, i64, i64) -> i32\nllvm.return %l : i32\n}\nllvm.func @testWait(%s: ~p, %e: ~p, %f: i32) -> i32 {"
 constant KM30 = "%k = ~mc(3 : i64) : i64\n%sb = llvm.ptrtoint %s : ~p to i64\n%eb = llvm.ptrtoint %e : ~p to i64\n%l = llvm.call @testLogged(%k, %sb, %eb) : (i64, i64, i64) -> i32\nllvm.return %l : i32\n}"
-constant KS1 = "func.func private @strict_gpu_lock_check() {\nreturn\n}\nfunc.func private @strict_gpu_lock_ensure(%b: i64) {\nreturn\n}\nfunc.func private @strict_gpu_copier() -> ~p {\n%n = llvm.mlir.zero : ~p\nreturn %n : ~p\n}"
-constant KS2 = "func.func private @strict_gpu_compact_wanted(%s: ~p, %l: i1) -> i64 {\n%z = ~a0 : i64\nreturn %z : i64\n}\nfunc.func private @strict_gpu_raw_call(%i: i64) -> ~p {\n%c = ~cstrict_gpu_call(%i) : (i64) -> ~p\nreturn %c : ~p\n}"
-constant KS3 = "func.func private @strict_gpu_put_compact(%d: i64, %h: ~p, %s: ~p, %t: ~p) -> i32 {\n%z = ~a0 : i32\nreturn %z : i32\n}"
-constant KS4 = "func.func private @strict_gpu_defer_copy(%k: i64, %t: i64, %s: i64, %b: i64) -> i1 {\n%f = ~afalse\nreturn %f : i1\n}"
 constant PoolStats = "llvm.func @pool_stats() -> ~p {\n%p = ~mad@pool_counters : ~p\nllvm.return %p : ~p\n}\nllvm.func @pool_spilled() -> ~p {\n%p = ~mad@strict_gpu_spilled_bytes : ~p\nllvm.return %p : ~p\n}"
 Run Number
 	folder = "Compiler/output/GpuCacheCheck" + 1000000.Random.Floor
@@ -86,13 +82,13 @@ ExtractedFn(src Text, name Text) Text
 	split.Length < 2 then Error("MissingMlirFn: " + name) else marker + split(1).Split("\n  }")(0) + "\n  }"
 Expand(raw Text) Text
 	s = raw.Replace("~p", "!llvm.ptr").Replace("~c", "func.call @").Replace("~a", "arith.constant ")
-	s.Replace("~mad", "llvm.mlir.addressof ").Replace("~gep", "llvm.getelementptr").Replace("~mc", "llvm.mlir.constant")
+	expanded = s.Replace("~f", "func.func private @strict_gpu_").Replace("~mad", "llvm.mlir.addressof ")
+	expanded.Replace("~gep", "llvm.getelementptr").Replace("~mc", "llvm.mlir.constant")
 KindMlirText(src Text) Texts
 	head = KM01 + "\n" + KM02 + "\n" + ExtractedFn(src, "strict_gpu_cached") + "\n" + KM03 + "\n" + KM04
 	mutable out = List(Text) + head
 	out = out + (KM05 + "\n" + KM06 + "\n" + KM07 + "\n" + KM08)
 	out = out + (ExtractedGlobalsAndFns(src, KindNamesA + KindNamesB, KindGlobals))
-	out = out + (KS1 + "\n" + KS2 + "\n" + KS3 + "\n" + KS4)
 	out = out + (ExtractedFn(src, "strict_gpu_allocated") + "\n" + ExtractedFn(src, "strict_gpu_ahead_joined"))
 	out = out + (KM09 + "\n" + KM10 + "\n" + KM11 + "\n" + KM12 + "\n" + KM13 + "\n" + KM14 + "\n" + KM15 + "\n" + KM16)
 	out = out + (KM17 + "\n" + KM18 + "\n" + KM19 + "\n" + KM20 + "\n" + KM21 + "\n" + KM22 + "\n" + KM23 + "\n" + KM24)
@@ -101,7 +97,13 @@ KindMlirText(src Text) Texts
 KindTail Text
 	constant remember = "func.func private @strict_gpu_remember(%l: f64, %k: i64, %c: i64, %o: ~p, %p: i64) {\nreturn\n}"
 	constant upload = "llvm.func @spill_upload(%lb: i64, %c: i64) -> i64 {\n%t = ~a3 : i64"
-	mutable out = List(Text) + remember + upload
+	constant locks = "~flock_check() {\nreturn\n}\n~flock_ensure(%b: i64) {\nreturn\n}"
+	constant copier = "~fcopier() -> ~p {\n%n = llvm.mlir.zero : ~p\nreturn %n : ~p\n}"
+	constant compact = "~fcompact_wanted(%s: ~p, %l: i1) -> i64 {\n%z = ~a0 : i64\nreturn %z : i64\n}"
+	constant put = "~fput_compact(%d: i64, %h: ~p, %s: ~p, %t: ~p) -> i32 {\n%z = ~a0 : i32\nreturn %z : i32\n}"
+	constant raw = "~fraw_call(%i: i64) -> ~p {\n%c = ~cstrict_gpu_call(%i) : (i64) -> ~p\nreturn %c : ~p\n}"
+	constant defer = "~fdefer_copy(%k: i64, %t: i64, %s: i64, %b: i64) -> i1 {\n%f = ~afalse\nreturn %f : i1\n}"
+	mutable out = List(Text) + locks + copier + compact + put + raw + defer + remember + upload
 	out = out + "%o = llvm.alloca %t x i64 : (i64) -> ~p\n%r = arith.bitcast %lb : i64 to f64"
 	out = out + "%u = ~cstrict_gpu_unspilled(%r, %c, %o) : (f64, i64, ~p) -> i1\n%d = llvm.load %o : ~p -> i64"
 	out = out + "llvm.return %d : i64\n}\nllvm.func @ahead_used(%d: i64) {\n%t = ~a3 : i64"

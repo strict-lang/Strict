@@ -29,6 +29,7 @@ Large features, difficult or long work and far fetched things, kept here until s
 - Many candidates in one request (Ben, 2026-11-18): one type with fixed tests and N alternative bodies for one method, sent over the server's connection from a native program, one result line per alternative. A trial's tests run in under 0.1 ms each, a call costs 170 to 450 ms around them (process, source search, compile and link), so 10,000 candidates need about 0.3 ms each: no process and no parsing of what did not change. Mutation runs are the nearest thing (every mutant one source edit, run alone).
 - Later: Qwen3-Coder-Next 80B-A3B and Qwen3-Coder-30B with all experts, image blur on the GPU, Apple Silicon, AMD GPUs, batched training ideas.
 - Break the `Strict` root folder cycle first (2026-11-24): the root folder mixes base types (`Number`, `Text`, `List`, `File`, ...) with the `Strict.strict` CLI, creating 44 cycle edges in `AcyclicDependencies`; moving the CLI out of the root folder clears the main cycle.
+- `strict check Compiler` logs 44 `PackageDependenciesMustNotCycle` edges between Compiler and its sub-folders (Checks, Gpu, Mlir, MlirDevice, MlirLoops, MlirStructs, MlirValues), only a warning (exit 0): Packages.md layering breaks them.
 
 ## Model: Ternary Bonsai 27B
 the Bonsai GGUF, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:
