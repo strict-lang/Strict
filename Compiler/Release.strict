@@ -3,7 +3,8 @@ constant Opening = "= func.call @" + "Window_Open("
 constant Sidecars = (".ptx", ".older.ptx", ".runtime.ptx", ".runtime.older.ptx", ".hsaco", ".metal")
 AndroidPackage
 	release = Parent + "/Release/Android"
-	Content(Parent + "/Release/Content")
+	if File(Parent + "/ContentBuild.strict").Exists
+		Content(Parent + "/Release/Content")
 	Directory.Create(Parent + "/Release")
 	Directory.Create(release)
 	Directory.Create(release + "/jniLibs")
@@ -16,7 +17,8 @@ AndroidPackage
 MobilePackage(platform Number)
 	if platform is Platform.Android
 		return AndroidPackage
-	Content(Parent + "/Release/Content")
+	if File(Parent + "/ContentBuild.strict").Exists
+		Content(Parent + "/Release/Content")
 	release = Parent + "/Release/iOS"
 	Refresh(release, release + "/Content", base, (".ios.a", ".simulator.a"))
 Package(program Text, isWeb = false, isCrossing = false, platform = -1, isReleased = false)
@@ -33,7 +35,8 @@ Package(program Text, isWeb = false, isCrossing = false, platform = -1, isReleas
 	if program.IndexOf(Opening) >= 0 or isReleased or isCrossing or File(Parent + "/" + Label(base) + ".shell.html").Exists
 		NativePackage(isCrossing)
 NativePackage(isCrossing Boolean)
-	Content(Parent + "/Release/Content")
+	if File(Parent + "/ContentBuild.strict").Exists
+		Content(Parent + "/Release/Content")
 	ending = Platform.Current is Platform.Windows then ".exe" else ""
 	if IsDemo
 		return Refresh(Parent + "/Release", "", BuildOutput.Deliver(base), (ending, ".shell.html"))
@@ -101,10 +104,13 @@ Sidecar(release Text)
 			PtxLibraries.Of(base).Place(base, value, release)
 Mirror(target Text)
 	Release("Compiler/output/A").Mirror("Compiler/output/Release/Web/Content") is not Error
+	if target is ""
+		return
+	if File(Parent + "/ContentBuild.strict").Exists is false
+		return Synce(Parent + "/Content", target)
 	if target.EndsWith("/Web/Content")
 		Content(Parent + "/Release/Content")
-	if target is not ""
-		Synce(Parent + "/Release/Content", target)
+	Synce(Parent + "/Release/Content", target)
 Synce(source Text, target Text)
 	Copy(source, target)
 	Remove(source, target)
