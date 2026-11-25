@@ -51,12 +51,8 @@ Pick(candidates Numbers, chunks Numbers, bound Number, uniform Number) Number
 Threshold(numbers Numbers, count Number) Number
 	Warm.Threshold((3, 1, 2, 5), 2) is 3
 	Warm.Threshold((5, 5, 1), 2) is 5
-	mutable limit = numbers.Maximum
-	for count
-		if Above(numbers, limit) >= count
-			return limit
-		limit = Below(numbers, limit)
-	limit
+	Warm.Threshold((2, 1), 3) is 1
+	count >= numbers.Length then numbers.Minimum else numbers.Sorted(numbers.Length - count)
 Nucleus(candidates Numbers, largest Number, limit Number) Number
 	Sampling(1, 0, 0.6, PseudoRandom(5)).Nucleus((2, 3, 2.9), 3, 2) is 2.9
 	Sampling(1, 0, 0.3, PseudoRandom(5)).Nucleus((2, 3, 2.9), 3, 2) is 3
@@ -87,12 +83,6 @@ Weight(logit Number, largest Number, cut Number) Number
 	Warm.Weight(1, 1, 0) is 1
 	Warm.Weight(0, 1, 0.5) is 0
 	logit >= cut then ((logit - largest) / temperature).Exponential else 0
-Above(numbers Numbers, limit Number) Number
-	Warm.Above((1, 2, 3), 2) is 2
-	mutable count = 0
-	for numbers
-		count = count + (value >= limit then 1 else 0)
-	count
 Below(numbers Numbers, limit Number) Number
 	Warm.Below((1, 2, 3), 3) is 2
 	mutable below = numbers.Minimum
