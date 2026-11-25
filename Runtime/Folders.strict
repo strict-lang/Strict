@@ -1,5 +1,6 @@
 constant Batch = 128
 constant CrashExitCode = 128
+constant MaxChildren = 8
 constant PendingPath = "./Compiler/output/Pending/Go.strict"
 constant PendingFile = BinaryFile(PendingPath)
 constant PendingSource = PtxCache("Compiler/output/Pending/Go").Save(".strict", "from") is not Error
@@ -12,7 +13,7 @@ TestFolder(folder Text, root Text, isRecursive = true, isMutating = false, isFul
 	mutable failed = 0
 	if pending.Length > 0
 		if isMutating is false and isFull is false
-			failed = Execute.Failures(pending, pending, root, false)
+			failed = Verify(pending, root)
 		else
 			failed = RunFolders(Commands("test", pending, root, isMutating, isFull))
 	for files - pending
@@ -74,12 +75,12 @@ Remove(folder Text) Number
 		removed = removed + Remove(value)
 	Directory.Delete(folder)
 	removed
-RunFolders(arguments Texts) Number
+RunFolders(arguments Texts, width = Batch) Number
 	Folders.RunFolders(List(Text)) is 0
 	mutable failed = 0
-	for Range(0, ((arguments.Length + Batch - 1) / Batch).Floor)
-		start = value * Batch
-		count = arguments.Length - start < Batch then arguments.Length - start else Batch
+	for Range(0, ((arguments.Length + width - 1) / width).Floor)
+		start = value * width
+		count = arguments.Length - start < width then arguments.Length - start else width
 		for Process.RunTools(Process.Current.executable, arguments.Slice(start, count))
 			logger.Log((value.Output + value.error).Replace("\r", "").Trim)
 			if value.exitCode is not 0
@@ -91,3 +92,29 @@ Fail(exitCode Number) Number
 	Folders.Fail(-1073741819) is 1
 	Folders.Fail(0) is 0 and Folders.Fail(200) is 1
 	exitCode >= 0 and exitCode < CrashExitCode then exitCode else 1
+Verify(pending Texts, root Text) Number slow
+	Folders.Verify(List(Text), ".") is 0
+	folders = Directories(pending)
+	width = Width(Process.Executed(0))
+	if folders.Length < 2 or width < 2
+		return Execute.Failures(pending, pending, root, false)
+	RunFolders(Separately(Commands("test", folders, root)), width)
+Separately(commands Texts) Texts
+	Folders.Separately(List(Text) + "test \"a\"") is ("test \"a\" --no-recursive")
+	for commands
+		value + " --no-recursive"
+Directories(paths Texts) Texts
+	Folders.Directories(("a/b.strict", "a/c.strict", "d/e.strict")) is ("a", "d")
+	Folders.Directories(List(Text) + "b.strict") is (".")
+	mutable found = List(Mutable(Text))
+	for paths
+		folder = Path(value).PathOnly.text
+		named = folder is "" then "." else folder
+		if named is not in found
+			found.Add(named)
+	found
+Width(cores Number) Number
+	Folders.Width(96) is 8
+	Folders.Width(6) is 3
+	Folders.Width(1) is 0
+	(cores / 2).Floor.Minimum(MaxChildren)
