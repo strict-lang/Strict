@@ -105,7 +105,7 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
 	missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
 		return tools.Installing(missing)
-	tuned =Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native")
+	tuned = Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native", isReleased = isReleased)
 	if IsUnchanged(base, mlir, tuned)
 		return "Built " + tuned.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)

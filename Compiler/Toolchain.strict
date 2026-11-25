@@ -4,6 +4,7 @@ has natives Texts = List(Text)
 has isWeb Boolean = false
 has cpu = "native"
 has target = ""
+has isReleased = false
 constant Needed = ("mlir-opt", "mlir-translate", "clang", "opt", "llc")
 constant WindowsFolders = ("C:/Program Files/LLVM/bin/", "C:/msys64/ucrt64/bin/")
 constant LinuxRelease = "LLVM-23.1.3-Linux-X64"
@@ -15,6 +16,7 @@ constant Direct = " -fuse-ld=lld -Wl,clang_rt.builtins-x86_64.lib"
 constant LtoCachePolicy = "prune_interval=0s:cache_size_bytes=64m"
 constant Thin = " -x none -flto=thin -Wl,/opt:lldltojobs=all -Wl,/mllvm:-mcpu=native" + Direct
 constant NoImports = " -Wl,/mllvm:-import-instr-limit=0"
+constant Edited = " -Wl,/mllvm:-import-instr-limit=25"
 constant OnWindows = Toolchain(Platform.Windows, "C:/s")
 constant OnLinux = Toolchain(Platform.Linux, "/s")
 Locate(name Text) Text
@@ -119,8 +121,9 @@ Inputs(base Text) Text
 	parts + Thin.Replace("native", cpu) + Importing(base) + cache + " -Wno-unused-command-line-argument"
 Importing(base Text) Text
 	OnWindows.Importing("a/obj/Tests.test") is NoImports
-	OnWindows.Importing("a/obj/Sum") is ""
-	base.EndsWith(".test") then NoImports else ""
+	OnWindows.Importing("a/obj/Sum") is Edited
+	Toolchain(OnWindows, isReleased = true).Importing("a/obj/Sum") is ""
+	base.EndsWith(".test") then NoImports else isReleased then "" else Edited
 Bitcode(part Text) Text
 	OnWindows.Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\" -march=")
 	Toolchain(Platform.Windows, ".", cpu = "skylake").Bitcode("p").IndexOf("-march=skylake") > 0
