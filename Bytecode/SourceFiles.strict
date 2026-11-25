@@ -62,10 +62,7 @@ Matching(names Texts, files Texts) Texts
 	SourceFiles(".").Matching(("Vector2s", "Missing"), Imaging + "./Math/Vector2.strict") is ("./Math/Vector2.strict")
 	wanted = Mentions.MarkNames(names)
 	for files
-		slashed = value.IndexOf("\\") >= 0 then value.Replace("\\", "/") else value
-		slash = slashed.LastIndexOf("/")
-		end = slashed.EndsWith(".strict") then slashed.Length - 7 else slashed.Length
-		name = slash < 0 then slashed.Substring(0, end) else slashed.Substring(slash + 1, end - slash - 1)
+		name = TypeFolders.FileType(value)
 		if name is in wanted or name + "s" is in wanted
 			value
 Folders(folders Texts, depth Number, scanned = 0) Texts

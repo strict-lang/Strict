@@ -30,7 +30,7 @@ IndexFolder(folder Text, known Dictionary(Text, Text)) Dictionary(Text, Text) sl
 	"Vector2" is in None.IndexFolder("./Math", Dictionary(Text, Text))
 	mutable map = known
 	for Directory.Files(folder, "*.strict")
-		name = Path(value.Replace("\\", "/")).FileName.RemoveExtension.text
+		name = FileType(value)
 		if name is not in map
 			map(name) = folder
 	map
@@ -38,7 +38,7 @@ Folders(parent Text) Texts slow
 	"./Math" is in None.Folders(".")
 	mutable result = List(Mutable(Text))
 	for Directory.Directories(parent)
-		name = Path(value.Replace("\\", "/")).FileName.text
+		name = FileType(value)
 		if name is not in ("Release", "Tools") and name(0) is name(0).Upper and name(0) is not name(0).Lower
 			result.Add(parent + "/" + name)
 			result = result + Folders(parent + "/" + name)
@@ -62,4 +62,10 @@ Match(indexed Dictionary(Text, Text), types Texts) Texts
 		if name is in indexed and indexed(name) is not in matched
 			matched.Add(indexed(name))
 	matched
-
+FileType(path Text) Text
+	TypeFolders.FileType("./Math/Vector2.strict") is "Vector2"
+	TypeFolders.FileType("C:\\Math\\Size.strict") is "Size"
+	TypeFolders.FileType("Plain") is "Plain"
+	slashed = path.IndexOf("\\") >= 0 then path.Replace("\\", "/") else path
+	slash = slashed.LastIndexOf("/")
+	slashed.Substring(slash + 1, (slashed.EndsWith(".strict") then slashed.Length - 7 else slashed.Length) - slash - 1)
