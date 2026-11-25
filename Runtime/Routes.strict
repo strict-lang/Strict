@@ -43,9 +43,13 @@ Target(call Invocation) Numbers
 	JsonOnly.Target(HostedJson.Getting)(0) is Resolver.Native and Searchable.Target(Searching)(0) is Resolver.Native
 	Textual.Call(Invocation.Parsing) is (Resolver.Native, 0, 0)
 	Characters.Call(Invocation.Coding) is (0, 0, 1)
+	Doubling.Target(HostedMath.Flooring) is (Resolver.Computing, 0, 0)
 	if Hosted(call).IsHosted and IsSourceRun(call) is false
 		return (Resolver.Hosting, 0, 0)
 	isText = call.TypeName is "Strict/Text" and call.MethodName is in Natives.TextMethods
+	isNumber = call.TypeName is "Strict/Number" and call.MethodName is in HostedMath.NumberMethods
+	if isNumber then IsSourceRun(call) is false else false
+		return (Resolver.Computing, 0, 0)
 	IsSearch(call) then (Resolver.Native, 0, 0) else isText then (Resolver.Searching, 0, 0) else Call(call)
 IsSearch(call Invocation) Boolean
 	Doubling.IsSearch(Searching)

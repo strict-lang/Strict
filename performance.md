@@ -19,7 +19,7 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - Reachability, safety and globals/text assembly of MLIR emission run serially.
 
 ## VM
-- VM loops of small Number methods (20-50x slower than native): `Machine.Bound` (4 us), `Execute` (3 us), routing (4 us), `VmValue.OfNumber` allocations and `strict_rc_reclaim` (18 %); `DynamicSample.Inflated` is still around its 100 ms limit.
+- A VM call of a small Strict method costs about 6 us: `Machine.Bound` a quarter of it (one `Member` call per member slot, Number has 12 with its constants, and a `strict_list_push` per slot), the body about 150 ns per instruction (`Frame.Finish`, `strict_list_set`, `strict_rc_container`).
 - VM calls dominate game logic (a member read through a method like `Vector2.X` is two calls): DeltaEngine's multi-tick simulation and content loading tests are Slow for it.
 
 ## Compiled CPU loops, lists and texts

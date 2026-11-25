@@ -166,11 +166,14 @@ Call(call Invocation) VmValue
 	(deadline > 0 then Hosted(call).IsChanging else false) then VmValue.OfError("ChangeInMutationRun") else Route(call)
 Route(call Invocation) VmValue
 	Hello.Route(Invocation.Uppered).text is "AB"
+	Hello.Route(HostedMath.Flooring).number is -3
 	at = call.Resolution
 	entry = call.entry.payload.Length > at then call.entry else Resolver(types).Target(call.entry)
 	route = entry.payload(at)
 	if route is Resolver.Hosting
 		return Hosted(call).Contained
+	if route is Resolver.Computing
+		return HostedMath(call).Computed
 	if route is Resolver.Searching
 		return Natives(types).Search(call.MethodName, call.Instance.text, call.Arguments)
 	if route is Resolver.Native and entry.payload(at + 1) > 0

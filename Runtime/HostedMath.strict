@@ -4,6 +4,10 @@ constant Sine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "S
 constant Cosine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Degrees", "Cos", "Strict/Math/Ratio"), List(Number), 0), List(VmValue), VmValue.OfNumber(0))
 constant Arcsine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Ratio", "Asin", "Strict/Math/Degrees"), List(Number), 0), List(VmValue), VmValue.OfNumber(1))
 constant Arccosine = Invocation(InstructionEntry.Invoke(1, ("Strict/Math/Ratio", "Acos", "Strict/Math/Degrees"), List(Number), 0), List(VmValue), VmValue.OfNumber(1))
+constant NumberMethods = ("Floor", "Ceiling", "Absolute", "Sign", "Truncated", "Maximum", "Minimum")
+constant Flooring = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Floor", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfNumber(-2.5))
+constant Signing = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Sign", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfNumber(-2.5))
+constant Larger = Invocation(InstructionEntry.Invoke(1, ("Strict/Number", "Maximum", "Strict/Number", "other"), 0, 0), List(VmValue) + VmValue.OfNumber(7), VmValue.OfNumber(3))
 Measured VmValue
 	HostedMath(Sine).Measured.number is 1
 	HostedMath(Logging).Measured.number is 0
@@ -14,6 +18,18 @@ Measured VmValue
 	if type is "Degrees"
 		return VmValue.OfNumber(Turn(Degrees(number)).number)
 	VmValue.OfNumber(Invert(Ratio(number)).number)
+Computed VmValue
+	HostedMath(Flooring).Computed.number is -3
+	HostedMath(Larger).Computed.number is 7
+	HostedMath(Signing).Computed.number is -1
+	number = call.Instance.number
+	name = call.MethodName
+	if call.Arguments.Length > 0
+		other = call.Arguments.First.number
+		return VmValue.OfNumber(name is "Maximum" then number.Maximum(other) else number.Minimum(other))
+	if name is "Floor" or name is "Ceiling"
+		return VmValue.OfNumber(name is "Floor" then number.Floor else number.Ceiling)
+	VmValue.OfNumber(name is "Absolute" then number.Absolute else name is "Sign" then number.Sign else number.Truncated)
 Calculate(number Number) Number
 	HostedMath(Logging).Calculate(1) is 0
 	call.MethodName is "Logarithm" then number.Logarithm else number.Random

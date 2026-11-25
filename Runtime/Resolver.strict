@@ -2,6 +2,7 @@ has types List(TypeEntry)
 constant Native = -1
 constant Hosting = -2
 constant Searching = -3
+constant Computing = -5
 constant OuterSlot = -2
 constant OuterIndexSlot = -3
 constant LiteralIndex = -4
