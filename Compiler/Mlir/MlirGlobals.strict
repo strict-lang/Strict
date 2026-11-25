@@ -1,7 +1,7 @@
 has functions List(MlirFunction)
 constant Counted = MlirGlobals(MlirModule.Counters.Functions)
 constant Foreign = MlirGlobals(List(MlirFunction) + MlirForeign.Adder)
-constant Filling = ("  func.func private @strict_places_fill() -> i64 {", "    %table = llvm.mlir.addressof @strict_places : !llvm.ptr")
+constant Filling = ("  func.func private @strict_places_fill() -> i64 attributes {llvm.passthrough = [\"noinline\"]} {", "    %table = llvm.mlir.addressof @strict_places : !llvm.ptr")
 constant Returning = ("    return %count : i64", "  }")
 constant ShapeFunction = ("    %f2 = func.constant @Shape_Run_0 : (f64) -> f64", "    %c2 = builtin.unrealized_conversion_cast %f2 : (f64) -> f64 to !llvm.ptr")
 constant ShapeStored = ("    %s2 = llvm.getelementptr %table[4] : (!llvm.ptr) -> !llvm.ptr, i64", "    llvm.store %c2, %s2 : !llvm.ptr, !llvm.ptr")

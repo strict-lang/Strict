@@ -12,6 +12,7 @@ constant CalledFunction = ("  func.func private @B(%p0: f64) -> f64 {", "    ret
 constant Sample = MlirSplit(SampleHeader + CallingFunction + CalledFunction)
 constant Linking = MlirSplit("  llvm.linker_options [\"a\"]")
 constant RuntimeParts = 8
+constant ProgramMade = ("strict_places_fill", "strict_places", "strict_gpu_ptx")
 constant Common = Sample.Shared
 constant Placing = Sample.Place(Common)
 constant LinkerOptions = "  llvm.linker_options"
@@ -47,8 +48,9 @@ Owner(line Text) Number
 	Sample.Owner("  llvm.func @strict_new(%a: i64) {") is Sample.Owner("  func.func @strict_new() {")
 	Sample.Owner("  func.func @Xor_Run_0() {") is RuntimeParts + HashCode("Xor").number % (Toolchain.Parts - RuntimeParts)
 	Sample.Owner("  func.func @Xor_Run_0() {") is Sample.Owner("  llvm.mlir.global constant @lXor_Run_0_1(\"a\") : x")
+	Sample.Owner("  func.func private @strict_places_fill() -> i64 {") >= RuntimeParts
 	name = Name(line)
-	if name.StartsWith("strict_")
+	if name.StartsWith("strict_") and name is not in ProgramMade
 		return HashCode(name).number % RuntimeParts
 	RuntimeParts + HashCode(FindType(name)).number % (Toolchain.Parts - RuntimeParts)
 Shared Texts
