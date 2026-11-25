@@ -30,7 +30,7 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - Appending in a loop still creates a new view per append (~30 ns) when a list starts from a member (`MersenneTwister.Uints`) or is handed to a constructor afterwards (`MersenneTwister.Seeded`).
 - Texts: `File.ReadLines` copies its lines in the runtime; `Trim`, case changes, `to Number` and sorting copy a span first; texts under 256 bytes copy their substrings.
 - Short parallel loops: the 10 us probe hands a loop over even when the rest takes less than wake-up, every piece starts with a memo miss, and cheaper small loops need work kept on fewer hot workers per CCX.
-- `List.Sorted`: MSVC and wasm `qsort` call the comparator per comparison (195 us on Windows, 952 us on web vs 54 us on Linux for 1187 numbers): inline comparison sort in the runtime, and measure `Sampling.Threshold` against one sort.
+- `Sampling.Threshold` walks the values once per top-k step: measure it against one `List.Sorted` (a radix sort since 2026-11-25, 1187 numbers in 40 us with the copy, 1M in 45 ms).
 - Matrix and vector speed: the VM calculates in f64, accessors (`point.X`) are not counted as 32 bit values, `Axis(n).Y` still allocates its Vector3, and a block is only reused when the local is alone.
 - Whole-number call guards give up (f64 version runs) when a variable read after an `if` or loop that stores it is used in `+`, `-` or `*`: a maximum over the possible stores would keep the i64 path.
 - ParticleStress at 1 million particles (4.8-5.5 ms per tick): 32 bit members (72 -> 44 bytes per particle) and writing in place over the list being read.

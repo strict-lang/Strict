@@ -1,0 +1,16 @@
+constant Step = 7919
+Shuffle(count Number) Numbers
+	SortedNumbers.Shuffle(2)(1) is 0
+	SortedNumbers.Shuffle(2)(0) > 0
+	half = count / 2
+	for count
+		(index * Step % count - half) * (index % 2 is 0 then -1 else 1) / Step
+IsAscending(count Number) Boolean native
+	SortedNumbers.IsAscending(50)
+	SortedNumbers.IsAscending(1187)
+	SortedNumbers.IsAscending(100000)
+	sorted = Shuffle(count).Sorted
+	for count - 1
+		if sorted(index) > sorted(index + 1)
+			return false
+	sorted(0) is Shuffle(count).Minimum and sorted(count - 1) is Shuffle(count).Maximum

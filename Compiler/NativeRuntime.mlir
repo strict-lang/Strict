@@ -13167,16 +13167,143 @@
   }
   // List.SwapRemoved: the last element takes the removed place, a dying list its alone local handed over
   // (strict_list_destine) changes in place in O(1), any other list is copied first
-  // ascending numbers for qsort (strict_sort_numbers), two NaN-boxed values compare as equal
-  llvm.func @strict_number_order(%left: !llvm.ptr, %right: !llvm.ptr) -> i32 {
-    %first = llvm.load %left : !llvm.ptr -> f64
-    %second = llvm.load %right : !llvm.ptr -> f64
-    %less = llvm.fcmp "olt" %first, %second : f64
-    %greater = llvm.fcmp "ogt" %first, %second : f64
-    %lessOne = llvm.zext %less : i1 to i32
-    %greaterOne = llvm.zext %greater : i1 to i32
-    %order = llvm.sub %greaterOne, %lessOne : i32
-    llvm.return %order : i32
+  // ascending numbers in place: insertion up to 64, else a radix sort of the bits made orderable (negative ones
+  // inverted, the sign of the others flipped) a byte per pass, skipping bytes all numbers share; the platform qsort
+  // called a comparator per comparison (1187 numbers: 195 us on Windows, 952 us on the web, 54 us on Linux)
+  func.func private @strict_sort_numbers(%items: !llvm.ptr, %count: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %small = arith.constant 64 : i64
+    %isSmall = arith.cmpi sle, %count, %small : i64
+    cf.cond_br %isSmall, ^outer(%one : i64), ^radix
+  ^outer(%next: i64):
+    %more = arith.cmpi slt, %next, %count : i64
+    cf.cond_br %more, ^take, ^done
+  ^take:
+    %takenSlot = llvm.getelementptr %items[%next] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %taken = llvm.load %takenSlot : !llvm.ptr -> f64
+    cf.br ^shift(%next : i64)
+  ^shift(%at: i64):
+    %atStart = arith.cmpi eq, %at, %zero : i64
+    cf.cond_br %atStart, ^place(%at : i64), ^compare
+  ^compare:
+    %before = arith.subi %at, %one : i64
+    %beforeSlot = llvm.getelementptr %items[%before] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %beforeValue = llvm.load %beforeSlot : !llvm.ptr -> f64
+    %isGreater = arith.cmpf ogt, %beforeValue, %taken : f64
+    cf.cond_br %isGreater, ^move, ^place(%at : i64)
+  ^move:
+    %atSlot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %beforeValue, %atSlot : f64, !llvm.ptr
+    cf.br ^shift(%before : i64)
+  ^place(%placed: i64):
+    %placedSlot = llvm.getelementptr %items[%placed] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %taken, %placedSlot : f64, !llvm.ptr
+    %following = arith.addi %next, %one : i64
+    cf.br ^outer(%following : i64)
+  ^radix:
+    %eight = arith.constant 8 : i64
+    %bytes = arith.muli %count, %eight : i64
+    %spare = func.call @strict_malloc(%bytes) : (i64) -> !llvm.ptr
+    %buckets = arith.constant 256 : i64
+    %counts = llvm.alloca %buckets x i64 : (i64) -> !llvm.ptr
+    %signBit = arith.constant -9223372036854775808 : i64
+    %allBits = arith.constant -1 : i64
+    %byteMask = arith.constant 255 : i64
+    %width = arith.constant 64 : i64
+    cf.br ^keys(%zero : i64)
+  ^keys(%keyIndex: i64):
+    %moreKeys = arith.cmpi slt, %keyIndex, %count : i64
+    cf.cond_br %moreKeys, ^key, ^pass(%zero, %items, %spare : i64, !llvm.ptr, !llvm.ptr)
+  ^key:
+    %keySlot = llvm.getelementptr %items[%keyIndex] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bits = llvm.load %keySlot : !llvm.ptr -> i64
+    %isNegative = arith.cmpi slt, %bits, %zero : i64
+    %inverted = arith.xori %bits, %allBits : i64
+    %signFlipped = arith.xori %bits, %signBit : i64
+    %orderable = arith.select %isNegative, %inverted, %signFlipped : i64
+    llvm.store %orderable, %keySlot : i64, !llvm.ptr
+    %nextKey = arith.addi %keyIndex, %one : i64
+    cf.br ^keys(%nextKey : i64)
+  ^pass(%shift: i64, %source: !llvm.ptr, %target: !llvm.ptr):
+    %passesLeft = arith.cmpi ult, %shift, %width : i64
+    cf.cond_br %passesLeft, ^clear(%zero : i64), ^restore(%source, %zero : !llvm.ptr, i64)
+  ^clear(%bucket: i64):
+    %moreBuckets = arith.cmpi slt, %bucket, %buckets : i64
+    cf.cond_br %moreBuckets, ^cleared, ^histogram(%zero : i64)
+  ^cleared:
+    %clearSlot = llvm.getelementptr %counts[%bucket] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %zero, %clearSlot : i64, !llvm.ptr
+    %nextBucket = arith.addi %bucket, %one : i64
+    cf.br ^clear(%nextBucket : i64)
+  ^histogram(%counted: i64):
+    %moreCounted = arith.cmpi slt, %counted, %count : i64
+    cf.cond_br %moreCounted, ^tally, ^shared
+  ^tally:
+    %tallySlot = llvm.getelementptr %source[%counted] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %tallyKey = llvm.load %tallySlot : !llvm.ptr -> i64
+    %tallyShifted = arith.shrui %tallyKey, %shift : i64
+    %tallyByte = arith.andi %tallyShifted, %byteMask : i64
+    %tallyCountSlot = llvm.getelementptr %counts[%tallyByte] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %tallyCount = llvm.load %tallyCountSlot : !llvm.ptr -> i64
+    %tallied = arith.addi %tallyCount, %one : i64
+    llvm.store %tallied, %tallyCountSlot : i64, !llvm.ptr
+    %nextCounted = arith.addi %counted, %one : i64
+    cf.br ^histogram(%nextCounted : i64)
+  ^shared:
+    %firstKey = llvm.load %source : !llvm.ptr -> i64
+    %firstShifted = arith.shrui %firstKey, %shift : i64
+    %firstByte = arith.andi %firstShifted, %byteMask : i64
+    %firstCountSlot = llvm.getelementptr %counts[%firstByte] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %firstCount = llvm.load %firstCountSlot : !llvm.ptr -> i64
+    %allShare = arith.cmpi eq, %firstCount, %count : i64
+    %skippedShift = arith.addi %shift, %eight : i64
+    cf.cond_br %allShare, ^pass(%skippedShift, %source, %target : i64, !llvm.ptr, !llvm.ptr), ^prefix(%zero, %zero : i64, i64)
+  ^prefix(%prefixBucket: i64, %sum: i64):
+    %morePrefix = arith.cmpi slt, %prefixBucket, %buckets : i64
+    cf.cond_br %morePrefix, ^summed, ^scatter(%zero : i64)
+  ^summed:
+    %prefixSlot = llvm.getelementptr %counts[%prefixBucket] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %bucketCount = llvm.load %prefixSlot : !llvm.ptr -> i64
+    llvm.store %sum, %prefixSlot : i64, !llvm.ptr
+    %nextSum = arith.addi %sum, %bucketCount : i64
+    %nextPrefix = arith.addi %prefixBucket, %one : i64
+    cf.br ^prefix(%nextPrefix, %nextSum : i64, i64)
+  ^scatter(%scattered: i64):
+    %moreScattered = arith.cmpi slt, %scattered, %count : i64
+    cf.cond_br %moreScattered, ^scatterOne, ^pass(%skippedShift, %target, %source : i64, !llvm.ptr, !llvm.ptr)
+  ^scatterOne:
+    %scatterSlot = llvm.getelementptr %source[%scattered] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %scatterKey = llvm.load %scatterSlot : !llvm.ptr -> i64
+    %scatterShifted = arith.shrui %scatterKey, %shift : i64
+    %scatterByte = arith.andi %scatterShifted, %byteMask : i64
+    %positionSlot = llvm.getelementptr %counts[%scatterByte] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %position = llvm.load %positionSlot : !llvm.ptr -> i64
+    %targetSlot = llvm.getelementptr %target[%position] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %scatterKey, %targetSlot : i64, !llvm.ptr
+    %nextPosition = arith.addi %position, %one : i64
+    llvm.store %nextPosition, %positionSlot : i64, !llvm.ptr
+    %nextScattered = arith.addi %scattered, %one : i64
+    cf.br ^scatter(%nextScattered : i64)
+  ^restore(%sorted: !llvm.ptr, %restored: i64):
+    %moreRestored = arith.cmpi slt, %restored, %count : i64
+    cf.cond_br %moreRestored, ^restoreOne, ^release
+  ^restoreOne:
+    %sortedSlot = llvm.getelementptr %sorted[%restored] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %sortedKey = llvm.load %sortedSlot : !llvm.ptr -> i64
+    %wasPositive = arith.cmpi slt, %sortedKey, %zero : i64
+    %positiveBits = arith.xori %sortedKey, %signBit : i64
+    %negativeBits = arith.xori %sortedKey, %allBits : i64
+    %restoredBits = arith.select %wasPositive, %positiveBits, %negativeBits : i64
+    %itemSlot = llvm.getelementptr %items[%restored] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    llvm.store %restoredBits, %itemSlot : i64, !llvm.ptr
+    %nextRestored = arith.addi %restored, %one : i64
+    cf.br ^restore(%sorted, %nextRestored : !llvm.ptr, i64)
+  ^release:
+    llvm.call @free(%spare) : (!llvm.ptr) -> ()
+    cf.br ^done
+  ^done:
+    return
   }
   // List(Number).Sorted: a copy whose numbers the platform's qsort orders in place
   func.func private @strict_list_sorted(%list: f64) -> f64 {
