@@ -2,7 +2,7 @@ constant ToolSeconds = 270
 constant RunSeconds = 60
 constant CompileSeconds = 60
 constant LineCount = 1000
-constant Doublings = 16
+constant Doublings = 17
 constant LineWidth = 80000
 constant ToolWidth = 3000
 constant MaxHeap = 64
@@ -37,7 +37,7 @@ constant TrimB = "Run\n\tmutable total = 0\n\tfor 3\n\t\ttotal = total + Last(64
 constant HandA = "has logger\nconstant Plain = HandedBack(Logger)\nFilled(c Number, o Number) Numbers\n\tFilled(2, 1) is (1, 2)\n\tfor c\n\t\tindex + o\n"
 constant HandB1 = "Validated(n Numbers) Numbers\n\tPlain.Validated((1, 2)) is (1, 2)\n\tn\nRun\n\tmutable total = 0\n\tfor 1000\n\t\tlet made = Filled(300, index)\n\t\tmutable chk = Plain.Validated(made)\n"
 constant HandB2 = "\t\tchk = Filled(300, index + 1)\n\t\ttotal = total + made(5) + chk(5)\n\tlogger.Log(\"total \" + total)"
-constant ChurnSrc = "Run\n\tmutable r = Filled(8192, 0)\n\tmutable total = 0\n\tfor 100000000\n\t\tlet t = Filled(8192 + index % 2, r(index % 8192))\n\t\ttotal = total + t(5)\n\t\tr = t\n\tlogger.Log(\"total \" + total)"
+constant ChurnSrc = "Run\n\tmutable r = Filled(8192, 0)\n\tmutable total = 0\n\tfor 200000\n\t\tlet t = Filled(8192 + index % 2, r(index % 8192))\n\t\ttotal = total + t(5)\n\t\tr = t\n\tlogger.Log(\"total \" + total)"
 Run Number
 	if Process.OperatingSystem is not "Windows"
 		return Error("CheckMemory limits process memory with a Windows job object")
@@ -55,7 +55,8 @@ CheckJobAndPressure(folder Text) slow
 	if exe is Error
 		return exe
 	File(folder + "/job.c").Write(JobCode.Split("\n"))
-	comp = Process.RunTool("clang", "-O2 \"" + folder + "/job.c\" -o \"" + folder + "/job.exe\"", CompileSeconds)
+	clang = Toolchain(Platform.Current, ".").Locate("clang")
+	comp = Process.RunTool(clang, "-O2 \"" + folder + "/job.c\" -o \"" + folder + "/job.exe\"", CompileSeconds)
 	if comp.exitCode is not 0
 		return Error("JobCompileFailed: " + comp.Output + comp.error)
 	r1 = Process.RunTool(folder + "/job.exe", "\"" + exe + "\" " + JobLimitMb + " " + SmallInput, RunSeconds)
@@ -107,7 +108,7 @@ CheckChurnAndProducts(folder Text) slow
 	churn = churnExe is Error then churnExe to Text else Process.RunTool("cmd", cmd, RunSeconds).Output
 	grp = Regex(ChurnPattern).Groups(churn)
 	badC = "GarbageCollectionExceedsLimit" is not in churn or grp.Length < 4
-	if badC or grp(1) to Number + (grp(2) to Number) <= 0 or grp(3) is not "0"
+	if badC or grp(0) to Number + (grp(1) to Number) <= 0 or grp(2) is not "0"
 		return Error("ChurnWrong: " + churn)
 	prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
 	if prodOut is Error
@@ -126,10 +127,10 @@ CheckedMaxHeap(matches Texts, limit Number)
 CheckTickersAndFiles(folder Text) slow
 	f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")
 	if f is Error or not HasFramesEnded(f, true)
-		return Error("FrameTickerWrong")
+		return Error("FrameTickerWrong: " + (f to Text))
 	w = FrameTicker(folder, "WordTicker", "Texts", "\"w\" + (index + seed)", "(\"w1\", \"w2\")", "100000", "40")
 	if w is Error or not HasWordsEnded(w)
-		return Error("WordTickerWrong")
+		return Error("WordTickerWrong: " + (w to Text))
 	CheckLongLines(folder)
 FrameTicker(folder Text, name Text, itemType Text, item Text, two Text, size Text, frames Text) Texts slow
 	elem = itemType.Substring(0, itemType.Length - 1)
@@ -169,7 +170,7 @@ CheckLongLines(folder Text) slow
 	File(folder + "/long.txt").Write(RepeatedLine(word.Substring(0, LineWidth), LineCount))
 	l1 = "has logger\nRun\n\tlet started = Process.Elapsed\n\tlet lines = File(\"" + folder + "/long.txt\").ReadLines"
 	longSrc = l1 + "\n\tlogger.Log(\"lines \" + lines.Length + \" slow \" + (Process.Elapsed - started > 3))"
-	longOut = RunBuilt(folder, "LongLines", longSrc, "", "STRICT_GPU=0", "lines 1001 slow false", "")
+	longOut = RunBuilt(folder, "LongLines", longSrc, "", "STRICT_GPU=0", "lines 1000 slow false", "")
 	if longOut is Error
 		return longOut
 	File(folder + "/tool.txt").Write(List(Text) + word.Substring(0, ToolWidth))

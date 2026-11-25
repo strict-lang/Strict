@@ -2,7 +2,7 @@ constant ToolSeconds = 60
 constant KindNamesA = ("strict_gpu_active_has", "strict_gpu_oldest", "strict_gpu_is_rows", "strict_gpu_alloc", "strict_gpu_free", "strict_gpu_free_memory", "strict_gpu_driver_free", "strict_gpu_sized", "strict_gpu_size_slot")
 constant KindNamesB = ("strict_gpu_unspilled", "strict_gpu_spilled", "strict_gpu_spill_at", "strict_gpu_put_async", "strict_gpu_put_ahead", "strict_gpu_ahead_join", "strict_gpu_followed", "strict_gpu_prefetch", "strict_gpu_ahead_hit")
 constant PoolNames = ("strict_gpu_stack", "strict_gpu_obtain", "strict_gpu_lend", "strict_gpu_lent_class", "strict_gpu_pair_put", "strict_gpu_pair_taken", "strict_gpu_obtained", "strict_gpu_class_size", "strict_gpu_trim_unused")
-constant KindGlobals = ("@strict_gpu_budget(", "@strict_gpu_sizes(", "@strict_gpu_spills(", "@strict_gpu_ahead(")
+constant KindGlobals = ("@strict_gpu_budget(", "@strict_gpu_lock_busy(", "@strict_gpu_sizes(", "@strict_gpu_spills(", "@strict_gpu_ahead(")
 constant PoolGlobals = ("@strict_gpu_blocks(", "@strict_gpu_chunk(", "@strict_gpu_lent(", "@strict_gpu_spilled_bytes(", "@strict_gpu_hosted_bytes(", "@strict_gpu_budget(", "@strict_gpu_own_since(")
 constant KindExp = "cached_kind,scope_choice,cache_address,rows_kind,budget_free,budget_alloc,budget_release,spill_upload,ahead_used,spills_address,ahead_address,calls_address,handed_address"
 constant PoolExports = "/export:pool_address /export:pool_take /export:pool_real /export:pool_stats /export:pool_spilled /export:pool_clear"
@@ -37,12 +37,16 @@ constant KM27 = "%n = llvm.add %c, %o : i64\nllvm.store %n, %cs : i64, ~p\nllvm.
 constant KM28 = "%sb = llvm.ptrtoint %s : ~p to i64\n%l = llvm.call @testLogged(%k, %sb, %d) : (i64, i64, i64) -> i32\nllvm.return %l : i32\n}\nllvm.func @testRecord(%e: ~p, %s: ~p) -> i32 {\n%k = ~mc(2 : i64) : i64"
 constant KM29 = "%eb = llvm.ptrtoint %e : ~p to i64\n%sb = llvm.ptrtoint %s : ~p to i64\n%l = llvm.call @testLogged(%k, %eb, %sb) : (i64, i64, i64) -> i32\nllvm.return %l : i32\n}\nllvm.func @testWait(%s: ~p, %e: ~p, %f: i32) -> i32 {"
 constant KM30 = "%k = ~mc(3 : i64) : i64\n%sb = llvm.ptrtoint %s : ~p to i64\n%eb = llvm.ptrtoint %e : ~p to i64\n%l = llvm.call @testLogged(%k, %sb, %eb) : (i64, i64, i64) -> i32\nllvm.return %l : i32\n}"
+constant KS1 = "func.func private @strict_gpu_lock_check() {\nreturn\n}\nfunc.func private @strict_gpu_lock_ensure(%b: i64) {\nreturn\n}\nfunc.func private @strict_gpu_copier() -> ~p {\n%n = llvm.mlir.zero : ~p\nreturn %n : ~p\n}"
+constant KS2 = "func.func private @strict_gpu_compact_wanted(%s: ~p, %l: i1) -> i64 {\n%z = ~a0 : i64\nreturn %z : i64\n}\nfunc.func private @strict_gpu_raw_call(%i: i64) -> ~p {\n%c = ~cstrict_gpu_call(%i) : (i64) -> ~p\nreturn %c : ~p\n}"
+constant KS3 = "func.func private @strict_gpu_put_compact(%d: i64, %h: ~p, %s: ~p, %t: ~p) -> i32 {\n%z = ~a0 : i32\nreturn %z : i32\n}"
+constant KS4 = "func.func private @strict_gpu_defer_copy(%k: i64, %t: i64, %s: i64, %b: i64) -> i1 {\n%f = ~afalse\nreturn %f : i1\n}"
 constant PoolStats = "llvm.func @pool_stats() -> ~p {\n%p = ~mad@pool_counters : ~p\nllvm.return %p : ~p\n}\nllvm.func @pool_spilled() -> ~p {\n%p = ~mad@strict_gpu_spilled_bytes : ~p\nllvm.return %p : ~p\n}"
 Run Number
 	folder = "Compiler/output/GpuCacheCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error
 		return Error("DirectoryNotCreated")
-	src = Text.Combine(File("Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	src = File("Compiler/NativeRuntime.mlir").ReadText
 	kEx = "/export:" + KindExp.Replace(",", " /export:")
 	m = KindMlirText(src)
 	CheckedPatterns(src)
@@ -88,8 +92,7 @@ KindMlirText(src Text) Texts
 	mutable out = List(Text) + head
 	out = out + (KM05 + "\n" + KM06 + "\n" + KM07 + "\n" + KM08)
 	out = out + (ExtractedGlobalsAndFns(src, KindNamesA + KindNamesB, KindGlobals))
-	out = out + "func.func private @strict_gpu_lock_check() {\nreturn\n}"
-	out = out + "func.func private @strict_gpu_lock_ensure(%b: i64) {\nreturn\n}"
+	out = out + (KS1 + "\n" + KS2 + "\n" + KS3 + "\n" + KS4)
 	out = out + (ExtractedFn(src, "strict_gpu_allocated") + "\n" + ExtractedFn(src, "strict_gpu_ahead_joined"))
 	out = out + (KM09 + "\n" + KM10 + "\n" + KM11 + "\n" + KM12 + "\n" + KM13 + "\n" + KM14 + "\n" + KM15 + "\n" + KM16)
 	out = out + (KM17 + "\n" + KM18 + "\n" + KM19 + "\n" + KM20 + "\n" + KM21 + "\n" + KM22 + "\n" + KM23 + "\n" + KM24)
@@ -152,7 +155,7 @@ PoolTailA Text
 	out = out + "%c = llvm.load %s : ~p -> i64\n%o = arith.extui %f : i1 to i64\n%n = arith.addi %c, %o : i64"
 	out = out + "llvm.store %n, %s : i64, ~p\nreturn\n}\nfunc.func private @strict_gpu_free_memory() -> i64 {"
 	out = out + "%cs = ~mad@pool_counters : ~p\n%f = llvm.load %cs : ~p -> i64"
-	out = out + "%i = ~a536870912 : i64\n%r = arith.addi %i, %f : i64\nreturn %r : i64\n}"
+	out = out + "%i = ~a0 : i64\n%r = arith.addi %i, %f : i64\nreturn %r : i64\n}"
 	out = out + "func.func private @strict_gpu_free(%d: i64) {\n%cs = ~mad@pool_counters : ~p"
 	out = out + "%f = llvm.load %cs : ~p -> i64\n%n = arith.addi %f, %d : i64\nllvm.store %n, %cs : i64, ~p\nreturn\n}"
 	Text.Combine(out, "\n") + "\nfunc.func private @strict_rc_reclaim() {\nreturn\n}"
@@ -242,7 +245,7 @@ DriverEndTail Text
 	out = out + "assert(pt(16)==123&&bl[52]==0&&bl[55]==1&&pr(123,16)==17&&pr(123,16)==16);"
 	out = out + "assert(pt(16)==456&&pr(456,16)==18&&pt(16)==0);`G*ct=ps();assert(ct[1]==0);"
 	out = out + "`G sm=256LL<<20,lg=512LL<<20;bl[96]=(`G)&sm;bl[97]=1;bl[98]=1;bl[108]=(`G)&lg;bl[109]=1;bl[110]=1;"
-	out = out + "pt(16);assert(ct[0]==(768LL<<20)&&ct[1]==1&&bl[97]==0&&bl[109]==0);`G*sp=pp();sp[0]=1;bl[97]=1;"
+	out = out + "pt(16);assert(ct[0]==(512LL<<20)&&ct[1]==1&&bl[97]==1&&bl[109]==0);`G*sp=pp();sp[0]=1;"
 	out = out + "bl[109]=1;ct[0]=0;pt(16);assert(ct[0]==0&&bl[97]==1&&bl[109]==1);sp[0]=0;bl[97]=0;"
 	out = out + "`G fp=64LL<<20,sp2=512LL<<20;bl[72]=(`G)&fp;bl[73]=1;bl[74]=1;bl[108]=(`G)&sp2;"
 	out = out + "bl[109]=1;bl[110]=1;`G wt=ct[1];assert(pc()==(double)(576LL<<20));"

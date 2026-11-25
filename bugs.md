@@ -1,4 +1,0 @@
-- `strict run Compiler/Checks/CheckGpuResidency.strict` fails: RunFailed GpuResidency: The system cannot find the path specified.
-- `strict run Compiler/CheckGpuCache.strict` fails: BuildDllFailed cache-kind, `llvm.mlir.addressof` of a global the extracted functions do not define.
-- `strict run Compiler/Checks/CheckMemory.strict` fails at its job object test: JobCompileFailed: tool not found: clang.
-- A GPU allocation that times out in strict_gpu_budget_wait (STRICT_GPU_WAIT) fails with an empty `Error:`, the busy message is not shown.

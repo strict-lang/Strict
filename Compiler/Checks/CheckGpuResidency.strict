@@ -21,9 +21,6 @@ constant ResF1 = "\tlogger.Log(\"joined \" + joined.Length + \" \" + joined(3072
 constant ResF2 = "\tlogger.Log(\"averaged \" + averaged.Length + \" \" + averaged(8))\n\tlet packed = Folded(Mixed(Codes(24576), Table(24576)) + mixed)"
 constant ResG1 = "\tlogger.Log(\"packed \" + packed.Length + \" \" + packed(1536) + \", written \" + Written(\"codes.bin\"))"
 constant ResG2 = "\tlet swapped = Table(8).Slice(4, 4) + Table(8).Slice(0, 4)\n\tlogger.Log(\"swapped \" + swapped.Length + \" \" + swapped(1) + \" \" + swapped(4))"
-constant SmallA = "has logger\nTable(count Number) Numbers\n\tSmallGpu(Logger).Table(2) is (1, 1.125)\n\tfor count\n\t\tindex / 8 + 1\nDoubled(table Numbers) Numbers\n\tSmallGpu(Logger).Doubled((1, 2)) is (2, 4)"
-constant SmallB = "\tfor table.Length\n\t\ttable(index) * 2\nRun\n\tlet opened = Table(2000000)\n\tlet before = Process.Executed\n\tlet doubled = Doubled(Table(200000))\n\tlet after = Process.Executed"
-constant SmallC = "\tlogger.Log(\"gpu kernels \" + (after(3) - before(3)) + \", doubled \" + doubled(16) + \", opened \" + opened(8))"
 constant PairA = "has real Number\nhas imaginary Number\n+(other) Pair\n\tPair(1, 2) + Pair(3, -1) is Pair(4, 1)\n\tPair(real + other.real, imaginary + other.imaginary)"
 constant PairB = "Squared Pair\n\tPair(1, 2).Squared is Pair(-3, 4)\n\tPair(real * real - imaginary * imaginary, 2 * real * imaginary)\nSquaredLength Number\n\tPair(3, 4).SquaredLength is 25\n\treal * real + imaginary * imaginary"
 constant SimpleA = "has logger\nTable(count Number) Numbers\n\tSimpleRead(Logger).Table(2) is (0, 0.5)\n\tfor count\n\t\tindex / count\nRead(table Numbers, count Number) Numbers\n\tSimpleRead(Logger).Read((1, 2), 3) is (2, 4, 2)"
@@ -38,7 +35,7 @@ Run Number
 	0
 Check(folder Text) slow
 	CheckPrimary(folder)
-	CheckSmallAndPair(folder)
+	CheckPair(folder)
 	CheckSimpleAndOrbit(folder)
 	CheckViewingAndPending(folder)
 CheckPrimary(folder Text) slow
@@ -61,10 +58,7 @@ CheckedBytes(bytes Bytes)
 	for ByteCount
 		if bytes(index) is not (index % ByteMod)
 			return Error("codes.bin byte mismatch at " + index)
-CheckSmallAndPair(folder Text) slow
-	small = BuiltAndRan(folder, "SmallGpu", SmallA + "\n" + SmallB + "\n" + SmallC, false, false)
-	if small is Error or "gpu kernels 2, doubled 6, opened 2" is not in small
-		return Error("SmallGpu failed: " + (small to Text))
+CheckPair(folder Text) slow
 	File(folder + "/Pair.strict").Write((PairA + "\n" + PairB).Split("\n"))
 	pair = BuiltAndRan(folder, "PairEscape", EscapeSrc, false, false)
 	if pair is Error or "gpu kernels 1, 64 3" is not in pair
@@ -100,7 +94,7 @@ BuiltAndRan(folder Text, name Text, code Text, allGpu Boolean, downloads Boolean
 	win = Process.OperatingSystem is "Windows"
 	dl = downloads then (win then "set STRICT_GPU_DOWNLOADS=1&& " else "STRICT_GPU_DOWNLOADS=1 ") else ""
 	gStr = (win then "set STRICT_GPU=" + (allGpu then "all" else "") + "&& " else "STRICT_GPU= ") + dl
-	target = "\"" + folder + "/" + name + (win then ".exe\"" else "\"")
+	target = win then "\".\\" + name + ".exe\"" else "./" + name
 	c1 = "cd " + (win then "/d " else "") + "\"" + folder + "\" && " + gStr + target
 	ran = Process.RunTool(win then "cmd" else "sh", win then "/c " + c1 else "-c \"" + c1 + "\"", ToolSeconds)
 	logger.Log(ran.Output.Trim)

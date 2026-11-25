@@ -21167,7 +21167,9 @@
   ^busyError:
     llvm.store %none, %busyFailedSlot : i64, !llvm.ptr
     %busyMessage = llvm.mlir.addressof @strict_gpu_lock_message : !llvm.ptr
-    %busyError = func.call @strict_error_named(%busyMessage) : (!llvm.ptr) -> f64
+    %busyText = func.call @strict_text_from(%busyMessage) : (!llvm.ptr) -> f64
+    %busyName = func.call @strict_ptr(%busyText) : (f64) -> !llvm.ptr
+    %busyError = func.call @strict_error_named(%busyName) : (!llvm.ptr) -> f64
     return %busyError : f64
   ^failedZero:
     return %zero : f64
