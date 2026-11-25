@@ -19,7 +19,7 @@ Builds native executables. `NativeBuild` behind `strict build` turns the instruc
 Steps taking at least 3 seconds print their time. `STRICT_BUILD_PROFILE=1` prints every stage (cache hits, linking passes, emission substeps, GPU batches, external tools, packaging) without changing the output. Parent stages include their children, batches report all concurrent jobs together.
 ```powershell
 $env:STRICT_BUILD_PROFILE = "1"
-.\strict.exe build Strict.strict
+.\strict.exe build Cli/Strict.strict
 Remove-Item Env:STRICT_BUILD_PROFILE
 ```
 

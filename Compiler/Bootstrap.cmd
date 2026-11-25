@@ -13,5 +13,6 @@ cd ..
 set "STRICT_GPU=0"
 rem windows builds a release compiler: a long garbage collection warns instead of stopping
 Compiler\NativeCompiler.exe build Cli/Strict.strict . windows || exit /b 1
+if exist Cli\strict.exe move /y Cli\strict.exe strict.exe >nul
 del Compiler\NativeCompiler.exe Compiler\NativeCompiler.ll Compiler\NativeCompiler.llvm.mlir Compiler\NativeCompiler.mlir
 echo Built %~dp0..\strict.exe

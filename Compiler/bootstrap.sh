@@ -21,5 +21,6 @@ if [ "$(uname)" = Darwin ]; then
 	release=
 fi
 STRICT_GPU=0 ./Compiler/NativeCompiler build Cli/Strict.strict . $release
+[ -f Cli/strict ] && mv -f Cli/strict strict
 rm -f Compiler/NativeCompiler Compiler/NativeCompiler.$platform.ll Compiler/NativeCompiler.$platform.llvm.mlir Compiler/NativeCompiler.$platform.mlir
 echo "Built $(pwd)/strict"
