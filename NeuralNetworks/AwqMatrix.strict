@@ -1,0 +1,11 @@
+has file Safetensors
+has name Text
+constant Plain = AwqMatrix(QwenSafetensors.Plain.file, "layers.0.self_attn.o_proj")
+Factors Numbers
+	Plain.Factors.Length is 64
+	AwqMatrix(QwenSafetensors.Tiny.file, "layers.3.self_attn.o_proj").Factors.Length is 0
+	isAwq = file.Entry(name + ".pre_quant_scale") is not "" and file.IsFours(name)
+	isAwq then file.Values(name + ".pre_quant_scale") else List(Number)
+Rows List(Numbers)
+	Plain.Rows.Length is Plain.file.Shape(Plain.name + ".weight").First
+	Factors.Length > 0 then file.Fold(name, "", Number.SingleBits) else file.Quantize(name, Number.SingleBits)

@@ -12,6 +12,7 @@ has values Numbers = List(Number)
 has queries Numbers = List(Number)
 has hybrid Hybrid = Hybrid.None
 has starts Numbers = List(Number)
+has inputs Numbers = List(Number)
 constant Epsilon = 0.000001
 constant Tiny = Qwen3Block.Loaded(Gguf("NeuralNetworks/tinyqwen3.gguf"), "blk.0.", 2, Basis.None)
 Loaded(model Gguf, prefix Text, queryHeads Number, basis Basis) Qwen3Block
@@ -127,9 +128,17 @@ Scales(input Numbers, size Number, epsilon Number) Float32s
 		Normalization.Scale(Normalization.Square(input, index * size, size), size, epsilon)
 Output(input Numbers, sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Output(Tiny.attentionNorm, 1).Length is 8
-	attended = experts.basis.Sums(projection.weights, input, Merge(sequences))
+	attended = experts.basis.Sums(projection.weights, input, Scale(Merge(sequences)))
 	experts.Add(Normalize(attended, 0, attended.Length, mlpNorm), attended)
 Merge(sequences Number) Numbers
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Merge(1).Length is 8
 	attending = Attention(queries, keys, values, heads, groups, queryNorm.Length, sequences)
 	hybrid.Gate(starts.Length is 0 then attending.Merged else MaskedAttention(attending, starts).Merged)
+Scale(merged Numbers) Numbers
+	Tiny.Scale((1, 2)) is (1, 2)
+	Qwen3Block(Tiny, inputs = (2, 3)).Scale((1, 1, 2, 2)) is (2, 3, 4, 6)
+	if inputs.Length is 0
+		return merged
+	width = inputs.Length
+	for merged
+		value * inputs(index % width)

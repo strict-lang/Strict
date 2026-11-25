@@ -43,8 +43,9 @@ Layers Number
 Attending(layer Text, basis Basis) Qwen3Block slow
 	Tiny.Attending("layers.3.", Basis.None).queryNorm.Length is 4
 	Tiny.Attending("layers.3.", Basis.None).heads is 2
+	Plain.Attending("layers.0.", Basis.None).inputs.Length is 64
 	size = file.Shape(layer + "self_attn.q_norm.weight").First
-	projected = Layer(file.Quantize(layer + "self_attn.o_proj", Number.SingleBits), Layer.Unbiased)
+	projected = Layer(AwqMatrix(file, layer + "self_attn.o_proj").Rows, Layer.Unbiased)
 	rows = HeadRows(size, rotary, projected.weights.First.Length / size)
 	queryNorm = rows.Norm(Norm(layer + "self_attn.q_norm.weight"))
 	keyNorm = rows.Norm(Norm(layer + "self_attn.k_norm.weight"))
@@ -52,7 +53,8 @@ Attending(layer Text, basis Basis) Qwen3Block slow
 	after = Norm(layer + "post_attention_layernorm.weight")
 	keyHeads = file.Shape(layer + "self_attn.k_proj.weight").First / size
 	feedForward = FeedForward(layer, basis)
-	Qwen3Block(normed, Attend(layer, rows), projected, queryNorm, keyNorm, after, feedForward, rows.heads, keyHeads)
+	base = Qwen3Block(normed, Attend(layer, rows), projected, queryNorm, keyNorm, after, feedForward, rows.heads, keyHeads)
+	Qwen3Block(base, inputs = AwqMatrix(file, layer + "self_attn.o_proj").Factors)
 Attend(layer Text, rows HeadRows) Layer
 	Tiny.Attend("layers.3.", HeadRows(4, 2, 2)).weights.Length is 24
 	queried = file.Quantize(layer + "self_attn.q_proj", Number.SingleBits)
