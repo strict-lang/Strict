@@ -53,12 +53,20 @@ FolderEdges(source Text, owners Dictionary(Text, Text)) Texts slow
 EdgeKeys(source Text, file Text, owners Dictionary(Text, Text)) Texts slow
 	AcyclicDependencies(".").EdgeKeys("Math", "Math/Vector2.strict", Dictionary(("Number", "."))).First is "Math->."
 	mutable result = List(Mutable(Text))
-	for ProductionTypes(File(file).ReadLines)
+	for Used(file)
 		if value is in owners
 			target = owners(value)
 			if target is not source
 				result.Add(source + "->" + target)
 	result
+Used(file Text) Texts slow
+	"Degrees" is in AcyclicDependencies(".").Used("Math/Vector2.strict")
+	constant kind = "productionTypes"
+	cached = Memo.Texts(file, kind)
+	if cached.Length > 0
+		return cached.Slice(1, cached.Length - 1)
+	found = ProductionTypes(File(file).ReadLines)
+	Memo.Keep(file, kind, List(Text) + "" + found).Slice(1, found.Length)
 Owners(folders Texts) Dictionary(Text, Text) slow
 	AcyclicDependencies(".").Owners(List(Text) + "Math")("Vector2") is "Math"
 	mutable owners = Dictionary(Text, Text)

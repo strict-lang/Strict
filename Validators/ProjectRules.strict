@@ -13,8 +13,19 @@ Issues(rules Text, files Texts) Number native
 	ProjectRules(".").Issues("Examples/Missing", List(Text) + (Fixture + "Crate.strict")) is 0
 	mutable issues = 0
 	for Directory.Exists(rules) then Directory.Files(rules, "*.strict") else List(Text)
-		issues = issues + RunRule(value, files)
+		issues = issues + Count(rules, value, files)
 	issues
+Count(rules Text, rule Text, files Texts) Number native
+	ProjectRules(".").Count(Fixture + "Validators", Fixture + "Validators/GetPrefix.strict", List(Text)) is 0
+	File(Fixture + "Validators/obj/GetPrefix.strict.stamp").Exists
+	key = ValidateCheck.Stamp(files + rule, List(Text))
+	stamp = File(rules + "/obj/" + Path(rule).FileName.text + ".stamp")
+	isCurrent = stamp.Exists then stamp.ReadText is key else false
+	found = isCurrent then 0 else RunRule(rule, files)
+	if found is 0 and isCurrent is false
+		Directory.Create(rules + "/obj")
+		stamp.Write(key)
+	found
 RunRule(rule Text, files Texts) Number native
 	ProjectRules(".").RunRule(Fixture + "Validators/GetPrefix.strict", List(Text)) is 0
 	ProjectRules(".").RunRule(Fixture + "Validators/GetPrefix.strict", List(Text) + (Fixture + "Crate.strict")) is 1

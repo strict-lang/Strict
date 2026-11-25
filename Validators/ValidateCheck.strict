@@ -9,6 +9,7 @@ Run(folder Text, root Text) Number
 	BuildProfile.Report("Check validation", started)
 	before = Process.Elapsed
 	cycles = folder.EndsWith(".strict") then 0 else Log(folder, AcyclicDependencies(root).Issues(Parts(folder)))
+	BuildProfile.Report("Check dependency cycles", before)
 	issues = issues + (cycles < 0 then 0 else ProjectRules(root).Check(folder))
 	BuildProfile.Report("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
