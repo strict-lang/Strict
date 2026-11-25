@@ -6,6 +6,11 @@ constant Once = MethodEntry("Run", List(MemberEntry), "None", Made + Sizing)
 constant Passing = MlirSpent(MlirFunction(MlirOwned.Rebuilt.function, method = Once), 3)
 constant Again = MethodEntry("Run", List(MemberEntry), "None", Made + Sizing + Sizing)
 constant Twice = MlirSpent(MlirFunction(MlirOwned.Rebuilt.function, method = Again), 3)
+constant LoadNamed = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "moved")
+constant NamedSizing = InstructionEntry.Invoke(5, ("Strict/Outer", "Sized", "Strict/Number", "outer"), 4, -1)
+constant NamedOnce = MethodEntry("Run", List(MemberEntry), "None", MlirOwned.OuterMade + LoadNamed + NamedSizing)
+constant Named = MlirSpent(MlirFunction(MlirOwned.Rebuilt.function, method = NamedOnce), 5)
+constant NamedAgain = MethodEntry("Run", List(MemberEntry), "None", MlirOwned.OuterMade + LoadNamed + NamedSizing + LoadNamed)
 Dead Texts
 	Passing.Dead.First is "    %t3dz0 = arith.constant 0.0 : f64"
 	Passing.Dead.Last is "    func.call @strict_rc_dead(%t3a0, %t3dz0) : (f64, f64) -> ()"
@@ -22,15 +27,46 @@ IsSpent(register Number) Boolean
 	Passing.IsSpent(2)
 	Passing.IsSpent(0) is false
 	Twice.IsSpent(2) is false
+	Named.IsSpent(4)
+	MlirSpent(MlirFunction(Named.function, method = NamedAgain), 5).IsSpent(4) is false
 	writer = MlirKinds(function).Writer(position, register)
+	if writer < 0
+		return false
+	isLoad = function.method.instructions(writer).kind is InstructionType.LoadVariableToRegister
+	isLoad then IsSpentLocal(register, writer) else IsSpentResult(register, writer)
+IsSpentResult(register Number, writer Number) Boolean
+	Passing.IsSpentResult(2, 2)
+	Twice.IsSpentResult(2, 2) is false
 	owned = MlirOwned(function, position)
-	isCall = writer >= 0 then function.method.instructions(writer).kind is InstructionType.Invoke else false
+	isCall = function.method.instructions(writer).kind is InstructionType.Invoke
 	kind = MlirKinds(function).KindOf(position, register)
 	if (isCall and owned.IsHeap(kind)) is false or MlirDying(function, position).IsSwept("", kind)
 		return false
 	isKept = MlirCarried(function).IsKeptValue(position, register, List(Text), 0)
 	isNext = MlirHanded(function, writer).First(register) is position
 	isKept and isNext and owned.IsLeaked(position, register) is false and IsUnread(register)
+IsSpentLocal(register Number, writer Number) Boolean
+	Named.IsSpentLocal(4, 4)
+	MlirSpent(MlirFunction(Named.function, method = NamedAgain), 5).IsSpentLocal(4, 4) is false
+	name = function.method.instructions(writer).texts(0)
+	isFirst = MlirHanded(function, writer).First(register) is position
+	isLooped = MlirWholeFunction(function).IsInsideLoop(position)
+	isOwned = MlirOwned(function, position).IsOwned(name) and MlirDying(function, position).IsSwept(name) is false
+	isFirst and isLooped is false and isOwned and IsLastLoad(name)
+IsLastLoad(name Text) Boolean
+	Named.IsLastLoad("moved")
+	MlirSpent(MlirFunction(Named.function, method = NamedAgain), 5).IsLastLoad("moved") is false
+	whole = MlirWholeFunction(function)
+	mutable stores = 0
+	for function.method.instructions
+		isNamed = value.texts.Length > 0 then value.texts(0) is name else false
+		if isNamed and value.kind is InstructionType.LoadVariableToRegister and index > position
+			return false
+		if isNamed and value.kind is InstructionType.StoreRegisterToVariable
+			if whole.IsInsideLoop(index)
+				return false
+			stores = stores + 1
+	stores is 1
 IsUnread(register Number) Boolean
 	Passing.IsUnread(2)
 	Twice.IsUnread(2) is false
