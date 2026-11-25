@@ -7232,7 +7232,8 @@
     %holdsNothing = arith.cmpi eq, %held, %noHolds : i16
     cf.cond_br %holdsNothing, ^done, ^check
   ^check:
-    %unshared = func.call @strict_rc_unshared(%old) : (f64) -> i1
+    %onDevice = arith.constant true
+    %unshared = func.call @strict_rc_lone(%old, %onDevice) : (f64, i1) -> i1
     cf.cond_br %unshared, ^dispose, ^large
   ^large:
     func.call @strict_rc_dead_large(%object, %kept) : (i64, i64) -> ()
@@ -7314,6 +7315,12 @@
   // true for a small object no heap object counts, not pinned, not free and not on the GPU: a local proven to be
   // its only holder (MlirOwned) may free it or write into it
   func.func private @strict_rc_unshared(%value: f64) -> i1 {
+    %onlyHost = arith.constant false
+    %unshared = func.call @strict_rc_lone(%value, %onlyHost) : (f64, i1) -> i1
+    return %unshared : i1
+  }
+  // strict_rc_unshared, with onDevice also a packed or GPU resident list: its only holder may free it, not write into it
+  func.func private @strict_rc_lone(%value: f64, %onDevice: i1) -> i1 {
     %zero = arith.constant 0 : i64
     %zeroCount = arith.constant 0 : i32
     %no = arith.constant false
@@ -7346,7 +7353,8 @@
     %pinned = arith.andi %flagByte, %pinnedFlag : i16
     %noFlags = arith.constant 0 : i16
     %isPinned = arith.cmpi ne, %pinned, %noFlags : i16
-    %bound = func.call @strict_rc_device_bound(%object, %located#2) : (i64, i64) -> i1
+    %deviceBound = func.call @strict_rc_device_bound(%object, %located#2) : (i64, i64) -> i1
+    %bound = arith.select %onDevice, %no, %deviceBound : i1
     %isLeft = arith.ori %isCounted, %isFree : i1
     %isHeld = arith.ori %isPinned, %bound : i1
     %ignored = arith.ori %isLeft, %isHeld : i1

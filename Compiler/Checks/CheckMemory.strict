@@ -112,16 +112,16 @@ CheckChurnAndProducts(folder Text) slow
 	prodOut = RunBuilt(folder, "Products", ProdSrc, "", LogEnv, "done", "")
 	if prodOut is Error
 		return prodOut
-	CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut))
+	CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(prodOut), MaxHeap)
 	CheckTickersAndFiles(folder)
-CheckedMaxHeap(matches Texts)
-	CheckedMaxHeap(List(Text)) is Error and CheckedMaxHeap(List(Text) + "heap 1") is not Error
-	CheckedMaxHeap(List(Text) + "heap 99") is Error
+CheckedMaxHeap(matches Texts, limit Number)
+	CheckedMaxHeap(List(Text), 64) is Error and CheckedMaxHeap(List(Text) + "heap 1", 64) is not Error
+	CheckedMaxHeap(List(Text) + "heap 99", 64) is Error
 	if matches.Length is 0
 		return Error("NoHeapLogged")
 	for matches
 		mb = Text.Combine(Regex("(\\d+)").Groups(value), "") to Number
-		if mb >= MaxHeap
+		if mb >= limit
 			return Error("HeapExceededLimit: " + mb)
 CheckTickersAndFiles(folder Text) slow
 	f = FrameTicker(folder, "FrameTicker", "Numbers", "index + seed", "(1, 2)", "5000000", "10")

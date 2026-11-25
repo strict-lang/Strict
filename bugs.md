@@ -1,0 +1,3 @@
+- `strict run Compiler/Checks/CheckGpuResidency.strict` fails: RunFailed GpuResidency: The system cannot find the path specified.
+- `strict run Compiler/CheckGpuCache.strict` fails: BuildDllFailed cache-kind, `llvm.mlir.addressof` of a global the extracted functions do not define.
+- `strict run Compiler/Checks/CheckMemory.strict` fails at its job object test: JobCompileFailed: tool not found: clang.

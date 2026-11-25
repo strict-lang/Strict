@@ -1,0 +1,21 @@
+has logger
+constant HeapLimit = 2048
+constant ChurnSource = "Run\n\tmutable recent = Filled(16000000, 0)\n\tfor 40\n\t\trecent = Filled(16000000, recent(5) + 1)\n\tlogger.Log(\"last \" + recent(5))"
+constant ChurnEnvironment = "STRICT_GC_LOG=1&& set STRICT_GPU=all"
+Run Number
+	folder = "Examples/GpuMemoryCheck" + 1000000.Random.Floor
+	if Directory.Create(folder) is Error
+		return Error("DirectoryNotCreated")
+	churned = Churn(folder)
+	Directory.Delete(folder)
+	if churned is Error
+		return churned
+	logger.Log("CheckGpuMemory passed")
+	0
+Churn(folder Text) Text slow
+	source = CheckMemory.FilledSrc + ChurnSource
+	output = CheckMemory.RunBuilt(folder, "GpuChurning", source, "", ChurnEnvironment, "last 245", "")
+	if output is Error
+		return output
+	heap = CheckMemory.CheckedMaxHeap(Regex("(\\d+) MB heap").FindAll(output), HeapLimit)
+	heap is Error then heap else output
