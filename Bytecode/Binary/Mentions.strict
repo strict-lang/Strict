@@ -81,7 +81,7 @@ Names(files Texts) Texts
 	Mentions.Names(("./Math/Vector2.strict", "Math\\Size.strict")) is ("None", "Other", "Vector2", "Size")
 	mutable known = List(Mutable(Text)) + "None" + "Other"
 	for files
-		known.Add(Path(value.Replace("\\", "/")).FileName.RemoveExtension.text)
+		known.Add(TypeFolders.FileType(value))
 	known
 MarkNames(names Texts) Dictionary(Text, Boolean)
 	Mentions.MarkNames(("a", "b", "a")).Length is 2

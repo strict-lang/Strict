@@ -1,5 +1,6 @@
 has root Text
 has projectFiles Texts = List(Text)
+has types TypeFolders = TypeFolders.None
 constant Imaging = List(Text) + "./Compression/Deflate.strict"
 constant Plain = SourceFiles(".")
 constant Nothing = "-"
@@ -13,7 +14,7 @@ Of(path Text, others Texts = List(Text)) Texts slow
 		if File(value).Exists
 			start = Add(start, List(Text) + FileCompiler.Normalize(value))
 	base = Directory.Files(root, "*.strict")
-	reached = Traverse(Add(IndexPaths(start), base), start, base)
+	reached = Traverse(Add(IndexPaths(start), base), start, base, List(Text), types)
 	TypeChoice(File(path).Exists then File(path).ReadLines else List(Text), base).Chosen(reached, path)
 Folder(path Text) Texts
 	Plain.Folder("./Math").Length > 10
@@ -38,12 +39,14 @@ IndexPaths(paths Texts) Texts
 	files
 WithProject SourceFiles
 	SourceFiles(".").WithProject.projectFiles.Length is 0
+	"Vector2" is in SourceFiles(".").WithProject.types.locals
+	indexed = TypeFolders.Local(root).Widened
 	if File("./Any.strict").Exists
-		return SourceFiles(root, List(Text))
+		return SourceFiles(root, List(Text), indexed)
 	mutable files = List(Mutable(Text))
 	for ResolveCheck.Tree(".")
 		files = files + Directory.Files(value, "*.strict")
-	SourceFiles(root, files)
+	SourceFiles(root, files, indexed)
 Traverse(known Texts, frontier Texts, reached Texts, searched = List(Text), folders = TypeFolders.None) Texts slow
 	"./Compression/Inflate.strict" is in Plain.Traverse(Compressed, Imaging, List(Text))
 	if frontier.Length is 0

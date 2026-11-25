@@ -12,7 +12,6 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 ## Native builds (emission, lowering, linking)
 - `MlirPurity.IsReachingGpu` and kernel selection for every program should only gate or offload loops whose counts can reach the GPU threshold (`IsDevice` today counts any device-capable inner loop), checked on NeuralNetworks and StrictComfy.
 - Every raw loop is emitted six times (one copy per packed format its lists may have at run time plus the plain one) next to its generic body: measure code size and lowering time impact.
-- Host lowering with 0 parts changed (1.5 s per build of Strict.strict): `ReadLines` 0.39 s (pass emitter text to `MlirSplit` without the file round-trip), `Text.Combine` of each key 0.20 s, `Starts`/`Shared`/`Placed` 0.13 s, `Written` 0.08 s.
 - `MlirWholeCall.IsMatched` analyses the callee from scratch at every call site (13397 calls per cold `build Strict.strict windows`).
 - Web rebuilds run whole-program emcc link with Closure (2.3 s) and wasm-opt (1.6 s) even when only one string changed.
 - Build speed (under 10 s hard limit, 2-3 s target; LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the front end twice (test gate, then native), lowering and ThinLTO link are the largest phases left.
