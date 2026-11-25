@@ -227,7 +227,7 @@ STRICT_EXPORT double Socket_Receive(double self, double socket, double count)
 	int got = 0;
 	while (got < wanted)
 	{
-		int read = (int)recv((int)socket, buffer + got, wanted - got, 0);
+		int read = (int)recv((int)socket, (char*)buffer + got, wanted - got, 0);
 		if (read <= 0)
 		{
 			free(buffer);
