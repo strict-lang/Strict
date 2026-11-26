@@ -28,6 +28,8 @@ Round(number Number) Number
 	Rounding(8).Round(256) is 0
 	Rounding(8).Round(-1) is 255
 	Single.Round(0.1) is 0.10000000149011612
+	Single.Round(16777219) is 16777220 and Single.Round(-0.1) is -0.10000000149011612
+	(Single.Round(1E39) / 1E39 - 1).Absolute < 0.0000001 and Single.Round(0) is 0
 	(Single.Of(VmValue.OfList((VmValue.OfNumber(0.1), VmValue.OfNumber(1)))).items.First.number is 0.1) is false
 	Single.Of(VmValue("Strict/Error", 0.1, "", List(VmValue))).number is 0.1 and Single.bits is 32
 	Single.Of(VmValue("Strict/ErrorWithValue", 0.1, "", List(VmValue))).number is 0.1 and Single.bits is 32

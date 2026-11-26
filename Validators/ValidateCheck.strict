@@ -62,7 +62,7 @@ Check(folder Text, root Text, known Texts) Number slow
 	problems = FileCompiler.Problems(Files(folder))
 	files = Parse(Files(folder), problems)
 	mutations = known + Mutations(files)
-	isBase = folder.Replace("\\", "/").Replace("/.", "") is root
+	isBase = SureMethods.IsBaseFolder(folder, root)
 	duplicates = Duplicates.Of(files + Directory.Files(root, "*.strict"))
 	reached = files.Length is 0 then files else SourceFiles(root).Of(files.First, files)
 	inference = ResolveCheck.Inference(reached)

@@ -15088,6 +15088,35 @@
     %text = func.call @strict_text_made(%room, %bytes) : (!llvm.ptr, i64) -> f64
     return %text : f64
   }
+  // Number.Rounded: a finite normal number with 32 bits keeps 24 significant bits, ties to even (no f32 range limit)
+  func.func private @strict_number_rounded(%self: f64, %bits: f64) -> f64 {
+    %single = arith.constant 32.0 : f64
+    %isSingle = arith.cmpf oeq, %bits, %single : f64
+    %word = arith.bitcast %self : f64 to i64
+    %exponentShift = arith.constant 52 : i64
+    %exponentMask = arith.constant 2047 : i64
+    %none = arith.constant 0 : i64
+    %shifted = arith.shrui %word, %exponentShift : i64
+    %exponent = arith.andi %shifted, %exponentMask : i64
+    %isSubnormal = arith.cmpi eq, %exponent, %none : i64
+    %isSpecial = arith.cmpi eq, %exponent, %exponentMask : i64
+    %isOdd = arith.ori %isSubnormal, %isSpecial : i1
+    %true = arith.constant true
+    %isNormal = arith.xori %isOdd, %true : i1
+    %isRounded = arith.andi %isSingle, %isNormal : i1
+    %droppedShift = arith.constant 29 : i64
+    %one = arith.constant 1 : i64
+    %kept = arith.shrui %word, %droppedShift : i64
+    %lowest = arith.andi %kept, %one : i64
+    %half = arith.constant 268435455 : i64
+    %bias = arith.addi %half, %lowest : i64
+    %biased = arith.addi %word, %bias : i64
+    %cleared = arith.constant -536870912 : i64
+    %rounded = arith.andi %biased, %cleared : i64
+    %result = arith.bitcast %rounded : i64 to f64
+    %chosen = arith.select %isRounded, %result, %self : f64
+    return %chosen : f64
+  }
   func.func private @strict_floor(%number: f64) -> f64 {
     %result = llvm.intr.floor(%number) : (f64) -> f64
     return %result : f64

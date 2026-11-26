@@ -103,6 +103,10 @@ HasBody(body Text) Boolean
 		if value is not "" and Duplicates.IsTest(value) is false
 			return true
 	false
+IsBaseFolder(folder Text, root Text) Boolean
+	SureMethods.IsBaseFolder(".", ".") and SureMethods.IsBaseFolder("./Number.strict", ".")
+	SureMethods.IsBaseFolder("./Math", ".") is false and SureMethods.IsBaseFolder("./Math/Vector2.strict", ".") is false
+	folder.Replace("\\", "/").Replace("/.", "") is root or folder.EndsWith(".strict") and IsBase(folder)
 IsBase(path Text) Boolean
 	SureMethods.IsBase("PseudoRandom.strict")
 	SureMethods.IsBase("Strict/PseudoRandom.strict") and SureMethods.IsBase("./PseudoRandom.strict")
