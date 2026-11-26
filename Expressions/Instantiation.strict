@@ -129,6 +129,8 @@ Substitute(instanceType Text, template Text) Text
 	Pairing.Substitute("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
 	Pairing.Substitute("Couple(Text, Number)", "Couple(first, second, first)") is "Couple(Text, Number)"
 	Instantiation(Mocks).Substitute("Mock(MockCheck)", "Mock(checker, platform)") is "Mock(MockCheck)"
+	Instantiation(Mocks).Substitute("Mock(MockCheck)", "Mock") is "Mock(MockCheck)"
+	Instantiation(Mocks).Substitute("Mock", "Mock(checker)") is "Mock"
 	members = types.MembersOf(instanceType)
 	mutable arguments = List(Mutable(Text))
 	for Arguments(template)
@@ -137,7 +139,7 @@ Substitute(instanceType Text, template Text) Text
 			if argument is "Unknown"
 				return instanceType
 			arguments.Add(argument)
-	types.BaseName(instanceType) + "(" + Text.Combine(arguments, ", ") + ")"
+	arguments.Length is 0 then instanceType else types.BaseName(instanceType) + "(" + Text.Combine(arguments, ", ") + ")"
 Fill(owner Text, type Text) Text
 	Pairing.Fill("Strict/List(Number)", "Dictionary(Generic, Boolean)") is "Dictionary(Number, Boolean)"
 	Pairing.Fill("Strict/List(Number)", "List(Generic)") is "List(Number)"
