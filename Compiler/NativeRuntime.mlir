@@ -14223,6 +14223,14 @@
     %distance = arith.subi %keptIndex, %index : i64
     %isNear = arith.cmpi ult, %distance, %index : i64
     %goesBack = arith.andi %isBefore, %isNear : i1
+    // a walk from the start to a near index keeps the farther position: Json reading index 0 between elements was quadratic
+    %true = arith.constant true
+    %fromStart = arith.xori %goesBack, %true : i1
+    %restarts = arith.andi %isBefore, %fromStart : i1
+    %isNearStart = arith.cmpi ult, %index, %long : i64
+    %isShortRestart = arith.andi %restarts, %isNearStart : i1
+    %stays = arith.xori %isShortRestart, %true : i1
+    %keeps = arith.andi %isLong, %stays : i1
     cf.cond_br %goesBack, ^back(%keptIndex, %keptOffset : i64, i64), ^forward
   ^forward:
     %startIndex = arith.select %isBefore, %zero, %keptIndex : i64
@@ -14270,7 +14278,7 @@
     %nextAt = arith.addi %at, %one : i64
     cf.br ^loop(%nextAt, %landed : i64, i64)
   ^finish(%foundIndex: i64, %foundOffset: i64):
-    cf.cond_br %isLong, ^keep, ^short
+    cf.cond_br %keeps, ^keep, ^short
   ^short:
     return %foundOffset : i64
   ^keep:
@@ -14323,7 +14331,12 @@
     %ahead = arith.addi %baseIndex, %between : i64
     %behind = arith.subi %baseIndex, %between : i64
     %index = arith.select %goesBack, %behind, %ahead : i64
-    cf.cond_br %isLong, ^keep, ^short
+    %true = arith.constant true
+    %isNearStart = arith.cmpi ult, %offset, %long : i64
+    %isShortRestart = arith.andi %restarts, %isNearStart : i1
+    %stays = arith.xori %isShortRestart, %true : i1
+    %keeps = arith.andi %isLong, %stays : i1
+    cf.cond_br %keeps, ^keep, ^short
   ^short:
     return %index : i64
   ^keep:

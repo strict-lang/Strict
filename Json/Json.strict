@@ -1,4 +1,6 @@
 has text
+constant Umlaut = Text.Utf8((195, 188))
+constant Wide = Json("[" + "xxxxxxxxxxxxxxxxxxxx".Replace("x", "{ \"a\": \"" + Umlaut + "\" }, ") + "{ \"a\": \"last\" } ]")
 constant Bones = Json("{ \"bones\": [ { \"name\": \"root\" }, { \"name\": \"Body\", \"y\": 39.54 } ], \"loop\": true }")
 constant Escaped = Json(" \"a\\\"b\\nc\\u0041\" ")
 constant Spaces = (" ", "\t", "\n", "\r")
@@ -26,6 +28,7 @@ Keys Texts
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
 		Unquote(parts(value * 2))
 Elements Jsons
+	Wide.Elements(20).get("a") to Text is "last"
 	Bones("bones").Elements.Length is 2
 	Bones.Elements(1) to Text is "true"
 	open = Skip(0)
