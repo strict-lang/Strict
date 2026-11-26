@@ -17386,6 +17386,7 @@
   // N: a child started meanwhile (Process.RunTools) does not inherit the file on Windows, other C libraries ignore it
   llvm.mlir.global internal constant @strict_read_mode("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00rbN\00") : !llvm.array<20 x i8>
   llvm.mlir.global internal constant @strict_write_mode("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00wbN\00") : !llvm.array<20 x i8>
+  llvm.mlir.global internal constant @strict_append_mode("\03\00\00\00\00\00\00\00\03\00\00\00\00\00\00\00abN\00") : !llvm.array<20 x i8>
   // bytes of the file or of the text it was overridden with (File.InMemory), 0 when it is missing
   func.func private @strict_file_length(%path: f64) -> f64 {
     %zero = arith.constant 0.0 : f64
@@ -18096,14 +18097,19 @@
     return %result : f64
   }
   func.func private @strict_file_create(%path: f64) -> !llvm.ptr {
+    %modeLengths = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %file = func.call @strict_file_opened(%path, %mode) : (f64, !llvm.ptr) -> !llvm.ptr
+    return %file : !llvm.ptr
+  }
+  // opens with the mode ("wbN" or "abN"), creating missing folders of the path when the first try fails
+  func.func private @strict_file_opened(%path: f64, %mode: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0.0 : f64
     %step = arith.constant 1 : i64
     %slash = arith.constant 47 : i8
     %backslash = arith.constant 92 : i8
     %full = func.call @strict_folder_joined(%path) : (f64) -> f64
     %name = func.call @strict_text_ptr(%full) : (f64) -> !llvm.ptr
-    %modeLengths = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
-    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %file = llvm.call @fopen(%name, %mode) : (!llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
@@ -18164,6 +18170,20 @@
     return %result : i1
   }
   func.func private @strict_file_writelines(%path: f64, %lines: f64) -> f64 {
+    %modeLengths = llvm.mlir.addressof @strict_write_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %written = func.call @strict_file_put(%path, %lines, %mode) : (f64, f64, !llvm.ptr) -> f64
+    return %written : f64
+  }
+  // appends the text at the end of the file (created when missing) without reading it, in the file's line endings
+  func.func private @strict_file_append(%path: f64, %text: f64) -> f64 {
+    %lines = func.call @strict_text_lines(%text) : (f64) -> f64
+    %modeLengths = llvm.mlir.addressof @strict_append_mode : !llvm.ptr
+    %mode = llvm.getelementptr %modeLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %written = func.call @strict_file_put(%path, %lines, %mode) : (f64, f64, !llvm.ptr) -> f64
+    return %written : f64
+  }
+  func.func private @strict_file_put(%path: f64, %lines: f64, %mode: !llvm.ptr) -> f64 {
     %zero = arith.constant 0.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
@@ -18171,7 +18191,7 @@
     %carriage = arith.constant 13 : i32
     %carriageByte = arith.constant 13 : i8
     %crlf = func.call @strict_file_crlf(%path) : (f64) -> i1
-    %file = func.call @strict_file_create(%path) : (f64) -> !llvm.ptr
+    %file = func.call @strict_file_opened(%path, %mode) : (f64, !llvm.ptr) -> !llvm.ptr
     %null = llvm.mlir.zero : !llvm.ptr
     %failed = llvm.icmp "eq" %file, %null : !llvm.ptr
     cf.cond_br %failed, ^done, ^write

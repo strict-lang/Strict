@@ -28,7 +28,8 @@ constant Listings = ("ReadLines", "ReadBytes", "Files", "Directories")
 constant BudgetMethods = ("TestBudget.Overran", "TestBudget.Overrun", "TestBudget.Watch", "TestBudget.Busy", "TestBudget.Limit")
 constant Methods = FileMethods + HostedText.Methods + DirectoryMethods + ProcessMethods + ToolMethods + MathMethods + LibraryMethods + RuntimeMethods + BudgetMethods + GpuMethods + MemoMethods
 constant Kinds = ("File", "Directory", "Process", "Logger", "Strict", "Number", "Degrees", "Ratio", "Vector2", "Library", "Time", "Socket", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots")
-constant LocalEffects = ("File.Write", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "File.WriteText", "Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Start", "Library.Call")
+constant FileEffects = ("File.Write", "File.Append", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "File.WriteText")
+constant LocalEffects = FileEffects + ("Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Start", "Library.Call")
 constant Effects = LocalEffects + ("Socket.Connect", "Socket.Listen", "Socket.Local", "Socket.Accept", "Socket.Waiting", "Socket.Send", "Socket.Receive")
 IsChanging Boolean
 	Hosted(Deleting).IsChanging

@@ -1,15 +1,20 @@
 has call Invocation
 constant Reading = Invocation(InstructionEntry.Invoke(1, ("Strict/File", "ReadText", "Strict/Text"), List(Number), 0), List(VmValue), Hosted.AnyFile)
-constant Methods = ("File.ReadText", "File.WriteText")
+constant Methods = ("File.ReadText", "File.WriteText", "File.Append")
 IsText Boolean
 	HostedText(Reading).IsText
 	HostedText(Hosted.Reading).IsText is false
-	call.MethodName is "ReadText" or call.MethodName is "Write" and "text" is in call.ParameterNames
+	call.MethodName is in ("ReadText", "Append") or call.MethodName is "Write" and "text" is in call.ParameterNames
 Result VmValue
 	HostedText(Reading).Result.text is Text.Combine(File("Any.strict").ReadLines, "\n")
 	File("Runtime/obj/Written.txt").Write("a\nb") is not Error and File("Runtime/obj/Written.txt").ReadText is "a\nb"
+	File("Runtime/obj/Appended.txt").Write("a") is not Error
+	File("Runtime/obj/Appended.txt").Append("b\n") is not Error and File("Runtime/obj/Appended.txt").ReadText is "ab\n"
 	file = File(call.Instance.Member(0).text)
 	if call.MethodName is "ReadText"
 		return VmValue.OfText(file.ReadText)
-	file.Write(call.Arguments.First.text)
+	if call.MethodName is "Append"
+		file.Append(call.Arguments.First.text)
+	else
+		file.Write(call.Arguments.First.text)
 	VmValue.None
