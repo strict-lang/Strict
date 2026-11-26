@@ -8,6 +8,8 @@ constant Going = MethodEntry("Go", List(MemberEntry), "Strict/Number", List(Inst
 constant Running = MethodEntry("Run", List(MemberEntry), "Strict/Number", Invoking)
 constant Types = (TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + Running), TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry) + Going))
 constant Graph = CallGraph(Types)
+constant Lined = (InstructionEntry(Invoking(0), line = 5), InstructionEntry(Invoking(1), line = 6))
+constant Shifted = (TypeEntry(Types.First, methods = List(MethodEntry) + MethodEntry(Running, instructions = Lined)), Types.Last)
 from(types List(TypeEntry))
 	Graph.callees("A.Run") is ",B.Go" and Graph.callers("B.Go") is ",A.Run"
 	hashes = HashTypes(types)
@@ -19,6 +21,7 @@ Key(type TypeEntry, method MethodEntry) Text
 HashTypes(types List(TypeEntry)) Dictionary(Text, Number)
 	Graph.HashTypes(Types).Length is 2
 	Graph.HashTypes(Types)("A.Run") > 1000000007
+	Graph.HashTypes(Shifted)("A.Run") is Graph.HashTypes(Types)("A.Run")
 	mutable hashed = Dictionary(Text, Number)
 	for type, method in types, type.methods
 		key = Key(type, method)

@@ -63,8 +63,17 @@ Trace(operand Text, result Text, helper Text) Texts
 	valued = MlirValued(function)
 	operands = operand + ", " + Temp("tw") + ", " + Temp("twl") + valued.Operands
 	call = "    " + result + " = func.call @" + valued.Helper(helper) + "(" + operands + ")"
-	number = "    " + Temp("twl") + " = arith.constant " + line + " : i64"
-	(address, number, call + " : (f64, !llvm.ptr, i64" + valued.Types + ") -> f64")
+	(List(Text) + address) + Line(line) + (call + " : (f64, !llvm.ptr, i64" + valued.Types + ") -> f64")
+Line(line Number) Texts
+	Sample.Line(0) is ("    %t3twl = arith.constant 0 : i64")
+	Sample.Line(9).Last is "    %t3twl = arith.addi %t3twb, %t3twr : i64"
+	Sample.Line(9).First is "    %t3twa = llvm.mlir.addressof @l" + Sample.function.Symbol + " : !llvm.ptr"
+	if line is 0
+		return List(Text) + ("    " + Temp("twl") + " = arith.constant 0 : i64")
+	base = "    " + Temp("twa") + " = llvm.mlir.addressof @l" + function.Symbol + " : !llvm.ptr"
+	loaded = "    " + Temp("twb") + " = llvm.load " + Temp("twa") + " : !llvm.ptr -> i64"
+	relative = "    " + Temp("twr") + " = arith.constant " + (line - MlirGlobals.Base(function)) + " : i64"
+	(base, loaded, relative, "    " + Temp("twl") + " = arith.addi " + Temp("twb") + ", " + Temp("twr") + " : i64")
 Member(path Text) Numbers
 	Pairing.Member("pair.rest") is (1, 2)
 	dot = path.IndexOf(".")

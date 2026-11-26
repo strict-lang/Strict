@@ -1,5 +1,6 @@
 has functions List(MlirFunction)
 constant Counted = MlirGlobals(MlirModule.Counters.Functions)
+constant Lined = MethodEntry(MlirCalls.Shapes.method, instructions = CallGraph.Lined)
 constant Foreign = MlirGlobals(List(MlirFunction) + MlirForeign.Adder)
 constant Filling = ("  func.func private @strict_places_fill() -> i64 attributes {llvm.passthrough = [\"noinline\"]} {", "    %table = llvm.mlir.addressof @strict_places : !llvm.ptr")
 constant Returning = ("    return %count : i64", "  }")
@@ -50,17 +51,27 @@ Files Dictionary(Text, Text) slow
 			files.Add(value.type.Name, TypeSource(value.type).Locate(""))
 	files
 Function(function MlirFunction, file Text) Texts
-	Counted.Function(MlirCalls.Shapes, "Shape.strict").Length is 3
+	Counted.Function(MlirCalls.Shapes, "Shape.strict").Length is 4
+	Counted.Function(MlirCalls.Shapes, "Shape.strict")(1).StartsWith("  llvm.mlir.global internal constant @lShape_Run_0(")
 	Counted.Function(MlirCalls.Shapes, "Shape.strict").First.IndexOf("(\"Shape.Run\\00Shape.strict\\00\")") > 0
 	location = TypeSource(function.type).Location(function.method.Name, file)
 	valued = MlirValued(function)
 	content = location.Replace(" in ", "\\00") + "\\00" + valued.Named + "\")"
 	where = "  llvm.mlir.global internal constant @w" + function.Symbol + "(\"" + content
-	mutable lines = List(Text) + (where + " : !llvm.array<" + (location.Length - 2 + valued.Size) + " x i8>")
+	first = where + " : !llvm.array<" + (location.Length - 2 + valued.Size) + " x i8>"
+	based = "  llvm.mlir.global internal constant @l" + function.Symbol + "(" + Base(function) + " : i64) : i64"
+	mutable lines = (first, based)
 	for Positions(function)
 		if IsGlobal(function, value)
 			lines = lines + Global(function, value, file)
 	lines + MlirGpu(function, 0).Globals
+Base(function MlirFunction) Number
+	MlirGlobals.Base(MlirFunction(MlirCalls.Shapes, method = Lined)) is 5
+	MlirGlobals.Base(MlirCalls.Shapes) is 0
+	for function.method.instructions
+		if value.line > 0
+			return value.line
+	0
 Positions(function MlirFunction) Numbers
 	Counted.Positions(MlirCalls.Shapes).Length is 4
 	mutable positions = List(Mutable(Number))
