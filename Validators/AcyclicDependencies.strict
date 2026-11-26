@@ -2,7 +2,26 @@ has root Text
 constant Rule = "PackageDependenciesMustNotCycle"
 Issues(folders Texts) ValidationIssues slow
 	AcyclicDependencies(".").Issues(List(Text) + "Math").Length is 0
-	CycleIssues(Edges(folders))
+	File("Math/obj/Cycles.stamp").Exists
+	key = Key(folders) + "\n#"
+	stamp = File(folders.First + "/obj/Cycles.stamp")
+	text = stamp.Exists then stamp.ReadText else ""
+	if text.StartsWith(key)
+		return CycleIssues(Load(text, key))
+	cycles = CycleEdges(Edges(folders))
+	Directory.Create(folders.First + "/obj")
+	stamp.Write(Text.Combine(List(Text) + key + cycles, "\n"))
+	CycleIssues(cycles)
+Key(folders Texts) Text slow
+	AcyclicDependencies(".").Key(List(Text) + "Math").IndexOf("Vector2.strict|") > 0
+	mutable files = List(Mutable(Text))
+	for folders
+		files = files + Directory.Files(value, "*.strict")
+	ValidateCheck.Stamp(files, List(Text))
+Load(text Text, key Text) Texts
+	AcyclicDependencies(".").Load("k\n#\nA->B\nB->A", "k\n#") is ("A->B", "B->A")
+	AcyclicDependencies(".").Load("k\n#", "k\n#").Length is 0
+	text.Substring(key.Length).Lines - ""
 CycleIssues(edges Texts) ValidationIssues
 	AcyclicDependencies(".").CycleIssues(List(Text) + "A->B").Length is 0
 	AcyclicDependencies(".").CycleIssues(("A->B", "B->A")).First to Text is Rule + ": Cycle involves A->B"
