@@ -3,12 +3,12 @@ constant CrashExitCode = 128
 constant MaxChildren = 8
 constant PendingPath = "./Compiler/output/Pending/Go.strict"
 constant PendingFile = BinaryFile(PendingPath)
-constant PendingSource = PtxCache("Compiler/output/Pending/Go").Save(".strict", "from") is not Error
+constant PendingSource = File(PendingPath).ReadText is "from" then true else File(PendingPath).Write("from") is not Error
 constant PendingHeader = PendingSource then BinarySources(List(Text) + PendingPath).Stamped.Header else List(Number)
 constant PendingBytes = PendingFile.Pack(PendingHeader, List(TypeEntry) + BinaryLinks.Tested, List(Text))
 TestFolder(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
 	Folders.TestFolder("Missing", ".") is 0
-	files = NativeFolder(isRecursive = isRecursive).Files(folder)
+	files = SourceFiles.Plain.Folder(folder, isRecursive)
 	pending = Pending(files, isMutating)
 	mutable failed = 0
 	if pending.Length > 0
@@ -39,7 +39,7 @@ IsChanged(path Text, known = Dictionary(Text, Number)) Boolean slow
 	Execute.IsEdited(path) or isTested is false
 Nightly(folder Text, root Text) Number slow
 	Folders.Nightly("Missing", ".") is 0
-	RunFolders(Commands("test", Execute("*").Stale(NativeFolder.Files(folder)), root, false, false, true))
+	RunFolders(Commands("test", Execute("*").Stale(SourceFiles.Plain.Folder(folder)), root, false, false, true))
 Commands(command Text, paths Texts, root Text, isMutating = false, isFull = false, isNightly = false) Texts
 	Folders.Commands("test", List(Text) + "a.strict", ".") is ("test \"a.strict\" \".\" unit")
 	Folders.Commands("test", List(Text) + "a.strict", ".", true) is ("test \"a.strict\" \".\" unit mutations")

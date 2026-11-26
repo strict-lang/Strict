@@ -52,10 +52,7 @@ Paths(path Text) Texts
 Files(folder Text) Texts
 	NativeFolder.Files("Math").Length > 5
 	NativeFolder(isRecursive = false).Files(".") is Directory.Files(".", "*.strict")
-	mutable files = List(Mutable(Text))
-	for isRecursive then ResolveCheck.Tree(folder) else List(Text) + folder
-		files = files + Directory.Files(value, "*.strict")
-	files
+	SourceFiles.Plain.Folder(folder, isRecursive)
 Collect(path Text, root Text) List(TypeEntry)
 	NativeFolder.Collect("Examples/NativeAdd/native", ".").Length is 0
 	folders = Directory.Exists(path) and isRecursive then ResolveCheck.Tree(path) else List(Text) + path

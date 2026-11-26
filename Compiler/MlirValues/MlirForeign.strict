@@ -1,51 +1,28 @@
 has function MlirFunction
-constant Add = MethodEntry("Add", (MemberEntry("left", "Strict/Number", List(InstructionEntry), false), MemberEntry("right", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", List(InstructionEntry))
+constant Add = ForeignMethod.Add
 constant Adder = MlirFunction(List(TypeEntry), TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Add), Add)
 constant Adding = "%p0: f64, %p1: f64, %p2: f64"
-constant Booleans = MlirFunction(List(TypeEntry), TypeEntry("Strict/Boolean", List(MemberEntry), List(MethodEntry)), Add)
 constant Doubles = MethodEntry("Doubled", List(MemberEntry) + MemberEntry("numbers", "Strict/List(Number)", List(InstructionEntry), false), "Strict/List(Number)", List(InstructionEntry))
 constant Names = MethodEntry("Named", List(MemberEntry) + MemberEntry("name", "Strict/Text", List(InstructionEntry), false), "Strict/Number", List(InstructionEntry))
 constant Namer = MlirFunction(List(TypeEntry), TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Names), Names)
 constant Doubler = MlirFunction(List(TypeEntry), TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Doubles), Doubles)
-constant Handle = MemberEntry("handle", "Strict/Number", List(InstructionEntry), false)
-constant Next = MethodEntry("Next", List(MemberEntry), "Strict/Number", List(InstructionEntry))
-constant Counter = TypeEntry("Strict/Examples/NativeAdd/Counter", List(MemberEntry) + Handle, List(MethodEntry) + Next)
+constant Next = ForeignMethod.Next
+constant Counter = ForeignMethod.Counter
 constant Counting = MlirFunction(List(TypeEntry), Counter, Next)
 constant Splits = MethodEntry("Split", Doubles.parameters, "Strict/List(Numbers)", List(InstructionEntry))
 constant Splitter = MlirFunction(List(TypeEntry), Doubler.type, Splits)
-constant Unimplementing = "TraitHasNoImplementation: Adder.Add has no body and no native/Adder.c, use a Generic member to hold any type with Add"
-constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAdd/Counter", List(InstructionEntry))
+constant Started = ForeignMethod.Started
 constant Closed = MethodEntry("Close", List(MemberEntry), "None", List(InstructionEntry))
 constant Closing = MlirFunction(List(TypeEntry), Adder.type, Closed)
 IsForeign Boolean
-	MlirForeign(Adder).IsForeign
-	MlirForeign(MlirFunction.Counter).IsForeign is false
-	MlirForeign(MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)).IsForeign is false
-	MlirForeign(Booleans).IsForeign is false
-	MlirForeign(MlirFunction(List(TypeEntry), Adder.type, TypeEntry.ToNumber)).IsForeign is false
-	MlirForeign(Counting).IsForeign
-	name = function.type.Name
-	isBase = name.IndexOf("/") >= 0 and name.IndexOf("/") is name.LastIndexOf("/")
-	isBodyless = function.method.instructions.Length is 0 and function.type.members.Length < 2
-	isBodyless and isBase is false and IsNative(function.method)
-IsNative(method MethodEntry) Boolean
-	MlirForeign(Adder).IsNative(Add)
-	MlirForeign(Counting).IsNative(Started)
-	MlirForeign(Counting).IsNative(MethodEntry("from", List(MemberEntry), "None", List(InstructionEntry))) is false
-	first = method.Name(0)
-	isConstructor = method.Name is "from" and method.parameters.Length > 0 and function.type.members.Length is 1
-	first.Lower is not first or isConstructor
+	MlirForeign(Adder).IsForeign and MlirForeign(Counting).IsForeign
+	ForeignMethod(function.type, function.method).IsForeign
 Symbol Text
 	MlirForeign(Adder).Symbol is "Adder_Add"
 	function.type.JustName + "_" + function.method.Name
 Wrapper Text
 	MlirForeign(Adder).Wrapper is "Adder_Add_foreign"
 	Symbol + "_foreign"
-Unimplemented Text
-	MlirForeign(Adder).Unimplemented is Unimplementing
-	name = function.type.JustName
-	missing = name + "." + function.method.Name + " has no body and no native/" + name + ".c"
-	"TraitHasNoImplementation: " + missing + ", use a Generic member to hold any type with " + function.method.Name
 Declaration Texts
 	MlirForeign(Adder).Declaration.First is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
 	MlirForeign(Adder).Declaration.Index("  func.func private @Adder_Add_foreign(" + Adding + ") -> f64 {") is 1
@@ -76,7 +53,9 @@ Converter(typeName Text) Text
 	MlirForeign(Adder).Converter("Strict/Text") is "strict_text_flat"
 	MlirForeign(Adder).Converter("Strict/Number") is ""
 	MlirForeign(Adder).Converter("Strict/Numbers") is "strict_list_ready"
-	IsNumbers(typeName) then "strict_list_ready" else typeName.EndsWith("/Text") then "strict_text_flat" else ""
+	if ForeignMethod.IsNumbers(typeName)
+		return "strict_list_ready"
+	typeName.EndsWith("/Text") then "strict_text_flat" else ""
 Arguments Text
 	MlirForeign(Adder).Arguments is "%p0, %p1, %p2"
 	MlirForeign(Doubler).Arguments is "%p0, %c1"
@@ -91,13 +70,5 @@ Returned Texts
 	MlirForeign(Closing).Returned.First.IndexOf("@strict_foreign_none(") > 0
 	returned = function.method.returnType
 	single = returned is "None" then "none" else (returned.EndsWith("Text") then "text" else "number")
-	kind = IsNumbers(returned) then "numbers" else IsRows(returned) then "rows" else single
+	kind = ForeignMethod.IsNumbers(returned) then "numbers" else ForeignMethod.IsRows(returned) then "rows" else single
 	("    %converted = func.call @strict_foreign_" + kind + "(%result) : (f64) -> f64", "    return %converted : f64")
-IsNumbers(typeName Text) Boolean
-	MlirForeign(Adder).IsNumbers("Strict/List(Number)")
-	MlirForeign(Adder).IsNumbers("Strict/Number") is false
-	typeName.EndsWith("List(Number)") or typeName.EndsWith("Numbers")
-IsRows(typeName Text) Boolean
-	MlirForeign(Adder).IsRows("Strict/List(Numbers)")
-	MlirForeign(Adder).IsRows("Strict/List(Number)") is false
-	typeName.EndsWith("List(Numbers)") or typeName.EndsWith("List(List(Number))")

@@ -1,4 +1,5 @@
 has sources NativeSources
+has LibraryBuilder
 constant Adding = NativeLibrary(NativeSources.Adding)
 constant Failing = "clang failed for Compiler/output/Cut.o: no"
 constant NoObject = "clang failed for Compiler/output/No" + Platform.ObjectExtension(Platform.Current)
@@ -17,6 +18,9 @@ Build(platform Number, root Text) Text
 	clang = Toolchain(platform, root).Locate("clang")
 	result = ToolRunner(clang).Execute(shared + sources.Arguments(platform, root) + " -o \"" + output + "\"")
 	Finish(result, output, library, shared)
+Build(folder Text) Text
+	Adding.Build("Examples/NativeAdd/native").StartsWith("Built Examples/NativeAdd/native/NativeAdd.")
+	NativeLibrary(NativeSources(List(Text) + folder)).Build(Platform.Current, TypeSource.Root)
 Objects(files Texts, platform Number, root Text, options Text) Texts slow
 	Adding.Objects(NativeSources.Adding.Files, Platform.Current, ".", "") is (AdderObject)
 	mutable missing = List(Mutable(Text))

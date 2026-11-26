@@ -16,13 +16,14 @@ Of(path Text, others Texts = List(Text)) Texts slow
 	base = Directory.Files(root, "*.strict")
 	reached = Traverse(Add(IndexPaths(start), base), start, base, List(Text), types)
 	TypeChoice(File(path).Exists then File(path).ReadLines else List(Text), base).Chosen(reached, path)
-Folder(path Text) Texts
+Folder(path Text, isRecursive = true) Texts
 	Plain.Folder("./Math").Length > 10
 	Plain.Folder("./Math/Vector2.strict").Length is 0
+	Plain.Folder(".", false) is Directory.Files(".", "*.strict")
 	if Directory.Exists(path) is false
 		return List(Text)
 	mutable files = List(Text)
-	for ResolveCheck.Tree(path)
+	for isRecursive then ResolveCheck.Tree(path) else List(Text) + path
 		files = files + Directory.Files(value, "*.strict")
 	files
 IndexPaths(paths Texts) Texts

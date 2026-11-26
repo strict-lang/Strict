@@ -9,7 +9,7 @@ constant Shorter = TypeEntry("Adder", List(MemberEntry), List(MethodEntry))
 constant Framing = TypeEntry("Strict/Math/Frame", List(MemberEntry), List(MethodEntry) + Add)
 constant Missing = VmValue("Strict/Library", 0, "", List(VmValue) + VmValue.OfText("missing.dll"))
 constant Calling = Foreign(Invocation(InstructionEntry.Invoke(2, ("Strict/Library", "Call", "Strict/Number", "symbol", "arguments"), (0, 0), 0), (VmValue.OfText("Add"), VmValue.OfList(VmValue.OfNumber(0))), Missing), List(TypeEntry))
-constant Counter = TypeEntry(MlirForeign.Counter.Name, MlirForeign.Counter.members, List(MethodEntry) + MlirForeign.Next)
+constant Counter = ForeignMethod.Counter
 constant Framed = Foreign(Invocation(InstructionEntry.Invoke(3, ("Strict/Math/Frame", "Add", "Strict/Number", "left", "right"), (0, 0), -1), (VmValue.OfNumber(1), VmValue.OfNumber(2)), VmValue.None), List(TypeEntry) + Framing)
 constant Counting = Foreign(Invocation(InstructionEntry.Invoke(1, (Counter.Name, "Next", "Strict/Number"), List(Number), 0), List(VmValue), VmValue.OfNumber(7).As(Counter.Name)), List(TypeEntry) + Counter)
 Called VmValue
@@ -31,9 +31,9 @@ Build(type TypeEntry) Text
 	Adding.Build(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")
 	native = Folder(type)
 	if Directory.Exists(native) is false
-		return MlirForeign(MlirFunction(types, type, Method(type))).Unimplemented
+		return ForeignMethod(type, Method(type)).Unimplemented
 	entered = TestBudget.Entered
-	library = NativeLibrary(NativeSources(List(Text) + native)).Build(Platform.Current, TypeSource.Root)
+	library = LibraryBuilder.Build(native)
 	TestBudget.Left(entered)
 	library
 IsForeign(type TypeEntry) Boolean
@@ -42,11 +42,11 @@ IsForeign(type TypeEntry) Boolean
 	Adding.IsForeign(TypeEntry(Adder.Name, List(MemberEntry), List(MethodEntry) + MethodEntry(Add, Name = "Sub"))) is false
 	for type.methods
 		if value.Name is call.MethodName
-			return MlirForeign(MlirFunction(types, type, value)).IsForeign
+			return ForeignMethod(type, value).IsForeign
 	false
 Method(type TypeEntry) MethodEntry
 	Adding.Method(Adder).Name is "Add"
-	Adding.Method(TypeEntry("T", List(MemberEntry), (MlirForeign.Next, Add))) is Add
+	Adding.Method(TypeEntry("T", List(MemberEntry), (ForeignMethod.Next, Add))) is Add
 	Defaulted.parameters is (Add.parameters(0), Add.parameters(1), MemberEntry.SevenMember)
 	Defaulted.Name is "Add" and Defaulted.returnType is "Strict/Number"
 	for type.methods
@@ -55,14 +55,14 @@ Method(type TypeEntry) MethodEntry
 	type.methods.First
 Arguments(library Library, method MethodEntry) Numbers
 	Adding.Arguments(Library("missing.dll"), Add) is (0, 1, 2)
-	Counting.Arguments(Library("missing.dll"), MlirForeign.Next) is (7)
+	Counting.Arguments(Library("missing.dll"), ForeignMethod.Next) is (7)
 	Adding.Arguments(Library("missing.dll"), Defaulted) is (0, 1, 2, 7)
 	mutable arguments = List(Number) + (call.entry.payload(call.Flag) is 1 then call.Instance.number else 0)
 	for method.parameters
 		given = index < call.Arguments.Length then call.Arguments(index) else Natives(types).Initial(value)
 		kind = value.typeName
 		number = kind.EndsWith("Text") then library.TextSlot(given.text) else given.number
-		arguments = arguments + (MlirForeign.IsNumbers(kind) then library.NumbersSlot(Numbers(given.items)) else number)
+		arguments = arguments + (ForeignMethod.IsNumbers(kind) then library.NumbersSlot(Numbers(given.items)) else number)
 	arguments
 Convert(library Library, returnType Text, bits Number) VmValue
 	Adding.Convert(Library("missing.dll"), "Strict/Number", 3).number is 3
@@ -71,9 +71,9 @@ Convert(library Library, returnType Text, bits Number) VmValue
 		return VmValue.OfBoolean(bits is not 0)
 	if returnType.EndsWith("Text")
 		return VmValue.OfText(library.TextResult(bits))
-	if MlirForeign.IsRows(returnType)
+	if ForeignMethod.IsRows(returnType)
 		return Rows(library, bits)
-	MlirForeign.IsNumbers(returnType) then Elements(library.NumbersResult(bits)) else VmValue.OfNumber(bits)
+	ForeignMethod.IsNumbers(returnType) then Elements(library.NumbersResult(bits)) else VmValue.OfNumber(bits)
 Rows(library Library, bits Number) VmValue
 	Adding.Rows(Library("missing.dll"), Library("missing.dll").NumbersSlot(List(Number))).items.Length is 0
 	Adding.call.TypeName is "Strict/Examples/NativeAdd/Adder"
@@ -105,8 +105,8 @@ Numbers(values List(VmValue)) Numbers
 	Adding.Numbers((VmValue.OfNumber(1), VmValue.OfNumber(2))) is (1, 2)
 	Missing.kind is "Strict/Library"
 	Missing.items is (VmValue.OfText("missing.dll"))
-	Counter is MlirForeign.Counter
-	Counting.types is (MlirForeign.Counter)
+	Counter is ForeignMethod.Counter
+	Counting.types is (ForeignMethod.Counter)
 	Counting.call.MethodName is "Next"
 	Counting.call.ReturnType is "Strict/Number"
 	for values

@@ -1,0 +1,38 @@
+has type TypeEntry
+has method MethodEntry
+constant Add = MethodEntry("Add", (MemberEntry("left", "Strict/Number", List(InstructionEntry), false), MemberEntry("right", "Strict/Number", List(InstructionEntry), false)), "Strict/Number", List(InstructionEntry))
+constant Adder = ForeignMethod(TypeEntry("Strict/Examples/NativeAdd/Adder", List(MemberEntry), List(MethodEntry) + Add), Add)
+constant Handle = MemberEntry("handle", "Strict/Number", List(InstructionEntry), false)
+constant Next = MethodEntry("Next", List(MemberEntry), "Strict/Number", List(InstructionEntry))
+constant Counter = TypeEntry("Strict/Examples/NativeAdd/Counter", List(MemberEntry) + Handle, List(MethodEntry) + Next)
+constant Counting = ForeignMethod(Counter, Next)
+constant Started = MethodEntry("from", Add.parameters, "Strict/Examples/NativeAdd/Counter", List(InstructionEntry))
+constant Unimplementing = "TraitHasNoImplementation: Adder.Add has no body and no native/Adder.c, use a Generic member to hold any type with Add"
+IsForeign Boolean
+	Adder.IsForeign and Counting.IsForeign
+	ForeignMethod(TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry)), Next).IsForeign is false
+	ForeignMethod(TypeEntry(Counter.Name, (Handle, Handle), List(MethodEntry)), Add).IsForeign is false
+	ForeignMethod(TypeEntry("Strict/Boolean", List(MemberEntry), List(MethodEntry)), Add).IsForeign is false
+	ForeignMethod(Adder.type, TypeEntry.ToNumber).IsForeign is false
+	name = type.Name
+	isBase = name.IndexOf("/") >= 0 and name.IndexOf("/") is name.LastIndexOf("/")
+	method.instructions.Length is 0 and type.members.Length < 2 and isBase is false and IsNative(method)
+IsNative(called MethodEntry) Boolean
+	Adder.IsNative(Add) and Counting.IsNative(Started)
+	Counting.IsNative(MethodEntry("from", List(MemberEntry), "None", List(InstructionEntry))) is false
+	first = called.Name(0)
+	isConstructor = called.Name is "from" and called.parameters.Length > 0 and type.members.Length is 1
+	first.Lower is not first or isConstructor
+Unimplemented Text
+	Adder.Unimplemented is Unimplementing
+	name = type.JustName
+	missing = name + "." + method.Name + " has no body and no native/" + name + ".c"
+	"TraitHasNoImplementation: " + missing + ", use a Generic member to hold any type with " + method.Name
+IsNumbers(typeName Text) Boolean
+	Adder.IsNumbers("Strict/List(Number)")
+	Adder.IsNumbers("Strict/Number") is false
+	typeName.EndsWith("List(Number)") or typeName.EndsWith("Numbers")
+IsRows(typeName Text) Boolean
+	Adder.IsRows("Strict/List(Numbers)")
+	Adder.IsRows("Strict/List(Number)") is false
+	typeName.EndsWith("List(Numbers)") or typeName.EndsWith("List(List(Number))")

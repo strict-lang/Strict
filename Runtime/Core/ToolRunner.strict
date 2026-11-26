@@ -8,11 +8,11 @@ Executable Text
 IsAvailable Boolean
 	ToolRunner("noSuchStrictTool").IsAvailable is false
 	Process.Find(name).IsAvailable
-Execute(arguments Text, phase = "") ProcessResult
+Execute(arguments Text, phase = "") ProcessResult slow
 	ToolRunner("noSuchStrictTool").Execute("").HasFailed
 	Echo.Execute(Echoed + "a").Output.IndexOf("\r") is -1
 	ExecuteAll(List(Text) + arguments, phase).First
-ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
+ExecuteAll(arguments Texts, phase = "") List(ProcessResult) slow
 	ToolRunner("noSuchStrictTool").ExecuteAll(("", "")).Last.HasFailed
 	Echo.ExecuteAll((Echoed + "a", Echoed + "b")).Last.Output is "b\n"
 	tool = "Tool " + Path(name).FileName.text + " (" + arguments.Length + " jobs)"
@@ -21,7 +21,7 @@ ExecuteAll(arguments Texts, phase = "") List(ProcessResult)
 	Phases.Report(phase is "" then tool else phase, started)
 	for results
 		Retry(Clean(value), arguments(index))
-Retry(result ProcessResult, arguments Text) ProcessResult
+Retry(result ProcessResult, arguments Text) ProcessResult slow
 	ToolRunner("noSuchStrictTool").Retry(ProcessResult(139, "", ""), "").exitCode is 127
 	ToolRunner("noSuchStrictTool").Retry(ProcessResult(1, "", ""), "").exitCode is 1
 	IsCrash(result.exitCode) then Clean(Process.RunTool(name, arguments)) else result
