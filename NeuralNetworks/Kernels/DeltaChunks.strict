@@ -10,26 +10,20 @@ has logs Numbers = List(Number)
 has attended Numbers = List(Number)
 has corrected Numbers = List(Number)
 has reads Numbers = List(Number)
-has sequences Number = 1
 constant Keys = (0.5, -1, 0.6, 0.8, 1, 2, -1, 0.5, 1, 0.25, 0.8, 0.6, 0.5, -0.5, 2, 1, -0.5, 0.5, 1, 0, 1, 1, 0, -1)
 constant Rates = (-0.1, -0.5, 0.5, 0.25, -0.2, -0.05, 0.75, 1, -1, -0.3, 0.3, 0.6)
 constant Probe = DeltaChunks(2, 1, 2, 2, 3, Keys, Rates, (0.1, 0.2, 0.3, 0.4, -0.2, 0, 0.5, 1))
-constant OneSequence = DeltaChunks(2, 1, 2, 2, 2, Keys.Slice(0, 16), Rates.Slice(0, 8), Probe.memory)
-constant TwoSequences = DeltaChunks(2, 1, 2, 2, 4, Keys.Slice(0, 16) + Keys.Slice(0, 16), Rates.Slice(0, 8) + Rates.Slice(0, 8), Probe.memory, sequences = 2)
 Read DeltaChunks
 	Probe.Read.reads(9).IsNearlyEqual(-0.076604, 0.003)
 	Probe.Read.memory(7).IsNearlyEqual(0.718619566, 0.003)
 	DeltaChunks(Probe, chunk = 4).Read.reads(4).IsNearlyEqual(0.38325276, 0.003)
-	TwoSequences.Read.reads(15).IsNearlyEqual(OneSequence.Read.reads(7), 0.001)
 	prepared = Prepared
-	chunksPerSeq = (tokens / sequences / chunk).Ceiling
 	mutable state = memory
 	mutable outputs = List(Number)
 	for (tokens / chunk).Ceiling
-		active = index % chunksPerSeq is 0 then memory else state
-		fresh = prepared.Fresh(active, index * chunk)
-		outputs = outputs + prepared.Outputs(fresh, active, index * chunk)
-		state = prepared.Remember(fresh, active, index * chunk)
+		fresh = prepared.Fresh(state, index * chunk)
+		outputs = outputs + prepared.Outputs(fresh, state, index * chunk)
+		state = prepared.Remember(fresh, state, index * chunk)
 	DeltaChunks(prepared, memory = state, reads = outputs)
 Stepped(block DeltaBlock) DeltaChunks slow
 	DeltaChunks(4, 2, 2, 16, 1, Layer.Zeros(16), Layer.Zeros(8)).Stepped(DeltaBlock.Tiny).reads is Layer.Zeros(8)

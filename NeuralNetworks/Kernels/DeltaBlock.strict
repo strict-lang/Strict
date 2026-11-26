@@ -56,48 +56,39 @@ Combine(input Numbers) Numbers
 		token = (index / (mixing + rating)).Floor
 		at = index % (mixing + rating)
 		at < mixing then mixed(token * mixing + at) else rated(token * rating + at - mixing)
-Cached(combined Numbers, sequences = 1) DeltaBlock slow
+Cached(combined Numbers) DeltaBlock slow
 	Tiny.Cached(Tiny.Combine(Drafter.Rows(1))).Output(Drafter.Rows(1)).First.IsNearlyEqual(0.54408, 0.00001)
 	Tiny.Cached(Tiny.Combine(Drafter.Pair)).Output(Drafter.Pair)(8).IsNearlyEqual(1.773538, 0.00001)
 	tokens = combined.Length / Width
-	keyed = Key(Convolve(combined, tokens, tokens / sequences))
+	keyed = Key(Convolve(combined, tokens))
 	constant Chunk = 16
-	decayed = Decay(combined, tokens)
-	size = norm.Length
-	chunks = DeltaChunks(decays.Length, KeyHeads, size, Chunk, tokens, keyed, decayed, memory, sequences = sequences)
+	chunks = DeltaChunks(decays.Length, KeyHeads, norm.Length, Chunk, tokens, keyed, Decay(combined, tokens), memory)
 	read = tokens is 1 then chunks.Stepped(value) else chunks.Read
 	DeltaBlock(value, memory = read.memory, window = Shift(combined, tokens), merged = Gate(read.reads, combined))
 Rewound(combined Numbers) DeltaBlock slow
 	Tiny.Rewound(Tiny.Combine(Drafter.Rows(1))).memory is Tiny.Cached(Tiny.Combine(Drafter.Rows(1))).memory
 	Tiny.Rewound(Tiny.Combine(Drafter.Pair)).window is Tiny.Cached(Tiny.Combine(Drafter.Pair)).window
 	tokens = combined.Length / Width
-	keyed = Key(Convolve(combined, tokens, tokens))
+	keyed = Key(Convolve(combined, tokens))
 	decayed = Decay(combined, tokens)
 	mutable current = value
 	for tokens
 		current = DeltaBlock(current, memory = current.Update(keyed, decayed, current.Read(keyed, index, 1), index))
 	DeltaBlock(current, window = Shift(combined, tokens))
-Convolve(combined Numbers, tokens Number, seqLen Number) Numbers
-	Tiny.Convolve(Layer.Zeros(64), 2, 2) is Layer.Zeros(32)
-	Tiny.Convolve(Layer.Zeros(32) + Pulse, 2, 1)(16) is Tiny.Convolve(Pulse, 1, 1)(0)
+Convolve(combined Numbers, tokens Number) Numbers
+	Tiny.Convolve(Layer.Zeros(64), 2) is Layer.Zeros(32)
 	channels = convolution.Length / 4
 	width = combined.Length / tokens
-	isWhole = seqLen is tokens
 	for tokens * channels
 		token = (index / channels).Floor
 		channel = index % channels
-		pos = token % seqLen
-		older = Tap(combined, width, Back(pos, token, 3, isWhole), channel, channels, 0)
-		old = older + Tap(combined, width, Back(pos, token, 2, isWhole), channel, channels, 1)
-		sum = old + Tap(combined, width, Back(pos, token, 1, isWhole), channel, channels, 2)
+		old = Tap(combined, width, token - 3, channel, channels, 0) + Tap(combined, width, token - 2, channel, channels, 1)
+		sum = old + Tap(combined, width, token - 1, channel, channels, 2)
 		all = sum + Tap(combined, width, token, channel, channels, 3)
 		all / (1 + (-all).Exponential)
 Tap(combined Numbers, width Number, token Number, channel Number, channels Number, weight Number) Number
 	Tiny.Tap((1, 2, 3, 4), 2, 1, 0, 1, 3) is 3 * Tiny.convolution(3)
 	TapChannel(combined, width, token, channel, channels) * convolution(4 * channel + weight)
-Back(position Number, token Number, back Number, isWhole Boolean) Number
-	Tiny.Back(1, 5, 2, true) is -1 and Tiny.Back(1, 5, 2, false) is -9 and Tiny.Back(3, 5, 2, true) is 3
-	position < back then (isWhole then position - back else -9) else token - back
 TapChannel(combined Numbers, width Number, token Number, channel Number, channels Number) Number
 	Tiny.TapChannel((1, 2, 3, 4), 2, 1, 0, 1) is 3
 	Tiny.TapChannel((1, 2, 3, 4), 2, -1, 0, 1) is 0
