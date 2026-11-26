@@ -2,15 +2,26 @@ has sources Texts
 has stamps Numbers = List(Number)
 constant Listing = TypeEntry("Strict/List(Number)", List(MemberEntry), List(MethodEntry))
 constant Mixed = BinarySources(("./Examples/A.strict", "./Examples/data.csv", "./Examples/List.strict"), (1, 2, 3))
+constant TimeWrap = 8589934592
+constant LengthWrap = 1048576
 constant CompilerStamp = BinarySources(List(Text) + Process.Current.executable).Stamped.stamps.First
 Stamped(known = Dictionary(Text, Number)) BinarySources
 	BinarySources(List(Text) + "./Missing.strict").Stamped.stamps is (0)
-	BinarySources(List(Text) + "./Any.strict").Stamped.stamps.First > 1.7e12
+	BinarySources(List(Text) + "./Any.strict").Stamped.stamps.First is Stamp("./Any.strict")
 	BinarySources(List(Text) + "./Any.strict").Stamped(Dictionary(("./Any.strict", 5))).stamps is (5)
 	mutable found = List(Number)
 	for sources
-		found = found + (value is in known then known(value) else (File(value).Modified * 1000).Floor)
+		found = found + (value is in known then known(value) else Stamp(value))
 	BinarySources(sources, found)
+Mark(milliseconds Number, length Number) Number
+	BinarySources.Mark(5, 1) is 5242881 and BinarySources.Mark(5, 2) is 5242882
+	BinarySources.Mark(6, 0) is 6291456 and BinarySources.Mark(TimeWrap + 6, LengthWrap + 1) is 6291457
+	BinarySources.Mark(0, 0) is 0
+	milliseconds % TimeWrap * LengthWrap + length % LengthWrap
+Stamp(path Text) Number
+	BinarySources.Stamp("./Missing.strict") is 0
+	BinarySources.Stamp("./Any.strict") % LengthWrap is File("./Any.strict").Length
+	Mark((File(path).Modified * 1000).Floor, File(path).Length)
 Indexed Dictionary(Text, Number)
 	Mixed.Indexed("./Examples/List.strict") is 3
 	mutable indexed = Dictionary(Text, Number)

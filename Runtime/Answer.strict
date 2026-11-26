@@ -17,7 +17,7 @@ Stamped(started Number) Answer
 	mutable stamped = Dictionary(Text, Number)
 	for files
 		modified = File(value).Modified
-		stamped(value) = modified < started then modified else -1
+		stamped(value) = modified < started then BinarySources.Stamp(value) else -1
 	Answer(value, stamps = stamped)
 Fresh(current Text) Dictionary(Text, TypeEntry)
 	Character.Fresh("elsewhere").Length is 0
@@ -33,7 +33,7 @@ Fresh(current Text) Dictionary(Text, TypeEntry)
 Changed Texts
 	Character.Stamped(0).Changed is ("Character", "Number")
 	for stamps
-		if File(value.Key).Modified is not value.Value
+		if BinarySources.Stamp(value.Key) is not value.Value
 			Path(value.Key).FileName.text.Replace(".strict", "")
 IsUsing(entry TypeEntry, names Texts) Boolean
 	Character.IsUsing(TypeEntry.CharacterEntry, List(Text) + "Character")

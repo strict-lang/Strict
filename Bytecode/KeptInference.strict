@@ -86,7 +86,7 @@ Rest(files Texts, path Text) Texts
 Stamps(sources Texts) Numbers
 	Empty.Stamps(List(Text) + "Missing.strict") is (0)
 	for sources
-		File(value).Modified
+		BinarySources.Stamp(value)
 Mention(sources Texts) Texts
 	Empty.Mention(Pair).Slice(0, 3) is ("Logger", "TextWriter", "Boolean")
 	"Logger" is not in Empty.Mention(Writer)
