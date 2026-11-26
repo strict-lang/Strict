@@ -1,0 +1,5 @@
+has service Service
+constant Test = Host(Service.Test)
+IsDelivered Boolean
+	Test.IsDelivered
+	service.IsStored("ok")

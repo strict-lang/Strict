@@ -1,0 +1,4 @@
+has Checker
+IsChecked(text Text) Boolean
+	MockCheck.IsChecked("ok")
+	text is "ok"

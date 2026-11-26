@@ -1,4 +1,6 @@
 has types List(TypeEntry)
+constant Doubled = VmValue("Strict/Doubler", 0, "", List(VmValue))
+constant Untraited = VmValue.OfError("TraitHasNoImplementation: Twicer.Twice has no body")
 constant Read = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "x")
 constant Doubling = Routes(List(TypeEntry) + Machine.Doubler)
 constant Placeholding = Routes(List(TypeEntry) + TypeEntry("Strict/Process", List(MemberEntry), List(MethodEntry) + InlineRules.Adding + MethodEntry(InlineRules.Placeholder, Name = "OperatingSystem", declaredType = "Strict/Text")))
@@ -123,3 +125,19 @@ ConstructionSlot(type TypeEntry) Number
 			if value.Name is "from"
 				return 0
 	Resolver(types).Position(type) + 1
+Native(call Invocation, machine Machine) VmValue
+	Doubling.Native(Invocation.Parsing, Machine.Hello).number is 5
+	native = call.Native(Natives(types, machine.folder))
+	found = Implementer(call, native)
+	found.Length is 0 then native else machine.Dispatch(found.First, types(found.First).methods(found.Last), call)
+Implementer(call Invocation, result VmValue) Numbers
+	Doubling.Implementer(Resolver.Twice, VmValue.OfNumber(1)).Length is 0
+	Doubling.Implementer(Invocation(Resolver.Twice.entry, List(VmValue), Doubled), Untraited) is (0, 0)
+	if result.kind is not "Strict/Error" then true else result.items.First.text.StartsWith("TraitHasNo") is false
+		return List(Number)
+	kind = TypeEntry.ShortName(call.Instance.kind)
+	for types
+		method = value.Chosen(call.MethodName, call.Count, call.ReturnType, call.ParameterNames)
+		if TypeEntry.ShortName(value.Name) is kind and method >= 0
+			return (index, method)
+	List(Number)

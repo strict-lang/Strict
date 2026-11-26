@@ -1,0 +1,4 @@
+has Vault
+IsBound(name Text) Boolean
+	MemoryVault.IsBound("a")
+	name.Length > 0

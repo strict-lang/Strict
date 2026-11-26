@@ -1,0 +1,33 @@
+has types List(TypeEntry)
+constant Checking = MethodEntry("IsChecked", List(MemberEntry), "Strict/Boolean", List(InstructionEntry))
+constant Checker = TypeEntry("Strict/A/Checker", List(MemberEntry), List(MethodEntry) + Checking)
+constant Held = List(MemberEntry) + MemberEntry("checker", "Strict/A/Checker", List(InstructionEntry), false)
+constant Mock = TypeEntry("Strict/A/MockCheck", Held, List(MethodEntry) + MethodEntry(Checking, instructions = List(InstructionEntry) + InstructionEntry.Return(0)))
+constant Real = TypeEntry(Mock, Name = "Strict/A/RealCheck")
+Owner(type TypeEntry, callee MethodEntry) TypeEntry
+	MlirTraits((Checker, Mock)).Owner(Checker, Checking).Name is "Strict/A/MockCheck"
+	MlirTraits((Checker, Mock)).Owner(Mock, Mock.methods.First).Name is "Strict/A/MockCheck"
+	MlirTraits((Checker, Mock, Real)).Owner(Checker, Checking).Name is "Strict/A/Checker"
+	if callee.instructions.Length > 0
+		return type
+	mutable found = List(Mutable(TypeEntry))
+	for types
+		if IsImplementing(value, type, callee.Name)
+			found.Add(value)
+	found.Length is 1 then found.First else type
+IsImplementing(candidate TypeEntry, trait TypeEntry, name Text) Boolean
+	MlirTraits(List(TypeEntry)).IsImplementing(Mock, Checker, "IsChecked")
+	MlirTraits(List(TypeEntry)).IsImplementing(Checker, Checker, "IsChecked") is false
+	if IsHolding(candidate, trait) is false
+		return false
+	for candidate.methods
+		if value.Name is name and value.instructions.Length > 0
+			return true
+	false
+IsHolding(candidate TypeEntry, trait TypeEntry) Boolean
+	MlirTraits(List(TypeEntry)).IsHolding(Mock, Checker)
+	MlirTraits(List(TypeEntry)).IsHolding(Checker, Checker) is false
+	for candidate.members
+		if TypeEntry.ShortName(value.typeName) is TypeEntry.ShortName(trait.Name)
+			return true
+	false

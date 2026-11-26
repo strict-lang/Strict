@@ -1,0 +1,32 @@
+has types KnownTypes
+has folder Text
+constant Checking = KnownTypes(("Checker", "MockCheck"), (KnownTypes.NoMembers, Scope("checker", "Checker")), (Scope("IsChecked", "Boolean"), Scope("IsChecked", "Boolean")), (Scope(" trait", "true"), KnownTypes.NoMembers))
+constant MockEntry = TypeEntry("Strict/A/MockCheck", List(MemberEntry) + MemberEntry("checker", "Strict/A/Checker", List(InstructionEntry), false), List(MethodEntry))
+constant Mocks = List(TypeEntry) + MockEntry
+constant Linking = TraitLinks(Checking, "Strict/A")
+constant Local = TraitLinks.Linking.Holders(List(TypeEntry) + TypeEntry("MockCheck", MockEntry.members, List(MethodEntry)))
+Implementers(targets Texts, entries List(TypeEntry)) Texts
+	Linking.Implementers(List(Text) + "Strict/A/Checker.IsChecked", Mocks) is ("Strict/A/MockCheck.IsChecked")
+	Linking.Implementers(List(Text) + "Strict/A/Checker.Other", Mocks).Length is 0
+	holders = Holders(entries)
+	mutable found = List(Mutable(Text))
+	for targets
+		dot = value.LastIndexOf(".")
+		owner = dot > 0 then value.Substring(0, dot) else ""
+		method = value.Substring(dot + 1, value.Length - dot - 1)
+		for owner is in holders then holders(owner) else List(Text)
+			if types.MethodsOf(TypeEntry.ShortName(value)).TypeOf(method) is not ""
+				found.Add(value + "." + method)
+	found
+Holders(entries List(TypeEntry)) Dictionary(Text, Texts)
+	Linking.Holders(Mocks)("Strict/A/Checker") is ("Strict/A/MockCheck")
+	Linking.Holders(List(TypeEntry) + TypeEntry.HelloLogger).Length is 0
+	Local("Strict/A/Checker") is ("Strict/A/MockCheck")
+	mutable holders = Dictionary(Text, Texts)
+	for entries
+		holder = value.Name.IndexOf("/") < 0 then folder + "/" + value.Name else value.Name
+		for value.members
+			isRoot = value.typeName.StartsWith("Strict/") and value.typeName.LastIndexOf("/") is 6
+			if isRoot then false else types.ParameterScope(TypeEntry.ShortName(value.typeName)).TypeOf(" trait") is "true"
+				holders(value.typeName) = (value.typeName is in holders then holders(value.typeName) else List(Text)) + holder
+	holders

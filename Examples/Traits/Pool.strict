@@ -1,0 +1,7 @@
+has services List(Service)
+AreStored Boolean
+	Pool((Service.Test, Service(MockCheck, MemoryVault))).AreStored
+	for services
+		if value.IsStored("ok") is false
+			return false
+	true

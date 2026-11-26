@@ -7,6 +7,8 @@ constant Swapped = Invocation(InstructionEntry.Invoke(2, ("Strict/Shape", "from"
 constant ByteCall = Invocation(Natives.NewShape.entry, (VmValue.OfNumber(3), VmValue.OfNumber(9)), VmValue.None)
 constant Maximal = VmValue("Strict/Byte", 0, "", (VmValue.None, VmValue.OfNumber(255)))
 constant PlainTypes = ("Strict/Number", "Strict/Text", "Strict/Boolean", "Strict/Logger", "Strict/Texts", "Strict/Numbers", "Strict/Bytes", "Number", "Text", "Boolean")
+constant NoItems = List(VmValue)
+constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry.LoggerMember, List(MethodEntry))
 Of(original VmValue) VmValue
 	Single.Of(VmValue.OfNumber(0.1)).number is 0.10000000149011612
 	Single.Of(VmValue.OfList(VmValue.OfNumber(0.1), VmValue.OfNumber(1))).items.First.number is 0.10000000149011612
@@ -70,8 +72,10 @@ Wrap(type TypeEntry, call Invocation) VmValue
 	(Single.Wrap(Natives.Single, Natives.NewSingle).number is 0.1) is false
 	Single.Wrap(Empty, Natives.NewSingle).number is 0.1 and Single.bits is 32
 	Single.Wrap(Empty, Invocation(Natives.NewDegree.entry, List(VmValue), VmValue.None)).kind is "None"
+	Single.Wrap(Holder, Invocation(Natives.NewDegree.entry, List(VmValue), VmValue.None)).kind is "Strict/Degree"
 	if call.Arguments.Length is 0
-		return type.members.Length is 0 then VmValue.None else Natives(List(TypeEntry)).Initial(type.members.First)
+		initial = type.members.Length is 0 then VmValue.None else Natives(List(TypeEntry)).Initial(type.members.First)
+		return initial.kind is not "None" or type.members.Length is 0 then initial else VmValue(call.TypeName, 0, "", NoItems)
 	memberBits = type.members.Length is 0 then Number.DoubleBits else type.members.First.Bits
 	argument = call.Arguments.First
 	(memberBits is in (0, Number.DoubleBits) then argument else Rounding(memberBits).Of(argument)).As(call.TypeName)

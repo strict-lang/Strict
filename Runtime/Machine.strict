@@ -179,7 +179,7 @@ Route(call Invocation) VmValue
 		prototype = built < prototypes.entries.Length then prototypes.At(built) else VmValue.None
 		return Rounding.Single.Build(types(built), call, Natives(types), entry.payload(at + 2) is 1, prototype)
 	skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
-	skip then call.Native(Natives(types, folder)) else Dispatch(route, types(route).methods(entry.payload(at + 1)), call)
+	skip then Routes(types).Native(call, value) else Dispatch(route, types(route).methods(entry.payload(at + 1)), call)
 Dispatch(route Number, method MethodEntry, call Invocation) VmValue
 	Pairing.Dispatch(0, Resolver.Doubling.Methods(Paired).First, Invocation.AddCall).items.First.number is 7
 	Hello.Ownership(TypeEntry.Numbers, VmValue.Numbered.kind) is 1

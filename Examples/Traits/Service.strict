@@ -1,0 +1,6 @@
+has checker Checker
+has vault Vault
+constant Test = Service(MockCheck, MemoryVault)
+IsStored(name Text) Boolean
+	Test.IsStored("ok")
+	checker.IsChecked(name) and vault.IsBound(name)

@@ -32,7 +32,8 @@ Call(function MlirFunction, position Number) List(MlirFunction)
 	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
 		return List(MlirFunction)
 	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
-	callee = decoder.Callee(type)
-	called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
+	owner = MlirTraits(types).Owner(type, decoder.Callee(type))
+	callee = decoder.Callee(owner)
+	called = MlirFunction(types, owner, callee, typeIndex = function.typeIndex)
 	none = MlirModule.NoFunctions
 	callee.instructions.Length > 0 or MlirForeign(called).IsForeign then none + called else none

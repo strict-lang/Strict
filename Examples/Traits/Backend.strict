@@ -1,0 +1,7 @@
+has count Number
+Open Service
+	Backend(1).Open.IsStored("ok") and Backend(0).Open.IsStored("ok")
+	count > 0 then Service(MockCheck, MemoryVault) else Service.Test
+IsServed Boolean
+	Backend(1).IsServed
+	Open.IsStored("ok")

@@ -83,8 +83,9 @@ Invoke(entry InstructionEntry, decoder PayloadDecoder) Texts
 	MlirGrouped(function, position).Keep(compiled, entry.payload(0))
 Compile(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compile(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
-	callee = decoder.Callee(type)
-	target = MlirFunction(function.types, type, callee, typeIndex = function.typeIndex)
+	owner = MlirTraits(function.types).Owner(type, decoder.Callee(type))
+	callee = decoder.Callee(owner)
+	target = MlirFunction(function.types, owner, callee, typeIndex = function.typeIndex)
 	if callee.instructions.Length is 0 and MlirForeign(target).IsForeign is false
 		return List(Text) + MlirStatements(function, position).Unsupport("call of " + type.Name + "." + decoder.Text(2))
 	types = Text.Combine(ArgumentTypes(target.Parameters.Length), ", ")

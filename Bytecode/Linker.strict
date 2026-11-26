@@ -41,7 +41,9 @@ Next(round LinkRound) LinkRound slow
 	Hello.Next(LinkRound.Greeting).signatures is ("Strict/Logger:")
 	Hello.Next(LinkRound(Hello, LinkRound.Forwarding, List(Text) + "Strict/W:Code")).entries.First.methods.Length is 2
 	Linker(Hello, isFast = true).Next(LinkRound.Greeting).linker.Homes.Length is 0
-	invoked = round.Targets.Unique
+	used = round.Targets.Unique
+	traited = TraitLinks(main.inference.types, Path(main.fullName).PathOnly.text).Implementers(used, round.entries)
+	invoked = traited.Length is 0 then used else (used + traited).Unique
 	completed = LinkRound(round, entries = Complete(round.entries, invoked))
 	targets = invoked + completed.Forward(invoked)
 	signed = Signatures(Linkable(BaseTypes(round.UsedTypes, targets), round.signatures), targets)
