@@ -17,6 +17,8 @@ constant Element = (Piece(0), InstructionEntry.LoadNumber(2, 5))
 constant Listed = Taken + Element + Added + Reload + InstructionEntry.Return(4)
 constant Lists = MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "Strict/List(Number)", Listed)
 constant Filling = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, Lists), 4)
+constant Holding = TypeEntry("Strict/Holding", List(MemberEntry) + MlirLists.Items, List(MethodEntry))
+constant Holder = MlirAppended(MlirFunction(List(TypeEntry) + Holding, Holding, MethodEntry(Lists, parameters = List(MemberEntry))), 4)
 constant Pushing = (InstructionEntry(InstructionType.LoadConstantToRegister, "Strict/List(Number)", (0, 6, -1, 0)), Stored, InstructionEntry.LoadNumber(2, 5), InstructionEntry.Named(InstructionType.InvokeWriteToList, 2, "text"), Reload)
 constant Pushed = MlirAppended(MlirFunction(Shape, MlirFunction.Shape, MethodEntry(Returned, instructions = Pushing + InstructionEntry.Return(4))), 3)
 constant Handing = Pushing + InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "other") + InstructionEntry.Return(4)
@@ -46,6 +48,7 @@ Name Text
 	(isStored and name is not "" then next.texts(0) is name else false) then name else ""
 Seed Text
 	Filling.Seed is "numbers"
+	Holder.Seed is "numbers" and Holder.IsOwned
 	Growing.Seed is ""
 	MlirDying(function, position).Seed(Name)
 IsLocal(name Text) Boolean
@@ -78,7 +81,7 @@ IsKept(entry InstructionEntry, at Number) Boolean
 	writer = MlirKinds(function).Writer(at, entry.payload(0))
 	made = writer >= 0 then function.method.instructions(writer) else InstructionEntry.Return(0)
 	if made.kind is InstructionType.LoadVariableToRegister
-		return IsList(entry.texts(0)) and made.texts(0) is in function.method.ParameterNames
+		return IsList(entry.texts(0)) and MlirInstances(function, 0).IsSeed(made.texts(0))
 	made.kind is InstructionType.LoadConstantToRegister or IsHarmless(made, writer)
 IsRead(at Number, register Number) Boolean
 	Growing.IsRead(2, 1)

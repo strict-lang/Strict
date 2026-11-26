@@ -27,7 +27,7 @@ Seed(name Text) Text
 	for function.method.instructions
 		if value.kind is InstructionType.StoreRegisterToVariable and value.texts(0) is name
 			loaded = MlirDying(function, index).Load(value.payload(0))
-			if loaded is in function.method.ParameterNames
+			if MlirInstances(function, 0).IsSeed(loaded)
 				return loaded
 	""
 EmitGuard(lines Texts, seed Text) Texts

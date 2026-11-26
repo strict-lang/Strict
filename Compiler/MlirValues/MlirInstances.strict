@@ -26,6 +26,10 @@ Store(owner TypeEntry) List(MemberEntry)
 	for owner.members
 		if value.IsStored
 			value
+IsSeed(name Text) Boolean
+	MlirInstances(Shapes, 0).IsSeed("width")
+	MlirInstances(Shapes, 0).IsSeed("value") is false
+	name is in function.method.ParameterNames or name is in StoredNames(function.type)
 StoredNames(owner TypeEntry) Texts
 	MlirInstances(Shapes, 1).Construct(Built, "Strict/Shape")(0) is "    %t1oz = arith.constant 8 : i64"
 	MlirInstances(Shapes, 1).Construct(Built, "Strict/Shape")(1).IndexOf("%t1op = func.call @strict_alloc(%t1oz)") is 4
