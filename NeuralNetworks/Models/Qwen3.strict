@@ -68,7 +68,7 @@ Step(token Number, position Number) Qwen3 slow
 	TinyBasis.Step(1, 0).Step(2, 1).Scored.First.IsNearlyEqual(2.182707, 0.00001)
 	TinyBasis.Prefilled((1, 2, 3), 0).Nexts is TinyHybrid.Prefilled((1, 2, 3), 0).Nexts
 	Primed.Copies(2).Steps((3, 4), (2, 2), 2).Nexts is (Primed.Step(3, 2).Next, Primed.Step(4, 2).Next)
-	Primed.Copies(2).Steps((3, 5, 4, 6), (2, 3, 2, 3), 2).Nexts(3) is Primed.Step(4, 2).Step(6, 3).Next
+	Primed.Copies(2).Steps((3, 5, 4, 2), (2, 3, 2, 3), 2).Nexts(3) is Primed.Step(4, 2).Step(2, 3).Next
 	Steps(List(Number) + token, List(Number) + position, 1)
 Positions(start Number, count Number) Numbers
 	Tiny.Positions(2, 3) is (2, 3, 4)
