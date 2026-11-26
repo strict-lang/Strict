@@ -9,7 +9,7 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 
 ## Native builds (emission, lowering, linking)
 - Web rebuilds run whole-program emcc link with Closure (2.3 s) and wasm-opt (1.6 s) even when only one string changed.
-- Build speed (under 10 s hard limit, 2-3 s target; LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the front end twice (test gate, then native), lowering and ThinLTO link are the largest phases left.
+- Build speed (under 10 s hard limit, 2-3 s target; LogoApp after a one-line edit 1.8-2.4 s on 2026-11-26, was 3.6-4 s): link 0.25-0.6 s, the test gate front end 0.31 s (the front end runs twice), lowering 0.3 s, emission 0.28 s.
 
 ## VM
 - A VM call of a small Strict method costs about 6 us: `Machine.Bound` a quarter of it (one `Member` call per member slot, Number has 12 with its constants, and a `strict_list_push` per slot; reference counting under `Frame.Call`, `Bound` and `Rounding.Members` is 17 % of a Vector2 loop), the body about 150 ns per instruction (`Frame.Finish`, `strict_list_set`, `strict_rc_container`).

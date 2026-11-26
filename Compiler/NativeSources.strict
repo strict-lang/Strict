@@ -4,6 +4,7 @@ constant Paralleled = NativeSources(("Examples/NativeAdd/native", "NeuralNetwork
 constant Fresh = "Compiler/output/Fresh.1.exe"
 constant Iconed = "Examples/NativeAdd/NativeAdd"
 constant Resourced = " \"Examples/NativeAdd/NativeAdd.res\""
+constant Icon = Release(Iconed).Icon
 constant Summed = " \"Examples/Sum.res\""
 Files Texts
 	Adding.Files is List(Text) + "Examples/NativeAdd/native/Adder.c"
@@ -116,12 +117,20 @@ Resource(base Text, platform Number, root Text) Text
 	icon = Release(base).Icon
 	if platform is not Platform.Windows or File(icon).Exists is false
 		return ""
+	kept = Reuse(base + ".res", icon)
+	kept is "" then Compile(base, icon, platform, root) else kept
+Compile(base Text, icon Text, platform Number, root Text) Text
+	Adding.Compile(Iconed, Icon, Platform.Windows, ".") is Resourced or Platform.Current is not Platform.Windows
 	full = icon.IndexOf(":") > 0 then icon else Directory.Current.Replace("\\", "/") + "/" + icon
 	File(base + ".rc").Write("GLFW_ICON ICON \"" + full + "\"")
 	compiler = Toolchain(platform, root).Locate("llvm-rc")
 	compiled = ToolRunner(compiler).Execute("/FO \"" + base + ".res\" \"" + base + ".rc\"")
 	File(base + ".rc").Delete
 	compiled.HasFailed then "llvm-rc failed: " + compiled.error else " \"" + base + ".res\""
+Reuse(resource Text, icon Text) Text
+	Adding.Reuse("Compiler/Missing.res", "Compiler/NativeSources.strict") is ""
+	Adding.Reuse("Compiler/NativeSources.strict", "Compiler/Missing.ico") is " \"Compiler/NativeSources.strict\""
+	IsCurrent(resource, List(Text) + icon) then " \"" + resource + "\"" else ""
 LinuxLink(base Text, program Text, root Text) Text
 	Adding.LinuxLink("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
 	tools = Toolchain(Platform.Windows, root)
