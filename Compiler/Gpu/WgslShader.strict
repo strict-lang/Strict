@@ -25,7 +25,12 @@ constant Equality = ("fn n_equal(a: num, b: num) -> bool { if (a.w && b.w) { ret
 constant Ordering = ("fn n_less(a: num, b: num) -> bool { if (a.w && b.w) { return a.i < b.i; } return a.f < b.f; }", "fn n_more(a: num, b: num) -> bool { if (a.w && b.w) { return a.i > b.i; } return a.f > b.f; }")
 constant PowerSize = ("fn n_power(base: num, exponent: num) -> num {", "let size = pow(abs(base.f), exponent.f);", "let isOdd = abs(exponent.f % 2.0) == 1.0;")
 constant PowerSign = ("return n_float(select(select(size, -size, base.f < 0.0 && isOdd), 1.0, exponent.f == 0.0));", "}")
-constant Numbers = NumberStruct + WholeConversions + Adding + Subtracting + Multiplying + Modulo + Divided + DivisionRounded + FloorLogarithm + Trigonometry + Indexing + Equality + Ordering + PowerSize + PowerSign
+constant Float8Check = ("fn n_float8(a: num) -> num {", "let m = min(abs(a.f), 448.0);", "let sg = select(1.0, -1.0, a.f < 0.0);")
+constant Float8Subnormal = Float8Check + "if (m < 0.015625) { return n_of(sg * round(m * 512.0) / 512.0); }"
+constant Float8Bits = ("let b = bitcast<u32>(m); let f = b & 0x7fffffu;", "let t = f + 0x7ffffu + ((f >> 20u) & 1u);")
+constant Float8Normal = Float8Bits + ("let c = (((b >> 23u) - 120u) << 3u) + (t >> 20u);", "let r = bitcast<f32>((((c >> 3u) + 120u) << 23u) | ((c & 7u) << 20u));", "return n_of(sg * r);", "}")
+constant MathOps = WholeConversions + Adding + Subtracting + Multiplying + Modulo + Divided + DivisionRounded
+constant Numbers = NumberStruct + MathOps + FloorLogarithm + Trigonometry + Indexing + Equality + Ordering + PowerSize + PowerSign + Float8Subnormal + Float8Normal
 constant Entry = ("@compute @workgroup_size(64)", "fn main(@builtin(global_invocation_id) id: vec3<u32>, @builtin(num_workgroups) groups: vec3<u32>) {", "let at = id.x + id.y * groups.x * 64u;")
 Source Text
 	Scaled.Source.StartsWith(Bindings.First)
@@ -46,7 +51,7 @@ IsShaded Boolean
 	WgslShader(MlirGpu.Timing.function, 2).IsShaded is false
 	Halved.IsShaded
 	collection = MlirLoops(function, position).Collection
-	isFloats = MlirDoubles(function, position).Format is in (0, MlirDoubles.BFloat16Format, Number.SingleBits)
+	isFloats = MlirDoubles(function, position).Format is in (0, 7, 9, MlirDoubles.BFloat16Format, Number.SingleBits)
 	isKernel = MlirWholeKernel(function, position).IsKernel
 	collection is in ("", "List(Number)") and isFloats and isKernel is false and MlirGpuCheck(function, position).IsGpu
 Functions Texts

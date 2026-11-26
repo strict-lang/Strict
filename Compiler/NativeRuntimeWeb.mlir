@@ -748,11 +748,17 @@
     %kernelUsable = arith.andi %isReady, %isKernel : i1
     cf.cond_br %usable, ^plain, ^other
   ^plain:
+    %sevenFormat = arith.constant 7 : i64
+    %nineFormat = arith.constant 9 : i64
     %brainFormat = arith.constant 17 : i64
     %singleFormat = arith.constant 32 : i64
+    %isSeven = arith.cmpi eq, %format, %sevenFormat : i64
+    %isNine = arith.cmpi eq, %format, %nineFormat : i64
     %isBrain = arith.cmpi eq, %format, %brainFormat : i64
     %isSingle = arith.cmpi eq, %format, %singleFormat : i64
-    %isNarrow = arith.ori %isBrain, %isSingle : i1
+    %isByte = arith.ori %isSeven, %isNine : i1
+    %isFloat = arith.ori %isBrain, %isSingle : i1
+    %isNarrow = arith.ori %isByte, %isFloat : i1
     %widened = func.call @strict_gpu_shaded_format(%source, %kind, %values, %valueCount, %mask) : (f64, i64, !llvm.ptr, i64, i64) -> i64
     %chosen = arith.select %isNarrow, %format, %widened : i64
     %isChosen = arith.cmpi ne, %chosen, %none : i64

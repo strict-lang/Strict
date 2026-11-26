@@ -98,17 +98,17 @@ Call(entry InstructionEntry) Texts
 	List(Text) + ("r" + entry.payload(0) + " = " + called.Name + "(" + instance + called.Arguments(entry) + ");")
 IsNative(entry InstructionEntry) Boolean
 	WgslStatement(Made, 1).IsNative(MlirDeviceCalls.Making)
-	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Rounding) is false
+	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Rounding)
 	WgslStatement(Doubled, 4).IsNative(MlirDeviceCalls.Sining)
 	WgslStatement(MlirDeviceCalls.Turned.function, 1).IsNative(MlirDeviceCalls.Turning) is false
 	WgslStatement(Measuring, 1).Lines is ("r1 = n_int(i32(r0l.y));")
-	WgslStatement(Doubled, 4).Call(MlirDeviceCalls.Rounding) is ("unsupported: from")
+	WgslStatement(Doubled, 4).Call(MlirDeviceCalls.Rounding) is ("r1 = n_float8(r0);")
 	WgslStatement(Twice, 2).Call(Doubled.method.instructions(4)) is ("unsupported: Twice")
 	WgslStatement(MlirGpuCheck.Powered, 2).Lines is ("r2 = n_power(r0, r1);")
 	name = entry.texts(1)
 	isRounding = MlirDeviceCalls(function, at, function).IsRounding(entry)
 	isMade = name is "from" and isRounding is false and MlirDeviceMembers(function).IsNativeCall(at)
-	name is in ("Floor", "Length") or name is in MlirDeviceCalls.Approximations or isMade
+	name is in ("Floor", "Length") or name is in MlirDeviceCalls.Approximations or isRounding or isMade
 Native(entry InstructionEntry, instance Text) Text
 	WgslStatement(Doubled, 4).Native(MlirGpuCheck.Flooring, "r0") is "r1 = n_floor(r0);"
 	WgslStatement(Doubled, 4).Native(MlirDeviceCalls.Logarithmic, "r0") is "r1 = n_Logarithm(r0);"
@@ -117,8 +117,11 @@ Native(entry InstructionEntry, instance Text) Text
 	slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).KindOf(at, register))
 	counted = slots > 0 then "n_int(i32(" + instance + "l.y / " + slots + "u))" else "n_int(i32(" + instance + "l.y))"
 	name = entry.texts(1)
-	made = name is "from" then "r" + PayloadDecoder(entry).Arguments.First else "n_" + name + "(" + instance + ")"
-	called = name is "Floor" then "n_floor(" + instance + ")" else made
+	if name is "from"
+		arg = "r" + PayloadDecoder(entry).Arguments.First
+		rounded = MlirDeviceCalls(function, at, function).IsRounding(entry) then "n_float8(" + arg + ")" else arg
+		return "r" + entry.payload(0) + " = " + rounded + ";"
+	called = name is "Floor" then "n_floor(" + instance + ")" else "n_" + name + "(" + instance + ")"
 	"r" + entry.payload(0) + " = " + (name is "Length" then counted else called) + ";"
 Loop(entry InstructionEntry) Texts
 	WgslStatement(Summed, 11).Loop(Summed.method.instructions(11)) is ("}", "v_index = s2i;", "v_value = s2v;")

@@ -338,7 +338,7 @@ addToLibrary({
 	// a kept kernel result (bits 255, its address the buffer) is bound as it is (the first 4, n_item) or copied into place
 	// on the GPU (bfloat16 halves as they are, their place gets the top bit); only the other values are
 	// written (the buffer of all of them starts as zeros), a 944 MB placeholder of a resident map took seconds
-	$strictWebGpuKernelInputs__deps: ['$strictWebGpu', '$strictWebGpuWidened'],
+	$strictWebGpuKernelInputs__deps: ['$strictWebGpu', '$strictWebGpuWidened', '$strictWebGpuFloat8Widened'],
 	$strictWebGpuKernelInputs: (count, table, slots) => {
 		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 3);
 		const places = new Uint32Array(slots * 2 + 1), parts = [], copies = [], bound = [];
@@ -357,7 +357,9 @@ addToLibrary({
 			const part = length < 0 ? [address] : resident ? { length: isBound ? 0 : words, isResident: true }
 				: bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
 				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
-				: bits === 17 ? strictWebGpuWidened(HEAPU16.subarray(address / 2, address / 2 + length)) : null;
+				: bits === 17 ? strictWebGpuWidened(HEAPU16.subarray(address / 2, address / 2 + length))
+				: bits === 9 ? HEAPU8.subarray(address >>> 0, (address >>> 0) + length)
+				: bits === 7 ? strictWebGpuFloat8Widened(HEAPU8.subarray(address >>> 0, (address >>> 0) + length)) : null;
 			if (!part)
 				return null;
 			const isSixteen = isHalved && address in strictWebGpu.sixteens;
@@ -380,6 +382,15 @@ addToLibrary({
 		for (let index = 0; index < halves.length; index++)
 			words[index] = halves[index] << 16;
 		return new Float32Array(words.buffer);
+	},
+	$strictWebGpuFloat8Widened: (bytes) => {
+		const out = new Float32Array(bytes.length), words = new Uint32Array(out.buffer);
+		for (let index = 0; index < bytes.length; index++) {
+			const b = bytes[index], e = (b >> 3) & 15, m = b & 7, s = (b & 128) << 24;
+			if (e === 0) out[index] = (b & 128 ? -m : m) * 0.001953125;
+			else words[index] = s | ((e + 120) << 23) | (m << 20);
+		}
+		return out;
 	},
 	// a shader that does not compile rejects (its loop runs on the CPU), checked once per pipeline
 	$strictWebGpuPipeline__deps: ['$strictWebGpu'],
@@ -450,13 +461,29 @@ addToLibrary({
 			return null;
 		}
 	},
-	// numbers into the data at output as 64 bit, 32 bit or bfloat16 (bits 17, rounded to the nearest even) numbers
+	// numbers into the data at output as 64 bit, 32 bit, 8 bit (9 bytes, 7 E4M3) or bfloat16 (bits 17) numbers
 	$strictWebGpuWritten: (numbers, output, bits) => {
 		if (bits === 64)
 			HEAPF64.set(numbers, output / 8);
 		else if (bits === 32)
 			HEAPF32.set(numbers, output / 4);
-		else {
+		else if (bits === 9) {
+			const bytes = HEAPU8.subarray(output >>> 0, (output >>> 0) + numbers.length);
+			for (let index = 0; index < numbers.length; index++)
+				bytes[index] = Math.max(0, Math.min(255, Math.round(numbers[index])));
+		} else if (bits === 7) {
+			const bytes = HEAPU8.subarray(output >>> 0, (output >>> 0) + numbers.length);
+			const words = new Uint32Array(numbers.buffer, numbers.byteOffset, numbers.length);
+			for (let index = 0; index < numbers.length; index++) {
+				const v = numbers[index], mag = Math.min(Math.abs(v), 448.0), sign = v < 0 ? 128 : 0;
+				if (mag < 0.015625) bytes[index] = sign | Math.round(mag * 512.0);
+				else {
+					const b = words[index] & 0x7fffffff, f = b & 0x7fffff;
+					const c = Math.min(126, (((b >>> 23) - 120) << 3) + ((f + 0x7ffff + ((f >>> 20) & 1)) >>> 20));
+					bytes[index] = sign | c;
+				}
+			}
+		} else {
 			const words = new Uint32Array(numbers.buffer, numbers.byteOffset, numbers.length);
 			const halves = HEAPU16.subarray(output / 2, output / 2 + numbers.length);
 			for (let index = 0; index < words.length; index++)
