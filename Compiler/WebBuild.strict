@@ -28,10 +28,6 @@ Closure Text
 	Missing.Closure is " --closure 1"
 	Editing.Closure is ""
 	tools.isEdited then "" else " --closure 1"
-Level Text
-	Missing.Level is Toolchain.Optimization
-	Editing.Level is " -O1"
-	tools.isEdited then " -O1" else Toolchain.Optimization
 ThinLink(base Text) Text
 	Options.IndexOf("--profiling-funcs") is -1
 	Missing.ThinLink("a").EndsWith(" -Wl,--thinlto-cache-dir=\"a.web.lto\"")
@@ -45,8 +41,11 @@ Compile(base Text) Text
 	lowered is not "" then lowered else tools.PartsCompiled(base + ".web") then "" else "clang failed for " + base
 Optimize(executable Text) Text
 	Missing.Optimize("Compiler/output/missing.html").StartsWith("wasm-opt failed")
+	Editing.Optimize("Compiler/output/missing.html").StartsWith("wasm-opt") is false
+	if tools.isEdited
+		return Icone(executable)
 	wasm = tools.Quote(executable.Replace(".html", ".wasm"))
-	optimized = ToolRunner(tools.Locate("wasm-opt")).Execute(wasm + Level + Passes + " -o " + wasm)
+	optimized = ToolRunner(tools.Locate("wasm-opt")).Execute(wasm + Toolchain.Optimization + Passes + " -o " + wasm)
 	optimized.HasFailed then "wasm-opt failed: " + optimized.error else Icone(executable)
 Icone(executable Text) Text
 	page = Text.Combine(File(executable).ReadLines, "\n")
