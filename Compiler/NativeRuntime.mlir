@@ -4154,7 +4154,7 @@
   // true when address lies on a small page this thread took or swept in its current pool job or in what its lane
   // allocated since the job started from a span it carried into the job, not published through a constant and not
   // marked: a page swept in the job still holds what the last collection kept
-  func.func private @strict_gc_mine(%address: i64) -> i1 {
+  func.func private @strict_gc_mine_page(%address: i64) -> i1 {
     %zero = arith.constant 0 : i64
     %no = arith.constant false
     %owner = func.call @strict_gc_owner() : () -> i64
@@ -4212,6 +4212,18 @@
     %beforeEnd = arith.cmpi ult, %address, %end : i64
     %inSpan = arith.andi %fromStart, %beforeEnd : i1
     cf.cond_br %inSpan, ^mine, ^none
+  ^mine:
+    %yes = arith.constant true
+    return %yes : i1
+  ^none:
+    return %no : i1
+  }
+  // strict_gc_mine_page for an object not published through a constant and not marked (a page swept in the job
+  // still holds what the last collection kept)
+  func.func private @strict_gc_mine(%address: i64) -> i1 {
+    %no = arith.constant false
+    %paged = func.call @strict_gc_mine_page(%address) : (i64) -> i1
+    cf.cond_br %paged, ^mine, ^none
   ^mine:
     %shared = func.call @strict_gc_shared(%address) : (i64) -> i1
     %marked = func.call @strict_gc_is_marked(%address) : (i64) -> i1
@@ -7657,33 +7669,63 @@
   func.func private @strict_rc_dead_job(%old: f64, %new: f64) {
     %none = arith.constant 0 : i64
     %noFlags = arith.constant 0 : i16
+    %oldBits = arith.bitcast %old : f64 to i64
+    %isUnset = arith.cmpi eq, %oldBits, %none : i64
+    cf.cond_br %isUnset, ^done, ^owned
+  ^owned:
     %pointer = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
     %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
-    %mine = func.call @strict_gc_mine(%object) : (i64) -> i1
-    cf.cond_br %mine, ^lone, ^done
-  ^lone:
-    %onlyHost = arith.constant false
-    %unshared = func.call @strict_rc_lone(%old, %onlyHost) : (f64, i1) -> i1
-    cf.cond_br %unshared, ^block, ^done
-  ^block:
+    %mine = func.call @strict_gc_mine_page(%object) : (i64) -> i1
+    cf.cond_br %mine, ^locate, ^done
+  ^locate:
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %no = arith.constant false
+    %isSmall = arith.cmpi eq, %located#3, %no : i1
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %smallFound = arith.andi %found, %isSmall : i1
+    %usable = arith.andi %smallFound, %isStart : i1
+    cf.cond_br %usable, ^alone, ^done
+  ^alone:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags atomic monotonic {alignment = 2 : i64} : !llvm.ptr -> i16
+    // shared through a constant (128), pinned (32) or holding counted references (4)
+    %heldFlags = arith.constant 164 : i16
+    %held = arith.andi %flagByte, %heldFlags : i16
+    %isHeld = arith.cmpi ne, %held, %noFlags : i16
+    %mark = llvm.load %located#0 : !llvm.ptr -> i8
+    %unmarked = arith.constant 0 : i8
+    %isMarked = arith.cmpi ne, %mark, %unmarked : i8
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %zeroCount = arith.constant 0 : i32
+    %isCounted = arith.cmpi ne, %count, %zeroCount : i32
+    %markerSlot = llvm.getelementptr %pointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    %marker = llvm.load %markerSlot : !llvm.ptr -> i64
+    %freeMarker = arith.constant -1 : i64
+    %isFree = arith.cmpi eq, %marker, %freeMarker : i64
+    %enabledSlot = llvm.mlir.addressof @strict_rc_enabled : !llvm.ptr
+    %enabled = llvm.load %enabledSlot : !llvm.ptr -> i64
+    %isDisabled = arith.cmpi eq, %enabled, %none : i64
+    %isBound = func.call @strict_rc_device_bound(%object, %located#2) : (i64, i64) -> i1
     %newPointer = func.call @strict_ptr(%new) : (f64) -> !llvm.ptr
     %kept = llvm.ptrtoint %newPointer : !llvm.ptr to i64
-    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
     %end = arith.addi %object, %located#2 : i64
     %inside = func.call @strict_gc_within(%kept, %object, %end) : (i64, i64, i64) -> i1
-    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
-    %flagByte = llvm.load %flags : !llvm.ptr -> i16
-    %holdsFlag = arith.constant 4 : i16
-    %held = arith.andi %flagByte, %holdsFlag : i16
-    %holds = arith.cmpi ne, %held, %noFlags : i16
     %pageMask = arith.constant -65536 : i64
     %page = arith.andi %object, %pageMask : i64
     %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
     %pendingSlot = llvm.getelementptr %pagePointer[7] : (!llvm.ptr) -> !llvm.ptr, i64
     %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
     %isPending = arith.cmpi ne, %pending, %none : i64
-    %used = arith.ori %inside, %holds : i1
-    %left = arith.ori %used, %isPending : i1
+    %reached = arith.ori %isHeld, %isMarked : i1
+    %taken = arith.ori %isCounted, %isFree : i1
+    %kept1 = arith.ori %reached, %taken : i1
+    %off = arith.ori %isDisabled, %isBound : i1
+    %used = arith.ori %inside, %isPending : i1
+    %kept2 = arith.ori %off, %used : i1
+    %left = arith.ori %kept1, %kept2 : i1
     cf.cond_br %left, ^done, ^free
   ^free:
     %clear = arith.constant 0 : i32
@@ -7699,8 +7741,6 @@
     llvm.store %object, %cursorSlot : i64, !llvm.ptr
     return
   ^listed:
-    %freeMarker = arith.constant -1 : i64
-    %markerSlot = llvm.getelementptr %pointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %freeMarker, %markerSlot : i64, !llvm.ptr
     %headSlot = func.call @strict_rc_lane_head(%class) : (i64) -> !llvm.ptr
     %head = llvm.load %headSlot : !llvm.ptr -> i64

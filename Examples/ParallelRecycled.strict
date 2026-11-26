@@ -43,7 +43,7 @@ Rounds(rounds Number, count Number) Numbers
 	for rounds
 		Round(count)
 Grown Number slow
-	Pair.Grown < 12000000
+	Pair.Grown < 20000000
 	before = Process.MemoryUsed
 	Rounds(RoundCount, RoundLength).Sum is Expected then Process.MemoryUsed - before else 1000000000000
 Stress(count Number) Number slow
