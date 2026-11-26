@@ -72,27 +72,33 @@ Settle(records Texts, markers Texts) Texts
 	InputOutputs.Settle(Reversed, Slowly) is ("File.ReadLines", "Reader.Loaded", "Reader.Shown")
 	InputOutputs.Settle(("A.Draw|native|", "B.Render||A.Draw"), Natively) is ("A.Draw", "B.Render")
 	InputOutputs.Settle(("A.Draw|native|", "B.Render||A.Draw"), Slowly).Length is 0
-	mutable reaching = Seeds(records, markers)
-	mutable added = reaching.Length
-	for as long as added > 0
-		added = 0
-		for records
-			if SureMethods.Key(value) is not in reaching and IsReaching(SureMethods.CallList(value), reaching)
-				reaching = reaching + SureMethods.Key(value)
-				added = added + 1
+	Spread(Callers(records), Seeds(records, markers))
+Callers(records Texts) Dictionary(Text, Texts)
+	InputOutputs.Callers(Reached)("Reader.Loaded") is ("Reader.Shown")
+	"Reader.Twice" is not in InputOutputs.Callers(Reached)
+	mutable callers = Dictionary(Text, Texts)
+	for records
+		caller = SureMethods.Key(value)
+		for SureMethods.CallList(value)
+			callers(value) = (value is in callers then callers(value) else List(Text)) + caller
+	callers
+Spread(callers Dictionary(Text, Texts), seeds Texts) Texts
+	InputOutputs.Spread(InputOutputs.Callers(Reversed), List(Text) + "File.ReadLines").Length is 3
+	mutable reaching = seeds
+	mutable seen = SourceFiles.Seen(seeds)
+	mutable position = 0
+	for as long as position < reaching.Length
+		for reaching(position) is in callers then callers(reaching(position)) else List(Text)
+			if value is not in seen
+				seen(value) = true
+				reaching = reaching + value
+		position = position + 1
 	reaching
 Seeds(records Texts, markers Texts) Texts
 	InputOutputs.Seeds(Reached, Slowly) is ("File.ReadLines")
 	for records
 		if value.Split("|")(1) is in markers
 			SureMethods.Key(value)
-IsReaching(calls Texts, reaching Texts) Boolean
-	InputOutputs.IsReaching(("Number.+", "File.ReadLines"), "File.ReadLines")
-	InputOutputs.IsReaching("Number.+", "File.ReadLines") is false
-	for calls
-		if value is in reaching
-			return true
-	false
 Issues(path Text, lines Texts, reaching Texts) List(ValidationIssue)
 	InputOutputs.Issues("Demo/Reader.strict", Loading, ("Reader.Loaded", "Reader.Run")).Length is 1
 	InputOutputs.Issues("Demo/Reader.strict", Loading, "Reader.Loaded").First to Text is Flagged
