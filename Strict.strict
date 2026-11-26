@@ -125,7 +125,7 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 	execute = request.Executing(known, inferred)
 	if request.Option is in ("lines", "native")
 		return Answer(Command.Native("test", rest), known)
-	execute.Serve(rest(0), rest(1))
+	request.Candidates is "" then execute.Serve(rest(0), rest(1)) else CandidateBatch(request).Serve(execute)
 Test(text Text) Text slow
 	Trial(text).Ran
 Trace(request TestRequest, rest Texts) Number slow

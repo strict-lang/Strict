@@ -1,0 +1,29 @@
+has request TestRequest
+constant Absent = CandidateBatch(TestRequest(("Missing.strict", ".", "candidates:Missing.txt")))
+constant Head = "has a Number\nB Number\n\tS(5).B is 25"
+Source(head Text, tail Text) Text
+	Absent.Source(Head, "\ta\nconstant C = 1") is "has a Number\nconstant C = 1\nB Number\n\tS(5).B is 25\n\ta"
+	lines = head.Lines
+	end = TypeShape(lines).MembersEnd
+	constants = Constants(tail.Lines)
+	Text.Combine(lines.Slice(0, end) + constants + lines.Slice(end, lines.Length - end) + (tail.Lines - constants), "\n")
+Serve(execute Execute) Answer slow
+	Absent.Serve(Execute).code is 1
+	Answer(Count(File(request.Candidates).ReadText, execute), execute.known)
+Count(tails Text, execute Execute) Number slow
+	Absent.Count("\tinput\n---\n\tinput * input", Execute) is 2
+	path = request.rest(0)
+	source = File(FileCompiler.Normalize(path))
+	head = File(path).ReadText
+	mutable failed = 0
+	for tails.Split("\n---\n")
+		source.InMemory(Source(head, value))
+		logger.Log("Candidate " + (index + 1))
+		failed = failed + (execute.Serve(path, request.rest(1)).code > 0 then 1 else 0)
+	source.InMemory("")
+	failed
+Constants(lines Texts) Texts
+	Absent.Constants(("\t1", "constant A = 1")) is ("constant A = 1")
+	for lines
+		if value.StartsWith("constant ")
+			value

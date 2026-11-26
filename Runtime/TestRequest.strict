@@ -18,26 +18,37 @@ Selection Text
 	TestRequest(("a.strict", ".", "mutations")).Selection is "*"
 	TestRequest(("a.strict", ".", "Merged")).Selection is "Merged"
 	TestRequest(("a.strict", ".", "shown")).Selection is "*"
+	TestRequest(("a.strict", ".", "candidates:b.txt")).Selection is "*"
 	TestRequest(("Math", ".", "native")).Selection is "*"
 	if Directory.Exists(rest(0)) and "native" is not in Options or IsWhole
 		return IsWhole and IsInternal then TestCodegen.Unmarked else ""
 	for Options
-		if value is not in Flags and value.StartsWith("rounds:") is false
+		if IsFlag(value) is false
 			return value
 	"*"
 Methods Texts
 	TestRequest(("a.strict", ".", "unit", "rounds:1/4", "Area")).Methods is ("Area")
 	TestRequest(("a.strict", ".", "-")).Methods.Length is 0
 	for Options
-		if value is not in Flags + "unit" + "-" and value.StartsWith("rounds:") is false
+		if IsFlag(value) is false and value is not in ("unit", "-")
 			value
 Part Text
 	TestRequest(("a.strict", ".", "unit", "rounds:1/4")).Part is "1/4"
 	TestRequest(List(Text) + "a.strict").Part is ""
+	Strip("rounds:")
+Candidates Text
+	TestRequest(("a.strict", ".", "candidates:b.txt")).Candidates is "b.txt"
+	Strip("candidates:")
+Strip(prefix Text) Text
+	Shown.Strip("rounds:") is ""
 	for Options
-		if value.StartsWith("rounds:")
-			return value.Substring(7)
+		if value.StartsWith(prefix)
+			return value.Substring(prefix.Length)
 	""
+IsFlag(option Text) Boolean
+	Shown.IsFlag("shown") and Shown.IsFlag("rounds:1/4") and Shown.IsFlag("candidates:b.txt")
+	Shown.IsFlag("Area") is false
+	option is in Flags or option.StartsWith("rounds:") or option.StartsWith("candidates:")
 IsFull Boolean
 	TestRequest(("Math", ".", "full")).IsFull
 	TestRequest(List(Text) + "Math").IsFull is false
@@ -51,8 +62,9 @@ IsMutating Boolean
 	TestRequest(List(Text) + "a.strict").IsMutating
 	TestRequest(("a.strict", ".", "unit")).IsMutating is false
 	TestRequest(("a.strict", ".", "shown")).IsMutating is false
+	TestRequest(("a.strict", ".", "candidates:b.txt")).IsMutating is false
 	TestRequest(("a.strict", ".", "unit", "mutations")).IsMutating
-	"mutations" is in Options or "unit" is not in Options and "shown" is not in Options
+	"mutations" is in Options or "unit" is not in Options and "shown" is not in Options and Candidates is ""
 IsWhole Boolean
 	TestRequest(("a.strict", ".", "mutations")).IsWhole is false
 	TestRequest(("a.strict", ".", "unit")).IsWhole

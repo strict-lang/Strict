@@ -85,6 +85,9 @@ strict format Examples/Sum.strict         print the file in its canonical form
 strict test Examples/Sum.strict native    build and run the tests natively
 strict test . native --no-recursive       build and run only the root types' tests
 strict test Examples/Sum.strict shown     run every test, including Slow, and print each one, without mutation
+strict test A.strict candidates:B.txt     test candidate bodies: A.strict holds the members and tests, B.txt the
+                                          rest of each candidate (body, helpers, constants) separated by --- lines,
+                                          each prints Candidate N and its results, exits with the failed count
 strict test Examples/Sum.strict lines     run the tests natively, then show how often and how long each line ran
 strict test Examples/Sum.strict values    run the tests on the Strict VM, then show the values each line produced
 strict test Examples/Sum.strict profile   run all its tests on the Strict VM, sample the running line every ms, show the slowest lines and methods
