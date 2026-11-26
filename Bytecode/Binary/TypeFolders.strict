@@ -31,10 +31,16 @@ IndexFolders(parents Texts, known Dictionary(Text, Text)) Dictionary(Text, Text)
 	map
 IndexParent(parent Text, known Dictionary(Text, Text)) Dictionary(Text, Text) slow
 	"Vector2" is in None.IndexParent(".", Dictionary(Text, Text))
+	"Profile" is not in None.IndexParent("../Strict", Dictionary(Text, Text))
 	mutable map = known
 	for Folders(parent)
-		map = IndexFolder(value, map)
+		if IsInternal(parent, value) is false
+			map = IndexFolder(value, map)
 	map
+IsInternal(parent Text, folder Text) Boolean
+	None.IsInternal("../Strict", "../Strict/Runtime/Core") and None.IsInternal(".", "./Runtime") is false
+	None.IsInternal("../Strict", "../Strict/Math") is false
+	parent is not "." and folder.Substring(parent.Length + 1).Split("/").First is in TypeSource.InternalPackages
 IndexFolder(folder Text, known Dictionary(Text, Text)) Dictionary(Text, Text) slow
 	"Vector2" is in None.IndexFolder("./Math", Dictionary(Text, Text))
 	mutable map = known
