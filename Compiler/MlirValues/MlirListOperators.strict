@@ -7,6 +7,8 @@ constant Worded = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunctio
 constant NumbersSubtracted = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.LoadNumber(1, 2), InstructionEntry.Binary(InstructionType.Subtract, (0, 1, 2)))
 constant ResultsCombined = (InstructionEntry.Binary(InstructionType.Multiply, (0, 0, 3)), InstructionEntry.Binary(InstructionType.Divide, (0, 1, 4)), InstructionEntry.Binary(InstructionType.Add, (1, 0, 5)))
 constant Arithmetic = NumbersSubtracted + ResultsCombined
+constant NumbersJoined = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "numbers"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
+constant Joining = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MlirLists.Items, "None", NumbersJoined))
 constant Remainder = InstructionEntry.Binary(InstructionType.Modulo, (0, 1, 2))
 constant ModuloSteps = NumbersSubtracted.Slice(0, 2) + Remainder
 constant WordsAdded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "numbers"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "words"), InstructionEntry.Binary(InstructionType.Add, (0, 1, 2)))
@@ -47,11 +49,18 @@ Helper(entry InstructionEntry) Text
 Add(entry InstructionEntry, isList Boolean) Text
 	MlirListOperators(Mixed, 5).Add(Arithmetic(5), false) is "strict_list_prepend"
 	MlirListOperators(Downcast, 2).Add(Downcast.method.instructions(2), true) is "strict_list_downcast"
+	MlirListOperators(Joining, 2).Add(NumbersJoined(2), true) is "strict_list_concat_numbers"
 	if IsList(entry.payload(1)) is false
 		return "strict_list_prepend"
 	isNumbers = ElementSuffix(entry.payload(1)) is "number"
 	isDowncast = isList and isNumbers and ElementSuffix(entry.payload(2)) is "text"
-	isDowncast then "strict_list_downcast" else (isList then "strict_list_concat" else Adder)
+	isPlain = IsNumbers(entry.payload(1)) and IsNumbers(entry.payload(2))
+	joined = isPlain then "strict_list_concat_numbers" else "strict_list_concat"
+	isDowncast then "strict_list_downcast" else (isList then joined else Adder)
+IsNumbers(register Number) Boolean
+	MlirListOperators(Joining, 2).IsNumbers(0)
+	MlirListOperators(Worded, 2).IsNumbers(0) is false
+	MlirLayout(function).Represent(MlirKinds(function).KindOf(position, register)) is "List(Number)"
 Adder Text
 	MlirListOperators(MlirAppended.Filling.function, 4).Adder is "strict_list_add_seeded"
 	MlirListOperators(MlirLists.Listed, 4).Adder is "strict_list_add"

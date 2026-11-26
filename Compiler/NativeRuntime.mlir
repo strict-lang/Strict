@@ -13520,6 +13520,17 @@
   // just that list; a host list after 32 bit
   // floats on the GPU moves there too (one Embedded tile of the H3 video VAE went down and up again for 8192 registers)
   func.func private @strict_list_concat(%left: f64, %right: f64) -> f64 {
+    %scanned = arith.constant false
+    %result = func.call @strict_list_joined(%left, %right, %scanned) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  // a concatenation of lists the compiler knows hold only numbers: a grown payload is a leaf the collector does not scan
+  func.func private @strict_list_concat_numbers(%left: f64, %right: f64) -> f64 {
+    %leaf = arith.constant true
+    %result = func.call @strict_list_joined(%left, %right, %leaf) : (f64, f64, i1) -> f64
+    return %result : f64
+  }
+  func.func private @strict_list_joined(%left: f64, %right: f64, %leaf: i1) -> f64 {
     %none = arith.constant 0 : i64
     %zero = arith.constant 0.0 : f64
     %floats = arith.constant 32 : i64
@@ -13571,12 +13582,12 @@
     %isJoined = arith.cmpf une, %joined, %zero : f64
     cf.cond_br %isJoined, ^done(%joined : f64), ^host
   ^host:
-    %copied = func.call @strict_list_concat_host(%left, %right) : (f64, f64) -> f64
+    %copied = func.call @strict_list_concat_host(%left, %right, %leaf) : (f64, f64, i1) -> f64
     cf.br ^done(%copied : f64)
   ^done(%result: f64):
     return %result : f64
   }
-  func.func private @strict_list_concat_host(%left: f64, %right: f64) -> f64 {
+  func.func private @strict_list_concat_host(%left: f64, %right: f64, %leaf: i1) -> f64 {
     %zero = arith.constant 0.0 : f64
     %two = arith.constant 2.0 : f64
     %four = arith.constant 4.0 : f64
@@ -13612,7 +13623,14 @@
     %bytes = arith.fptosi %bytesf : f64 to i64
     %oldbits = llvm.load %holder : !llvm.ptr -> f64
     %old = func.call @strict_ptr(%oldbits) : (f64) -> !llvm.ptr
-    %moved = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    cf.cond_br %leaf, ^leafGrown, ^scannedGrown
+  ^leafGrown:
+    %leafBlock = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
+    cf.br ^grownBlock(%leafBlock : !llvm.ptr)
+  ^scannedGrown:
+    %scannedBlock = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    cf.br ^grownBlock(%scannedBlock : !llvm.ptr)
+  ^grownBlock(%moved: !llvm.ptr):
     %usedBytesf = arith.mulf %used, %eight : f64
     %usedBytes = arith.fptosi %usedBytesf : f64 to i64
     %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
