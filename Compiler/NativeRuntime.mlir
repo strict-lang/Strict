@@ -2636,7 +2636,10 @@
     %budgetSlot = llvm.mlir.addressof @strict_gc_budget : !llvm.ptr
     llvm.store %budget, %budgetSlot : i64, !llvm.ptr
     %usualYoung = arith.constant 67108864 : i64
-    %youngBudget = arith.maxui %budget, %usualYoung : i64
+    // a young generation over 512 MB (a big host's share) marks slower: ParticleStress 1M 9.8 -> 8.7 ms per tick
+    %largestYoung = arith.constant 536870912 : i64
+    %hostYoung = arith.maxui %budget, %usualYoung : i64
+    %youngBudget = arith.minui %hostYoung, %largestYoung : i64
     %youngBudgetSlot = llvm.mlir.addressof @strict_gc_young_limit : !llvm.ptr
     llvm.store %youngBudget, %youngBudgetSlot : i64, !llvm.ptr
     %firstThreshold = arith.select %checks, %checkThreshold, %budget : i64

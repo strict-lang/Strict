@@ -18,7 +18,7 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 ## Compiled CPU loops, lists and texts
 - Matrix and vector speed: the VM calculates in f64, accessors (`point.X`) are not counted as 32 bit values, `Axis(n).Y` still allocates its Vector3, and a block is only reused when the local is alone.
 - Whole-number call guards give up (f64 version runs) when a variable read after an `if` or loop that stores it is used in `+`, `-` or `*`: a maximum over the possible stores would keep the i64 path.
-- ParticleStress at 1 million particles (9.4-10.2 ms per tick with the machine 43 % busy, 2026-11-26; 4.8-5.5 ms quiet): allocating and freeing the new particle list each tick is a quarter of the time in nsys (`strict_gc_small` 12 %, `strict_rc_dead` 8 %, `strict_gc_park` 6 %), `Particle.Advanced` 21 % self. 32 bit members (72 -> 44 bytes per particle) and writing in place over the list being read would cut it.
+- ParticleStress at 1 million particles (8.3-8.8 ms per tick with the machine 40 % busy after capping the young generation at 512 MB, was 9.7-13 ms, 2026-11-26; 4.8-5.5 ms quiet): every `Particle.Advanced` allocates a new 96 byte particle and the old one dies (`strict_gc_small` 12 %, `strict_rc_dead` 8 %). Reusing the old particle needs an ownership-passing call (the caller drops `current` after `current.Advanced`, the callee cannot know); 32 bit members (72 -> 44 bytes).
 
 ## Collector
 - Realtime frames: mark incrementally over several frame ends when a full collection takes longer than a few ms.
