@@ -128,10 +128,11 @@ Substitute(instanceType Text, template Text) Text
 	Pairing.Substitute("Couple(Text, Number)", "Couple(second, first)") is "Couple(Number, Text)"
 	Pairing.Substitute("Couple(Text, Number)", "Couple(1, first)") is "Couple(Text, Number)"
 	Pairing.Substitute("Couple(Text, Number)", "Couple(first, second, first)") is "Couple(Text, Number)"
+	Instantiation(Mocks).Substitute("Mock(MockCheck)", "Mock(checker, platform)") is "Mock(MockCheck)"
 	members = types.MembersOf(instanceType)
 	mutable arguments = List(Mutable(Text))
 	for Arguments(template)
-		if index < members.types.Length and members.types(index) is "Generic"
+		if index < members.types.Length then IsGeneric(members.types(index)) else false
 			argument = Argument(instanceType, value)
 			if argument is "Unknown"
 				return instanceType
