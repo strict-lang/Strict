@@ -29,6 +29,12 @@ Select(name Text, asked Texts) TypeEntry
 	methods = SelectedMethods(After(start + 1), asked)
 	empty = TypeEntry("", List(MemberEntry), List(MethodEntry))
 	HasAll(methods, asked) then TypeEntry(name, Members(start + 1), methods) else empty
+Has(method Text) Boolean
+	Hello.Has("Run") and Hello.Has("Missing") is false
+	for Starts(After(2 + stream(0)))
+		if names(stream(value)) is method
+			return true
+	false
 SelectedMethods(start Number, asked Texts) List(MethodEntry)
 	EntryDecoder((1, 4, 0, 1, 0, 0), ("Run", "None")).SelectedMethods(0, List(Text) + "Run").Length is 1
 	EntryDecoder((1, 4, 0, 1, 0, 0), ("Run", "None")).SelectedMethods(0, List(Text)).Length is 0

@@ -107,7 +107,8 @@ Claim(entries List(ZipEntry), stamps Dictionary(Text, Number)) TypeEntry
 IsTested(entries List(ZipEntry)) Boolean
 	User.IsTested(BinaryFile.Packing) is false
 	User.IsTested(Home.Unpack(Home.Pack(Empty, List(TypeEntry) + Tested, List(Text))))
-	Matching(Own(entries), TestCodegen.Runner).Length > 0
+	isCoded = entries.Length > 1 and entries(1).Name.EndsWith(".bytecode")
+	isCoded then EntryDecoder.Of(entries(1).content).Has(TestCodegen.Runner) else false
 Own(entries List(ZipEntry)) TypeEntry
 	BinaryLinks(BinaryFile.Probe).Own(BinaryFile.Packing) is TypeEntry.HelloLogger
 	BinaryLinks(BinaryFile.Probe).Own(List(ZipEntry)) is Unknown

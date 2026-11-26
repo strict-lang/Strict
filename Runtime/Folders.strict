@@ -23,14 +23,19 @@ Pending(files Texts, isMutating Boolean) Texts slow
 	Folders.Pending(List(Text) + "Missing.strict", false) is ("Missing.strict")
 	PendingFile.Save(PendingBytes) is not Error
 	Folders.Pending(List(Text) + PendingPath, false).Length is 0
+	known = BinarySources(Normalize(files)).Stamped.Indexed
 	for files
-		if IsChanged(value) or isMutating and MutationCache(value).IsCurrent is false
+		if IsChanged(value, known) or isMutating and MutationCache(value).IsCurrent is false
 			value
-IsChanged(path Text) Boolean slow
+Normalize(files Texts) Texts
+	Folders.Normalize(("Math/Size.strict", "./A.strict")) is ("./Math/Size.strict", "./A.strict")
+	for files
+		FileCompiler.Normalize(value)
+IsChanged(path Text, known = Dictionary(Text, Number)) Boolean slow
 	Folders.IsChanged("Missing.strict")
 	cache = BinaryFile(FileCompiler.Normalize(path))
 	entries = cache.Head(File(cache.Path).ReadBytes)
-	isTested = cache.IsCurrent(entries) and BinaryLinks(cache).IsTested(entries)
+	isTested = cache.IsCurrent(entries, known) and BinaryLinks(cache).IsTested(entries)
 	Execute.IsEdited(path) or isTested is false
 Nightly(folder Text, root Text) Number slow
 	Folders.Nightly("Missing", ".") is 0
