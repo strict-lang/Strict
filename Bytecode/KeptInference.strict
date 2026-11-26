@@ -56,7 +56,7 @@ Unindent(lines Texts) Texts
 			value
 Mentioned(files Texts, at Number) KeptInference
 	Writing.base.files is Pair and Writing.stamps.Length is 1
-	shapes = BuildProfile.Shapes(files)
+	shapes = Phases.Shapes(files)
 	inferring = Inferring(files, shapes, ResolveCheck.Generics(files, shapes))
 	inferred = inferring.Raw
 	typed = inferring.Refine(inferred)
@@ -98,7 +98,7 @@ Fresh(rest Texts, names Texts) KeptInference
 	Empty.Fresh(Writer, List(Text)).refined is ResolveCheck.Inference(Writer)
 	Empty.Fresh(Writer, List(Text)).IsKept(Writer)
 	current = Stamps(rest)
-	shapes = BuildProfile.Shapes(rest)
+	shapes = Phases.Shapes(rest)
 	inferring = Inferring(rest, shapes, ResolveCheck.Generics(rest, shapes))
 	inferred = inferring.Raw
 	KeptInference(Directory.Current, inferring, current, inferred, inferring.Refine(inferred), names, inferred)

@@ -34,7 +34,7 @@ Link(entries List(TypeEntry), signatures Texts) LinkRound slow
 		round = next
 	round
 IsSettled(next LinkRound, complete Boolean, started Number) Boolean
-	BuildProfile.Report("Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")", started)
+	Phases.Report("Frontend / link pass (" + next.entries.Length + " types, complete " + complete + ")", started)
 	complete
 Next(round LinkRound) LinkRound slow
 	Sample.Next(LinkRound.Single).entries.Length is 1
@@ -111,7 +111,7 @@ UsedMethods(targets Texts) Dictionary(Text, Texts)
 				used(type) = methods + method
 	used
 IsNative(type Text, method Text) Boolean
-	Sample.IsNative("Strict/Compiler/BuildProfile", "IsDetailed")
+	Sample.IsNative("Strict/Expressions/Phases", "IsDetailed")
 	(Sample.IsNative("Strict/Text", "Upper") or Sample.IsNative("Strict/Range", "Length")) is false
 	Sample.IsNative("Strict/Bytecode/B", "to") is false
 	Sample.IsNative("Strict/Dictionary(Number, Number)", "get")

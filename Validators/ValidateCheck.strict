@@ -6,16 +6,16 @@ Run(folder Text, root Text) Number
 	mutable issues = 0
 	for Parts(folder)
 		issues = issues + Validate(value, root, mutations, sources)
-	BuildProfile.Report("Check validation", started)
+	Phases.Report("Check validation", started)
 	before = Process.Elapsed
 	cycles = folder.EndsWith(".strict") then 0 else Log(folder, AcyclicDependencies(root).Issues(Parts(folder)))
-	BuildProfile.Report("Check dependency cycles", before)
+	Phases.Report("Check dependency cycles", before)
 	issues = issues + (cycles < 0 then 0 else ProjectRules(root).Check(folder))
-	BuildProfile.Report("Check project rules", before)
+	Phases.Report("Check project rules", before)
 	logger.Log("Validation issues: " + issues)
 	tested = Process.Elapsed
 	failed = issues is 0 then Folders.TestFolder(folder, root) else 0
-	BuildProfile.Report("Check tests", tested)
+	Phases.Report("Check tests", tested)
 	issues + failed
 Validate(folder Text, root Text, mutations Texts, sources = SourceFiles(root)) Number slow
 	Directory.Create(EmptyPart) is not Error and ValidateCheck.Validate(EmptyPart, ".", List(Text)) is 0
@@ -37,7 +37,7 @@ Fresh(folder Text, root Text, mutations Texts, key Text) Number slow
 Change(folder Text, key Text) slow
 	ValidateCheck.Change(EmptyPart, "key") is not Error
 	stamp = File(folder + "/obj/Validated.stamp")
-	if BuildProfile.IsDetailed and stamp.Exists
+	if Phases.IsDetailed and stamp.Exists
 		differing = key.Split("\n") - stamp.ReadLines
 		first = differing.Length > 0 then differing.First else "a removed line"
 		logger.Log("Validation of " + folder + " is stale, first changed: " + first)

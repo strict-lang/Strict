@@ -20,14 +20,14 @@ Compile(path Text, root Text, withTests Boolean, known Texts = List(Text)) List(
 	started = Process.Elapsed
 	files = known.Length > 0 then known else SourceFiles(root).Of(Normalize(path))
 	if known.Length is 0
-		BuildProfile.Report("Frontend / source discovery (" + files.Length + " files)", started)
+		Phases.Report("Frontend / source discovery (" + files.Length + " files)", started)
 	before = Process.Elapsed
 	inference = ResolveCheck.Inference(files)
-	BuildProfile.Report("Frontend / type inference", before)
+	Phases.Report("Frontend / type inference", before)
 	Build(path, root, withTests, files, inference).entries
 Build(path Text, root Text, withTests Boolean, files Texts, inference TypeInference, known = Dictionary(Text, TypeEntry)) LinkRound
 	source = Normalize(path)
-	isParsed = BuildProfile.IsParsed(value, List(Text) + source)
+	isParsed = FrontProfile.IsParsed(value, List(Text) + source)
 	missing = isParsed then Mentions(File(source).ReadLines).Missing(files) else List(Text)
 	if missing.Length > 0
 		return Unlinked.With(Locate(source, root, withTests, missing.First))
@@ -35,20 +35,20 @@ Build(path Text, root Text, withTests Boolean, files Texts, inference TypeInfere
 		return Unlinked
 	fused = Fusion(File(source).ReadLines, Path(source).PathOnly.text).Fused
 	main = TypeCodegen(FullName(source, root), fused, inference, FullNames(files, root), isOptimizing)
-	entry = BuildProfile.Entry(main, withTests, isQuiet, selection)
-	linked = BuildProfile.Link(Linker(root, main, known, BinarySources(files).Stamped), entry)
+	entry = FrontProfile.Entry(main, withTests, isQuiet, selection)
+	linked = FrontProfile.Link(Linker(root, main, known, BinarySources(files).Stamped), entry)
 	checked = linked.With(Check(linked.linker, linked.entries, source, inference))
 	before = Process.Elapsed
 	saved = LinkHomes(checked).Saved
-	BuildProfile.Report("Frontend / saving homes", before)
+	Phases.Report("Frontend / saving homes", before)
 	saved
 Check(linker Linker, linked List(TypeEntry), source Text, inference TypeInference) List(TypeEntry)
 	FileCompiler.Check(Linker.Sample, List(TypeEntry) + Linker.Go, "./A.strict", ResolveCheck.Counting).Length is 1
 	sources = BinaryFile.Uncheck(Sources(linker, linked, source))
-	if sources.Length > 0 and BuildProfile.IsParsed(value, sources) is false
+	if sources.Length > 0 and FrontProfile.IsParsed(value, sources) is false
 		return List(TypeEntry)
 	mutable failures = 0
-	for sources.Length > 0 then BuildProfile.Issues(value, sources, inference) else List(Texts)
+	for sources.Length > 0 then FrontProfile.Issues(value, sources, inference) else List(Texts)
 		failures = failures + value.Length
 		for value
 			logger.Log(value)

@@ -105,7 +105,7 @@ Verify(path Text, root Text, isQuiet Boolean, files Texts, inference TypeInferen
 	if tested.code is 0 and selection is "" and IsEdited(path) is false
 		Store(cache, root, files, linked.linker.Sourced, isOwn, linked)
 	survived = tested.code is 0 and isTested then Mutate(types, path, root, files, inference, started) else 0
-	BuildProfile.Report("Verified " + path, begun)
+	Phases.Report("Verified " + path, begun)
 	Answer(tested.code + survived, linked.Known(known), files = files, Types = types, constants = tested.constants)
 Store(cache BinaryFile, root Text, files Texts, stamped BinarySources, isOwn Boolean, linked LinkRound)
 	Execute.Store(BinaryFile.Probe, ".", List(Text), Unstamped, true, LinkRound.Greeting) is not Error
@@ -148,7 +148,7 @@ Load(path Text, root Text, withTests = true, sources Texts = List(Text)) List(Ty
 	entries = cache.Unpack(File(cache.Path).ReadBytes)
 	isReady = withTests and selection is "" and IsEdited(path) is false and BinaryLinks(cache).IsTested(entries)
 	types = isReady then cache.Current(entries) else List(TypeEntry)
-	BuildProfile.Report("Bytecode cache " + (types.Length > 0 then "hit" else "miss"), started)
+	Phases.Report("Bytecode cache " + (types.Length > 0 then "hit" else "miss"), started)
 	types.Length > 0 then types else FileCompiler(false, selection).Compile(path, root, withTests, sources)
 HasRun(type TypeEntry) Boolean
 	Execute.HasRun(TypeEntry.HelloLogger)
@@ -168,10 +168,10 @@ Start(types List(TypeEntry), path Text, isTracing = false, isInlining = true, is
 	Execute.Start(List(TypeEntry) + TypeEntry.HelloLogger, "A.strict", false, true, true).isSampling
 	started = Process.Elapsed
 	rewritten = isInlining then Inliner(types).Rewritten else TailCalls(types).Rewritten
-	BuildProfile.Report("Machine inlining (" + types.Length + " types)", started)
+	Phases.Report("Machine inlining (" + types.Length + " types)", started)
 	before = Process.Elapsed
 	folder = Path(path).PathOnly.text
 	resolved = Resolver(rewritten).Resolved
 	machine = Machine(resolved, ConstantCache(List(VmValue)), folder, isTracing, isSampling = isSampling).Prepared
-	BuildProfile.Report("Machine resolving and preparing", before)
+	Phases.Report("Machine resolving and preparing", before)
 	machine

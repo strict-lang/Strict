@@ -17,7 +17,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	counted = isCounting then CountedFiles(paths, root) else List(Text)
 	symbol = platform is Platform.IOS then "strict_main" else "main"
 	inlined = BuildProfile.Inline(types)
-	BuildProfile.Report("Frontend", started)
+	Phases.Report("Frontend", started)
 	MlirModule(inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol, platform)
 TestFolder(path Text, root Text, sources Texts) List(TypeEntry)
 	NativeFolder(gated = Greeting).TestFolder("Missing.strict", ".", List(Text)) is Greeting

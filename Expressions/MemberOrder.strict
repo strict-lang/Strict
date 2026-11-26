@@ -1,0 +1,8 @@
+has lines Texts
+Misplaced Numbers
+	MemberOrder(("Run", "\t1", "has a")).Misplaced is (2)
+	MemberOrder(("has a", "Run", "\t1")).Misplaced.Length is 0
+	shape = TypeShape(lines)
+	for Range(shape.MembersEnd, lines.Length)
+		if shape.IsMemberLine(lines(value))
+			value

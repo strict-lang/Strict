@@ -29,7 +29,7 @@ Helper(typeName Text, name Text, count Number) Text
 	MlirNatives(Texts, 1).Helper("Strict/Number", "Floor", 0) is "strict_floor"
 	MlirNatives(Texts, 1).Helper("Strict/Other", "Floor", 0) is ""
 	MlirNatives(Texts, 1).Helper("Strict/Directory", "Directories", 1) is "strict_directory_directories"
-	MlirNatives(Texts, 1).Helper("Strict/Compiler/BuildProfile", "IsDetailed", 0) is "strict_buildprofile_isdetailed"
+	MlirNatives(Texts, 1).Helper("Strict/Expressions/Phases", "IsDetailed", 0) is "strict_phases_isdetailed"
 	kind = TypeEntry.ShortName(typeName)
 	isList = kind.StartsWith("List(") or kind.StartsWith("Dictionary(")
 	if name is in ("Length", "Count") and count is 0 and (kind is "Text" or isList)

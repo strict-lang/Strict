@@ -29,7 +29,7 @@ Report(code Number, started Number, problem Text) Number
 	NativeCompiler.Report(2, Process.Elapsed, "Error: InvalidTestRequest") is 2
 	if (problem is "" then "" else problem.Lines.First) is not in Logged
 		logger.Log(problem)
-	BuildProfile.Report(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
+	Phases.Report(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
 	code
 IsLocked(target Text) Boolean slow
 	lock = File(Lock(target))

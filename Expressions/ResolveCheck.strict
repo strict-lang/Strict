@@ -26,8 +26,8 @@ Resolve(path Text, inference TypeInference) Texts
 Misplace(path Text, lines Texts) Texts
 	ResolveCheck.Misplace("A.strict", ("Run", "\t1", "constant B = 1")) is (Stray)
 	ResolveCheck.Misplace("A.strict", ("constant B = 1", "Run", "\t1")).Length is 0
-	for Limits(lines, false).OrderIssues
-		Locate(path, value.Line, value to Text)
+	for MemberOrder(lines).Misplaced
+		Locate(path, value + 1, "MembersMustComeBeforeMethods: " + lines(value))
 Find(check FileCheck, bodies MethodBodies, lines Texts, path Text) Texts
 	ResolveCheck.Find(FileCheck(Counting, List(Text)), Joining, Joined, "A.strict").First.StartsWith("A.strict:line 2: ")
 	ResolveCheck.Find(FileCheck(Counting, List(Text)), Missed, Missing, "A").First is "A:line 2: NameNotFound: missing"
@@ -96,7 +96,7 @@ TypeNames(files Texts) Texts
 	for files
 		TypeName(value)
 Inference(files Texts) TypeInference
-	shapes = BuildProfile.Shapes(files)
+	shapes = Phases.Shapes(files)
 	inferring = Inferring(files, shapes, Generics(files, shapes))
 	inferring.Refine(inferring.Raw)
 Shapes(files Texts) List(TypeShape)

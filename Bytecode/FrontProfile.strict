@@ -1,0 +1,25 @@
+constant Running = TypeCodegen("Strict/A", ("Run Number", "\t1"), ValueCodegen.NoTypes, List(Text))
+Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") TypeEntry
+	FrontProfile.Entry(Running, false, true).Name is "A"
+	FrontProfile.Entry(Running, true, true).methods.Length is 2
+	started = Process.Elapsed
+	entry = withTests then TestCodegen(main, isQuiet, selection).Entry else main.Entry
+	Phases.Report("Frontend / main codegen (" + entry.methods.Length + " methods)", started)
+	entry
+Link(linker Linker, entry TypeEntry) LinkRound
+	started = Process.Elapsed
+	linked = linker.Link(entry, List(Text))
+	Phases.Report("Frontend / dependency linking (" + linked.entries.Length + " types)", started)
+	linked
+IsParsed(compiler FileCompiler, sources Texts) Boolean
+	started = Process.Elapsed
+	problems = compiler.Problems(sources) - ""
+	Phases.Report("Frontend / syntax validation (" + sources.Length + " files)", started)
+	if problems.Length > 0
+		logger.Log(problems.First)
+	problems.Length is 0
+Issues(compiler FileCompiler, sources Texts, inference TypeInference) List(Texts)
+	started = Process.Elapsed
+	issues = compiler.Issues(sources, inference)
+	Phases.Report("Frontend / name validation (" + sources.Length + " files)", started)
+	issues

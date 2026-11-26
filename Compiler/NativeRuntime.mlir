@@ -3098,6 +3098,30 @@
     %disabled = arith.constant 0.0 : f64
     return %disabled : f64
   }
+  // Phases.IsDetailed; strict_buildprofile_isdetailed stays while the bootstrap seed calls it
+  func.func private @strict_phases_isdetailed(%self: f64) -> f64 {
+    %nameLengths = llvm.mlir.addressof @strict_build_profile_name : !llvm.ptr
+    %name = llvm.getelementptr %nameLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %setting = llvm.call @getenv(%name) : (!llvm.ptr) -> !llvm.ptr
+    %null = llvm.mlir.zero : !llvm.ptr
+    %missing = llvm.icmp "eq" %setting, %null : !llvm.ptr
+    cf.cond_br %missing, ^off, ^first
+  ^first:
+    %character = llvm.load %setting : !llvm.ptr -> i8
+    %one = arith.constant 49 : i8
+    %enabled = arith.cmpi eq, %character, %one : i8
+    cf.cond_br %enabled, ^end, ^off
+  ^end:
+    %following = llvm.getelementptr %setting[1] : (!llvm.ptr) -> !llvm.ptr, i8
+    %last = llvm.load %following : !llvm.ptr -> i8
+    %zero = arith.constant 0 : i8
+    %finished = arith.cmpi eq, %last, %zero : i8
+    %result = func.call @strict_boolean(%finished) : (i1) -> f64
+    return %result : f64
+  ^off:
+    %disabled = arith.constant 0.0 : f64
+    return %disabled : f64
+  }
   func.func private @strict_parallel(%body: (!llvm.ptr, i64, i64) -> f64, %context: !llvm.ptr, %count: i64) -> f64 {
     %zero = arith.constant 0 : i64
     %result = func.call @strict_parallel_from(%body, %context, %zero, %count) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64, i64) -> f64

@@ -20,14 +20,14 @@ constant ToolMethods = ("Process.Find", "Process.RunTool", "Process.RunTools", "
 constant MathMethods = ("Number.Logarithm", "Number.Random", "Degrees.Sin", "Degrees.Cos", "Degrees.Tan", "Ratio.Asin", "Ratio.Acos", "Ratio.Atan")
 constant LibraryMethods = ("Library.Call", "Library.TextSlot", "Library.NumbersSlot", "Library.TextResult", "Library.NumbersResult", "Library.Failure")
 constant Budgeted = ("TestBudget.Start", "TestBudget.Finish", "TestBudget.Entered", "TestBudget.Left", "TestBudget.Expired")
-constant RuntimeMethods = ("Time.Now", "Socket.Output", "BuildProfile.IsDetailed", "ConstantCache.At", "ConstantCache.Store") + Budgeted
+constant RuntimeMethods = ("Time.Now", "Socket.Output", "Phases.IsDetailed", "ConstantCache.At", "ConstantCache.Store") + Budgeted
 constant GpuMethods = ("GpuMemory.Trim", "GpuMemory.Evict", "GpuMemory.Yield", "GpuMemory.Finish", "GpuMemory.Freed")
 constant MemoMethods = ("Memo.Has", "Memo.Texts", "Memo.Keep", "Sampler.IsTaken", "FrameSlots.Root", "Logger.Capture", "Strict.Test")
-constant ProcessKinds = ("Process", "Library", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots", "Logger", "Strict")
+constant ProcessKinds = ("Process", "Library", "Phases", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots", "Logger", "Strict")
 constant Listings = ("ReadLines", "ReadBytes", "Files", "Directories")
 constant BudgetMethods = ("TestBudget.Overran", "TestBudget.Overrun", "TestBudget.Watch", "TestBudget.Busy", "TestBudget.Limit")
 constant Methods = FileMethods + HostedText.Methods + DirectoryMethods + ProcessMethods + ToolMethods + MathMethods + LibraryMethods + RuntimeMethods + BudgetMethods + GpuMethods + MemoMethods
-constant Kinds = ("File", "Directory", "Process", "Logger", "Strict", "Number", "Degrees", "Ratio", "Vector2", "Library", "Time", "Socket", "BuildProfile", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots")
+constant Kinds = ("File", "Directory", "Process", "Logger", "Strict", "Number", "Degrees", "Ratio", "Vector2", "Library", "Time", "Socket", "Phases", "TestBudget", "ConstantCache", "Memo", "Sampler", "FrameSlots")
 constant FileEffects = ("File.Write", "File.Append", "File.Delete", "File.Rename", "File.WriteLines", "File.WriteBytes", "File.WriteText")
 constant LocalEffects = FileEffects + ("Directory.Create", "Directory.Change", "Process.RunTool", "Process.RunTools", "Process.Start", "Library.Call")
 constant Effects = LocalEffects + ("Socket.Connect", "Socket.Listen", "Socket.Local", "Socket.Accept", "Socket.Waiting", "Socket.Send", "Socket.Receive")
@@ -81,7 +81,7 @@ Processed VmValue
 	Hosted(SystemCall).Processed.text is in ("Windows", "Linux", "MacOS", "Unknown")
 	name = call.MethodName
 	if name is "IsDetailed"
-		return VmValue.OfBoolean(BuildProfile.IsDetailed)
+		return VmValue.OfBoolean(Phases.IsDetailed)
 	if name is in ("Elapsed", "FilesRead", "Executed", "MemoryUsed", "Id")
 		return name is "Elapsed" then VmValue.OfNumber(Process.Elapsed) else Report(name)
 	if name is in ("OperatingSystem", "Built", "Variable")

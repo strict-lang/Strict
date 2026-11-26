@@ -57,7 +57,7 @@ Refuse(executable Text, target Text) Text
 	started = Process.Elapsed
 	unrunnable = Unrunnable(executable, target)
 	refused = unrunnable is "" then Uncheck(executable, target) else unrunnable
-	BuildProfile.Report("New executable checks", started)
+	Phases.Report("New executable checks", started)
 	refused
 Unrunnable(executable Text, target Text) Text
 	Intermediates.Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""

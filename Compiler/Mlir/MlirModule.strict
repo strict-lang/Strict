@@ -21,7 +21,7 @@ Text Text slow
 	NoRun.Text.StartsWith("unsupported:")
 	started = Process.Elapsed
 	reachable = Linked
-	BuildProfile.Report("Emission / reachability (" + reachable.functions.Length + " functions)", started)
+	Phases.Report("Emission / reachability (" + reachable.functions.Length + " functions)", started)
 	edges = reachable.Edges
 	functions = Safe(reachable.functions, edges)
 	problem = Problem(functions)
@@ -39,19 +39,19 @@ Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
 	started = Process.Elapsed
 	functions = MlirSafety(reachable, edges).Marked
-	BuildProfile.Report("Emission / safety", started)
+	Phases.Report("Emission / safety", started)
 	functions
 Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts slow
 	Counters.Declare(Counters.Functions, Counters.Functions, List(Numbers) + List(Number)).First is "module {"
 	MlirRecursion.Looped.Text.IndexOf("^stackChecked") > MlirRecursion.Looped.Text.IndexOf("@Looped_Again_0(")
 	started = Process.Elapsed
 	recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
-	BuildProfile.Report("Emission / recursion", started)
+	Phases.Report("Emission / recursion", started)
 	lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
 	emitted = BuildProfile.Emit(value, texts, functions, recursive)
 	before = Process.Elapsed
 	result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
-	BuildProfile.Report("Emission / helpers", before)
+	Phases.Report("Emission / helpers", before)
 	result
 Emit(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts slow
 	Counters.Emit(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
@@ -68,11 +68,11 @@ Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) T
 	table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	started = Process.Elapsed
 	device = EmissionCache(value, functions, List(Text)).Device(functions)
-	BuildProfile.Report("Emission / GPU kernels", started)
+	Phases.Report("Emission / GPU kernels", started)
 	before = Process.Elapsed
 	main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
 	host = outer.Text.Combine(lines + MlirGlobals(functions).Lines + table + main + "}", "\n")
-	BuildProfile.Report("Emission / globals and assembly", before)
+	Phases.Report("Emission / globals and assembly", before)
 	outer.Text.Combine((host, device, platform is Platform.Web then WgslShader.Scripts(functions) else "") - "", "\n")
 Functions List(MlirFunction) slow
 	Counters.Functions.Length is 1
