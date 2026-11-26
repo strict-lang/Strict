@@ -68,6 +68,7 @@ IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	Checker.IsRebuilt(Checker.function.method.instructions(1), Maker)
 	MlirStructs(Made.function, 0).IsRebuilt(Making.instructions(0), Maker) is false
 	Made.IsRebuilt(Making.instructions(1), MlirInstances.Outer) is false
+	MlirOwned(Probing.function, 2).Rewritten(ProbeMade, Probe, "").Last.EndsWith("%t2rd1c, %t2r1 : f64, !llvm.ptr")
 	if entry.kind is not InstructionType.Invoke
 		return false
 	checkedAt = MlirDestined(function, position).CheckedAt

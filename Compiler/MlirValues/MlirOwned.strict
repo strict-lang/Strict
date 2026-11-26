@@ -173,7 +173,6 @@ Target(entry InstructionEntry, owner TypeEntry) Text
 	(isStored and isBuilt then IsOwned(next.texts(0)) else false) then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
-	Rebuilt.Rewritten(MlirStructs.ProbeMade, MlirStructs.Probe, "").Last.EndsWith("%t7rd1c, %t7r1 : f64, !llvm.ptr")
 	arguments = PayloadDecoder(entry).Arguments
 	mutable lines = List(Text)
 	for MlirInstances(function, 0).Store(owner)
