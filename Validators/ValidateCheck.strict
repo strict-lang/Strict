@@ -53,7 +53,7 @@ Stamp(paths Texts, mutations Texts) Text slow
 Stamps(paths Texts) Texts slow
 	ValidateCheck.Stamps(List(Text) + "Missing.strict") is ("Missing.strict|0")
 	for paths
-		value + "|" + File(value).Modified
+		value + "|" + BinarySources.Stamp(value)
 Parts(path Text) Texts slow
 	ValidateCheck.Parts("Validators/MagicNumbers.strict") is ("Validators/MagicNumbers.strict")
 	ValidateCheck.Parts("./Math") is ResolveCheck.Tree("./Math")

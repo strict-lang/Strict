@@ -105,6 +105,9 @@ Stored VmValue
 Moved VmValue
 	Hosted(Deleting).Moved.IsTrue is false
 	Hosted(Changing).Moved.kind is "None"
+	File("Compiler/output/Cleared.strict").InMemory("a") is not Error
+	File("Compiler/output/Cleared.strict").InMemory("") is not Error
+	File("Compiler/output/Cleared.strict").Exists is false
 	if call.MethodName is "Change"
 		return Directory.Change(Location) is Error then VmValue.OfError("DirectoryNotFound") else VmValue.None
 	if call.MethodName is "Delete"

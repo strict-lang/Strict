@@ -11,6 +11,10 @@ constant Masked = SyntaxParser(Tokenizer("Part(1, mask = 3)").Tokens).Parse
 constant Shining = Constructing.WithAll(("Shine", "Shine light default", "Shine mask default"), ("light,mask", "0", "Curve.Flat"))
 constant ShineTypes = KnownTypes(Types.names, Types.members, Types.methods, (Shining, KnownTypes.NoMembers))
 constant Shined = NamedArguments(ValueCodegen(TypeInference(ShineTypes, CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
+constant Echoing = Constructing.WithAll(("Shine", "Shine light default", "Shine mask default"), ("light,mask", "0", "light"))
+constant Echoed = NamedArguments(ValueCodegen(TypeInference(KnownTypes(Types.names, Types.members, Types.methods, (Echoing, KnownTypes.NoMembers)), CallTarget.NoScopes), KnownTypes.NoMembers, Parts.values.target))
+constant Light = List(Text) + "light"
+constant Five = List(SyntaxNode) + SyntaxNode("Number", "5")
 constant Lights = (Scope(List(Text) + "Light", List(Text) + "1"), KnownTypes.NoMembers)
 constant Lit = NamedArguments(ValueCodegen(Shined.values, inference = TypeInference(ShineTypes, Lights)))
 constant Boxing = NamedArguments(ValueCodegen.Boxing)
@@ -145,13 +149,25 @@ Default(call SyntaxNode, owner Text, start Number, scope Scope) SyntaxNode
 	Shined.Default(Parts.Parse("Shine(1)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(1, Curve.Flat)"
 	Parts.Default(Masked, "Part", 0, CallTarget.NoScope) to Text is "Part(1, mask = 3)"
 	Shined.Default(Parts.Parse("Shine(mask = 3)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(0, 3)"
+	Echoed.Default(Parts.Parse("Shine(5)"), "Part", 0, CallTarget.NoScope) to Text is "Shine(5, 5)"
 	given = Positional(call) - start
 	names = values.inference.types.ParametersOf(owner, call.text, call.children.Length - start)
 	last = Compute(call, owner, names, given)
 	mutable children = call.children.Slice(0, Positional(call))
 	for Range(given, last + 1)
-		children = children + Argument(call, owner, call.text + " ", names(value), scope)
+		children = children + Bound(Argument(call, owner, call.text + " ", names(value), scope), names, children, start)
 	last < given then call else SyntaxNode(call.Kind, call.text, children, call.line)
+Bound(node SyntaxNode, names Texts, given SyntaxNodes, start Number) SyntaxNode
+	Parts.Bound(SyntaxNode("Identifier", "light"), Light, Five, 0) to Text is "5"
+	Parts.Bound(SyntaxNode("Identifier", "mask"), Light, Five, 0).text is "mask"
+	at = node.Kind is "Identifier" then names.Index(node.text) + start else -1
+	if at >= start and at < given.Length
+		return given(at)
+	SyntaxNode(node.Kind, node.text, Rebound(node, names, given, start), node.line)
+Rebound(node SyntaxNode, names Texts, given SyntaxNodes, start Number) SyntaxNodes
+	Parts.Rebound(Parts.Parse("Part(light)"), Light, Five, 0).First.text is "5"
+	for node.children
+		Bound(value, names, given, start)
 Compute(call SyntaxNode, owner Text, names Texts, given Number) Number
 	Shined.Compute(SyntaxNode("Call", "Shine"), "Part", ("light", "mask"), 2) is 1
 	Shined.Compute(Parts.Parse("Shine(light = 1)"), "Part", ("mask", "light"), 0) is 1
