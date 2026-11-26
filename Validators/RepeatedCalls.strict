@@ -1,9 +1,13 @@
 has lines Texts
-constant Filed = RepeatedCalls(("Read Texts", "	Read is (\"a\")", "	File(path).Exists then File(path).ReadLines else List(Text)"))
+constant Filed = RepeatedCalls(("Read Texts", "	Read is (\"a\")", "	File(path).Exists and File(path).Exists then File(path).ReadLines else List(Text)"))
+constant Written = RepeatedCalls(("Write", "	File(path).Write(\"a\")", "	File(path).Write(\"b\")"))
 constant Typed = RepeatedCalls(("Read Texts", "	let empty = List(Text)", "	path is \"\" then List(Text) else empty"))
 constant Fixed = RepeatedCalls(("Fixed Number", "	Fixed is 1", "	mutable text = \"a\"", "	if text.IndexOf(\".\") < 0", "		text = text + \".\"", "	text.IndexOf(\".\")"))
+constant Rounded = RepeatedCalls(("Sum(a Number) Number", "	Sum(1) is 2", "	a.Round(1) + a.Round(1)"))
+constant Recreated = RepeatedCalls(("Make Boolean", "	Make is true", "	if Directory.Exists(folder)", "		return true", "	Directory.Create(folder) is Error then false else Directory.Exists(folder)"))
+constant Reads = ("Exists", "ReadLines", "ReadText", "ReadBytes", "Length", "Modified", "IsLocked", "Files", "Directories", "Find", "Variable")
 Issues List(ValidationIssue)
-	Filed.Issues.First to Text is "SameCallTwiceMustBeLet: File(path), keep it in a let"
+	Filed.Issues.First to Text is "SameCallTwiceMustBeLet: File(path).Exists, keep it in a let"
 	Filed.Issues.First.Line is 3 and Typed.Issues.Length is 0
 	shape = TypeShape(lines)
 	mutable issues = List(Mutable(ValidationIssue))
@@ -13,17 +17,19 @@ Issues List(ValidationIssue)
 	issues
 Repeat(header Number) List(ValidationIssue)
 	Filed.Repeat(0).Length is 1 and Typed.Repeat(0).Length is 0 and Fixed.Repeat(0).Length is 0
+	Rounded.Repeat(0).Length is 0 and Written.Repeat(0).Length is 0 and Recreated.Repeat(0).Length is 0
 	code = ErrorDrops(lines).Code(header)
-	start = FileCheck.LastLine(lines, header) - code.Length + 2
-	changing = Changing(code)
+	Repeats(code, FileCheck.LastLine(lines, header) - code.Length + 2, Changing(code))
+Repeats(code Texts, start Number, changing Texts) List(ValidationIssue)
+	Recreated.Repeats(("Directory.Exists(a)", "Directory.Exists(a)"), 3, List(Text)).First.Line is 4
 	mutable seen = Dictionary(Text, Boolean)
 	mutable issues = List(Mutable(ValidationIssue))
 	for code
-		line = start + index
-		calls = Calls(Tokenizer(value).Tokens)
-		for calls - Unsteady(calls, changing)
+		lookups = Lookups(Tokenizer(value).Tokens)
+		seen = "" is in lookups then Dictionary(Text, Boolean) else seen
+		for lookups - Unsteady(lookups, changing) - ""
 			if value is in seen and seen(value)
-				issues.Add(ValidationIssue("SameCallTwiceMustBeLet", value + ", keep it in a let", line))
+				issues.Add(ValidationIssue("SameCallTwiceMustBeLet", value + ", keep it in a let", start + outer.index))
 			seen(value) = value is not in seen
 	issues
 Changing(code Texts) Texts
@@ -44,21 +50,24 @@ IsChanging(tokens Texts, changing Texts) Boolean
 		if value is in tokens
 			return true
 	false
-Calls(tokens Texts) Texts
-	Filed.Calls(("File", "(", "path", ")", ".", "Exists")) is ("File(path)")
-	Filed.Calls(("List", "(", "Text", ")")).Length is 0 and Filed.Calls(("Go", "(", ")")).Length is 0
-	Filed.Calls(("Path", "(", "value", ")")).Length is 0 and Filed.Calls(("texts", "(", "0", ")")).Length is 0
-	Filed.Calls(("a", ".", "Round", "(", "1", ")", "+", "b", ".", "Round", "(", "1", ")")) is ("a.Round(1)", "b.Round(1)")
+Lookups(tokens Texts) Texts
+	Filed.Lookups(("File", "(", "path", ")", ".", "Exists")) is ("File(path).Exists")
+	Filed.Lookups(("Directory", ".", "Exists", "(", "folder", ")")) is ("Directory.Exists(folder)")
+	Filed.Lookups(("File", "(", "path", ")", ".", "Write", "(", "a", ")")) is ("")
 	for tokens
-		isCall = index + 1 < tokens.Length and tokens(index + 1) is "(" and IsName(value) and value(0).Upper is value(0)
-		close = isCall then Close(tokens, index + 1) else -1
-		inner = close > index + 2 then tokens.Slice(index + 2, close - index - 2) else List(Text)
-		start = Start(tokens, index)
-		if inner.Length > 0 and IsTyped(inner) is false and "value" is not in inner and "index" is not in inner
-			Text.Combine(tokens.Slice(start, close - start + 1), "")
-Start(tokens Texts, at Number) Number
-	Filed.Start(("a", ".", "B"), 2) is 0 and Filed.Start(("(", ".", "B"), 2) is 2 and Filed.Start(List(Text) + "B", 0) is 0
-	at < 2 then at else tokens(at - 1) is "." and IsName(tokens(at - 2)) then at - 2 else at
+		if value is in InputOutputs.Kinds
+			Lookup(tokens, index)
+Lookup(tokens Texts, at Number) Text
+	Filed.Lookup(("File", "(", "value", ")", ".", "Exists"), 0) is ""
+	Filed.Lookup(("File", "."), 0) is ""
+	isStatic = at + 3 < tokens.Length and tokens(at + 1) is "." and tokens(at + 3) is "("
+	open = isStatic then at + 3 else at + 1
+	close = open < tokens.Length and tokens(open) is "(" then Close(tokens, open) else -1
+	if close < 0 or "value" is in tokens.Slice(open, close - open) or "index" is in tokens.Slice(open, close - open)
+		return ""
+	isRead = close + 2 < tokens.Length and tokens(close + 1) is "." and tokens(close + 2) is in Reads
+	end = isStatic then close else close + 2
+	(isStatic then tokens(at + 2) is in Reads else isRead) then Text.Combine(tokens.Slice(at, end - at + 1), "") else ""
 IsName(token Text) Boolean
 	Filed.IsName("File") and Filed.IsName("(") is false and Filed.IsName("\"a\"") is false
 	token.Length > 0 and token(0).Lower is not token(0).Upper
@@ -70,10 +79,3 @@ Close(tokens Texts, open Number) Number
 		if depth is 0
 			return value
 	Number.NotFound
-IsTyped(inner Texts) Boolean
-	Filed.IsTyped(("Text", ",", "Number")) and Filed.IsTyped(("Mutable", "(", "Text", ")"))
-	Filed.IsTyped(List(Text) + "path") is false and Filed.IsTyped(("Width", "+", "1")) is false
-	for inner
-		if value is not in ("(", ")", ",") and (IsName(value) is false or value(0).Upper is not value(0))
-			return false
-	true
