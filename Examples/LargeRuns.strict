@@ -11,3 +11,9 @@ Words(amount Number) Texts
 Reuse(garbage Number) Number slow
 	LargeRuns(Big).Reuse(4000000) is Big + 12000000 + Big * (Big - 1) / 2
 	Numbers.Length + Words(garbage).Length + Words(garbage).Length + Words(garbage).Length + Numbers.Sum
+Chain(amount Number) Number slow
+	LargeRuns(1).Chain(3000000) is 3000000
+	mutable words = List(Text)
+	for amount
+		words = words + (index to Text)
+	words.Length

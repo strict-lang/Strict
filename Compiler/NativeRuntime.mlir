@@ -9691,8 +9691,70 @@
   // marks stay set (sticky): a young collection marks from the roots and the marked cards and stops at marked (old)
   // objects, so it only frees objects allocated since the last collection, a full collection clears all marks first;
   // the spilled registers are copied first (on wasm the locals of this frame kept the last large object of a loop)
+  // a full collection of a heap over 64 MB before the first parallel loop starts the pool, so its workers take the
+  // seats of the parallel drain (ParticleStress collects 87 MB once while it spawns its particles on one thread:
+  // 83-91 -> 37-43 ms); the collection begins when the workers are registered and parked, or after 100 ms
+  func.func private @strict_gc_pool_wanted(%full: i1) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %spawnedSlot = llvm.mlir.addressof @strict_pool_spawned : !llvm.ptr
+    %spawned = llvm.load %spawnedSlot : !llvm.ptr -> i64
+    %isFresh = arith.cmpi eq, %spawned, %zero : i64
+    %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
+    %base = llvm.load %baseSlot : !llvm.ptr -> i64
+    %topSlot = llvm.mlir.addressof @strict_gc_top : !llvm.ptr
+    %top = llvm.load %topSlot : !llvm.ptr -> i64
+    %heap = arith.subi %top, %base : i64
+    %bigHeap = arith.constant 67108864 : i64
+    %isBig = arith.cmpi ugt, %heap, %bigHeap : i64
+    %wanted = arith.andi %isFresh, %isBig : i1
+    %starting = arith.andi %wanted, %full : i1
+    cf.cond_br %starting, ^claim, ^done
+  ^claim:
+    %busySlot = llvm.mlir.addressof @strict_pool_busy : !llvm.ptr
+    %claim = llvm.cmpxchg %busySlot, %zero, %one acq_rel monotonic : !llvm.ptr, i64
+    %claimed = llvm.extractvalue %claim[1] : !llvm.struct<(i64, i1)>
+    cf.cond_br %claimed, ^spawn, ^done
+  ^spawn:
+    %before = func.call @strict_gc_thread_total() : () -> i64
+    %workers = func.call @strict_pool_started() : () -> i64
+    llvm.store %zero, %busySlot atomic release {alignment = 8 : i64} : i64, !llvm.ptr
+    %all = arith.addi %before, %workers : i64
+    %limit = arith.constant 512 : i64
+    %expected = arith.minui %all, %limit : i64
+    %patience = arith.constant 1000000 : i64
+    cf.br ^registered(%zero : i64)
+  ^registered(%waited: i64):
+    %total = func.call @strict_gc_thread_total() : () -> i64
+    %missing = arith.cmpi ult, %total, %expected : i64
+    %patient = arith.cmpi ult, %waited, %patience : i64
+    %waiting = arith.andi %missing, %patient : i1
+    %longer = arith.addi %waited, %one : i64
+    cf.cond_br %waiting, ^pause(%longer : i64), ^parked(%before, %waited : i64, i64)
+  ^pause(%paused: i64):
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^registered(%paused : i64)
+  ^parked(%index: i64, %spent: i64):
+    %more = arith.cmpi ult, %index, %expected : i64
+    %stillPatient = arith.cmpi ult, %spent, %patience : i64
+    %checking = arith.andi %more, %stillPatient : i1
+    cf.cond_br %checking, ^entry, ^done
+  ^entry:
+    %entry = func.call @strict_gc_thread_entry(%index) : (i64) -> !llvm.ptr
+    %state = llvm.load %entry atomic seq_cst {alignment = 8 : i64} : !llvm.ptr -> i64
+    %isParked = arith.cmpi ne, %state, %zero : i64
+    %next = arith.addi %index, %one : i64
+    %later = arith.addi %spent, %one : i64
+    cf.cond_br %isParked, ^parked(%next, %spent : i64, i64), ^unparked(%later : i64)
+  ^unparked(%retry: i64):
+    llvm.call @strict_pause() : () -> ()
+    cf.br ^parked(%index, %retry : i64, i64)
+  ^done:
+    return
+  }
   func.func private @strict_gc_run(%requested: i1) {
     %zero = arith.constant 0 : i64
+    func.call @strict_gc_pool_wanted(%requested) : (i1) -> ()
     %stopped = func.call @strict_gc_stop() : () -> i1
     cf.cond_br %stopped, ^collect, ^deferred
   ^deferred:
