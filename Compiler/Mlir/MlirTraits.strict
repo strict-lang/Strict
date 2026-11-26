@@ -1,25 +1,56 @@
 has types List(TypeEntry)
 constant Checking = MethodEntry("IsChecked", List(MemberEntry), "Strict/Boolean", List(InstructionEntry))
-constant Checker = TypeEntry("Strict/A/Checker", List(MemberEntry), List(MethodEntry) + Checking)
+constant Readying = MethodEntry(Checking, Name = "IsReady")
+constant Checker = TypeEntry("Strict/A/Checker", List(MemberEntry), (Checking, Readying))
+constant Bodies = List(InstructionEntry) + InstructionEntry.Return(0)
 constant Held = List(MemberEntry) + MemberEntry("checker", "Strict/A/Checker", List(InstructionEntry), false)
-constant Mock = TypeEntry("Strict/A/MockCheck", Held, List(MethodEntry) + MethodEntry(Checking, instructions = List(InstructionEntry) + InstructionEntry.Return(0)))
+constant Mock = TypeEntry("Strict/A/MockCheck", Held, (MethodEntry(Checking, instructions = Bodies), MethodEntry(Readying, instructions = Bodies)))
+constant Half = TypeEntry("Strict/A/Half", Held, List(MethodEntry) + MethodEntry(Checking, instructions = Bodies))
 constant Real = TypeEntry(Mock, Name = "Strict/A/RealCheck")
+constant Making = InstructionEntry.Invoke(1, ("Strict/A/RealCheck", "from", "Strict/A/RealCheck"), List(Number), -1)
+constant Builder = TypeEntry("Strict/A/Builder", List(MemberEntry), List(MethodEntry) + MethodEntry(Checking, instructions = List(InstructionEntry) + Making))
 Owner(type TypeEntry, callee MethodEntry) TypeEntry
 	MlirTraits((Checker, Mock)).Owner(Checker, Checking).Name is "Strict/A/MockCheck"
 	MlirTraits((Checker, Mock)).Owner(Mock, Mock.methods.First).Name is "Strict/A/MockCheck"
 	MlirTraits((Checker, Mock, Real)).Owner(Checker, Checking).Name is "Strict/A/Checker"
+	MlirTraits((Checker, Mock, Half)).Owner(Checker, Checking).Name is "Strict/A/MockCheck"
+	MlirTraits((Checker, Mock, Real, Builder)).Owner(Checker, Checking).Name is "Strict/A/RealCheck"
 	if callee.instructions.Length > 0
 		return type
 	mutable found = List(Mutable(TypeEntry))
 	for types
-		if IsImplementing(value, type, callee.Name)
+		if IsImplementing(value, type)
 			found.Add(value)
-	found.Length is 1 then found.First else type
-IsImplementing(candidate TypeEntry, trait TypeEntry, name Text) Boolean
-	MlirTraits(List(TypeEntry)).IsImplementing(Mock, Checker, "IsChecked")
-	MlirTraits(List(TypeEntry)).IsImplementing(Checker, Checker, "IsChecked") is false
+	found.Length is 1 then found.First else Pick(found, type)
+Pick(found List(TypeEntry), trait TypeEntry) TypeEntry
+	MlirTraits(List(TypeEntry) + Builder).Pick((Mock, Real), Checker) is Real
+	MlirTraits(List(TypeEntry) + Builder).Pick((Mock, Half), Checker) is Checker
+	mutable built = List(Mutable(TypeEntry))
+	for found
+		if IsPick(value.Name)
+			built.Add(value)
+	built.Length is 1 then built.First else trait
+IsPick(name Text) Boolean
+	MlirTraits(List(TypeEntry) + Builder).IsPick("Strict/A/RealCheck")
+	MlirTraits(List(TypeEntry) + Builder).IsPick("Strict/A/MockCheck") is false
+	for owner, method, entry in types, owner.methods, method.instructions
+		isMade = entry.kind is InstructionType.Invoke and entry.texts.Length > 1
+		if isMade then entry.texts(1) is "from" and entry.texts(0) is name else false
+			return true
+	false
+IsImplementing(candidate TypeEntry, trait TypeEntry) Boolean
+	MlirTraits(List(TypeEntry)).IsImplementing(Mock, Checker)
+	MlirTraits(List(TypeEntry)).IsImplementing(Checker, Checker) is false
+	MlirTraits(List(TypeEntry)).IsImplementing(Half, Checker) is false
 	if IsHolding(candidate, trait) is false
 		return false
+	for trait.methods
+		if HasBody(candidate, value.Name) is false
+			return false
+	true
+HasBody(candidate TypeEntry, name Text) Boolean
+	MlirTraits(List(TypeEntry)).HasBody(Half, "IsChecked")
+	MlirTraits(List(TypeEntry)).HasBody(Half, "IsReady") is false
 	for candidate.methods
 		if value.Name is name and value.instructions.Length > 0
 			return true

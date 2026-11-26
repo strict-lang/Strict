@@ -2,6 +2,8 @@ has types KnownTypes
 has folder Text
 constant Checking = KnownTypes(("Checker", "MockCheck"), (KnownTypes.NoMembers, Scope("checker", "Checker")), (Scope("IsChecked", "Boolean"), Scope("IsChecked", "Boolean")), (Scope(" trait", "true"), KnownTypes.NoMembers))
 constant MockEntry = TypeEntry("Strict/A/MockCheck", List(MemberEntry) + MemberEntry("checker", "Strict/A/Checker", List(InstructionEntry), false), List(MethodEntry))
+constant Halves = (Scope(("IsChecked", "IsReady"), ("Boolean", "Boolean")), Scope("IsChecked", "Boolean"))
+constant Partial = TraitLinks(KnownTypes(("Checker", "MockCheck"), Checking.members, Halves, Checking.parameters), "Strict/A")
 constant Mocks = List(TypeEntry) + MockEntry
 constant Linking = TraitLinks(Checking, "Strict/A")
 constant Local = TraitLinks.Linking.Holders(List(TypeEntry) + TypeEntry("MockCheck", MockEntry.members, List(MethodEntry)))
@@ -21,12 +23,18 @@ Implementers(targets Texts, entries List(TypeEntry)) Texts
 Holders(entries List(TypeEntry)) Dictionary(Text, Texts)
 	Linking.Holders(Mocks)("Strict/A/Checker") is ("Strict/A/MockCheck")
 	Linking.Holders(List(TypeEntry) + TypeEntry.HelloLogger).Length is 0
-	Local("Strict/A/Checker") is ("Strict/A/MockCheck")
+	Local("Strict/A/Checker") is ("Strict/A/MockCheck") and Partial.Holders(Mocks).Length is 0
 	mutable holders = Dictionary(Text, Texts)
 	for entries
 		holder = value.Name.IndexOf("/") < 0 then folder + "/" + value.Name else value.Name
 		for value.members
 			isRoot = value.typeName.StartsWith("Strict/") and value.typeName.LastIndexOf("/") is 6
-			if isRoot then false else types.ParameterScope(TypeEntry.ShortName(value.typeName)).TypeOf(" trait") is "true"
+			if isRoot then false else IsImplementing(holder, value.typeName)
 				holders(value.typeName) = (value.typeName is in holders then holders(value.typeName) else List(Text)) + holder
 	holders
+IsImplementing(holder Text, trait Text) Boolean
+	Linking.IsImplementing("Strict/A/MockCheck", "Strict/A/Checker")
+	Partial.IsImplementing("Strict/A/MockCheck", "Strict/A/Checker") is false
+	if types.ParameterScope(TypeEntry.ShortName(trait)).TypeOf(" trait") is not "true"
+		return false
+	(types.MethodsOf(TypeEntry.ShortName(trait)).names - types.MethodsOf(TypeEntry.ShortName(holder)).names).Length is 0
