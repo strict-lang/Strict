@@ -170,14 +170,14 @@ Route(call Invocation) VmValue
 	at = call.Resolution
 	entry = call.entry.payload.Length > at then call.entry else Resolver(types).Target(call.entry)
 	route = entry.payload(at)
-	if route is Resolver.Hosting
-		return Hosted(call).Contained
-	if route is Resolver.Computing
-		return HostedMath(call).Computed
+	if route is Resolver.Hosting or route is Resolver.Computing
+		return route is Resolver.Hosting then Hosted(call).Contained else HostedMath(call).Computed
 	if route is Resolver.Searching
 		return Natives(types).Search(call.MethodName, call.Instance.text, call.Arguments)
 	if route is Resolver.Native and entry.payload(at + 1) > 0
-		return Rounding.Single.Build(types(entry.payload(at + 1) - 1), call, Natives(types), entry.payload(at + 2) is 1)
+		built = entry.payload(at + 1) - 1
+		prototype = built < prototypes.entries.Length then prototypes.At(built) else VmValue.None
+		return Rounding.Single.Build(types(built), call, Natives(types), entry.payload(at + 2) is 1, prototype)
 	skip = route < 0 or (entry.payload(at + 2) is 1 then call.IsMemberValue(types(route)) else false)
 	skip then call.Native(Natives(types, folder)) else Dispatch(route, types(route).methods(entry.payload(at + 1)), call)
 Dispatch(route Number, method MethodEntry, call Invocation) VmValue

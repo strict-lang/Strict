@@ -23,7 +23,7 @@ Result(call Invocation) VmValue
 		type = TypeOf(call.TypeName)
 		if type.members.Length is 1 and type.methods.Length > 0
 			return Foreign(call, types, folder).Construct(type)
-		return Rounding.Single.Build(type, call, value, type.IsStruct)
+		return Rounding.Single.Build(type, call, value, type.IsStruct, VmValue.None)
 	if name is in ("to", "Code")
 		return name is "to" then Convert(call.Instance, call.ReturnType) else VmValue.OfText(ValueCode(call.Instance).Code)
 	if name is in ("Length", "Count")
@@ -161,7 +161,7 @@ Construct(call Invocation) VmValue
 	Natives(List(TypeEntry) + Single).Construct(NewSingle).number is 0.10000000149011612
 	Natives((Byted, Pixel)).Construct(NewPixel).items.First.number is 127
 	type = TypeOf(call.TypeName)
-	Rounding.Single.Build(type, call, value, type.IsStruct)
+	Rounding.Single.Build(type, call, value, type.IsStruct, VmValue.None)
 Fresh(type TypeEntry) VmValue
 	Shapes.Key("in", Pairs, List(VmValue) + VmValue.OfNumber(2)) is VmValue.TrueValue
 	Shapes.Key("in", Pairs, List(VmValue) + VmValue.OfNumber(7)) is VmValue.FalseValue
