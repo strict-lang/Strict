@@ -1,0 +1,13 @@
+has count Number
+constant Big = 12000000
+Numbers Numbers
+	LargeRuns(3).Numbers is (0, 1, 2)
+	for count
+		index
+Words(amount Number) Texts
+	LargeRuns(1).Words(3) is ("0", "1", "2")
+	for amount
+		index to Text
+Reuse(garbage Number) Number slow
+	LargeRuns(Big).Reuse(4000000) is Big + 12000000 + Big * (Big - 1) / 2
+	Numbers.Length + Words(garbage).Length + Words(garbage).Length + Words(garbage).Length + Numbers.Sum

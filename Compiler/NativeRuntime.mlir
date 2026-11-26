@@ -5033,7 +5033,7 @@
     %spareEntry = llvm.getelementptr %sparePointer[%last] : (!llvm.ptr, i64) -> !llvm.ptr, i64
     %sparePage = llvm.load %spareEntry : !llvm.ptr -> i64
     %sparePagePointer = llvm.inttoptr %sparePage : i64 to !llvm.ptr
-    func.call @strict_commit(%sparePagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
+    func.call @strict_gc_recommit(%sparePagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
     %spareHeader = arith.constant 4096 : i64
     %spareCleared = llvm.call @memset(%sparePagePointer, %clear, %spareHeader) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     %spareFreshSlot = llvm.mlir.addressof @strict_gc_fresh : !llvm.ptr
@@ -5189,7 +5189,7 @@
     llvm.store %nextPooled, %poolSlot : i64, !llvm.ptr
     %fewer = arith.subi %poolCount, %one : i64
     llvm.store %fewer, %pooledSlot : i64, !llvm.ptr
-    func.call @strict_decommit(%pagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
+    func.call @strict_gc_decommit(%pagePointer, %pageSize) : (!llvm.ptr, i64) -> ()
     %spare = llvm.load %spareSlot : !llvm.ptr -> i64
     %spareCount = llvm.load %spareCountSlot : !llvm.ptr -> i64
     %spareCapacity = llvm.load %spareCapacitySlot : !llvm.ptr -> i64
@@ -6194,7 +6194,7 @@
   // objects can make an old object point to a young one, writes into pages of young objects leave their card clean
   // (a compiler build had 500 000 dirty cards per young collection, mostly in pages made since the last one)
   llvm.mlir.global internal @strict_gc_old_pages(dense<0> : tensor<1048576xi8>) : !llvm.array<1048576 x i8>
-  func.func private @strict_gc_page_slot(%address: i64) -> !llvm.ptr {
+  func.func private @strict_gc_page_index(%address: i64) -> i64 {
     %baseSlot = llvm.mlir.addressof @strict_gc_base : !llvm.ptr
     %base = llvm.load %baseSlot : !llvm.ptr -> i64
     %offset = arith.subi %address, %base : i64
@@ -6202,6 +6202,64 @@
     %index = arith.shrui %offset, %sixteen : i64
     %last = arith.constant 1048575 : i64
     %bounded = arith.minui %index, %last : i64
+    return %bounded : i64
+  }
+  // pages given back to the system are committed again before their next use (a byte per page says so), a reused run
+  // that stayed committed is taken as it is: committing 104 MB that is committed took 1.4 ms of every reuse; pages
+  // beyond the table share its last byte, which is never cleared
+  llvm.mlir.global internal @strict_gc_gone(dense<0> : tensor<1048576xi8>) : !llvm.array<1048576 x i8>
+  func.func private @strict_gc_gone_range(%start: !llvm.ptr, %bytes: i64) -> (!llvm.ptr, i64, i64) {
+    %one = arith.constant 1 : i64
+    %address = llvm.ptrtoint %start : !llvm.ptr to i64
+    %end = arith.addi %address, %bytes : i64
+    %lastByte = arith.subi %end, %one : i64
+    %first = func.call @strict_gc_page_index(%address) : (i64) -> i64
+    %last = func.call @strict_gc_page_index(%lastByte) : (i64) -> i64
+    %span = arith.subi %last, %first : i64
+    %count = arith.addi %span, %one : i64
+    %table = llvm.mlir.addressof @strict_gc_gone : !llvm.ptr
+    %slot = llvm.getelementptr %table[0, %first] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1048576 x i8>
+    return %slot, %count, %last : !llvm.ptr, i64, i64
+  }
+  func.func private @strict_gc_decommit(%start: !llvm.ptr, %bytes: i64) {
+    func.call @strict_decommit(%start, %bytes) : (!llvm.ptr, i64) -> ()
+    %range:3 = func.call @strict_gc_gone_range(%start, %bytes) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    %gone = arith.constant 1 : i32
+    %marked = llvm.call @memset(%range#0, %gone, %range#1) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    return
+  }
+  func.func private @strict_gc_recommit(%start: !llvm.ptr, %bytes: i64) {
+    %zero = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %none = arith.constant 0 : i8
+    %range:3 = func.call @strict_gc_gone_range(%start, %bytes) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    cf.br ^page(%zero, %none : i64, i8)
+  ^page(%index: i64, %any: i8):
+    %more = arith.cmpi ult, %index, %range#1 : i64
+    cf.cond_br %more, ^check, ^checked
+  ^check:
+    %slot = llvm.getelementptr %range#0[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %gone = llvm.load %slot : !llvm.ptr -> i8
+    %anyNow = arith.ori %any, %gone : i8
+    %next = arith.addi %index, %one : i64
+    cf.br ^page(%next, %anyNow : i64, i8)
+  ^checked:
+    %isGone = arith.cmpi ne, %any, %none : i8
+    cf.cond_br %isGone, ^commit, ^done
+  ^commit:
+    func.call @strict_commit(%start, %bytes) : (!llvm.ptr, i64) -> ()
+    %shared = arith.constant 1048575 : i64
+    %endsShared = arith.cmpi eq, %range#2, %shared : i64
+    %fewer = arith.subi %range#1, %one : i64
+    %clearing = arith.select %endsShared, %fewer, %range#1 : i64
+    %clear = arith.constant 0 : i32
+    %cleared = llvm.call @memset(%range#0, %clear, %clearing) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_gc_page_slot(%address: i64) -> !llvm.ptr {
+    %bounded = func.call @strict_gc_page_index(%address) : (i64) -> i64
     %pages = llvm.mlir.addressof @strict_gc_old_pages : !llvm.ptr
     %slot = llvm.getelementptr %pages[0, %bounded] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<1048576 x i8>
     return %slot : !llvm.ptr
@@ -8740,7 +8798,7 @@
     cf.br ^commit
   ^commit:
     %pointer = llvm.inttoptr %start : i64 to !llvm.ptr
-    func.call @strict_commit(%pointer, %bytes) : (!llvm.ptr, i64) -> ()
+    func.call @strict_gc_recommit(%pointer, %bytes) : (!llvm.ptr, i64) -> ()
     return %start : i64
   ^missing:
     return %zero : i64
@@ -8767,7 +8825,7 @@
     cf.cond_br %fits, ^scan(%next, %total : i64, i64), ^release
   ^release:
     %pointer = llvm.inttoptr %start : i64 to !llvm.ptr
-    func.call @strict_decommit(%pointer, %bytes) : (!llvm.ptr, i64) -> ()
+    func.call @strict_gc_decommit(%pointer, %bytes) : (!llvm.ptr, i64) -> ()
     cf.br ^scan(%next, %kept : i64, i64)
   ^done:
     return
@@ -18067,7 +18125,10 @@
   ^found:
     %textSlot = llvm.getelementptr %pair[1] : (!llvm.ptr) -> !llvm.ptr, f64
     %text = llvm.load %textSlot : !llvm.ptr -> f64
-    return %text : f64
+    %textBytes = func.call @strict_text_size(%text) : (f64) -> i64
+    %isCleared = arith.cmpi eq, %textBytes, %none : i64
+    %kept = arith.select %isCleared, %zero, %text : f64
+    return %kept : f64
   ^none:
     return %zero : f64
   }
