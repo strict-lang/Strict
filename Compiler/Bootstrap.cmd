@@ -12,6 +12,8 @@ clang NativeCompiler.ll ..\Networking\native\Socket.c -I . -lws2_32 -o NativeCom
 cd ..
 set "STRICT_GPU=0"
 rem windows builds a release compiler: a long garbage collection warns instead of stopping
-Compiler\NativeCompiler.exe build Strict.strict . windows || exit /b 1
+Compiler\NativeCompiler.exe build Compiler/Strict.strict . windows || exit /b 1
+rem a seed older than Compiler/Strict.strict puts strict.exe next to it
+if exist Compiler\strict.exe move /y Compiler\strict.exe strict.exe >nul
 del Compiler\NativeCompiler.exe Compiler\NativeCompiler.ll Compiler\NativeCompiler.llvm.mlir Compiler\NativeCompiler.mlir
 echo Built %~dp0..\strict.exe

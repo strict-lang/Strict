@@ -20,6 +20,8 @@ release=linux
 if [ "$(uname)" = Darwin ]; then
 	release=
 fi
-STRICT_GPU=0 ./Compiler/NativeCompiler build Strict.strict . $release
+STRICT_GPU=0 ./Compiler/NativeCompiler build Compiler/Strict.strict . $release
+# a seed older than Compiler/Strict.strict puts strict next to it
+[ -f Compiler/strict ] && mv -f Compiler/strict strict
 rm -f Compiler/NativeCompiler Compiler/NativeCompiler.$platform.ll Compiler/NativeCompiler.$platform.llvm.mlir Compiler/NativeCompiler.$platform.mlir
 echo "Built $(pwd)/strict"

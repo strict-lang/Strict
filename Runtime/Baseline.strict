@@ -104,7 +104,7 @@ IsBase Boolean
 	Baseline(Mutants("Number.strict")).IsBase and Baseline(Mutants("./Text.strict")).IsBase
 	Baseline(Mutants("Math/Size.strict")).IsBase is false
 	folder = Path(mutants.path).PathOnly.text
-	File((folder is "" then "." else folder) + "/Strict.strict").Exists
+	File((folder is "" then "." else folder) + "/Any.strict").Exists
 IsExcluded Boolean
 	Baseline(Mutants("Compiler/NativeBuild.strict")).IsExcluded
 	Baseline(Mutants(".\\Bytecode\\BinaryNames.strict")).IsExcluded

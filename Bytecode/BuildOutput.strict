@@ -1,3 +1,4 @@
+constant CommandBase = "/Compiler/obj/Strict"
 Intermediate(path Text) Text
 	BuildOutput.Intermediate("Examples\Sum.strict") is "./Examples/obj/Sum.strict"
 	BuildOutput.Intermediate("C:/s/A") is "C:/s/obj/A"
@@ -7,8 +8,11 @@ Intermediate(path Text) Text
 Deliver(base Text) Text
 	BuildOutput.Deliver("./Examples/obj/Sum") is "./Examples/Sum"
 	BuildOutput.Deliver("./obj/Strict") is "./Strict"
+	BuildOutput.Deliver("./Compiler/obj/Strict") is "./Strict"
 	BuildOutput.Deliver("./Math/obj/Tests.test") is "./Math/obj/Tests.test"
 	BuildOutput.Deliver("Compiler/output/Sum") is "Compiler/output/Sum"
+	if base.EndsWith(CommandBase)
+		return base.Substring(0, base.Length - CommandBase.Length) + "/Strict"
 	slash = base.LastIndexOf("/")
 	isObj = base.EndsWith(".test") is false and slash >= 4 and base.Substring(slash - 4, 4) is "/obj"
 	isObj then base.Substring(0, slash - 4) + base.Substring(slash) else base

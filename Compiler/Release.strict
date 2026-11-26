@@ -55,7 +55,8 @@ Parent Text
 	Release("Missing/App").Parent is "Missing"
 	Release("App").Parent is "."
 	Release("./Missing/obj/App.test").Parent is "./Missing"
-	parent = Path(base).PathOnly.text
+	Release("./Compiler/obj/Strict").Parent is "."
+	parent = Path(BuildOutput.Deliver(base)).PathOnly.text
 	source = parent.EndsWith("/obj") then parent.Substring(0, parent.Length - 4) else parent
 	source is "" or source is "obj" then "." else source
 Icon Text

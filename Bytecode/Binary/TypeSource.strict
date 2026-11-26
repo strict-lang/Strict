@@ -45,7 +45,7 @@ Absolute(path Text) Text
 	current = Directory.Current.Replace("\\", "/")
 	inside is "." then current else current + "/" + inside
 Case(path Text) Text slow
-	Sizing.Case("strict") is "Strict.strict" and Sizing.Case("Examples/sum.STRICT") is "Examples/Sum.strict"
+	Sizing.Case("number") is "Number.strict" and Sizing.Case("Examples/sum.STRICT") is "Examples/Sum.strict"
 	Sizing.Case("Missing") is "Missing" and Sizing.Case("Examples") is "Examples"
 	slashed = path.Replace("\\", "/")
 	named = slashed.Lower.EndsWith(".strict") then Path(slashed).RemoveExtension.text else slashed

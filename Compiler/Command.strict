@@ -17,7 +17,7 @@ constant FullHelp = ("strict test <folder> full  remove its obj/ folders, then r
 constant SourceHelp = ("strict check <folder>      validate the .strict files: type rules, unused members, limits", "strict format <file>       print the file in its canonical form, each method body as the parser reads it")
 constant MaintenanceHelp = ("strict update <folder>     refresh the packages copied into the folder (.origin) from their clone or GitHub", "strict version             show the version number and when this strict executable was built")
 constant SuggestHelp = List(Text) + "strict suggest <file> <method>  print bodies passing its tests; add - to read unsaved source"
-constant Entry = "Strict.strict"
+constant Entry = "Compiler/Strict.strict"
 constant Help = RunHelp + CodeHelp + BuildHelp + PlatformHelp + EditHelp + AppHelp + BuildModeHelp + TestHelp + TestInputHelp + LinesHelp + ValuesHelp + FullHelp + SourceHelp + MaintenanceHelp + SuggestHelp
 constant FirstTraceLines = 3
 constant LastTraceLines = 3
@@ -68,7 +68,7 @@ FindMainFile(folder Text) Text slow
 	target = (isCurrent then Directory.Current else folder).Replace("\\", "/")
 	clean = target.EndsWith("/") and target.Length > 1 then target.Substring(0, target.Length - 1) else target
 	named = TypeSource.Case((isCurrent then "" else clean + "/") + Path(clean).FileName.text)
-	if File(named).Exists
+	if named.EndsWith(".strict") and File(named).Exists
 		return named
 	files = Directory.Files(isCurrent then "." else clean, "*.strict")
 	isCurrent and File(Entry).Exists then Entry else (files.Length is 1 then files.First else "")
@@ -92,9 +92,14 @@ Resolve(arguments Texts, main Text) Texts slow
 	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
 		folder = FindMainFile(given)
 		return folder is "" then arguments else List(Text) + "build" + folder + arguments.Slice(2, arguments.Length - 2)
-	isSource = given is not "" and (File(TypeSource.Case(given)).Exists or Directory.Exists(given))
+	isSource = given is not "" and IsSource(given)
 	target = arguments(0) is "test" and main is "" then "." else main
 	isSource or target is "" then arguments else List(Text) + arguments(0) + target + Rest(arguments)
+IsSource(given Text) Boolean slow
+	Command.IsSource("Examples/Sum") and Command.IsSource("Math")
+	Command.IsSource("LICENSE") is false
+	named = TypeSource.Case(given)
+	named.EndsWith(".strict") and File(named).Exists or Directory.Exists(given)
 Project(arguments Texts) Texts slow
 	Command.Project(("test", "Examples/Sum.strict")) is ("test", "Examples/Sum.strict")
 	Command.Project(("Examples/Sum", "5")) is ("Examples/Sum.strict", "5")
