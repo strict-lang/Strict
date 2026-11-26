@@ -24,7 +24,6 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - Serial loops still generic (`strict_hoisted_read`/`strict_list_read`, `strict_is_failure`, `strict_list_push`): gathers `table(value)`, calls that can fail or read lists (`MersenneTwister.Normals`), one thread of a parallel chunk, and raw `Tempered` calls (f64 body has two remainders, no whole-number version used).
 - Appending in a loop still creates a new view per append (`strict_list_add`, about 130 ns against 15-30 ns pushed, 3 million appends 390-570 ms) when the list is handed to a call or constructor after the loop (`MersenneTwister.Seeded`).
 - Texts: a substring of a plain text under 256 bytes is copied (Substring, a trimmed or cut text that is no span), Upper and Lower always copy.
-- Short parallel loops: the 10 us probe hands a loop over even when the rest takes less than wake-up, every piece starts with a memo miss, and cheaper small loops need work kept on fewer hot workers per CCX.
 - Matrix and vector speed: the VM calculates in f64, accessors (`point.X`) are not counted as 32 bit values, `Axis(n).Y` still allocates its Vector3, and a block is only reused when the local is alone.
 - Whole-number call guards give up (f64 version runs) when a variable read after an `if` or loop that stores it is used in `+`, `-` or `*`: a maximum over the possible stores would keep the i64 path.
 - ParticleStress at 1 million particles (4.8-5.5 ms per tick): 32 bit members (72 -> 44 bytes per particle) and writing in place over the list being read.
