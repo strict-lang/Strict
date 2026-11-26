@@ -32,10 +32,8 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - A `for` that drops items collects objects in parallel, but numbers and flat elements stay on one thread (no hole marker): keep a bitmap of the kept slots.
 - Generated CPU loops still per element: reads of non-hoisted lists (`strict_list_read`), checks on instances, chunks with inner loops, serial loops, and f64 numbers and indices.
 - Reading a packed list through `strict_list_items` (chunks without inner loops over Float8, byte, lane or quantized lists, quantized formats read by index, Float8 and quantized arguments of native library calls) replaces it with an f64 copy for good (`strict_list_unpacked`).
-- A call with whole-number arguments dispatches per element between its i64 (`_whole`) and f64 versions (a vectorized loop computes both and blends: 55 ms vs 14 ms inline over 10 million numbers).
 
 ## Collector
-- Lists of numbers made by generic list paths (`strict_list_add`, `strict_list_new`) are scanned by the collector (on wasm halves of numbers look like references): scan only up to their items like `strict_numbers_new` lists.
 - Realtime frames: mark incrementally over several frame ends when a full collection takes longer than a few ms.
 - `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
