@@ -10,7 +10,6 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - Trees as pools with 32 bit backward offsets ([Goose](https://github.com/aardappel/goose)): count SyntaxNode allocations of `strict build Strict.strict` first.
 
 ## Native builds (emission, lowering, linking)
-- `MlirPurity.IsReachingGpu` and kernel selection for every program should only gate or offload loops whose counts can reach the GPU threshold (`IsDevice` today counts any device-capable inner loop), checked on NeuralNetworks and StrictComfy.
 - Web rebuilds run whole-program emcc link with Closure (2.3 s) and wasm-opt (1.6 s) even when only one string changed.
 - Build speed (under 10 s hard limit, 2-3 s target; LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the front end twice (test gate, then native), lowering and ThinLTO link are the largest phases left.
 
@@ -32,4 +31,3 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
 ## GPU
-- Small number types as kernel values: still on CPU for a `for` over `List(Complex)` (a list member with `value.Bits is 32` fails the build, index it instead), a `List(Complex)` result, a method returning `Complex` that has a loop or an early return, and list-backed types (`Vector2`, `Vector3`).
