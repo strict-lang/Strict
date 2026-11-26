@@ -1,6 +1,7 @@
 has tools Toolchain
 constant Missing = WebBuild(Toolchain(Toolchain.OnWindows, isWeb = true))
 constant Options = " -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sSTACK_SIZE=16MB -sASYNCIFY -sASYNCIFY_STACK_SIZE=1048576 -sEXPORTED_RUNTIME_METHODS=callMain --closure 1 -g0 -Wl,--fatal-warnings -Wno-override-module"
+constant Compiled = " -O1 -g0"
 constant OneCallerInlining = " --one-caller-inline-max-function-size=1000"
 constant Features = " --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals"
 constant Passes = " --strip-debug --strip-producers --skip-pass=coalesce-locals" + OneCallerInlining + Features
@@ -15,7 +16,7 @@ Link(base Text, executable Text) Text
 	if compiled is not ""
 		return compiled
 	folder = Release(base).Parent
-	sources = NativeSources(tools.natives).Arguments(Platform.Web, tools.root) + Preload(folder + "/Content")
+	sources = NativeSources(tools.natives).Objects(Platform.Web, tools.root) + Preload(folder + "/Content")
 	page = " --shell-file " + tools.Quote(Shell(base))
 	Release(base).Creat(Path(executable).PathOnly.text)
 	inputs = tools.PartObjects(base + ".web") + sources + Mirror(folder, base) + Script(base) + page + Runtime

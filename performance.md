@@ -8,7 +8,7 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - `strict test RealTimeStrategy native` (DeltaEngine, 73 files) after one touched file (16.6-17.3 s): struct lanes 3.2-3.9 s (lane state is texts like "3 Pair" keyed by register numbers: keep laned registers as numbers), `CallGraph.Closure` in `EmissionCache.Keys` (`Marked` copies the dictionary parameter, rebuilding the index), dependency linking (`Completed`, `Forwarded`, `Linkable` and round lists), and name validation reading every linked source again per file.
 
 ## Native builds (emission, lowering, linking)
-- Web rebuilds run whole-program emcc link with Closure (2.3 s) and wasm-opt (1.6 s) even when only one string changed.
+- Web rebuilds after a one-line edit (LogoApp 24 s, 2026-11-26, machine 50 % busy): wasm-opt -O3 11.7 s and the emcc link 9.5 s (Asyncify, Closure about 5 s) run whole-program every time.
 - Build speed (under 10 s hard limit, 2-3 s target; LogoApp after a one-line edit 1.8-2.4 s on 2026-11-26, was 3.6-4 s): link 0.25-0.6 s, the test gate front end 0.31 s (the front end runs twice), lowering 0.3 s, emission 0.28 s.
 
 ## VM

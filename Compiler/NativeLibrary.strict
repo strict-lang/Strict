@@ -32,11 +32,15 @@ Objects(files Texts, platform Number, root Text, options Text) Texts slow
 		built.StartsWith("Built ") then built.Substring(6) else built
 Compile(files Texts, platform Number, root Text, options Text) Texts slow
 	Adding.Compile(List(Text) + "Compiler/output/No.c", Platform.Current, ".", "").First.StartsWith(NoObject)
+	Adding.Compile(NativeSources.Adding.Files, Platform.Web, ".", "").First.EndsWith("/Adder.web.o")
+	File("Examples/NativeAdd/native/Adder.web.o").ReadBytes.Slice(0, 4) is (0, 97, 115, 109)
 	if files.Length is 0
 		return List(Text)
 	suffix = "." + RandomSuffixRange.Random.Floor + ".o"
-	flags = " -I\"" + root + "/Compiler\"" + Toolchain.Optimized + options
-	for ToolRunner(Toolchain(platform, root).Locate("clang")).ExecuteAll(Commands(files, suffix, flags))
+	isWeb = platform is Platform.Web
+	flags = " -I\"" + root + "/Compiler\"" + (isWeb then WebBuild.Compiled else Toolchain.Optimized) + options
+	tools = Toolchain(isWeb then Platform.Current else platform, root, isWeb = isWeb)
+	for ToolRunner(tools.Locate(isWeb then "emcc" else "clang")).ExecuteAll(Commands(files, suffix, flags))
 		Finish(value, Path(files(index)).RemoveExtension.text + suffix, Object(files(index), platform), options)
 Object(file Text, platform Number) Text
 	Adding.Object("a/b.c", Platform.Linux) is "a/b.linux.o"

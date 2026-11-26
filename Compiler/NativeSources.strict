@@ -70,10 +70,12 @@ Options(tokens Texts, isLinking Boolean) Text
 	Adding.Options(("-DX", "a/b.c", "-lgdi32"), false) is " -DX"
 	Adding.Options(("-DX", "a/b.m"), false) is " -DX"
 	Adding.Options(("", "-DX"), false) is " -DX"
+	Adding.Options(("--use-port=contrib.glfw3", "-sX", "-DX"), true) is " --use-port=contrib.glfw3 -sX"
 	mutable options = ""
 	for tokens
 		isLinked = value.StartsWith("-l") or value.StartsWith("-Wl")
-		if value is not "" and IsSource(value) is false and isLinked is isLinking
+		isBoth = value.StartsWith("-s") or value.StartsWith("--use-port")
+		if value is not "" and IsSource(value) is false and (isLinked is isLinking or isBoth)
 			options = options + " " + value
 	options
 IsCompiled(target Text, inputs Texts, options Text) Boolean
