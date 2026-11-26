@@ -29,7 +29,7 @@ constant Compiling = MlirParallel(MlirFunction(Held.function, types = List(TypeE
 constant Logging = MlirParallel(MlirFunction(List(TypeEntry) + Rows + MlirPurity.Hosting, Rows, MethodEntry(Timed, instructions = Timed.instructions.Slice(0, 4) + Effects + Timed.instructions.Slice(5, 2))), 2)
 IsParallel Boolean
 	Doubling.IsParallel and Logging.IsParallel and Randomizing.IsParallel and Timing.IsParallel is false
-	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel is false
+	MlirParallel(MlirFunction(List(TypeEntry) + Rows, Rows, Filtered), 2).IsParallel
 	MlirParallel(MlirKernel.Doubling.function, 2).IsParallel
 	MlirParallel(MlirFunction(Logging.function, method = MlirPurity.Written), 2).IsParallel is false
 	isBegin = function.method.instructions(position).kind is InstructionType.LoopBegin
@@ -181,6 +181,7 @@ Collect(at Number) Texts
 	MlirParallel(MlirFiltering.Keeping.function, 2).Collect(7).Last.IndexOf("@strict_rc_written(%t7p)") > 0
 	Doubling.Collect(5).Length is 3
 	emitted = MlirFastLoop(function, position).Emit(at)
-	stored = function.IsDeferred then MlirDeferred(function, position).EmitScope(emitted) else emitted
+	unholed = MlirFiltering(function, position).Unhole(at) + emitted
+	stored = function.IsDeferred then MlirDeferred(function, position).EmitScope(unholed) else unholed
 	written = "    func.call @strict_rc_written(%t" + at + "p) : (!llvm.ptr) -> ()"
 	Filler is "strict_list_filled" then stored + written else stored

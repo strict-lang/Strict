@@ -8,6 +8,8 @@ constant Kept = MethodEntry("Kept", List(MemberEntry) + MemberEntry("names", "St
 constant Keeping = MlirFiltering(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, Kept), 2)
 constant Filtering = MlirFiltering(MlirFunction(List(TypeEntry) + MlirParallel.Rows, MlirParallel.Rows, MlirParallel.Filtered), 2)
 constant Doubling = MlirFiltering(MlirParallel.Doubling.function, 2)
+constant HoleBits = "9222527611924643840"
+constant Plain = "0x7FF8000000000000 : f64"
 IsFiltering Boolean
 	Keeping.IsFiltering
 	Filtering.IsFiltering
@@ -19,13 +21,28 @@ IsFiltering Boolean
 			return true
 	false
 IsFilteringValues Boolean
-	Filtering.IsFilteringValues
+	Filtering.IsFilteringValues is false
 	Keeping.IsFilteringValues is false
 	Doubling.IsFilteringValues is false
 	MlirParallel(Keeping.function, 2).IsParallel
 	kinds = MlirKinds(function)
 	flats = MlirFlats(function, position).Count(kinds.ElementKind(kinds.VariableKind(position, "forResult")))
-	IsFiltering and (MlirParallel(function, position).Filler is not "strict_list_filled" or flats > 0)
+	IsFiltering and (flats > 0 or MlirBytes(function, position).IsCollected)
+Unhole(at Number) Texts
+	Filtering.Unhole(7).Length is 7 and Filtering.Unhole(7).Last.StartsWith("    llvm.store %t7hc, %r1")
+	Keeping.Unhole(7).Length is 0
+	if IsFiltering is false or MlirParallel(function, position).Filler is not "strict_list_filled_numbers"
+		return List(Text)
+	register = "%r" + function.method.instructions(at).payload(0)
+	named = "    %t" + at
+	kept = "%t" + at + "hv"
+	bits = named + "hb = arith.bitcast " + kept + " : f64 to i64"
+	holes = named + "hh = arith.constant " + HoleBits + " : i64"
+	plain = named + "hn = arith.constant " + Plain
+	isHole = named + "hs = arith.cmpi eq, %t" + at + "hb, %t" + at + "hh : i64"
+	chosen = named + "hc = arith.select %t" + at + "hs, %t" + at + "hn, " + kept + " : f64"
+	stored = function.Store("%t" + at + "hc", register)
+	(List(Text) + function.Load(kept, register) + bits + holes + plain) + (isHole, chosen, stored)
 Holed Texts
 	Keeping.Holed.Last is "    func.call @strict_list_holes(%t2ph, %t2n) : (f64, f64) -> ()"
 	Doubling.Holed.Length is 0
