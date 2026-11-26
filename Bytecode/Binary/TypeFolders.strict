@@ -1,13 +1,25 @@
 has locals Dictionary(Text, Text)
 has folders Dictionary(Text, Text)
+has internals = Dictionary(Text, Text)
 constant None = TypeFolders(Dictionary(Text, Text), Dictionary(Text, Text))
+constant Clashing = TypeFolders(Dictionary(("Vector2", "./Math")), Dictionary(("Profile", "./Math")), Dictionary(("Profile", "./Runtime"), ("Coordinator", "./Runtime")))
 constant Single = Dictionary(("A", "."))
 constant Mathematics = TypeFolders(Dictionary(("Vector2", "./Math")), Dictionary(("Vector2", "./Math"), ("Size", "../Other")))
 Local(root Text) TypeFolders slow
 	"Vector2" is in TypeFolders.Local(".").locals
 	TypeFolders.Local(".").folders.Length is 0
 	None.IndexFolders(List(Text) + ".", Single).Length > Single.Length
-	TypeFolders(IndexFolders(List(Text) + root, Dictionary(Text, Text)), Dictionary(Text, Text))
+	"Coordinator" is in TypeFolders.Local("../Strict").internals
+	"Coordinator" is not in TypeFolders.Local("../Strict").locals
+	hidden = root is "." then Dictionary(Text, Text) else Internals(root)
+	TypeFolders(IndexFolders(List(Text) + root, Dictionary(Text, Text)), Dictionary(Text, Text), hidden)
+Internals(root Text) Dictionary(Text, Text) slow
+	"Profile" is in None.Internals("../Strict") and "Vector2" is not in None.Internals("../Strict")
+	mutable map = Dictionary(Text, Text)
+	for Folders(root)
+		if IsInternal(root, value)
+			map = IndexFolder(value, map)
+	map
 Widened TypeFolders slow
 	"Vector2" is in TypeFolders.Local(".").Widened.folders
 	TypeFolders.Local(".").Widened.folders.Length >= TypeFolders.Local(".").locals.Length
@@ -16,7 +28,7 @@ Widened TypeFolders slow
 		project = Path(value.Replace("\\", "/")).FileName.text
 		if project(0) is project(0).Upper and project(0) is not project(0).Lower
 			parents = parents + ("../" + project)
-	TypeFolders(locals, parents.Length is 0 then locals else IndexFolders(parents, locals))
+	TypeFolders(locals, parents.Length is 0 then locals else IndexFolders(parents, locals), internals)
 Unfound(types Texts) Texts
 	Mathematics.Unfound(("Vector2s", "Size")) is ("Size")
 	for types
@@ -62,9 +74,11 @@ Files(types Texts) Texts slow
 	TypeFolders.Local(".").Widened.Files(List(Text) + "Vector2").Length is Directory.Files("./Math", "*.strict").Length
 	None.Files(List(Text) + "Vector2").Length is 0
 	TypeFolders(Mathematics.locals, Dictionary(Text, Text)).Files(("Vector2", "Vector2s")).Length > 0
+	Clashing.Files(List(Text) + "Profile") is Directory.Files("./Math", "*.strict")
+	Clashing.Files(List(Text) + "Coordinator") is Directory.Files("./Runtime", "*.strict")
 	local = Match(locals, types)
 	mutable files = List(Mutable(Text))
-	for local.Length < types.Length and folders.Length > 0 then Match(folders, types) else local
+	for local.Length < types.Length then Match(Extended, types) else local
 		files = files + Directory.Files(value, "*.strict")
 	files
 Match(indexed Dictionary(Text, Text), types Texts) Texts
@@ -85,3 +99,10 @@ FileType(path Text) Text
 	slashed = path.IndexOf("\\") >= 0 then path.Replace("\\", "/") else path
 	slash = slashed.LastIndexOf("/")
 	slashed.Substring(slash + 1, (slashed.EndsWith(".strict") then slashed.Length - 7 else slashed.Length) - slash - 1)
+Extended Dictionary(Text, Text)
+	Clashing.Extended("Profile") is "./Math" and Clashing.Extended("Coordinator") is "./Runtime"
+	mutable map = folders.Length > 0 then folders else locals
+	for internals
+		if value.Key is not in map
+			map(value.Key) = value.Value
+	map
