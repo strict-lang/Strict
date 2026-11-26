@@ -33,7 +33,6 @@ Large features, difficult or long work and far fetched things, kept here until s
 
 ## Model: Ternary Bonsai 27B
 the Bonsai GGUF, 12.7-18 ms per token on the RTX 4090 (Prism's llama.cpp ~11); per token (ncu) the products take ~8.7 ms, the quantize kernels ~0.6. Left:
-- the dot products decode every PTQ1_0 block twice, the two lanes of a block should split the codes
 - one kernel for 1 to 8 tokens (like Kindi's) so `LookupDecoding` verifies cheaper (2, 4, 8 tokens 27.7, 37.3, 47.2 ms against 16.8 for one)
 - CPU loops unpack 3 bit rows to doubles (`MlirWidths` decodes only 4 and 6 bit blocks per use)
 - the 257 `Sylvester` launches per token still take ~1.1 ms (4.4 us each with one barrier, latency bound): rotate the inputs of a block in fewer launches
