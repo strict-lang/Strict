@@ -1,0 +1,4 @@
+has Checker
+IsChecked(text Text) Boolean
+	RealCheck.IsChecked("real")
+	text is "real"

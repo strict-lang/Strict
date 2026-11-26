@@ -6,6 +6,14 @@ constant Bodies = List(InstructionEntry) + InstructionEntry.Return(0)
 constant Held = List(MemberEntry) + MemberEntry("checker", "Strict/A/Checker", List(InstructionEntry), false)
 constant Mock = TypeEntry("Strict/A/MockCheck", Held, (MethodEntry(Checking, instructions = Bodies), MethodEntry(Readying, instructions = Bodies)))
 constant Half = TypeEntry("Strict/A/Half", Held, List(MethodEntry) + MethodEntry(Checking, instructions = Bodies))
+constant Kinded = "    llvm.store %k, %s : f64, !llvm.ptr"
+constant Both = (Checker, Mock, TypeEntry(Mock, Name = "Strict/A/RealCheck"))
+constant Address = "    %address = func.call @strict_ptr(%p0) : (f64) -> !llvm.ptr"
+constant Loaded = "    %kind = llvm.load %address : !llvm.ptr -> f64"
+constant Zero = "    %zero = arith.constant 0.0 : f64"
+constant Ending = ("    return %zero : f64", "  }")
+constant Compared = "    %is0 = arith.cmpf oeq, %p0, %k0 : f64"
+constant Asking = MlirFunction(Both, Checker, Checking)
 constant Real = TypeEntry(Mock, Name = "Strict/A/RealCheck")
 constant Making = InstructionEntry.Invoke(1, ("Strict/A/RealCheck", "from", "Strict/A/RealCheck"), List(Number), -1)
 constant Builder = TypeEntry("Strict/A/Builder", List(MemberEntry), List(MethodEntry) + MethodEntry(Checking, instructions = List(InstructionEntry) + Making))
@@ -17,22 +25,23 @@ Owner(type TypeEntry, callee MethodEntry) TypeEntry
 	MlirTraits((Checker, Mock, Real, Builder)).Owner(Checker, Checking).Name is "Strict/A/RealCheck"
 	if callee.instructions.Length > 0
 		return type
+	candidates = Candidates(type)
+	candidates.Length is 1 then candidates.First else type
+Candidates(trait TypeEntry) List(TypeEntry)
+	MlirTraits((Checker, Mock, Real, Builder)).Candidates(Checker) is (Real)
+	MlirTraits((Checker, Mock, Real)).Candidates(Checker).Length is 2
 	mutable found = List(Mutable(TypeEntry))
 	for types
-		if IsImplementing(value, type)
+		if IsImplementing(value, trait)
 			found.Add(value)
-	found.Length is 1 then found.First else Pick(found, type)
-Pick(found List(TypeEntry), trait TypeEntry) TypeEntry
-	MlirTraits(List(TypeEntry) + Builder).Pick((Mock, Real), Checker) is Real
-	MlirTraits(List(TypeEntry) + Builder).Pick((Mock, Half), Checker) is Checker
 	mutable built = List(Mutable(TypeEntry))
 	for found
-		if IsPick(value.Name)
+		if IsBuilt(value.Name)
 			built.Add(value)
-	built.Length is 1 then built.First else trait
-IsPick(name Text) Boolean
-	MlirTraits(List(TypeEntry) + Builder).IsPick("Strict/A/RealCheck")
-	MlirTraits(List(TypeEntry) + Builder).IsPick("Strict/A/MockCheck") is false
+	built.Length > 0 then built else found
+IsBuilt(name Text) Boolean
+	MlirTraits(List(TypeEntry) + Builder).IsBuilt("Strict/A/RealCheck")
+	MlirTraits(List(TypeEntry) + Builder).IsBuilt("Strict/A/MockCheck") is false
 	for owner, method, entry in types, owner.methods, method.instructions
 		isMade = entry.kind is InstructionType.Invoke and entry.texts.Length > 1
 		if isMade then entry.texts(1) is "from" and entry.texts(0) is name else false
@@ -62,3 +71,77 @@ IsHolding(candidate TypeEntry, trait TypeEntry) Boolean
 		if TypeEntry.ShortName(value.typeName) is TypeEntry.ShortName(trait.Name)
 			return true
 	false
+IsSlot(owner TypeEntry, member MemberEntry) Boolean
+	MlirTraits((Checker, Mock)).IsSlot(Mock, Mock.members.First)
+	MlirTraits((Checker, Half)).IsSlot(Half, Half.members.First) is false
+	MlirTraits(List(TypeEntry) + Mock).IsSlot(Mock, Mock.members.First) is false
+	MlirTraits((Checker, Mock)).IsSlot(Mock, MemberEntry(Mock.members.First, Name = "Checker"))
+	if member.typeName.LastIndexOf("/") is "Strict/".Length - 1
+		return false
+	short = TypeEntry.ShortName(member.typeName)
+	if member.Name.Length is not short.Length then true else member.Name.Lower is not short.Lower
+		return false
+	for types
+		if value.Name is member.typeName
+			return IsImplementing(owner, value)
+	false
+Id(typeName Text) Number
+	MlirTraits((Checker, Mock)).Id("Strict/A/MockCheck") is 2
+	MlirTraits((Checker, Mock)).Id("Strict/A/Missing") is 0
+	for types
+		if value.Name is typeName
+			return index + 1
+	0
+Kind(owner TypeEntry, slot Text, temp Text) Texts
+	MlirTraits((Checker, Mock)).Kind(Mock, "%s", "%k") is ("    %k = arith.constant 2.0 : f64", Kinded)
+	line = "    " + temp + " = arith.constant " + Id(owner.Name) + ".0 : f64"
+	(line, "    llvm.store " + temp + ", " + slot + " : f64, !llvm.ptr")
+Dispatch(function MlirFunction) Texts
+	Text.Combine(MlirTraits(Both).Dispatch(Asking)).IndexOf("@MockCheck_IsChecked") > 0
+	MlirTraits(Both).Dispatch(Asking).First is "  func.func private @Checker_IsChecked_foreign(%p0: f64) -> f64 {"
+	MlirTraits(Both).Dispatch(Asking).Last is "  }"
+	Text.Combine(MlirTraits(Both).Dispatch(Asking)).IndexOf(Address) < 0
+	foreign = MlirForeign(function)
+	header = "  func.func private @" + foreign.Wrapper + "(" + foreign.Parameters + ") -> f64 {"
+	targets = Implementers(function)
+	structs = Cases(function, targets, true)
+	loaded = structs.Length is 0 then List(Text) else List(Text) + Address + Loaded + structs
+	((List(Text) + header + Zero) + Cases(function, targets, false)) + loaded + Ending
+Cases(function MlirFunction, targets List(MlirFunction), isStruct Boolean) Texts
+	MlirTraits(Both).Cases(Asking, MlirTraits(Both).Implementers(Asking), false).Length is 14
+	mutable lines = List(Mutable(Text))
+	for targets
+		if MlirLayout(function).IsStruct(value.type.Name) is isStruct
+			lines = lines + Case(value, isStruct then "%kind" else "%p0", index, Raw(function))
+	lines
+Case(target MlirFunction, compared Text, position Number, arguments Text) Texts
+	MlirTraits(Both).Case(MlirFunction(Both, Mock, Mock.methods.First), "%p0", 0, "%p0")(1) is Compared
+	kind = "    %k" + position + " = arith.constant " + Id(target.type.Name) + ".0 : f64"
+	compare = "    %is" + position + " = arith.cmpf oeq, " + compared + ", %k" + position + " : f64"
+	branch = "    cf.cond_br %is" + position + ", ^call" + position + ", ^next" + position
+	signature = Text.Combine(MlirCalls(target, 0).ArgumentTypes(target.Parameters.Length), ", ")
+	called = " = func.call @" + target.Symbol + "(" + arguments + ") : (" + signature + ") -> f64"
+	returned = "    return %r" + position + " : f64"
+	(kind, compare, branch, "  ^call" + position + ":", "    %r" + position + called, returned, "  ^next" + position + ":")
+Implementers(called MlirFunction) List(MlirFunction)
+	MlirTraits(Both).Implementers(Asking).Length is 2
+	MlirTraits(Both).Implementers(MlirFunction(Both, Mock, Mock.methods.First)).Length is 0
+	if called.method.instructions.Length > 0
+		return List(MlirFunction)
+	candidates = Candidates(called.type)
+	if candidates.Length < 2
+		return List(MlirFunction)
+	for candidates
+		MlirFunction(types, value, Implementation(value, called.method), typeIndex = called.typeIndex)
+Implementation(owner TypeEntry, method MethodEntry) MethodEntry
+	MlirTraits(Both).Implementation(Mock, Checking).instructions.Length is 1
+	for owner.methods
+		if value.Name is method.Name and value.parameters.Length is method.parameters.Length
+			return value
+	method
+Raw(function MlirFunction) Text
+	MlirTraits(Both).Raw(MlirFunction(Both, Mock, MethodEntry(Checking, parameters = Held))) is "%p0, %p1"
+	mutable names = List(Mutable(Text))
+	for function.Parameters
+		names.Add("%p" + index)
+	Text.Combine(names, ", ")

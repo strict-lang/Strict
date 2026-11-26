@@ -1,0 +1,6 @@
+has Vault
+has prefix Text
+IsBound(name Text) Boolean
+	RealVault("a").IsBound("ab")
+	RealVault("a").IsBound("b") is false
+	name.StartsWith(prefix)

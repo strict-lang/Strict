@@ -36,4 +36,5 @@ Call(function MlirFunction, position Number) List(MlirFunction)
 	callee = decoder.Callee(owner)
 	called = MlirFunction(types, owner, callee, typeIndex = function.typeIndex)
 	none = MlirModule.NoFunctions
-	callee.instructions.Length > 0 or MlirForeign(called).IsForeign then none + called else none
+	isReached = callee.instructions.Length > 0 or MlirForeign(called).IsForeign
+	isReached then none + called + MlirTraits(types).Implementers(called) else none

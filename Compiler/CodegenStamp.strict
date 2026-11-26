@@ -1,5 +1,5 @@
 has root Text
-constant Folders = ("Compiler", "Bytecode", "Expressions")
+constant Folders = Intermediates.CompilerFolders + ("Bytecode", "Bytecode/Binary", "Bytecode/Optimize", "Expressions", "Expressions/Syntax")
 constant Range = 1000000007
 constant Output = CodegenStamp("Compiler/output")
 constant Waiting = CodegenStamp("Compiler/output/Waiting")
@@ -13,6 +13,7 @@ Hashed Text
 	sum to Text
 Sources Texts
 	"./Compiler/MlirEquality.strict" is in CodegenStamp(".").Sources
+	"./Compiler/Mlir/MlirTraits.strict" is in CodegenStamp(".").Sources
 	"./Compiler/NativeRuntime.mlir" is not in CodegenStamp(".").Sources
 	"./Compiler/CheckAudit.strict" is not in CodegenStamp(".").Sources
 	"./Bytecode/FileCheck.strict" is not in CodegenStamp(".").Sources

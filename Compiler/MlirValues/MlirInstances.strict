@@ -6,6 +6,11 @@ constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1)
 constant Loggers = (MemberEntry.LoggerMember, MemberEntry("plain", "Logger", List(InstructionEntry), false), MemberEntry("count", "Number", List(InstructionEntry), false))
 constant Shapes = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry), "None", (InstructionEntry.LoadNumber(0, 3), Built, Width)))
 constant MemberBase = 100000
+constant Counted = MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
+constant Ordered = TypeEntry(MlirTraits.Mock, Name = "Strict/A/Ordered", members = List(MemberEntry) + Counted + MlirTraits.Held.First)
+constant Mocking = MlirFunction((MlirTraits.Checker, MlirTraits.Mock), MlirTraits.Mock, MethodEntry.CountingLoop)
+constant Mocked = InstructionEntry.Invoke(1, ("Strict/A/MockCheck", "from", "Strict/A/MockCheck"), List(Number), -1)
+constant Ordering = MlirFunction((MlirTraits.Checker, Ordered), Ordered, MethodEntry.CountingLoop)
 constant Looping = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
 constant Outer = TypeEntry("Strict/Outer", (MemberEntry("shape", "Strict/Shape", List(InstructionEntry), false), MemberEntry("size", "Strict/Number", List(InstructionEntry), false)), List(MethodEntry))
 constant Widened = MlirFunction(List(TypeEntry) + MlirFunction.Shape, MlirFunction.Shape, MethodEntry("Run", List(MemberEntry) + MemberEntry("width", "Strict/Number", List(InstructionEntry), false), "None", List(InstructionEntry)))
@@ -24,9 +29,16 @@ Store(owner TypeEntry) List(MemberEntry)
 	MlirInstances(Nesting, 1).MemberValue(Built, Outer, Outer.members(1), 1)(0).IndexOf("%t1op[1]") > 0
 	MlirInstances(Shapes, 0).Store(MlirFunction.Shape).Length is 1
 	MlirInstances(Shapes, 0).Store(TypeEntry("Strict/Logged", Loggers, List(MethodEntry))).Length is 1
+	MlirInstances(Ordering, 0).Store(Ordered).First.Name is "checker"
+	traits = MlirTraits(function.types)
+	mutable first = List(Mutable(MemberEntry))
+	mutable rest = List(Mutable(MemberEntry))
 	for owner.members
-		if value.IsStored
-			value
+		if value.IsStored and traits.IsSlot(owner, value)
+			first.Add(value)
+		else if value.IsStored
+			rest.Add(value)
+	first + rest
 IsSeed(name Text) Boolean
 	MlirInstances(Shapes, 0).IsSeed("width")
 	MlirInstances(Shapes, 0).IsSeed("value") is false
@@ -58,15 +70,20 @@ Construct(entry InstructionEntry, typeName Text) Texts
 Wrap(entry InstructionEntry) Texts
 	MlirInstances(Shapes, 1).Wrap(Built).Length > 0
 	MlirInstances(Shapes, 1).Wrap(Unfilled).Length is 2
+	MlirInstances(Mocking, 1).Wrap(Mocked).First.EndsWith("2.0 : f64")
 	arguments = PayloadDecoder(entry).Arguments
 	if arguments.Length > 0
 		return function.Copy("%r" + arguments.First, "%r" + entry.payload(0), Temp("o"))
 	zero = Temp("o")
-	("    " + zero + " = arith.constant 0.0 : " + function.Float, function.Store(zero, "%r" + entry.payload(0)))
+	owner = function.TypeOf(PayloadDecoder(entry).Text(1))
+	isKind = owner.members.Length is 1 then MlirTraits(function.types).IsSlot(owner, owner.members.First) else false
+	value = isKind then MlirTraits(function.types).Id(owner.Name) + ".0" else "0.0"
+	("    " + zero + " = arith.constant " + value + " : " + function.Float, function.Store(zero, "%r" + entry.payload(0)))
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
 	arguments = PayloadDecoder(entry).Arguments
-	chosen = MlirOwned(function, position).Argument(entry, member, slot)
+	isKind = MlirTraits(function.types).IsSlot(owner, member)
+	chosen = isKind then -1 else MlirOwned(function, position).Argument(entry, member, slot)
 	offset = MlirEmbedded(function).Offset(owner, member.Name)
 	target = MlirMemory(function, position).Slot(Temp("op"), offset, "s" + slot)
 	if chosen >= 0
@@ -77,6 +94,9 @@ MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Nu
 	List(Text) + target + Default(owner, member, Temp("s" + slot), "d" + slot) + written
 Default(owner TypeEntry, member MemberEntry, slot Text, suffix Text) Texts
 	MlirInstances(Shapes, 1).Default(MlirFunction.Shape, MlirFunction.Shape.members.First, "%s", "d0").Length is 2
+	MlirInstances(Ordering, 1).Default(Ordered, Ordered.members(1), "%s", "d0").First.EndsWith("2.0 : f64")
+	if MlirTraits(function.types).IsSlot(owner, member)
+		return MlirTraits(function.types).Kind(owner, slot, Temp(suffix))
 	named = MlirDefaults(function).Name(owner, member)
 	initial = Natives(function.types).Initial(member)
 	if MlirFlats(function, position).Kind(member.typeName) is not ""

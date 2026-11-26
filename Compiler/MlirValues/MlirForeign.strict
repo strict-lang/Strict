@@ -50,6 +50,8 @@ Declaration Texts
 	MlirForeign(Adder).Declaration.First is "  func.func private @Adder_Add(f64, f64, f64) -> f64"
 	MlirForeign(Adder).Declaration.Index("  func.func private @Adder_Add_foreign(" + Adding + ") -> f64 {") is 1
 	MlirForeign(Doubler).Declaration.Length is 7
+	if MlirTraits(function.types).Implementers(function).Length > 0
+		return MlirTraits(function.types).Dispatch(function)
 	types = Text.Combine(MlirCalls(function, 0).ArgumentTypes(function.Parameters.Length), ", ")
 	header = "  func.func private @" + Wrapper + "(" + Parameters + ") -> f64 {"
 	call = "    %result = func.call @" + Symbol + "(" + Arguments + ") : (" + types + ") -> f64"
