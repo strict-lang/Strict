@@ -142,5 +142,5 @@ Save(source Text, target Text, suffix Text) Texts
 	Exacting.Save("%r9", "%m", "n").Last is "    llvm.store %t11gnx_q, %m_q : i64, !llvm.ptr"
 	Remembering.Save("%r9", "%groupMemo", "n").First is "    %t11gn = llvm.load %r9 : !llvm.ptr -> f64"
 	exact = MlirExact(function, position)
-	moved = (function.Load(Temp(suffix), source), function.Store(Temp(suffix), target))
+	moved = (function.Load(Temp(suffix), source), MlirTyped(function.Float).Store(Temp(suffix), target))
 	moved + exact.LoadExact(Temp(suffix + "x"), source) + exact.Set(Temp(suffix + "x_e"), Temp(suffix + "x_q"), target)

@@ -19,10 +19,7 @@ constant RowedRead = ("    llvm.store %d4w#0, %r2_d : !llvm.ptr, !llvm.ptr", "  
 constant RowedCount = ("    %d4c = arith.select %d4o, %d4n, %d4z : i64", "    llvm.store %d4c, %r2_n : i64, !llvm.ptr", "    cf.cond_br %d4o, ^d4done, ^d4fail")
 constant Rowed = RowedLoad + RowedCall + RowedBounds + RowedRead + RowedCount + MlirDeviceRecords.IndexedFailure + "  ^d4done:"
 constant CountLoad = ("    %d1n = llvm.load %r0_n : !llvm.ptr -> i64", "    %d1 = arith.sitofp %d1n : i64 to f32")
-constant CountStore = "    llvm.store %d1, %r1 : f32, !llvm.ptr\n    %d1_r1i = llvm.call_intrinsic \"llvm.fptosi.sat.i32.f32\"(%d1) : (f32) -> i32\n"
-constant CountExactness = "    %d1_r1w = arith.sitofp %d1_r1i : i32 to f32\n    %d1_r1s = arith.cmpf oeq, %d1_r1w, %d1 : f32\n    %d1_r1_e = arith.extsi %d1_r1i : i32 to i64\n"
-constant CountExactStore = "    %d1_r1_q = arith.extui %d1_r1s : i1 to i64\n    llvm.store %d1_r1_e, %r1_e : i64, !llvm.ptr\n    llvm.store %d1_r1_q, %r1_q : i64, !llvm.ptr"
-constant Counting = CountLoad + (CountStore + CountExactness + CountExactStore, "    llvm.store %d1n, %r1_e : i64, !llvm.ptr", "    llvm.store %one, %r1_q : i64, !llvm.ptr")
+constant Counting = CountLoad + ("    llvm.store %d1, %r1 : f32, !llvm.ptr", "    llvm.store %d1n, %r1_e : i64, !llvm.ptr", "    llvm.store %one, %r1_q : i64, !llvm.ptr")
 IsRows(kind Text) Boolean
 	MlirDeviceRows(Picking, 4).IsRows("List(Numbers)")
 	MlirDeviceRows(Picking, 4).IsRows("Numbers") is false
@@ -65,7 +62,7 @@ Call(entry InstructionEntry) Texts
 	count = MlirDeviceRecords(function, at).EmitCount("%r" + instance + "_n", MlirKinds(function).KindOf(at, instance))
 	converted = "    " + Temp("") + " = arith.sitofp " + Temp("n") + " : i64 to " + function.Float
 	exact = MlirExact(function, at).Set(Temp("n"), "%one", "%r" + entry.payload(0))
-	(count + converted + function.Store(Temp(""), "%r" + entry.payload(0))) + exact
+	(count + converted + MlirTyped(function.Float).Store(Temp(""), "%r" + entry.payload(0))) + exact
 Temp(suffix Text) Text
 	MlirDeviceRows(Picking, 4).Temp("w") is "%d4w"
 	"%d" + at + suffix

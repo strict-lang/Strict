@@ -128,7 +128,8 @@ Entry Texts
 	"    llvm.store %m0, %v_heads : f64, !llvm.ptr" is in MlirDevice(MlirDeviceMembers.Head, 0).Entry
 	calls = MlirDeviceCalls(function, 0, function)
 	exact = MlirExact(function, 0)
-	mutable lines = (List(Text) + function.Store("%p0", "%v_value")) + exact.Set("%p0_e", "%p0_q", "%v_value")
+	first = MlirTyped(function.Float).Store("%p0", "%v_value")
+	mutable lines = (List(Text) + first) + exact.Set("%p0_e", "%p0_q", "%v_value")
 	for function.method.parameters
 		number = "%p" + (index + 1)
 		stored = StoredParameter(number, "%v_" + value.Name, value.Name, exact)
@@ -137,7 +138,7 @@ Entry Texts
 StoredParameter(number Text, slot Text, name Text, exact MlirExact) Texts
 	Doubling.StoredParameter("%p0", "%v_value", "value", MlirExact(Doubling.function, 0)).Length is 1
 	denom = name is in function.Whole then "%one" else number + "_q"
-	(List(Text) + function.Store(number, slot)) + exact.Set(number + "_e", denom, slot)
+	(List(Text) + MlirTyped(function.Float).Store(number, slot)) + exact.Set(number + "_e", denom, slot)
 Indexed Texts
 	Doubling.Indexed.Last is "    cf.cond_br %inside, ^body, ^exit"
 	Doubling.Indexed.First is "    %thread = func.call @strict_device_thread_index() : () -> i32"
