@@ -3,7 +3,7 @@ constant NumberMethods = Scope(("Floor", "digits", "Rounded"), ("Number", "Numbe
 constant NumberParameters = Scope(("Floor", "Floor types", "digits", "digits types", "Rounded", "Rounded types", "Shift", "Shift"), ("", "", "", "", "bits", "Number", "steps", ""))
 constant Typed = IndexedValues(TypeInference(KnownTypes("Number", KnownTypes.NoMembers, NumberMethods, NumberParameters), KnownTypes.NoMembers))
 constant Named = Scope(("other", "others", "name", "done", "thing", "self type"), ("Number", "Numbers", "Text", "Boolean", "Xyz", "Number"))
-constant Indexes = ("other(0)", "other.Floor(1)", "done(0)", "Floor(1)", "others(0)", "name(0)", "other.digits(1)", "thing(0)", "Rounded(1)", "count(0)", "other.Floor", "other.Rounded(32)")
+constant Indexes = ("other(0)", "other.Floor(1)", "done(0)", "Floor(1)", "others(0)", "name(0)", "other.digits(1)", "thing(0)", "Rounded(1)", "count(0)", "other.Floor", "other.Rounded(32)", "others(name)", "others(other)")
 Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Typed.Issue(Parse(0), Named, NumberMethods) is "IndexedValueMustHaveElements: other(0) indexes a Number"
 	Typed.Issue(Parse(1), Named, NumberMethods) is "IndexedValueMustHaveElements: other.Floor(1) indexes a Number"
@@ -13,8 +13,20 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	(Typed.Issue(Parse(6), Named, NumberMethods) + Typed.Issue(Parse(7), Named, NumberMethods)) is ""
 	(Typed.Issue(Parse(8), Named, NumberMethods) + Typed.Issue(Parse(10), Named, NumberMethods)) is ""
 	Typed.Issue(Parse(11), Named, NumberMethods) is ""
+	Typed.Issue(Parse(12), Named, NumberMethods) is "IndexMustBeNumber: others(name) indexes Numbers with a Text"
+	Typed.Issue(Parse(13), Named, NumberMethods) is ""
 	type = IndexedType(node, scope, current)
-	type is in ("Number", "Boolean") then "IndexedValueMustHaveElements: " + node + " indexes a " + type else ""
+	isScalar = type is in ("Number", "Boolean")
+	isScalar then "IndexedValueMustHaveElements: " + node + " indexes a " + type else Index(node, type, scope, current)
+Index(node SyntaxNode, type Text, scope Scope, current Scope) Text
+	Typed.Index(Parse(12), "Numbers", Named, NumberMethods).EndsWith("with a Text")
+	Typed.Index(Parse(12), "Number", Named, NumberMethods) is ""
+	first = node.Kind is "MethodCall" then 1 else 0
+	if (type is "Text" or ListFits(inference.types).IsList(type)) is false or node.children.Length is not first + 1
+		return ""
+	argument = inference.TypeOf(node.children(first), scope, current)
+	isIndex = argument is in ("Number", "Byte", "Range", "Unknown", "")
+	isIndex then "" else "IndexMustBeNumber: " + node + " indexes " + type + " with a " + argument
 IndexedType(node SyntaxNode, scope Scope, current Scope) Text
 	Typed.IndexedType(Parse(0), Named, NumberMethods) is "Number"
 	Typed.IndexedType(Parse(9), Named, Scope(List(Text) + "count", List(Text) + "Number")) is "Number"

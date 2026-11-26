@@ -37,9 +37,9 @@ Emit(entry InstructionEntry) Texts
 EmitLength(entry InstructionEntry) Texts
 	Lengthening.EmitLength(MlirWholeChild.Lengths(4))(0) is "    %t4c = llvm.load %v_pixels_length : !llvm.ptr -> i64"
 	Lengthening.EmitLength(MlirWholeChild.Lengths(4))(1) is "    llvm.store %t4c, %r2 : i64, !llvm.ptr"
-	Lengthening.Emitted(MlirWholeChild.Lengths(4)) is Lengthening.EmitLength(MlirWholeChild.Lengths(4))
-	Mixed.Emitted(InstructionEntry.Invoke(1, ("Strict/Text", "Floor", "Strict/Number"), List(Number), 0)).Length is 0
-	Mixed.Emitted(InstructionEntry.Invoke(1, ("Strict/Number", "Round", "Strict/Number"), List(Number), 0)).Length is 0
+	Lengthening.Emit(MlirWholeChild.Lengths(4)) is Lengthening.EmitLength(MlirWholeChild.Lengths(4))
+	Mixed.Emit(InstructionEntry.Invoke(1, ("Strict/Text", "Floor", "Strict/Number"), List(Number), 0)).Length is 0
+	Mixed.Emit(InstructionEntry.Invoke(1, ("Strict/Number", "Round", "Strict/Number"), List(Number), 0)).Length is 0
 	Floor.EmitLength(MlirWholeTypes.Halves(3)).Length is 0
 	listed = MlirWholeTypes(statements.function).Length(statements.position)
 	if listed is ""
@@ -75,7 +75,7 @@ Build(entry InstructionEntry) Texts
 	Sizing.Read(MlirWholeInstance.Sizing.instructions(1)) is Sizing.Member(MlirWholeInstance.Sizing.instructions(1))
 	Sizing.Member(MlirWholeInstance.Sizing.instructions(1))(1) is "    llvm.store %t1c, %r1p : !llvm.ptr, !llvm.ptr"
 	Sizing.Member(MlirWholeInstance.Sizing.instructions(1))(0).StartsWith("    %t1c = ")
-	Mixed.Emitted(Flooring) is Mixed.EmitFloor(Flooring)
+	Mixed.Emit(Flooring) is Mixed.EmitFloor(Flooring)
 	Mixed.EmitFloor(Flooring)(3) is "    llvm.store %t0c, %r0i : i64, !llvm.ptr"
 	MlirWholeNative(Painting).Build(MlirLanes.Made).Last is "    llvm.store %t3o2, %r3 : i64, !llvm.ptr"
 	typeName = PayloadDecoder(entry).Text(1)
@@ -83,7 +83,7 @@ Build(entry InstructionEntry) Texts
 		return Copy(entry)
 	MlirLanes(statements.function, statements.position).IsPacked(typeName) then Pack(entry, typeName) else List(Text)
 Pack(entry InstructionEntry, typeName Text) Texts
-	Mixed.Emitted(InstructionEntry.Invoke(1, ("Strict/Number", "Validated", "Strict/Number"), List(Number), 0)).Length is 3
+	Mixed.Emit(InstructionEntry.Invoke(1, ("Strict/Number", "Validated", "Strict/Number"), List(Number), 0)).Length is 3
 	MlirWholeNative(Painting).Pack(MlirLanes.Made, "Rgb")(1) is "    %t3z0 = arith.constant 0 : i64"
 	members = MlirLanes(statements.function, statements.position).Members(typeName)
 	values = MlirWholeValues(statements.position)
