@@ -16,16 +16,12 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - VM calls dominate game logic (a member read through a method like `Vector2.X` is two calls): DeltaEngine's multi-tick simulation and content loading tests are Slow for it. `position + Vector2(1, 2) * 0.75` costs about 20 us (nsys 2026-11-26): `Rounding.Build` 21 % (prototype list copy 4 %, X and Y through `Number.Rounded`'s logarithms 3 %), `Machine.Bound` 19 % (dropped 2026-11-26: writing serial collecting loops by index passed the fixpoint, but `strict_list_filled` at the exit costs what the pushes did, `Machine.Bound` 18.8 % before and after in nsys).
 
 ## Compiled CPU loops, lists and texts
-- Serial loops still generic (`strict_hoisted_read`/`strict_list_read`, `strict_is_failure`, `strict_list_push`): gathers `table(value)`, calls that can fail or read lists (`MersenneTwister.Normals`), one thread of a parallel chunk, and raw `Tempered` calls (f64 body has two remainders, no whole-number version used).
 - Texts: a substring of a plain text under 256 bytes is copied (Substring, a trimmed or cut text that is no span), Upper and Lower always copy.
 - Matrix and vector speed: the VM calculates in f64, accessors (`point.X`) are not counted as 32 bit values, `Axis(n).Y` still allocates its Vector3, and a block is only reused when the local is alone.
 - Whole-number call guards give up (f64 version runs) when a variable read after an `if` or loop that stores it is used in `+`, `-` or `*`: a maximum over the possible stores would keep the i64 path.
-- ParticleStress at 1 million particles (4.8-5.5 ms per tick): 32 bit members (72 -> 44 bytes per particle) and writing in place over the list being read.
-- Generated CPU loops still per element: reads of non-hoisted lists (`strict_list_read`), checks on instances, chunks with inner loops, serial loops, and f64 numbers and indices.
-- Reading a packed list through `strict_list_items` (chunks without inner loops over Float8, byte, lane or quantized lists, quantized formats read by index, Float8 and quantized arguments of native library calls) replaces it with an f64 copy for good (`strict_list_unpacked`).
+- ParticleStress at 1 million particles (9.4-10.2 ms per tick with the machine 43 % busy, 2026-11-26; 4.8-5.5 ms quiet): allocating and freeing the new particle list each tick is a quarter of the time in nsys (`strict_gc_small` 12 %, `strict_rc_dead` 8 %, `strict_gc_park` 6 %), `Particle.Advanced` 21 % self. 32 bit members (72 -> 44 bytes per particle) and writing in place over the list being read would cut it.
 
 ## Collector
 - Realtime frames: mark incrementally over several frame ends when a full collection takes longer than a few ms.
-- `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
 ## GPU
