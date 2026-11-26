@@ -7,6 +7,7 @@ has selection Text = ""
 has isRecursive Boolean = true
 has isReleased Boolean = false
 has isFast Boolean = false
+has isEdited Boolean = false
 has gated List(TypeEntry) = List(TypeEntry)
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
@@ -105,7 +106,7 @@ Rebuilt(base Text, mlir Text, tools Toolchain) Text slow
 	missing = tools.Missing(tools.isWeb then Toolchain.Needed + "emcc" else Toolchain.Needed)
 	if missing.Length > 0
 		return tools.Installing(missing)
-	tuned = Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native", isReleased = isReleased)
+	tuned = Toolchain(tools, cpu = isReleased then "x86-64-v3" else "native", isReleased = isReleased, isEdited = isEdited)
 	if IsUnchanged(base, mlir, tuned)
 		return "Built " + tuned.Executable(base) + ", unchanged"
 	File(base + ".mlir").Write(mlir)

@@ -120,13 +120,16 @@ Configure(options Texts, path = "") NativeBuild
 	NativeCompiler.Configure(("linux", "web")).isCrossing is false
 	NativeCompiler.Configure(List(Text) + "windows").isReleased
 	NativeCompiler.Configure(List(Text) + "fast").isFast
+	NativeCompiler.Configure(("web", "edit")).isEdited
 	NativeCompiler.Configure(List(Text), "./Strict.strict").isReleased
 	isWeb = "web" is in options
 	isCrossing = "linux" is in options and isWeb is false
 	configured = NativeBuild(isCrossing, isWeb, "android" is in options, "ios" is in options)
 	isFast = "fast" is in options
 	isReleased = "windows" is in options or Path(path).FileName.text is "Strict.strict"
-	NativeBuild(configured, isSimulator = "simulator" is in options, isReleased = isReleased, isFast = isFast)
+	isEdited = "edit" is in options
+	isSimulator = "simulator" is in options
+	NativeBuild(configured, isSimulator = isSimulator, isReleased = isReleased, isFast = isFast, isEdited = isEdited)
 Options(rest Texts) Texts
 	NativeCompiler.Options(("a.strict", ".", "linux")) is ("linux")
 	rest.Length > 2 then rest.Slice(2, rest.Length - 2) else List(Text)

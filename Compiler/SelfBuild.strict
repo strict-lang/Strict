@@ -9,7 +9,7 @@ constant CorePackages = CompilerPackages + ("Bytecode", "Bytecode/Binary", "Byte
 constant ExtraPackages = ("Math", "Binary", "Compression", "Regex", "Json", "Networking", "NeuralNetworks")
 constant DaemonCommands = ("coordinator", "serve", "linked", "status", "stop")
 constant InfoCommands = ("help", "--help", "version", "--version")
-constant BuildOptions = ("", "windows", "linux", "web", "android", "ios", "fast", "library", "full", "strict")
+constant BuildOptions = ("", "windows", "linux", "web", "edit", "android", "ios", "fast", "library", "full", "strict")
 Rebuilt(arguments Texts) Number slow
 	SelfBuild("Compiler/output/Missing", "Missing.exe").Rebuilt(List(Text) + "test") is Current
 	SelfBuild(".", "strict.exe").Rebuilt(List(Text) + "stop") is Current

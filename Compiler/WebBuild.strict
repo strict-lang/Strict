@@ -1,6 +1,7 @@
 has tools Toolchain
 constant Missing = WebBuild(Toolchain(Toolchain.OnWindows, isWeb = true))
-constant Options = " -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sSTACK_SIZE=16MB -sASYNCIFY -sASYNCIFY_STACK_SIZE=1048576 -sEXPORTED_RUNTIME_METHODS=callMain --closure 1 -g0 -Wl,--fatal-warnings -Wno-override-module"
+constant Editing = WebBuild(Toolchain(Toolchain.OnWindows, isWeb = true, isEdited = true))
+constant Options = " -sALLOW_MEMORY_GROWTH -sMAXIMUM_MEMORY=4GB -sINITIAL_MEMORY=64MB -sSTACK_SIZE=16MB -sASYNCIFY -sASYNCIFY_STACK_SIZE=1048576 -sEXPORTED_RUNTIME_METHODS=callMain -g0 -Wl,--fatal-warnings -Wno-override-module"
 constant Compiled = " -O1 -g0"
 constant OneCallerInlining = " --one-caller-inline-max-function-size=1000"
 constant Features = " --enable-bulk-memory --enable-sign-ext --enable-nontrapping-float-to-int --enable-mutable-globals"
@@ -20,11 +21,19 @@ Link(base Text, executable Text) Text
 	page = " --shell-file " + tools.Quote(Shell(base))
 	Release(base).Creat(Path(executable).PathOnly.text)
 	inputs = tools.PartObjects(base + ".web") + sources + Mirror(folder, base) + Script(base) + page + Runtime
-	output = " -o " + tools.Quote(executable) + Options + ThinLink(base) + " -O1"
+	output = " -o " + tools.Quote(executable) + Options + Closure + ThinLink(base) + " -O1"
 	linked = ToolRunner(tools.Locate("emcc")).Execute(inputs + output)
 	linked.HasFailed then "emcc failed: " + linked.error else Optimize(executable)
+Closure Text
+	Missing.Closure is " --closure 1"
+	Editing.Closure is ""
+	tools.isEdited then "" else " --closure 1"
+Level Text
+	Missing.Level is Toolchain.Optimization
+	Editing.Level is " -O1"
+	tools.isEdited then " -O1" else Toolchain.Optimization
 ThinLink(base Text) Text
-	Options.IndexOf("--closure 1") >= 0 and Options.IndexOf("--profiling-funcs") is -1
+	Options.IndexOf("--profiling-funcs") is -1
 	Missing.ThinLink("a").EndsWith(" -Wl,--thinlto-cache-dir=\"a.web.lto\"")
 	Missing.ThinLink("a").StartsWith(Thin)
 	Thin + " -Wl,--thinlto-cache-dir=" + tools.Quote(base + ".web.lto")
@@ -37,8 +46,7 @@ Compile(base Text) Text
 Optimize(executable Text) Text
 	Missing.Optimize("Compiler/output/missing.html").StartsWith("wasm-opt failed")
 	wasm = tools.Quote(executable.Replace(".html", ".wasm"))
-	optimizing = wasm + Toolchain.Optimization + Passes + " -o " + wasm
-	optimized = ToolRunner(tools.Locate("wasm-opt")).Execute(optimizing)
+	optimized = ToolRunner(tools.Locate("wasm-opt")).Execute(wasm + Level + Passes + " -o " + wasm)
 	optimized.HasFailed then "wasm-opt failed: " + optimized.error else Icone(executable)
 Icone(executable Text) Text
 	page = Text.Combine(File(executable).ReadLines, "\n")

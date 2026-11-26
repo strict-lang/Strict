@@ -72,6 +72,7 @@ strict build FractalZoomer web            build FractalZoomer.strict for a platf
 strict build Examples/Sum.strict windows  also the executable in Release/Windows (Release/<Platform> on other systems)
 strict build Examples/Sum.strict linux    also the Linux executable in Release/Linux (on Windows through WSL)
 strict build Examples/Sum.strict web      .html, .js and .wasm for the browser in Release/Web (Emscripten, installed when missing)
+strict build Examples/Sum.strict web edit faster web build to try an edit (wasm-opt -O1, no Closure, also for games), publish with web
 strict build Examples/Sum.strict android  arm64-v8a shared library and assets in Release/Android (Android NDK)
 strict build Examples/Sum.strict ios      arm64 iOS static archive and assets in Release/iOS (native packages need Xcode)
 strict build Examples/Sum.strict ios simulator  the same for the iOS Simulator of this Mac
