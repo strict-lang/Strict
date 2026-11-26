@@ -14,6 +14,7 @@ get(key Text) Json
 	Bones("loop") to Text is "true"
 	Bones("missing") to Text is ""
 	Json("[\"a\", 1]").get("a") to Text is ""
+	Json("{\"a\": 1, \"b\": [{\"c\": [{\"d\": [1")("b") to Text is "[{\"c\": [{\"d\": [1"
 	open = Skip(0)
 	parts = Parts(open)
 	for Range(0, text.StartsWith("{", open) then (parts.Length - 1) / 2 else 0)
@@ -102,7 +103,8 @@ Skip(position Number) Number
 	at
 Slice(start Number, finish Number) Json
 	Bones.Slice(11, 65).Elements.Length is 2
-	Json(text.Substring(start, finish - start))
+	Json("[1").Slice(0, 3) to Text is "[1"
+	Json(text.Substring(start, finish.Minimum(text.Length) - start))
 Unquote(start Number) Text
 	Escaped.Unquote(1) is "a\"b\ncA"
 	JsonText(text.Substring(start + 1, StringEnd(start) - start - 2)).Unescaped
