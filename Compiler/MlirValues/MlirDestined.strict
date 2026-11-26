@@ -153,7 +153,7 @@ Hand(entry InstructionEntry) Text
 	count = PayloadDecoder(entry).ArgumentCount
 	if MlirNatives(function, position).Helper(entry.texts(0), entry.texts(1), count) is in MlirNatives.Destining
 		return "strict_list_destine"
-	callees = MlirModule(function.types, "").Call(function, position)
+	callees = MlirReach(function.types).Call(function, position)
 	callees.Length > 0 then Destine(callees.First) else ""
 Destine(callee MlirFunction) Text
 	Caller.Destine(Made.function) is "strict_flat_destine"

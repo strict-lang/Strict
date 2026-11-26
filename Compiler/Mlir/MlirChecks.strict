@@ -154,7 +154,7 @@ IsFailing(callee MlirFunction, at Number, depth Number) Boolean
 		return MlirChecks(callee, at + 1).IsSafeRead is false
 	if entry.kind is not InstructionType.Invoke
 		return false
-	nested = MlirModule(callee.types, "").Call(callee, at)
+	nested = MlirReach(callee.types).Call(callee, at)
 	if nested.Length is 0
 		return IsNativeFailing(callee, at)
 	depth >= 3 or IsCalleeInfallible(nested.First, depth + 1) is false

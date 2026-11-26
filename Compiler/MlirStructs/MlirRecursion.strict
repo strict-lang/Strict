@@ -24,7 +24,7 @@ Edges List(Numbers)
 		return calls
 	symbols = Symbols(functions)
 	for functions
-		Indexes(MlirModule(value.types, "").Callees(value), symbols)
+		Indexes(MlirReach(value.types).Callees(value), symbols)
 Indexes(callees List(MlirFunction), symbols Texts) Numbers
 	Looping.Indexes(Looping.functions, ("Looped_Again_0", "Looped_Run_0")) is (1, 0)
 	for callees

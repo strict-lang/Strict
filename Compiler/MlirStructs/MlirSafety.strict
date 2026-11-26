@@ -48,7 +48,7 @@ IsDirect(function MlirFunction) Boolean
 	purity = MlirPurity(function, 0)
 	for function.method.instructions
 		isCall = value.kind is InstructionType.Invoke
-		callees = isCall then MlirModule(function.types, "").Call(function, index) else List(MlirFunction)
+		callees = isCall then MlirReach(function.types).Call(function, index) else List(MlirFunction)
 		if (isCall then purity.IsAllowed(function, index, callees) else purity.IsSafe(function, index, 1)) is false
 			return true
 	false

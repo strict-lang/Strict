@@ -1,0 +1,38 @@
+has types List(TypeEntry)
+has entries = 1
+constant Counting = MlirReach(MlirModule.Counters.types)
+Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers)) MlirRecursion
+	Counting.Reachable(MlirModule.Counters.Functions, MlirModule.Counters.Functions, List(Numbers)).functions.Length is 1
+	mutable symbols = MlirRecursion.Symbols(known)
+	mutable found = List(Mutable(MlirFunction))
+	mutable calls = List(Mutable(Numbers))
+	for Collect(fresh)
+		unseen = MlirUnseen(symbols).Of(value)
+		found = found + unseen
+		symbols = symbols + MlirRecursion.Symbols(unseen)
+		calls.Add(MlirRecursion.Indexes(value, symbols))
+	found.Length is 0 then MlirRecursion(known, entries, prior + calls) else Reachable(known + found, found, prior + calls)
+Collect(fresh List(MlirFunction)) List(List(MlirFunction))
+	Counting.Collect(MlirModule.Counters.Functions).First.Length is 0
+	for fresh
+		Callees(value)
+Callees(function MlirFunction) List(MlirFunction)
+	Counting.Callees(MlirModule.Counters.Functions.First).Length is 0
+	mutable callees = List(Mutable(MlirFunction))
+	for function.method.instructions
+		callees = callees + Call(function, index)
+	callees
+Call(function MlirFunction, position Number) List(MlirFunction)
+	Counting.Call(MlirModule.Counters.Functions.First, 0).Length is 0
+	MlirReach(List(TypeEntry) + MlirTexts.Joined.type).Call(MlirTexts.Joined, 2).Length is 0
+	entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke
+		return MlirAutomatic(function).Conversions(position)
+	decoder = PayloadDecoder(entry)
+	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
+		return List(MlirFunction)
+	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
+	callee = decoder.Callee(type)
+	called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
+	none = MlirModule.NoFunctions
+	callee.instructions.Length > 0 or MlirForeign(called).IsForeign then none + called else none

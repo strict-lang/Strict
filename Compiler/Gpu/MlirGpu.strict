@@ -168,7 +168,7 @@ Devices(inspected MlirFunction, first Number, limit Number, depth Number) List(M
 		entry = inspected.method.instructions(callAt)
 		isRounding = MlirDeviceCalls(inspected, callAt, inspected).IsRounding(entry)
 		if depth < 3 and entry.kind is InstructionType.Invoke and isRounding is false
-			for MlirModule(inspected.types, "").Call(inspected, callAt)
+			for MlirReach(inspected.types).Call(inspected, callAt)
 				sub = MlirCalleeGuards(inspected, callAt).WithWhole(value)
 				found = found + sub + Devices(sub, 0, sub.method.instructions.Length, depth + 1)
 	found

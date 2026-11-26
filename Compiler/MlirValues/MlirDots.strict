@@ -62,7 +62,7 @@ IsDottedCall(call Number, register Number) Boolean
 	decoder = PayloadDecoder(function.method.instructions(call))
 	if register is not in decoder.Arguments
 		return decoder.Instance is not register
-	callees = MlirModule(function.types, "").Call(function, call)
+	callees = MlirReach(function.types).Call(function, call)
 	if callees.Length is not 1 or decoder.Instance is register
 		return false
 	for decoder.Arguments

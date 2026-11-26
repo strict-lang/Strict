@@ -38,7 +38,7 @@ IsDevice(inspected MlirFunction, first Number, last Number, depth Number) Boolea
 	for Range(first, last)
 		if inspected.method.instructions(value).kind is InstructionType.LoopBegin and MlirGpuCheck(inspected, value).IsGpu
 			return true
-		callees = depth < 8 then MlirModule(inspected.types, "").Call(inspected, value) else List(MlirFunction)
+		callees = depth < 8 then MlirReach(inspected.types).Call(inspected, value) else List(MlirFunction)
 		if callees.Length > 0 and IsDevice(callees.First, 0, callees.First.method.instructions.Length, depth + 1)
 			return true
 	false
@@ -67,7 +67,7 @@ Call(inspected MlirFunction, at Number, depth Number) Number
 	Doubling.Call(Doubling.function, 4, 4) is Native
 	if TypeEntry.ShortName(PayloadDecoder(inspected.method.instructions(at)).Text(1)) is in External
 		return Outside
-	callees = MlirModule(inspected.types, "").Call(inspected, at)
+	callees = MlirReach(inspected.types).Call(inspected, at)
 	if callees.Length is 0
 		return Native
 	depth >= 4 then Native else 2 + Sum(callees.First, 0, callees.First.method.instructions.Length, depth + 1)

@@ -35,7 +35,7 @@ Own(inspected MlirFunction, at Number) List(MlirFunction)
 	entry = inspected.method.instructions(at)
 	if entry.kind is not InstructionType.Invoke or MlirDeviceCalls(inspected, at, inspected).Register(entry) >= 0
 		return List(MlirFunction)
-	callees = MlirModule(inspected.types, "").Call(inspected, at)
+	callees = MlirReach(inspected.types).Call(inspected, at)
 	callees.Length is 1 and callees.First.type.Name is inspected.type.Name then callees else List(MlirFunction)
 IsLoaded(inspected MlirFunction, name Text) Boolean
 	Heading.IsLoaded(Head, "heads")
@@ -53,7 +53,7 @@ IsMember(at Number, name Text) Boolean
 Passable(at Number) List(MlirFunction)
 	Heading.Passable(4).Length is 1
 	Heading.Passable(4).First.method.Name is "Head"
-	callees = MlirModule(function.types, "").Call(function, at)
+	callees = MlirReach(function.types).Call(function, at)
 	isOwn = MlirDeviceCalls(function, at, function).Register(function.method.instructions(at)) < 0
 	isPlain = callees.Length is not 1 or MlirDeviceMembers(callees.First).Names.Length is 0
 	isOwn or isPlain then callees else List(MlirFunction)
@@ -63,7 +63,7 @@ IsNativeCall(at Number) Boolean
 	isFrom = entry.texts(1) is "from"
 	isNumbered = MlirLayout(function).Represent(TypeEntry.ShortName(entry.texts(0))) is in MlirGpuCheck.Values
 	isRounding = MlirDeviceCalls(function, at, function).IsRounding(entry)
-	isOwn = isFrom and isRounding is false and MlirModule(function.types, "").Call(function, at).Length > 0
+	isOwn = isFrom and isRounding is false and MlirReach(function.types).Call(function, at).Length > 0
 	entry.texts(1) is in MlirDeviceCalls.Natives and (isFrom is false or isNumbered and isOwn is false)
 Calling(first Number, limit Number, known Texts) Texts
 	Heading.Calling(3, 7, List(Text)) is ("heads", "weights")

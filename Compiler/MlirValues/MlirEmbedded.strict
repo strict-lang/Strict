@@ -77,7 +77,7 @@ StackSlots(at Number) Number
 	entry = function.method.instructions(at)
 	if entry.kind is not InstructionType.Invoke or IsCopied(at, entry.payload(0)) is false
 		return 0
-	callees = MlirModule(function.types, "").Call(function, at)
+	callees = MlirReach(function.types).Call(function, at)
 	returned = callees.Length > 0 then callees.First.method.returnType else ""
 	isConsumed = callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(1) else false
 	isConsumed and IsNumbers(returned) then Slots(returned) else 0

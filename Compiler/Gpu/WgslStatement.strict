@@ -90,7 +90,7 @@ Call(entry InstructionEntry) Texts
 	register = MlirDeviceCalls(function, at, function).Register(entry)
 	if IsNative(entry)
 		return List(Text) + Native(entry, "r" + register)
-	callees = MlirModule(function.types, "").Call(function, at)
+	callees = MlirReach(function.types).Call(function, at)
 	if callees.Length is not 1 or entry.texts(1) is in MlirDeviceCalls.Natives
 		return List(Text) + ("unsupported: " + entry.texts(1))
 	called = WgslFunction(callees.First)

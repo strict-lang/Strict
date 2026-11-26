@@ -49,7 +49,7 @@ IsSource(at Number, register Number, depth Number) Boolean
 		return entry.texts(0) is function.method.returnType and MlirConstants(function, writer).IsConstant is false
 	if entry.texts(1) is "Validated"
 		return IsSource(writer, entry.payload.Last, depth)
-	callees = MlirModule(function.types, "").Call(function, writer)
+	callees = MlirReach(function.types).Call(function, writer)
 	callees.Length > 0 then MlirStructs(callees.First, 0).Consumes(depth + 1) else false
 Prologue Texts
 	Filler.Consumes(0) is false
@@ -94,7 +94,7 @@ Aim(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	Made.Aim(Calling, Making.instructions(2), List(Text) + "call") is ("call")
 	Text.Combine(MlirDestined(Filler.function, 1).Aim(Calling, List(Text) + "call")).IndexOf("_destine_element(") > 0
 	Text.Combine(MlirDestined(Forwarder.function, 1).Aim(Calling, List(Text) + "call")).IndexOf("struct_destine(") > 0
-	callees = MlirModule(function.types, "").Call(function, position)
+	callees = MlirReach(function.types).Call(function, position)
 	if callees.Length is 0 then true else MlirStructs(callees.First, 0).Consumes(1) is false
 		return MlirElements(function, position).Destine(entry, next, compiled)
 	if next.kind is InstructionType.Return and next.payload(0) is entry.payload(0) and Consumes(0)

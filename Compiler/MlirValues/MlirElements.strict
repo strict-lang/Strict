@@ -43,7 +43,7 @@ Index(text Text, temp Text) Text
 FlatResult Text
 	Moved.FlatResult is "Tripling"
 	MlirElements(Moved.function, 0).FlatResult is ""
-	callees = MlirModule(function.types, "").Call(function, position)
+	callees = MlirReach(function.types).Call(function, position)
 	isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
 	isFlat then TypeEntry.ShortName(callees.First.method.returnType) else ""
 IsStored(at Number, register Number) Boolean

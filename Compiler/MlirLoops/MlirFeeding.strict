@@ -109,7 +109,7 @@ IsPassed(position Number, register Number) Boolean
 	Passing.IsPassed(6, 2)
 	MlirFeeding(MlirParallel.Doubling.function, 4).IsPassed(4, 1) is false
 	entry = function.method.instructions(position)
-	callees = MlirModule(function.types, "").Call(function, position)
+	callees = MlirReach(function.types).Call(function, position)
 	if callees.Length is 0
 		return false
 	for PayloadDecoder(entry).Arguments

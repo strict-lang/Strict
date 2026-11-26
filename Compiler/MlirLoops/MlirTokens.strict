@@ -56,7 +56,7 @@ IsDotted(at Number) Boolean
 	Summing.IsRowDot(Overlong) is false
 	if function.method.instructions(at).kind is not InstructionType.Invoke
 		return false
-	callees = MlirModule(function.types, "").Call(function, at)
+	callees = MlirReach(function.types).Call(function, at)
 	callees.Length is 1 then IsRowDot(callees.First) else false
 IsRowDot(callee MlirFunction) Boolean
 	Summing.IsRowDot(MlirFunction(Summing.function.types, Tokens, Dotted))

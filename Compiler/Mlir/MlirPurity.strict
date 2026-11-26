@@ -112,7 +112,7 @@ IsPureCall(inspected MlirFunction, at Number, depth Number) Boolean
 	Reading.IsPureCall(Reading.function, 4, 0)
 	Doubling.IsPureCall(Making, 1, 0)
 	Doubling.IsPureCall(MlirFunction(Doubling.function, safeCalls = Dictionary(("Rows_Twice_1", 0))), 4, 0) is false
-	callees = MlirModule(inspected.types, "").Call(inspected, at)
+	callees = MlirReach(inspected.types).Call(inspected, at)
 	if IsAllowed(inspected, at, callees) is false
 		return false
 	callees.Length is 0 then IsIntrinsic(inspected, at) else IsKnown(callees.First, inspected, depth)
@@ -184,7 +184,7 @@ IsReachingGpu Boolean
 	MlirPurity(MlirCost.Devices.function, 2).IsReachingGpu
 	for Range(position + 1, function.method.LoopEndOf(position))
 		isCall = function.method.instructions(value).kind is InstructionType.Invoke
-		callees = isCall then MlirModule(function.types, "").Call(function, value) else List(MlirFunction)
+		callees = isCall then MlirReach(function.types).Call(function, value) else List(MlirFunction)
 		symbol = callees.Length > 0 then callees.First.Symbol else ""
 		if symbol is in function.safeCalls and function.safeCalls(symbol) is 2
 			return true

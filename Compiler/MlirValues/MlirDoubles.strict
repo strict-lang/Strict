@@ -27,7 +27,7 @@ Fails(inspected MlirFunction, first Number, limit Number, depth Number) Boolean
 		if entry.kind is InstructionType.Power or isLogarithm
 			return true
 		if depth < 3 and entry.kind is InstructionType.Invoke
-			for MlirModule(inspected.types, "").Call(inspected, value)
+			for MlirReach(inspected.types).Call(inspected, value)
 				if Fails(value, 0, value.method.instructions.Length, depth + 1)
 					return true
 	false

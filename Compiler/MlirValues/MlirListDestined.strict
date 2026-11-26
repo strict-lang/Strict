@@ -97,7 +97,7 @@ IsElement(entry InstructionEntry) Boolean
 	reads = LoadReuse(steps).InvokeReads(entry)
 	writer = reads.Length > 0 then MlirKinds(function).Writer(position, entry.payload(reads.Last)) else -1
 	isValue = writer >= 0 then Text.Combine(steps(writer).texts) is "value" else false
-	callees = MlirModule(function.types, "").Call(function, position)
+	callees = MlirReach(function.types).Call(function, position)
 	isFlat = callees.Length > 0 then MlirDestined(callees.First, 0).IsDestined else false
 	isValue and IsDestined and isFlat and IsKept(writer)
 IsKept(at Number) Boolean

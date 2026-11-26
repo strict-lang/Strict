@@ -85,7 +85,7 @@ Linked MlirRecursion slow
 	Started.Linked.calls.Length is 2
 	mains = Entries
 	roots = mains + Starts(mains)
-	Reachable(roots, roots, List(Numbers))
+	MlirReach(types, entries).Reachable(roots, roots, List(Numbers))
 Starts(mains List(MlirFunction)) List(MlirFunction)
 	Counters.Starts(Counters.Functions).Length is 0
 	Started.Starts(Started.Functions).First.Symbol is "Counter_$Start_0"
@@ -125,34 +125,3 @@ RunMethod(main TypeEntry) MethodEntry
 		if value.Name is entryName
 			return value
 	MethodEntry(entryName, List(MemberEntry), "None", List(InstructionEntry))
-Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers)) MlirRecursion
-	Counters.Reachable(Counters.Functions, Counters.Functions, List(Numbers)).functions.Length is 1
-	mutable symbols = MlirRecursion.Symbols(known)
-	mutable found = List(Mutable(MlirFunction))
-	mutable calls = List(Mutable(Numbers))
-	for fresh
-		called = Callees(value)
-		unseen = MlirUnseen(symbols).Of(called)
-		found = found + unseen
-		symbols = symbols + MlirRecursion.Symbols(unseen)
-		calls.Add(MlirRecursion.Indexes(called, symbols))
-	found.Length is 0 then MlirRecursion(known, entries, prior + calls) else Reachable(known + found, found, prior + calls)
-Callees(function MlirFunction) List(MlirFunction)
-	Counters.Callees(Counters.Functions.First).Length is 0
-	mutable callees = List(Mutable(MlirFunction))
-	for function.method.instructions
-		callees = callees + Call(function, index)
-	callees
-Call(function MlirFunction, position Number) List(MlirFunction)
-	Counters.Call(Counters.Functions.First, 0).Length is 0
-	MlirModule(List(TypeEntry) + MlirTexts.Joined.type, "Run").Call(MlirTexts.Joined, 2).Length is 0
-	entry = function.method.instructions(position)
-	if entry.kind is not InstructionType.Invoke
-		return MlirAutomatic(function).Conversions(position)
-	decoder = PayloadDecoder(entry)
-	if MlirCalls(function, position).NativeHelper(entry, decoder) is not ""
-		return List(MlirFunction)
-	type = MlirLayout(function).Owner(function.TypeOf(decoder.Text(1)), decoder.Text(2))
-	callee = decoder.Callee(type)
-	called = MlirFunction(types, type, callee, typeIndex = function.typeIndex)
-	callee.instructions.Length > 0 or MlirForeign(called).IsForeign then NoFunctions + called else NoFunctions

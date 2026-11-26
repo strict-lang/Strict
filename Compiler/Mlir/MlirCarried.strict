@@ -110,7 +110,7 @@ IsHeld(local Text, allowed Texts, depth Number) Boolean
 IsKeepingCall(at Number, allowed Texts, depth Number) Boolean
 	Carrying.IsKeepingCall(5, Kept, 0) and Leaking.IsKeepingCall(5, Kept, 0) is false
 	Carrying.IsKeepingCall(2, Kept, 0) is false
-	callees = MlirModule(function.types, "").Call(function, at)
+	callees = MlirReach(function.types).Call(function, at)
 	if callees.Length is 0 or depth > 6
 		return false
 	callee = MlirCarried(callees.First, false)
