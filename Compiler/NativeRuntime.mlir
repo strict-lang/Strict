@@ -4436,6 +4436,10 @@
     cf.br ^try
   ^lockedRefill:
     func.call @strict_gc_poll_due() : () -> ()
+    %laneHead = func.call @strict_rc_lane_head(%class) : (i64) -> !llvm.ptr
+    %recycled = func.call @strict_rc_take_from(%class, %laneHead) : (i64, !llvm.ptr) -> i1
+    cf.cond_br %recycled, ^try, ^busyRefill
+  ^busyRefill:
     func.call @strict_gc_refill_busy(%class) : (i64) -> ()
     cf.br ^try
   }
@@ -7230,7 +7234,10 @@
     cf.cond_br %enabled, ^checked, ^done
   ^checked:
     %busy = func.call @strict_rc_busy() : () -> i1
-    cf.cond_br %busy, ^done, ^dying
+    cf.cond_br %busy, ^job, ^dying
+  ^job:
+    func.call @strict_rc_dead_job(%old, %new) : (f64, f64) -> ()
+    return
   ^dying:
     %oldPointer = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
     %object = llvm.ptrtoint %oldPointer : !llvm.ptr to i64
@@ -7575,6 +7582,77 @@
     llvm.store %object, %headSlot : i64, !llvm.ptr
     return
   }
+  // inside a pool job nothing is counted, but a lane may free what it made in this job itself (strict_gc_mine: no
+  // other thread had it before) when no heap slot took it since (not pinned, no count) and the dying local was its
+  // only holder: the cleared block is the lane's next allocation when it was its last one, else it waits in the
+  // lane's own list of its class, which a refill takes before a new span; a collection clears the lists
+  llvm.mlir.global internal @strict_rc_lane_recycled(dense<0> : tensor<32768xi64>) : !llvm.array<32768 x i64>
+  func.func private @strict_rc_lane_head(%class: i64) -> !llvm.ptr attributes {llvm.passthrough = ["alwaysinline"]} {
+    %lane = func.call @strict_gc_lane_index() : () -> i64
+    %classCount = arith.constant 64 : i64
+    %row = arith.muli %lane, %classCount : i64
+    %entry = arith.addi %row, %class : i64
+    %lists = llvm.mlir.addressof @strict_rc_lane_recycled : !llvm.ptr
+    %headSlot = llvm.getelementptr %lists[%entry] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    return %headSlot : !llvm.ptr
+  }
+  func.func private @strict_rc_dead_job(%old: f64, %new: f64) {
+    %none = arith.constant 0 : i64
+    %noFlags = arith.constant 0 : i16
+    %pointer = func.call @strict_ptr(%old) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %pointer : !llvm.ptr to i64
+    %mine = func.call @strict_gc_mine(%object) : (i64) -> i1
+    cf.cond_br %mine, ^lone, ^done
+  ^lone:
+    %onlyHost = arith.constant false
+    %unshared = func.call @strict_rc_lone(%old, %onlyHost) : (f64, i1) -> i1
+    cf.cond_br %unshared, ^block, ^done
+  ^block:
+    %newPointer = func.call @strict_ptr(%new) : (f64) -> !llvm.ptr
+    %kept = llvm.ptrtoint %newPointer : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %end = arith.addi %object, %located#2 : i64
+    %inside = func.call @strict_gc_within(%kept, %object, %end) : (i64, i64, i64) -> i1
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags : !llvm.ptr -> i16
+    %holdsFlag = arith.constant 4 : i16
+    %held = arith.andi %flagByte, %holdsFlag : i16
+    %holds = arith.cmpi ne, %held, %noFlags : i16
+    %pageMask = arith.constant -65536 : i64
+    %page = arith.andi %object, %pageMask : i64
+    %pagePointer = llvm.inttoptr %page : i64 to !llvm.ptr
+    %pendingSlot = llvm.getelementptr %pagePointer[7] : (!llvm.ptr) -> !llvm.ptr, i64
+    %pending = llvm.load %pendingSlot : !llvm.ptr -> i64
+    %isPending = arith.cmpi ne, %pending, %none : i64
+    %used = arith.ori %inside, %holds : i1
+    %left = arith.ori %used, %isPending : i1
+    cf.cond_br %left, ^done, ^free
+  ^free:
+    %clear = arith.constant 0 : i32
+    %wiped = llvm.call @memset(%pointer, %clear, %located#2) : (!llvm.ptr, i32, i64) -> !llvm.ptr
+    llvm.store %noFlags, %flags : i16, !llvm.ptr
+    %classSlot = llvm.getelementptr %pagePointer[4] : (!llvm.ptr) -> !llvm.ptr, i64
+    %class = llvm.load %classSlot : !llvm.ptr -> i64
+    %cursorSlot = func.call @strict_gc_lane_slot(%class) : (i64) -> !llvm.ptr
+    %cursor = llvm.load %cursorSlot : !llvm.ptr -> i64
+    %isLast = arith.cmpi eq, %cursor, %end : i64
+    cf.cond_br %isLast, ^back, ^listed
+  ^back:
+    llvm.store %object, %cursorSlot : i64, !llvm.ptr
+    return
+  ^listed:
+    %freeMarker = arith.constant -1 : i64
+    %markerSlot = llvm.getelementptr %pointer[1] : (!llvm.ptr) -> !llvm.ptr, i64
+    llvm.store %freeMarker, %markerSlot : i64, !llvm.ptr
+    %headSlot = func.call @strict_rc_lane_head(%class) : (i64) -> !llvm.ptr
+    %head = llvm.load %headSlot : !llvm.ptr -> i64
+    %link = func.call @strict_gc_link(%head) : (i64) -> i64
+    llvm.store %link, %pointer : i64, !llvm.ptr
+    llvm.store %object, %headSlot : i64, !llvm.ptr
+    return
+  ^done:
+    return
+  }
   // the references of a freed object give back their counts, a count reaching zero puts its object into the table
   func.func private @strict_rc_release(%object: i64, %size: i64) {
     %zero = arith.constant 0 : i64
@@ -7689,15 +7767,23 @@
     %next = arith.addi %class, %one : i64
     cf.br ^loop(%next : i64)
   ^done:
+    %lists = llvm.mlir.addressof @strict_rc_lane_recycled : !llvm.ptr
+    %noByte = arith.constant 0 : i32
+    %listBytes = arith.constant 262144 : i64
+    %cleared = llvm.call @memset(%lists, %noByte, %listBytes) : (!llvm.ptr, i32, i64) -> !llvm.ptr
     return
   }
   // the allocator takes a recycled block of the class first: it becomes the whole span, its count and link are reset
   func.func private @strict_rc_take(%class: i64) -> i1 {
+    %recycled = llvm.mlir.addressof @strict_rc_recycled : !llvm.ptr
+    %headSlot = llvm.getelementptr %recycled[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
+    %taken = func.call @strict_rc_take_from(%class, %headSlot) : (i64, !llvm.ptr) -> i1
+    return %taken : i1
+  }
+  func.func private @strict_rc_take_from(%class: i64, %headSlot: !llvm.ptr) -> i1 {
     %zero = arith.constant 0 : i64
     %true = arith.constant true
     %false = arith.constant false
-    %recycled = llvm.mlir.addressof @strict_rc_recycled : !llvm.ptr
-    %headSlot = llvm.getelementptr %recycled[0, %class] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.array<64 x i64>
     %head = llvm.load %headSlot : !llvm.ptr -> i64
     %hasRecycled = arith.cmpi ne, %head, %zero : i64
     cf.cond_br %hasRecycled, ^take, ^none

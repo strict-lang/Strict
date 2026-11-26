@@ -1,0 +1,51 @@
+has pair RecycledPair
+constant RoundCount = 256
+constant RoundLength = 250000
+constant Expected = RoundCount * RoundLength * (RoundLength - 1) / 2
+constant Pair = ParallelRecycled(RecycledPair(0, 1))
+Dying(count Number) Numbers
+	Pair.Dying(3) is (3, 4, 5)
+	Pair.Dying(1000).Sum is 1000 * 999 / 2 + 3000
+	for count
+		RecycledPair(index, pair.second).Advanced(2).first + pair.second
+Keep(count Number) List(RecycledPair)
+	Pair.Keep(1000)(0) is RecycledPair(2, 1, 2)
+	Pair.Keep(1000)(999) is RecycledPair(1001, 1, 2)
+	for count
+		RecycledPair(index, pair.second).Advanced(2)
+Totals(kept List(RecycledPair)) Numbers
+	Pair.Totals(Pair.Keep(1000)).Sum is 1000 * 999 / 2 + 3000
+	for kept
+		value.first + value.Third - value.second
+Interleave(count Number) Numbers
+	Pair.Interleave(3) is (4, 7, 10)
+	Pair.Interleave(1000).Sum is 3 * 1000 * 999 / 2 + 4000
+	for count
+		early = RecycledPair(index, pair.second).Advanced(1)
+		late = RecycledPair(index, 2).Advanced(early.first)
+		early.Advanced(late.second).first + late.first
+Alias(count Number) Numbers
+	Pair.Alias(3) is (3, 5, 7)
+	Pair.Alias(1000).Sum is 1000 * 999 + 3000
+	for count
+		mutable current = RecycledPair(index, pair.second).Advanced(1)
+		held = current
+		current = current.Advanced(1)
+		held.first + current.first
+Round(count Number) Number
+	Pair.Round(4) is 6
+	mutable sum = 0
+	for count
+		sum = sum + pair.Advanced(index).first
+	sum
+Rounds(rounds Number, count Number) Numbers
+	Pair.Rounds(2, 4) is (6, 6)
+	for rounds
+		Round(count)
+Grown Number slow
+	Pair.Grown < 12000000
+	before = Process.MemoryUsed
+	Rounds(RoundCount, RoundLength).Sum is Expected then Process.MemoryUsed - before else 1000000000000
+Stress(count Number) Number slow
+	Pair.Stress(2000000) is 3.5 * 2000000 * 1999999 + 26000000
+	Dying(count).Sum + Totals(Keep(count)).Sum + Interleave(count).Sum + Alias(count).Sum
