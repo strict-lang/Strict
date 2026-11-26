@@ -119,21 +119,28 @@ Inputs(base Text) Text
 		return Quote(base + ".ll")
 	parts = PartObjects(base)
 	cache = " -Xlinker " + Quote("/lldltocache:" + base + ".lto") + " -Wl,/lldltocachepolicy:" + LtoCachePolicy
-	parts + Thin.Replace("native", cpu) + Importing(base) + cache + " -Wno-unused-command-line-argument"
+	linked = IsThin then Thin.Replace("native", cpu) + Importing(base) + cache else Direct
+	parts + linked + " -Wno-unused-command-line-argument"
 Importing(base Text) Text
 	OnWindows.Importing("a/obj/Tests.test") is NoImports
 	OnWindows.Importing("a/obj/Sum") is Edited
 	Toolchain(OnWindows, isReleased = true).Importing("a/obj/Sum") is ""
 	base.EndsWith(".test") then NoImports else isReleased then "" else Edited
 Bitcode(part Text) Text
-	OnWindows.Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\" -march=")
+	OnWindows.Bitcode("p").StartsWith("-c -x ir \"p\" -o \"p.o\" -march=")
+	Toolchain(OnWindows, isReleased = true).Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\" -march=")
+	Toolchain(OnLinux, isEdited = true).Bitcode("p").StartsWith("-c -flto=thin -x ir")
 	Toolchain(Platform.Windows, ".", cpu = "skylake").Bitcode("p").IndexOf("-march=skylake") > 0
 	Toolchain(Platform.Windows, ".", target = " --target=x").Bitcode("p").IndexOf(" --target=x -march=") > 0
 	Toolchain(OnWindows, isWeb = true).Bitcode("p").StartsWith("-c -flto=thin -x ir \"p\" -o \"p.o\"" + WebBuild.Target)
 	Toolchain(OnWindows, isWeb = true).Bitcode("p").EndsWith(WebBuild.Lowering + Optimization)
 	native = target + Optimized.Replace("native", cpu)
 	flags = isWeb then WebBuild.Target + WebBuild.Lowering + Optimization else native
-	"-c -flto=thin -x ir " + Quote(part) + " -o " + Quote(part + ".o") + flags
+	"-c " + (IsThin then "-flto=thin " else "") + "-x ir " + Quote(part) + " -o " + Quote(part + ".o") + flags
+IsThin Boolean
+	OnLinux.IsThin and Toolchain(OnWindows, isReleased = true).IsThin and Toolchain(OnWindows, isWeb = true).IsThin
+	OnWindows.IsThin is false
+	isReleased or isWeb or platform is not Platform.Windows
 PartsCompiled(base Text) Boolean
 	PtxCache("Compiler/output/Broken-0").Save("", "not llvm") is not Error
 	OnWindows.PartsCompiled("Compiler/output/Broken") is false
@@ -154,13 +161,6 @@ PartObjects(base Text) Text
 		if File(base + "-" + value + ".o").Exists
 			parts = parts + " " + Quote(base + "-" + value + ".o")
 	parts
-WslPath(path Text) Text
-	OnWindows.WslPath("C:/code/A") is "/mnt/c/code/A"
-	OnWindows.WslPath("D:\\B\\c") is "/mnt/d/B/c"
-	OnWindows.WslPath("./Examples/Sum") is "./Examples/Sum"
-	OnWindows.WslPath("") is ""
-	slashed = path.Replace("\\", "/")
-	slashed.IndexOf(":") is 1 then "/mnt/" + slashed(0).Lower + slashed.Substring(2) else slashed
 Lower(base Text, kept = "", parts = 1) Text
 	OnWindows.Lower("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if parts > 1 and File(base + ".mlir").Exists

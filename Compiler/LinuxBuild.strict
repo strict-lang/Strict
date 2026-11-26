@@ -22,3 +22,10 @@ Relocatable(base Text) Text
 	cache = " --thinlto-cache-dir=" + tools.Quote(base + ".lto") + policy
 	options = "-r -m elf_x86_64 --lto-O3 --thinlto-jobs=all -mllvm -mcpu=" + tools.cpu + Sections + cache
 	options + tools.PartObjects(base) + " -o " + tools.Quote(base + ".o")
+WslPath(path Text) Text
+	LinuxBuild.WslPath("C:/code/A") is "/mnt/c/code/A"
+	LinuxBuild.WslPath("D:\\B\\c") is "/mnt/d/B/c"
+	LinuxBuild.WslPath("./Examples/Sum") is "./Examples/Sum"
+	LinuxBuild.WslPath("") is ""
+	slashed = path.Replace("\\", "/")
+	slashed.IndexOf(":") is 1 then "/mnt/" + slashed(0).Lower + slashed.Substring(2) else slashed

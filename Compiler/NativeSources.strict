@@ -136,13 +136,13 @@ Reuse(resource Text, icon Text) Text
 LinuxLink(base Text, program Text, root Text) Text
 	Adding.LinuxLink("Compiler/output/missing", "missing", ".").StartsWith("Linux build failed")
 	tools = Toolchain(Platform.Windows, root)
-	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quote(tools.WslPath(root + "/Compiler"))
+	mutable sources = folders.Length is 0 then "" else " -I" + tools.Quote(LinuxBuild.WslPath(root + "/Compiler"))
 	for Files
-		sources = sources + " " + tools.Quote(tools.WslPath(value))
+		sources = sources + " " + tools.Quote(LinuxBuild.WslPath(value))
 	gcc = folders.Length is 0 then "-e gcc -static " else "-e gcc -no-pie "
-	linkage = gcc + tools.Quote(tools.WslPath(base + ".linux.o"))
+	linkage = gcc + tools.Quote(LinuxBuild.WslPath(base + ".linux.o"))
 	libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
-	output = " -o " + tools.Quote(tools.WslPath(program)) + libraries
+	output = " -o " + tools.Quote(LinuxBuild.WslPath(program)) + libraries
 	Release(base).Creat(Path(program).PathOnly.text)
 	linked = ToolRunner("wsl").Execute(linkage + sources + output)
 	linked.HasFailed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
@@ -152,7 +152,7 @@ Wsl(flags Text, tools Toolchain) Text
 	for flags.Split(" ")
 		isInclude = value.StartsWith("-I")
 		path = isInclude then value.Substring(2) else value
-		wsl = (isInclude then "-I" else "") + tools.Quote(tools.WslPath(path))
+		wsl = (isInclude then "-I" else "") + tools.Quote(LinuxBuild.WslPath(path))
 		if value is not ""
 			converted = converted + " " + (isInclude or IsSource(value) then wsl else value)
 	converted

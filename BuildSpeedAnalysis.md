@@ -106,7 +106,9 @@ So the fix is to generate the text once and compose the variants from those stri
 - Cache hygiene: `Networking/native/Socket.<random>.o` ×25, `NeuralNetworks/native/**/*.old*.o` and `quants.*.o` accumulate; they cost disk and confuse "what is current".
 - Warm VM is already at the target (60–220 ms). Keep `run -c`, `test <file> unit`, `check <file>` and the VS Code path on the server; do not move work into the build path.
 
-### 7. A dev build that skips ThinLTO (small, high gain on small edits)
+### 7. A dev build that skips ThinLTO (small, high gain on small edits; done 2026-11-26)
+
+Done: plain Windows builds compile each part to a native -O3 object and link without ThinLTO, release builds (`windows`, `linux`, `web`) and `strict` keep it. Measured: a one-line edit of Sum 0.74 -> 0.65 s (link 0.28 -> 0.16 s); a program linking the whole compiler (a copy of Seed) 26.7 -> 20.2 s after a one-line edit (link 6.6 -> 0.22 s) and 55 -> 40 s cold (link 8.2 -> 1.0 s, part compiles 1.6 -> 3.4 s).
 
 The 0.90 s one-line-change link is ThinLTO, not a linker limit. Parts are compiled to bitcode (`clang -c -flto=thin -x ir`) and all optimization happens at link (`--lto-O3` on Linux, `-Wl,/opt:lldltojobs=all` on Windows), so one changed function invalidates its ThinLTO work and the parts that import it are re-optimized; a build where nothing changed links in 0.16 s. A dev link that compiles parts to objects and skips ThinLTO is about 0.045 s per part plus ~0.05 s of lld: Sum's one-line edit goes from 1.45 s to ~0.6 s, the big program's 15.6 s link to ~1 s.
 
