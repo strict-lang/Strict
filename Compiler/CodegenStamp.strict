@@ -58,5 +58,5 @@ Current(executable Text) Text
 	Output.Current("Compiler/output/missing.exe").StartsWith("Compiler/output/missing.exe|")
 	stamp = File(root + "/obj/Strict.codegen")
 	lines = stamp.Exists then stamp.ReadLines else List(Text)
-	isOwn = lines.Length is 2 then lines(1) is File(executable).Modified to Text else false
-	isOwn then "codegen " + lines(0) else executable + "|" + File(executable).Modified
+	built = File(executable).Modified
+	(lines.Length is 2 then lines(1) is built to Text else false) then "codegen " + lines(0) else executable + "|" + built

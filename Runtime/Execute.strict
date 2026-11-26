@@ -26,9 +26,10 @@ Run(arguments Texts) Number
 	Start(types, arguments(0)).IsCompleted(types.First.Name, texts) then 0 else 1
 Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	Execute.Test("Missing.strict", ".") is 1
-	if File(path).Exists and Directory.Exists(path) is false
+	isFolder = Directory.Exists(path)
+	if File(path).Exists and isFolder is false
 		return Failures(path, Stale(path), root, isQuiet, sources)
-	Directory.Exists(path) then Folders.TestFolder(path, root, isRecursive, isMutating, isFull) else 1
+	isFolder then Folders.TestFolder(path, root, isRecursive, isMutating, isFull) else 1
 Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
 	files = Source(stale, root, sources)
 	types = ResolveCheck.Inference(files)

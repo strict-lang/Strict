@@ -12,16 +12,18 @@ Serve(execute Execute) Answer slow
 	Answer(Count(File(request.Candidates).ReadText, execute), execute.known)
 Count(tails Text, execute Execute) Number slow
 	Absent.Count("\tinput\n---\n\tinput * input", Execute) is 2
-	path = request.rest(0)
-	source = File(FileCompiler.Normalize(path))
-	head = File(path).ReadText
-	mutable failed = 0
-	for tails.Split("\n---\n")
-		source.InMemory(Source(head, value))
-		logger.Log("Candidate " + (index + 1))
-		failed = failed + (execute.Serve(path, request.rest(1)).code > 0 then 1 else 0)
-	source.InMemory("")
+	failed = Test(tails.Split("\n---\n"), 0, execute, File(request.rest(0)).ReadText).Count(false)
+	File(FileCompiler.Normalize(request.rest(0))).InMemory("")
 	failed
+Test(tails Texts, at Number, execute Execute, head Text) Booleans slow
+	Absent.Test(("\t1", "\t2"), 2, Execute, Head).Length is 0
+	if at >= tails.Length
+		return List(Boolean)
+	File(FileCompiler.Normalize(request.rest(0))).InMemory(Source(head, tails(at)))
+	logger.Log("Candidate " + (at + 1))
+	answer = execute.Serve(request.rest(0), request.rest(1))
+	warm = Execute(execute, known = answer.known, inferred = answer.inferred)
+	(List(Boolean) + (answer.code is 0)) + Test(tails, at + 1, warm, head)
 Constants(lines Texts) Texts
 	Absent.Constants(("\t1", "constant A = 1")) is ("constant A = 1")
 	for lines

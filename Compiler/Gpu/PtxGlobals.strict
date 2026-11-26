@@ -2,9 +2,10 @@ has path Text
 has prefix Text
 constant Sample = PtxGlobals("Compiler/output/Globals.ptx", "ptx/")
 Write(lines Texts) slow
-	old = File(path).Exists then File(path).ReadLines else List(Text)
+	exists = File(path).Exists
+	old = exists then File(path).ReadLines else List(Text)
 	composed = Compose((Keep(old) + lines).Unique)
-	if File(path).Exists is false or Text.Combine(old, "\n") is not composed
+	if exists is false or Text.Combine(old, "\n") is not composed
 		File(path).Write(composed)
 Keep(old Texts) Texts
 	Sample.Keep(("// a", ".shared a;", "")) is List(Text) + ".shared a;"

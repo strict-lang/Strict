@@ -5,6 +5,7 @@ constant Typed = RepeatedCalls(("Read Texts", "	let empty = List(Text)", "	path 
 constant Fixed = RepeatedCalls(("Fixed Number", "	Fixed is 1", "	mutable text = \"a\"", "	if text.IndexOf(\".\") < 0", "		text = text + \".\"", "	text.IndexOf(\".\")"))
 constant Rounded = RepeatedCalls(("Sum(a Number) Number", "	Sum(1) is 2", "	a.Round(1) + a.Round(1)"))
 constant Recreated = RepeatedCalls(("Make Boolean", "	Make is true", "	if Directory.Exists(folder)", "		return true", "	Directory.Create(folder) is Error then false else Directory.Exists(folder)"))
+constant Rechecked = RepeatedCalls(("Check Number", "\tCheck is 1", "\tsize = File(\"a\").ReadLines.Length", "\tChange", "\tsize + File(\"a\").ReadLines.Length", "Change slow", "\tFile(\"a\").Write(\"b\")"))
 constant Reads = ("Exists", "ReadLines", "ReadText", "ReadBytes", "Length", "Modified", "IsLocked", "Files", "Directories", "Find", "Variable")
 Issues List(ValidationIssue)
 	Filed.Issues.First to Text is "SameCallTwiceMustBeLet: File(path).Exists, keep it in a let"
@@ -18,20 +19,26 @@ Issues List(ValidationIssue)
 Repeat(header Number) List(ValidationIssue)
 	Filed.Repeat(0).Length is 1 and Typed.Repeat(0).Length is 0 and Fixed.Repeat(0).Length is 0
 	Rounded.Repeat(0).Length is 0 and Written.Repeat(0).Length is 0 and Recreated.Repeat(0).Length is 0
+	Rechecked.Repeat(0).Length is 0
 	code = ErrorDrops(lines).Code(header)
-	Repeats(code, FileCheck.LastLine(lines, header) - code.Length + 2, Changing(code))
-Repeats(code Texts, start Number, changing Texts) List(ValidationIssue)
-	Recreated.Repeats(("Directory.Exists(a)", "Directory.Exists(a)"), 3, List(Text)).First.Line is 4
+	Repeats(code, FileCheck.LastLine(lines, header) - code.Length + 2, Changing(code), Acting)
+Repeats(code Texts, start Number, changing Texts, acting Texts) List(ValidationIssue)
+	Recreated.Repeats(("Directory.Exists(a)", "Directory.Exists(a)"), 3, List(Text), List(Text)).First.Line is 4
 	mutable seen = Dictionary(Text, Boolean)
 	mutable issues = List(Mutable(ValidationIssue))
 	for code
-		lookups = Lookups(Tokenizer(value).Tokens)
+		lookups = Lookups(Tokenizer(value).Tokens, acting)
 		seen = "" is in lookups then Dictionary(Text, Boolean) else seen
 		for lookups - Unsteady(lookups, changing) - ""
 			if value is in seen and seen(value)
 				issues.Add(ValidationIssue("SameCallTwiceMustBeLet", value + ", keep it in a let", start + outer.index))
 			seen(value) = value is not in seen
 	issues
+Acting Texts
+	Rechecked.Acting is ("Change")
+	for lines
+		if value.EndsWith(" slow") and value.StartsWith("	") is false
+			Tokenizer(value).Tokens.First
 Changing(code Texts) Texts
 	Fixed.Changing(("mutable text = \"a\"", "text.IndexOf(\".\")")) is ("text")
 	Fixed.Changing(List(Text) + "let a = 1").Length is 0
@@ -50,13 +57,16 @@ IsChanging(tokens Texts, changing Texts) Boolean
 		if value is in tokens
 			return true
 	false
-Lookups(tokens Texts) Texts
-	Filed.Lookups(("File", "(", "path", ")", ".", "Exists")) is ("File(path).Exists")
-	Filed.Lookups(("Directory", ".", "Exists", "(", "folder", ")")) is ("Directory.Exists(folder)")
-	Filed.Lookups(("File", "(", "path", ")", ".", "Write", "(", "a", ")")) is ("")
+Lookups(tokens Texts, acting Texts) Texts
+	Filed.Lookups(("File", "(", "path", ")", ".", "Exists"), List(Text)) is ("File(path).Exists")
+	Filed.Lookups(("Directory", ".", "Exists", "(", "folder", ")"), List(Text)) is ("Directory.Exists(folder)")
+	Filed.Lookups(("File", "(", "path", ")", ".", "Write", "(", "a", ")"), List(Text)) is ("")
+	Filed.Lookups(("Change", "(", ")"), List(Text) + "Change") is ("")
 	for tokens
 		if value is in InputOutputs.Kinds
 			Lookup(tokens, index)
+		else if value is in acting
+			""
 Lookup(tokens Texts, at Number) Text
 	Filed.Lookup(("File", "(", "value", ")", ".", "Exists"), 0) is ""
 	Filed.Lookup(("File", "."), 0) is ""

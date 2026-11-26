@@ -164,11 +164,12 @@ CheckReadTextAndLinks(folder Text, helper Text)
 	rtSrc = folder + "/ReadTextCheck.strict"
 	fnLine = "\tJoined(\"" + folder + "/sample.txt\") is \"one\\ntwo\""
 	File(rtSrc).Write(("Joined(path Text) Text", fnLine, "\tText.Combine(File(path).ReadLines, \"\\n\")"))
-	rt = Process.RunTool(Process.Find("strict").executable, "test " + rtSrc + " native", ToolSeconds)
+	strict = Process.Find("strict").executable
+	rt = Process.RunTool(strict, "test " + rtSrc + " native", ToolSeconds)
 	mlir = Text.Combine(File(folder + "/obj/ReadTextCheck.test.mlir").ReadLines, "\n")
 	if rt.exitCode is not 0 or "@strict_file_joined(" is not in mlir
 		return Error("ReadTextFusionFailed: " + rt.Output)
-	cmd = "/c set STRICT_THREADS=1&& \"" + Process.Find("strict").executable + "\" test " + LinkChainSrc + " native"
+	cmd = "/c set STRICT_THREADS=1&& \"" + strict + "\" test " + LinkChainSrc + " native"
 	l1 = Process.RunTool("cmd", cmd, ToolSeconds)
 	File(folder + "/NamedCheck.strict").Write(NamedCode.Split("\n"))
 	if l1.exitCode is not 0

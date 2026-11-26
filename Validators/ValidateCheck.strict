@@ -98,6 +98,7 @@ Report(issues Texts) Number
 CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean) List(ValidationIssue)
 	(CheckFile("A.strict", Assertions.Completing.lines, "A", List(Text), false) to Text).IndexOf(Assertions.Rule) >= 0
 	(CheckFile("A.strict", ResultNames.Hosting.lines, "A", List(Text), false) to Text).IndexOf(ResultNames.Rule) >= 0
+	(CheckFile("A.strict", RepeatedCalls.Filed.lines, "A", List(Text), false) to Text).IndexOf("SameCallTwice") >= 0
 	limits = Limits(lines, isBase, Limits.Scale(path), typeName).Issues + SubstringLengths(lines).Issues
 	rules = TypeValidator(TypeShape(lines), mutations, typeName).Validate + limits
 	named = Names(lines).Issues + Recursions(lines, typeName).Issues + Assertions(lines, typeName).Issues
@@ -105,7 +106,8 @@ CheckFile(path Text, lines Texts, typeName Text, mutations Texts, isBase Boolean
 	based = (isBase then List(ValidationIssue) else BaseCalls(lines).Issues) + NotFoundResults(lines).Issues
 	shaped = names + Writes(lines, typeName).Issues + StatusCodes(lines).Issues + based + SingleLists(lines).Issues
 	extra = LoopBodies(lines).Issues + MagicNumbers(lines).Issues + Branches(lines).Issues + ErrorDrops(lines).Issues
-	rules + shaped + extra + Brackets(lines).Issues + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
+	repeated = RepeatedCalls(lines).Issues + Brackets(lines).Issues
+	rules + shaped + extra + repeated + GeometryTypes(lines, typeName).Issues + ErrorValues(lines).Issues
 Log(path Text, found List(ValidationIssue)) Number
 	Log("A.strict", List(ValidationIssue)) is 0
 	for found
