@@ -81,7 +81,7 @@ Bound(type TypeEntry, instance VmValue, method MethodEntry, arguments List(VmVal
 	end = start + method.parameters.Length
 	mode = type.members.Length is 0 then 0 else Ownership(type, instance.kind)
 	empty = VmValue.None
-	for (end, method.Slots).Maximum
+	for end.Maximum(method.Slots)
 		head = index < 2 then instance else index is Index and end > start then CallIndex(method, arguments) else empty
 		arg = index >= start then (index < end then Argument(method, arguments, index - start) else empty) else empty
 		index < Frame.MembersSlot then head else index < start then Member(type, instance, index, mode, prototype) else arg

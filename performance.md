@@ -15,8 +15,8 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - Build speed (under 10 s hard limit, 2-3 s target; LogoApp, Blocks and Breakout 3.6-4 s): a build with tests runs the front end twice (test gate, then native), lowering and ThinLTO link are the largest phases left.
 
 ## VM
-- A VM call of a small Strict method costs about 6 us: `Machine.Bound` a quarter of it (one `Member` call per member slot, Number has 12 with its constants, and a `strict_list_push` per slot), the body about 150 ns per instruction (`Frame.Finish`, `strict_list_set`, `strict_rc_container`).
-- VM calls dominate game logic (a member read through a method like `Vector2.X` is two calls): DeltaEngine's multi-tick simulation and content loading tests are Slow for it. `position + Vector2(1, 2) * 0.75` costs about 20 us: `Machine.Bound` 20 %, `Rounding.Build` 23 % (copying the prototype's 10 items, decoding the parameter names, rounding X and Y through `Number.Rounded`'s logarithms, 2-3 %).
+- A VM call of a small Strict method costs about 6 us: `Machine.Bound` a quarter of it (one `Member` call per member slot, Number has 12 with its constants, and a `strict_list_push` per slot; reference counting under `Frame.Call`, `Bound` and `Rounding.Members` is 17 % of a Vector2 loop), the body about 150 ns per instruction (`Frame.Finish`, `strict_list_set`, `strict_rc_container`).
+- VM calls dominate game logic (a member read through a method like `Vector2.X` is two calls): DeltaEngine's multi-tick simulation and content loading tests are Slow for it. `position + Vector2(1, 2) * 0.75` costs about 20 us: `Machine.Bound` 18 %, `Rounding.Build` 23 % (copying the prototype's 10 items, decoding the parameter names, rounding X and Y through `Number.Rounded`'s logarithms, 2-3 %).
 
 ## Compiled CPU loops, lists and texts
 - Serial loops still generic (`strict_hoisted_read`/`strict_list_read`, `strict_is_failure`, `strict_list_push`): gathers `table(value)`, calls that can fail or read lists (`MersenneTwister.Normals`), one thread of a parallel chunk, and raw `Tempered` calls (f64 body has two remainders, no whole-number version used).
