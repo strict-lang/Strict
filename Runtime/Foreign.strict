@@ -25,7 +25,7 @@ Called VmValue
 	failure = library.Failure(bits)
 	failure is "" then Convert(library, method.returnType, bits) else VmValue.OfError(failure)
 Construct(type TypeEntry) VmValue
-	Adding.Construct(Adder) is Adding.Called
+	Framed.Construct(Framing) is Framed.Called
 	IsForeign(type) then Called else Rounding.Single.Build(type, call, Natives(types, folder), type.IsStruct, VmValue.None)
 Build(type TypeEntry) Text
 	Adding.Build(Framing).StartsWith("TraitHasNoImplementation: Frame.Add has no body")

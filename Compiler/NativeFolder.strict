@@ -16,7 +16,7 @@ Module(path Text, root Text, isCounting Boolean, isProgram Boolean, platform = -
 	types = isProgram then Program(loaded, path, root, sources) else loaded
 	counted = isCounting then CountedFiles(paths, root) else List(Text)
 	symbol = platform is Platform.IOS then "strict_main" else "main"
-	inlined = BuildProfile.Inline(types)
+	inlined = BuildProfile.Inline(MissingNatives(types, path, root).Stubbed)
 	Phases.Report("Frontend", started)
 	MlirModule(inlined, isProgram then "Run" else TestCodegen.Runner, counted, paths.Length, symbol, platform)
 TestFolder(path Text, root Text, sources Texts) List(TypeEntry)

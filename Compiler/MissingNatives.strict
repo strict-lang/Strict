@@ -1,0 +1,52 @@
+has types List(TypeEntry)
+has path Text
+has root Text
+constant Folder = MemberEntry("folder", "Strict/Text", List(InstructionEntry), false)
+constant Building = MethodEntry("Build", List(MemberEntry) + Folder, "Strict/Text", List(InstructionEntry))
+constant Builder = TypeEntry("Strict/Runtime/LibraryBuilder", List(MemberEntry), List(MethodEntry) + Building)
+constant Holder = MemberEntry("libraryBuilder", "Strict/Runtime/LibraryBuilder", List(InstructionEntry), false)
+constant Built = MethodEntry(Building, instructions = List(InstructionEntry) + InstructionEntry.Return(0))
+constant Library = TypeEntry("Strict/Compiler/NativeLibrary", List(MemberEntry) + Holder, List(MethodEntry) + Built)
+constant Builders = MissingNatives(List(TypeEntry) + Builder, "Runtime/Foreign.strict", ".")
+Stubbed List(TypeEntry) slow
+	Builders.Stubbed.First.methods.First.instructions.Length > 0
+	Builders.Stubbed.First.Name is Builder.Name
+	MissingNatives(List(TypeEntry) + Foreign.Adder, "Runtime/Foreign.strict", ".").Stubbed is (Foreign.Adder)
+	for types
+		IsUnsourced(value) then Stub(value) else value
+IsUnsourced(type TypeEntry) Boolean slow
+	Builders.IsUnsourced(Builder) and Builders.IsUnsourced(Foreign.Adder) is false
+	MissingNatives((Builder, Library), "Runtime/Foreign.strict", ".").IsUnsourced(Builder) is false
+	if NativeFolder.IsNative(type, types) is false or MlirTraits(types).Candidates(type).Length > 0
+		return false
+	Directory.Exists(TypeSource(type).NativeFolder(path, root)) is false
+Stub(type TypeEntry) TypeEntry
+	Builders.Stub(Builder).methods.Length is 1
+	Builders.Stub(Builder).methods.First.instructions(1).texts.First is "Strict/Error"
+	errors = ResolveCheck.Inference(List(Text) + FileCompiler.Normalize(TypeSource.Root + "/Error.strict"))
+	stubs = TypeCodegen(type.Name, Lines(type), errors, List(Text)).Entry.methods
+	mutable methods = List(MethodEntry)
+	mutable used = 0
+	for type.methods
+		if value.instructions.Length > 0
+			methods = methods + value
+		else
+			methods = methods + stubs(used)
+			used = used + 1
+	TypeEntry(type, methods = methods)
+Lines(type TypeEntry) Texts
+	Builders.Lines(Builder).Last.StartsWith("\tError(\"TraitHasNoImplementation: LibraryBuilder.Build has no body")
+	mutable lines = List(Text)
+	for type.methods
+		if value.instructions.Length is 0
+			lines = lines + Header(value) + ("\tError(\"" + ForeignMethod(type, value).Unimplemented + "\")")
+	lines
+Header(method MethodEntry) Text
+	Builders.Header(Building) is "Build(folder Text) Text"
+	Builders.Header(ForeignMethod.Next) is "Next Number"
+	parameters = method.parameters.Length is 0 then "" else "(" + Text.Combine(Parameters(method)) + ")"
+	method.Name + parameters + (method.returnType is "None" then "" else " " + TypeEntry.ShortName(method.returnType))
+Parameters(method MethodEntry) Texts
+	Builders.Parameters(Building) is ("folder Text")
+	for method.parameters
+		value.Name + " " + TypeEntry.ShortName(value.typeName)
