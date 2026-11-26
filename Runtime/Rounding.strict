@@ -87,18 +87,17 @@ Members(type TypeEntry, call Invocation, natives Natives, prototype VmValue) Lis
 	Single.Members(Natives.Byted, ByteCall, Bytes, Maximal)(1).number is 255
 	Single.Members(Natives.Shape, ByteCall, Natives.Shapes, VmValue.None)(1).number is 9
 	arguments = call.Arguments
-	names = arguments.Length > 0 then call.ParameterNames else List(Text)
 	mutable values = prototype.items.Length is type.members.Length then prototype.items else natives.Fresh(type).items
 	for type.members
-		chosen = value.IsConstant then arguments.Length else Positional(names, value.Name, index)
+		chosen = value.IsConstant then arguments.Length else Positional(call, value.Name, index)
 		if chosen < arguments.Length
 			values(index) = RoundedValue(value, arguments(chosen), natives)
 	values
-Positional(names Texts, name Text, position Number) Number
-	Single.Positional(("a", "b"), "b", 1) is 1
-	Single.Positional(("a", "b"), "b", 0) is 1
-	if position < names.Length
-		if names(position) is name
-			return position
-	found = names.Index(name)
+Positional(call Invocation, name Text, position Number) Number
+	Single.Positional(Swapped, "width", 1) is 1
+	Single.Positional(Swapped, "width", 0) is 1
+	Single.Positional(Swapped, "missing", 0) is 0
+	if call.ParameterName(position) is name
+		return position
+	found = call.ParameterNames.Index(name)
 	found < 0 then position else found

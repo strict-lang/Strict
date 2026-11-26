@@ -28,6 +28,10 @@ ReturnType Text
 ParameterNames Texts
 	AddCall.ParameterNames is ("x")
 	PayloadDecoder(entry).Names
+ParameterName(position Number) Text
+	AddCall.ParameterName(0) is "x"
+	AddCall.ParameterName(1) is ""
+	position < entry.payload(3) then entry.texts(-1 - entry.payload(4 + position)) else ""
 Count Number
 	AddCall.Count is 1
 	AddCall.Arguments.First.number is 3 and Parsing.Instance.text is "5"
