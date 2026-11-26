@@ -14903,8 +14903,19 @@
     %begins = func.call @strict_text_begins(%text, %prefix, %from) : (f64, f64, f64) -> f64
     return %begins : f64
   }
+  // a text copied up to its zero byte (also a C text without lengths, Process.Variable), a span once by its length
   func.func private @strict_text_copy(%text: f64) -> f64 {
-    %one = arith.constant 1 : i64
+    %bits = arith.bitcast %text : f64 to i64
+    %isSpan = func.call @strict_span_is(%bits) : (i64) -> i1
+    cf.cond_br %isSpan, ^span, ^plain
+  ^span:
+    %source = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %bytes = func.call @strict_text_size(%text) : (f64) -> i64
+    %data = func.call @strict_text_room(%bytes) : (i64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%data, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %made = func.call @strict_text_made(%data, %bytes) : (!llvm.ptr, i64) -> f64
+    return %made : f64
+  ^plain:
     %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
     %result = func.call @strict_text_from(%pointer) : (!llvm.ptr) -> f64
     return %result : f64
@@ -14938,12 +14949,22 @@
   ^body:
     %slot = llvm.getelementptr %pointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %byte = llvm.load %slot : !llvm.ptr -> i8
-    %wide = arith.extui %byte : i8 to i32
-    %raised = llvm.call @toupper(%wide) : (i32) -> i32
-    %lowered = llvm.call @tolower(%wide) : (i32) -> i32
-    %chosen = arith.select %upper, %raised, %lowered : i32
-    %narrow = arith.trunci %chosen : i32 to i8
-    llvm.store %narrow, %slot : i8, !llvm.ptr
+    // ASCII letters only, like toupper and tolower in the C locale the runtime keeps
+    %smallA = arith.constant 97 : i8
+    %smallZ = arith.constant 122 : i8
+    %bigA = arith.constant 65 : i8
+    %bigZ = arith.constant 90 : i8
+    %caseBit = arith.constant 32 : i8
+    %fromSmall = arith.cmpi uge, %byte, %smallA : i8
+    %toSmall = arith.cmpi ule, %byte, %smallZ : i8
+    %isSmall = arith.andi %fromSmall, %toSmall : i1
+    %fromBig = arith.cmpi uge, %byte, %bigA : i8
+    %toBig = arith.cmpi ule, %byte, %bigZ : i8
+    %isBig = arith.andi %fromBig, %toBig : i1
+    %isChanged = arith.select %upper, %isSmall, %isBig : i1
+    %flipped = arith.xori %byte, %caseBit : i8
+    %chosen = arith.select %isChanged, %flipped, %byte : i8
+    llvm.store %chosen, %slot : i8, !llvm.ptr
     %next = arith.addi %index, %one : i64
     cf.br ^check(%next : i64)
   ^exit:
@@ -15962,11 +15983,31 @@
     return %result : f64
   }
   llvm.mlir.global internal constant @strict_invalid_number("\0F\00\00\00\00\00\00\00\0F\00\00\00\00\00\00\00InvalidNumber: \00") : !llvm.array<32 x i8>
-  // all of the text has to be the number, strtod alone reads "abc" as 0 and "12 monkeys" as 12
+  // all of the text has to be the number, strtod alone reads "abc" as 0 and "12 monkeys" as 12; a short span (a
+  // number in a file line) is ended with its zero byte on the stack instead of being copied to the heap
   func.func private @strict_text_number(%text: f64) -> f64 {
-    %a = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
     %one = arith.constant 1 : i64
     %endSlot = llvm.alloca %one x !llvm.ptr : (i64) -> !llvm.ptr
+    %buffer = llvm.alloca %one x !llvm.array<64 x i8> : (i64) -> !llvm.ptr
+    %bits = arith.bitcast %text : f64 to i64
+    %isSpan = func.call @strict_span_is(%bits) : (i64) -> i1
+    cf.cond_br %isSpan, ^spanned, ^heap
+  ^spanned:
+    %bytes = func.call @strict_text_size(%text) : (f64) -> i64
+    %limit = arith.constant 64 : i64
+    %isShort = arith.cmpi ult, %bytes, %limit : i64
+    cf.cond_br %isShort, ^stack, ^heap
+  ^stack:
+    %source = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %copied = llvm.call @memcpy(%buffer, %source, %bytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    %ending = llvm.getelementptr %buffer[%bytes] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %zeroByte = arith.constant 0 : i8
+    llvm.store %zeroByte, %ending : i8, !llvm.ptr
+    cf.br ^parse(%buffer : !llvm.ptr)
+  ^heap:
+    %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
+    cf.br ^parse(%pointer : !llvm.ptr)
+  ^parse(%a: !llvm.ptr):
     %result = llvm.call @strtod(%a, %endSlot) : (!llvm.ptr, !llvm.ptr) -> f64
     %end = llvm.load %endSlot : !llvm.ptr -> !llvm.ptr
     %last = llvm.load %end : !llvm.ptr -> i8
@@ -17271,52 +17312,63 @@
     %result = arith.ori %first, %second : i1
     return %result : i1
   }
-  func.func private @strict_text_trim_start(%text: f64) -> f64 {
-    %start = arith.constant 0 : i64
+  // Trim, TrimStart and TrimEnd scan the bytes of a text or span in place (spaces are ASCII) and give back the
+  // text itself when nothing is cut: a span of a file line is never copied just to look at it
+  func.func private @strict_text_trimmed(%text: f64, %front: i1, %back: i1) -> f64 {
+    %zero = arith.constant 0 : i64
     %step = arith.constant 1 : i64
-    %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
-    %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
-    cf.br ^check(%start : i64)
-  ^check(%index: i64):
+    %data = func.call @strict_text_data(%text) : (f64) -> !llvm.ptr
+    %length = func.call @strict_text_size(%text) : (f64) -> i64
+    cf.cond_br %front, ^start(%zero : i64), ^started(%zero : i64)
+  ^start(%index: i64):
     %more = arith.cmpi slt, %index, %length : i64
-    cf.cond_br %more, ^inspect, ^cut(%index : i64)
-  ^inspect:
-    %slot = llvm.getelementptr %pointer[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %character = llvm.load %slot : !llvm.ptr -> i8
-    %isSpace = func.call @strict_is_space(%character) : (i8) -> i1
+    cf.cond_br %more, ^lead, ^started(%index : i64)
+  ^lead:
+    %leadSlot = llvm.getelementptr %data[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %leadCharacter = llvm.load %leadSlot : !llvm.ptr -> i8
+    %isLeadSpace = func.call @strict_is_space(%leadCharacter) : (i8) -> i1
     %next = arith.addi %index, %step : i64
-    cf.cond_br %isSpace, ^check(%next : i64), ^cut(%index : i64)
-  ^cut(%at: i64):
-    %rest = arith.subi %length, %at : i64
-    %from = arith.sitofp %at : i64 to f64
-    %count = arith.sitofp %rest : i64 to f64
-    %result = func.call @strict_text_cut(%text, %from, %count) : (f64, f64, f64) -> f64
+    cf.cond_br %isLeadSpace, ^start(%next : i64), ^started(%index : i64)
+  ^started(%first: i64):
+    cf.cond_br %back, ^end(%length : i64), ^ended(%length : i64)
+  ^end(%at: i64):
+    %left = arith.cmpi sgt, %at, %first : i64
+    cf.cond_br %left, ^trail, ^ended(%at : i64)
+  ^trail:
+    %last = arith.subi %at, %step : i64
+    %trailSlot = llvm.getelementptr %data[%last] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %trailCharacter = llvm.load %trailSlot : !llvm.ptr -> i8
+    %isTrailSpace = func.call @strict_is_space(%trailCharacter) : (i8) -> i1
+    cf.cond_br %isTrailSpace, ^end(%last : i64), ^ended(%at : i64)
+  ^ended(%stop: i64):
+    %isFront = arith.cmpi eq, %first, %zero : i64
+    %isBack = arith.cmpi eq, %stop, %length : i64
+    %isWhole = arith.andi %isFront, %isBack : i1
+    cf.cond_br %isWhole, ^whole, ^cut
+  ^whole:
+    return %text : f64
+  ^cut:
+    %count = arith.subi %stop, %first : i64
+    %from = arith.sitofp %first : i64 to f64
+    %size = arith.sitofp %count : i64 to f64
+    %result = func.call @strict_text_cut(%text, %from, %size) : (f64, f64, f64) -> f64
+    return %result : f64
+  }
+  func.func private @strict_text_trim_start(%text: f64) -> f64 {
+    %yes = arith.constant true
+    %no = arith.constant false
+    %result = func.call @strict_text_trimmed(%text, %yes, %no) : (f64, i1, i1) -> f64
     return %result : f64
   }
   func.func private @strict_text_trim_end(%text: f64) -> f64 {
-    %zero = arith.constant 0.0 : f64
-    %none = arith.constant 0 : i64
-    %step = arith.constant 1 : i64
-    %pointer = func.call @strict_text_ptr(%text) : (f64) -> !llvm.ptr
-    %length = func.call @strict_text_bytes(%pointer) : (!llvm.ptr) -> i64
-    cf.br ^check(%length : i64)
-  ^check(%end: i64):
-    %more = arith.cmpi sgt, %end, %none : i64
-    cf.cond_br %more, ^inspect, ^cut(%end : i64)
-  ^inspect:
-    %last = arith.subi %end, %step : i64
-    %slot = llvm.getelementptr %pointer[%last] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %character = llvm.load %slot : !llvm.ptr -> i8
-    %isSpace = func.call @strict_is_space(%character) : (i8) -> i1
-    cf.cond_br %isSpace, ^check(%last : i64), ^cut(%end : i64)
-  ^cut(%at: i64):
-    %count = arith.sitofp %at : i64 to f64
-    %result = func.call @strict_text_cut(%text, %zero, %count) : (f64, f64, f64) -> f64
+    %yes = arith.constant true
+    %no = arith.constant false
+    %result = func.call @strict_text_trimmed(%text, %no, %yes) : (f64, i1, i1) -> f64
     return %result : f64
   }
   func.func private @strict_text_trim(%text: f64) -> f64 {
-    %started = func.call @strict_text_trim_start(%text) : (f64) -> f64
-    %result = func.call @strict_text_trim_end(%started) : (f64) -> f64
+    %yes = arith.constant true
+    %result = func.call @strict_text_trimmed(%text, %yes, %yes) : (f64, i1, i1) -> f64
     return %result : f64
   }
   func.func private @strict_text_capitalize(%text: f64) -> f64 {
