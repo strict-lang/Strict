@@ -40,8 +40,7 @@ Replace(executable Text, target Text) Text
 	Swapped.Save((".exe", ".old.exe", ".new.exe"), ("a", "b", "built")) is not Error
 	Intermediates.Replace("Compiler/output/Swapped.exe", "Compiler/output/Swapped.new.exe") is ""
 	Swapped.Read(".exe") is "built"
-	unrunnable = Unrunnable(executable, target)
-	refused = unrunnable is "" then Uncheck(executable, target) else unrunnable
+	refused = Refuse(executable, target)
 	if refused is not ""
 		return refused
 	old = Free(executable)
@@ -53,6 +52,13 @@ Replace(executable Text, target Text) Text
 	if File(target).Exists is false and Path(executable).FileName.RemoveExtension.text is "strict"
 		CodegenStamp(Path(executable).PathOnly.text).Promote(executable)
 	File(target).Exists then Used(executable, executable) else Running(executable).Restart(old)
+Refuse(executable Text, target Text) Text
+	Intermediates.Refuse("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
+	started = Process.Elapsed
+	unrunnable = Unrunnable(executable, target)
+	refused = unrunnable is "" then Uncheck(executable, target) else unrunnable
+	BuildProfile.Report("New executable checks", started)
+	refused
 Unrunnable(executable Text, target Text) Text
 	Intermediates.Unrunnable("Compiler/output/A.exe", "Compiler/output/A.new.exe") is ""
 	Intermediates.Unrunnable("Compiler/output/strict.exe", "Compiler/output/missing.new.exe").Length > 0
