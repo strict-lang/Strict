@@ -21,6 +21,6 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - ParticleStress at 1 million particles (8.3-8.8 ms per tick with the machine 40 % busy after capping the young generation at 512 MB, was 9.7-13 ms, 2026-11-26; 4.8-5.5 ms quiet): every `Particle.Advanced` allocates a new 96 byte particle and the old one dies (`strict_gc_small` 12 %, `strict_rc_dead` 8 %). Reusing the old particle needs three steps: the caller passes a dying receiver (`current = current.Advanced(Tick)`), `EffectSystem(value, ...)` moves members of an owned `value` instead of sharing them, and the parallel `Living` loop frees or reuses elements of its owned list; today `strict_rc_dead` returns at once inside pool jobs (`strict_rc_busy`, counts are not atomic and `strict_rc_recycled` is global), so a tick's million dead particles wait for the young collection. 32 bit members (72 -> 44 bytes).
 
 ## Collector
-- Realtime frames: mark incrementally over several frame ends when a full collection takes longer than a few ms. Lists of numbers grown by `+` are leaf blocks now (`strict_list_concat_numbers`, `Uints(20000000)` 1.0 -> 0.63 s); payloads grown by appends (`strict_list_appended`) are still scanned word by word.
+- Realtime frames: mark incrementally over several frame ends when a full collection takes longer than a few ms. Lists of numbers grow into leaf blocks the collector does not scan, by `+` (`strict_list_concat_numbers`, `Uints(20000000)` 1.0 -> 0.63 s) and by appends (`strict_list_push_number`, 20M appends 0.50 -> 0.45 s).
 
 ## GPU

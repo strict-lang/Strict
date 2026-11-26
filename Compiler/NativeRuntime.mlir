@@ -12369,6 +12369,12 @@
   }
   // appends element to the items of holder that used of them so far (growing them when full) and returns the count
   func.func private @strict_list_appended(%holder: !llvm.ptr, %used: f64, %element: f64) -> f64 {
+    %scanned = arith.constant false
+    %next = func.call @strict_list_appended_into(%holder, %used, %element, %scanned) : (!llvm.ptr, f64, f64, i1) -> f64
+    return %next : f64
+  }
+  // strict_list_appended that grows a list of numbers into a leaf block the collector does not scan
+  func.func private @strict_list_appended_into(%holder: !llvm.ptr, %used: f64, %element: f64, %leaf: i1) -> f64 {
     %one = arith.constant 1.0 : f64
     %two = arith.constant 2.0 : f64
     %four = arith.constant 4.0 : f64
@@ -12385,7 +12391,14 @@
     %bytes = arith.fptosi %bytesf : f64 to i64
     %oldbits = llvm.load %holder : !llvm.ptr -> f64
     %old = func.call @strict_ptr(%oldbits) : (f64) -> !llvm.ptr
-    %moved = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    cf.cond_br %leaf, ^leafGrown, ^scannedGrown
+  ^leafGrown:
+    %leafBlock = func.call @strict_alloc_text(%bytes) : (i64) -> !llvm.ptr
+    cf.br ^grownBlock(%leafBlock : !llvm.ptr)
+  ^scannedGrown:
+    %scannedBlock = func.call @strict_alloc(%bytes) : (i64) -> !llvm.ptr
+    cf.br ^grownBlock(%scannedBlock : !llvm.ptr)
+  ^grownBlock(%moved: !llvm.ptr):
     %usedBytesf = arith.mulf %used, %eight : f64
     %usedBytes = arith.fptosi %usedBytesf : f64 to i64
     %grown = llvm.call @memcpy(%moved, %old, %usedBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
@@ -13497,7 +13510,8 @@
     %growable = arith.cmpf ogt, %capacity, %zero : f64
     cf.cond_br %growable, ^grow, ^add
   ^grow:
-    %grown = func.call @strict_list_appended(%holder, %used, %element) : (!llvm.ptr, f64, f64) -> f64
+    %leaf = arith.constant true
+    %grown = func.call @strict_list_appended_into(%holder, %used, %element, %leaf) : (!llvm.ptr, f64, f64, i1) -> f64
     llvm.store %grown, %view : f64, !llvm.ptr
     return %list : f64
   ^push:
