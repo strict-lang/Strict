@@ -152,9 +152,11 @@ Embed(chosen Numbers) Numbers
 	width = norm.Length
 	for chosen.Length * width
 		tokens(chosen((index / width).Floor))(index % width)
-Copies(count Number) Qwen3
+Copies(count Number, dropped = -1) Qwen3
 	Prompted.Copies(2).blocks.First.keys.Length is 16
+	Primed.Copies(2).Steps((3, 4), (2, 2), 2).Copies(2, 0).Step(5, 3).Next is Primed.Step(4, 2).Step(5, 3).Next
+	Primed.Copies(2).Steps((3, 4), (2, 2), 2).Copies(2, 1).Step(5, 3).Next is Primed.Step(3, 2).Step(5, 3).Next
 	mutable copied = List(Mutable(Qwen3Block))
 	for blocks
-		copied.Add(value.Copies(count, cacheBits))
+		copied.Add(dropped < 0 then value.Copies(count, cacheBits) else value.Without(dropped, count, cacheBits))
 	Qwen3(value, blocks = copied)

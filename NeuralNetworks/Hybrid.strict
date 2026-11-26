@@ -74,6 +74,26 @@ Copies(count Number) Hybrid
 	for layers
 		copied.Add(DeltaBlock(value, memory = Repeat(value.memory, count), window = Repeat(value.window, count)))
 	Hybrid(value, layers = copied)
+Without(dropped Number, count Number) Hybrid
+	Tiny.Copies(2).Without(0, 2).layers.First.memory is Block.memory
+	Tiny.Copies(2).Without(1, 2).layers.First.window is Block.window
+	mutable kept = List(Mutable(DeltaBlock))
+	for layers
+		kept.Add(DeltaBlock(value, memory = Omit(value.memory, dropped, count), window = Omit(value.window, dropped, count)))
+	Hybrid(value, layers = kept)
+Omit(state Numbers, dropped Number, count Number) Numbers
+	Tiny.Omit((1, 2, 3, 4), 0, 2) is (3, 4)
+	Tiny.Omit((1, 2, 3, 4), 1, 2) is (1, 2)
+	size = state.Length / count
+	state.Slice(0, dropped * size) + state.Slice((dropped + 1) * size, (count - dropped - 1) * size)
+Drop(cache Numbers, stride Number, dropped Number, count Number) Numbers
+	Tiny.Drop((1, 2, 3, 4, 5, 6, 7, 8), 4, 0, 2) is (5, 6, 7, 8)
+	Tiny.Drop((1, 2, 3, 4, 9, 9, 9, 9, 5, 6, 7, 8, 9, 9, 9, 9), 4, 1, 2) is (1, 2, 3, 4, 5, 6, 7, 8)
+	remaining = count - 1
+	for cache.Length / count * remaining
+		token = (index / (remaining * stride)).Floor
+		slot = (index / stride).Floor % remaining
+		cache((token * count + (slot < dropped then slot else slot + 1)) * stride + index % stride)
 Repeat(state Numbers, count Number) Numbers
 	Tiny.Repeat((1, 2), 2) is (1, 2, 1, 2)
 	for state.Length * count

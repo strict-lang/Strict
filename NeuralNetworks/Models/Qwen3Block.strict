@@ -80,6 +80,12 @@ Copies(count Number, bits Number) Qwen3Block
 	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Copies(2, 32).keys.Length is 8
 	keyed = Qwen3Block(value, keys = Store(Interleave(keys, count), bits), hybrid = hybrid.Copies(count))
 	Qwen3Block(keyed, values = Store(Interleave(values, count), bits))
+Without(dropped Number, count Number, bits Number) Qwen3Block
+	Tiny.Cached(Tiny.mlpNorm, Tiny.mlpNorm, 32).Copies(2, 32).Without(0, 2, 32).keys.Length is 4
+	stride = groups * queryNorm.Length
+	droppedKeys = Store(hybrid.Drop(keys, stride, dropped, count), bits)
+	keyed = Qwen3Block(value, keys = droppedKeys, hybrid = hybrid.Without(dropped, count))
+	Qwen3Block(keyed, values = Store(hybrid.Drop(values, stride, dropped, count), bits))
 Interleave(cache Numbers, count Number) Numbers
 	Tiny.Interleave((1, 2, 3, 4, 5, 6, 7, 8), 2) is (1, 2, 3, 4, 1, 2, 3, 4, 5, 6, 7, 8, 5, 6, 7, 8)
 	stride = groups * queryNorm.Length
