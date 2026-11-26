@@ -27952,7 +27952,8 @@
   // on the GPU otherwise comes down here once
   func.func private @strict_gpu_tuned_factors(%factors: !llvm.ptr, %staging: !llvm.ptr, %height: i64, %width: i64, %rank: i64, %downOnDevice: i1, %upOnDevice: i1) {
     %none = arith.constant 0 : i64
-    %eight = arith.constant 8 : i64
+    %four = arith.constant 4 : i64
+    %thirtyTwo = arith.constant 32 : i64
     %downCount = arith.muli %rank, %width : i64
     %stagedDownCount = arith.select %downOnDevice, %none, %downCount : i64
     %upCount = arith.muli %height, %rank : i64
@@ -27979,6 +27980,33 @@
     %hostUpData = func.call @strict_gpu_host(%upList) : (f64) -> !llvm.ptr
     cf.br ^prepared(%hostUpData : !llvm.ptr)
   ^prepared(%upData: !llvm.ptr):
+    %true = arith.constant true
+    %downSingle = arith.cmpi eq, %downBits, %thirtyTwo : i64
+    %notDownOnDevice = arith.xori %downOnDevice, %true : i1
+    %downDirect = arith.andi %notDownOnDevice, %downSingle : i1
+    cf.cond_br %downDirect, ^copyDownBlock, ^checkUpDirect
+  ^copyDownBlock:
+    %downBytes = arith.muli %downCount, %four : i64
+    %copiedDown = llvm.call @memcpy(%staging, %downData, %downBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^checkUpDirect
+  ^checkUpDirect:
+    %downDone = arith.ori %downOnDevice, %downSingle : i1
+    %upSingle = arith.cmpi eq, %upBits, %thirtyTwo : i64
+    %notUpOnDevice = arith.xori %upOnDevice, %true : i1
+    %upCopy = arith.andi %notUpOnDevice, %upSingle : i1
+    cf.cond_br %upCopy, ^copyUpBlock, ^checkParallel
+  ^copyUpBlock:
+    %upBytes = arith.muli %upCount, %four : i64
+    %copiedUp = llvm.call @memcpy(%ups, %upData, %upBytes) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
+    cf.br ^checkParallel
+  ^checkParallel:
+    %downUnits = arith.select %downDone, %none, %rank : i64
+    %upDone = arith.ori %upOnDevice, %upSingle : i1
+    %upUnits = arith.select %upDone, %none, %height : i64
+    %units = arith.addi %downUnits, %upUnits : i64
+    %anyParallel = arith.cmpi sgt, %units, %none : i64
+    cf.cond_br %anyParallel, ^runParallel, ^scalesOnly
+  ^runParallel:
     %nine = arith.constant 9 : i64
     %context = llvm.alloca %nine x i64 : (i64) -> !llvm.ptr
     llvm.store %downData, %context : !llvm.ptr, !llvm.ptr
@@ -27994,16 +28022,15 @@
     llvm.store %ups, %upsAt : !llvm.ptr, !llvm.ptr
     %widthAt = llvm.getelementptr %context[6] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %width, %widthAt : i64, !llvm.ptr
-    // downs already on the GPU are not converted, the ups still have rank numbers per row
-    %downUnits = arith.select %downOnDevice, %none, %rank : i64
+    // downs already on the GPU or copied directly are not converted, the ups still have rank numbers per row
     %rankAt = llvm.getelementptr %context[7] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %rank, %rankAt : i64, !llvm.ptr
     %downUnitsAt = llvm.getelementptr %context[8] : (!llvm.ptr) -> !llvm.ptr, i64
     llvm.store %downUnits, %downUnitsAt : i64, !llvm.ptr
-    %upUnits = arith.select %upOnDevice, %none, %height : i64
-    %units = arith.addi %downUnits, %upUnits : i64
     %body = func.constant @strict_gpu_tuned_converting : (!llvm.ptr, i64, i64) -> f64
     %ran = func.call @strict_parallel(%body, %context, %units) : ((!llvm.ptr, i64, i64) -> f64, !llvm.ptr, i64) -> f64
+    cf.br ^scalesOnly
+  ^scalesOnly:
     func.call @strict_gpu_tuned_scales(%factors, %scales, %rank) : (!llvm.ptr, !llvm.ptr, i64) -> ()
     return
   }

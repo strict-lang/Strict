@@ -32,5 +32,4 @@ Measured speed work, compiler front end first. One item per finding, removed whe
 - `GarbageCollectionExceedsLimit` and `GarbageCollectionAboveTarget` could name the largest allocating call sites of the window.
 
 ## GPU
-- Loading with LoRAs (H3 with the turbo v4 LoRA 12.3 s vs 5.9 s without, warm, 2026-11-25): the GPU is busy 2.4 of 14 s (merge kernel 0.63 s, 22.6 GB up and 21.7 GB down in copies 1.8 s), the main thread spends 67 % in H3Block.Merge: reading each LoRA's factors serially (MossLora.Loaded -> Safetensors.Values -> TensorFile_Floats, 20 %), MossLora.Pack (15 %) and strict_gpu_tune (33 %, mostly host work in a parallel loop around the merge). Read the next matrix's factors while the GPU merges, and avoid round-tripping every merged matrix.
 - Small number types as kernel values: still on CPU for a `for` over `List(Complex)` (a list member with `value.Bits is 32` fails the build, index it instead), a `List(Complex)` result, a method returning `Complex` that has a loop or an early return, and list-backed types (`Vector2`, `Vector3`).
