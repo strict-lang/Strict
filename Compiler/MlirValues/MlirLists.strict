@@ -123,10 +123,16 @@ Append(entry InstructionEntry) Texts
 	kinds = MlirKinds(function)
 	elements = MlirLayout(function).Represent(kinds.ElementKind(kinds.VariableKind(position, entry.texts(0))))
 	adder = MlirDying(function, position).Adder(entry.texts(0))
-	helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else adder
+	helper = entry.kind is InstructionType.InvokeRemove then "strict_list_remove" else Pusher(adder, entry.texts(0))
 	added = MlirMemory(function, position).Pass(Temp("n"), helper, (Temp("l"), Temp("e")), elements)
 	element = function.Load(Temp("e"), "%r" + entry.payload(0))
 	(function.Load(Temp("l"), name), element) + added + function.Store(Temp("n"), name)
+Pusher(adder Text, name Text) Text
+	MlirLists(MlirLoops.Collecting.function, 2).Pusher("strict_list_push", "forResult") is "strict_list_push_number"
+	MlirLists(Listed, 3).Pusher("strict_list_push", "forResult") is "strict_list_push"
+	MlirLists(MlirLoops.Collecting.function, 2).Pusher("strict_list_add", "forResult") is "strict_list_add"
+	isNumbers = MlirLayout(function).Represent(MlirKinds(function).VariableKind(position, name)) is "List(Number)"
+	adder is "strict_list_push" and isNumbers then "strict_list_push_number" else adder
 EmitIndex(entry InstructionEntry) Texts
 	MlirLists(Listed, 2).EmitIndex(Steps(2)).Last is "    llvm.store %t2x, %r2 : f64, !llvm.ptr"
 	Text.Combine(Hoisting.EmitIndex(Hoisting.function.method.instructions(1))).IndexOf("@strict_hoisted_read(") > 0

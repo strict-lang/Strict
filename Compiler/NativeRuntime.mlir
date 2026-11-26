@@ -13463,6 +13463,59 @@
     %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
     return %added : f64
   }
+  // strict_list_push of an element the compiler knows is a number: no reference or span to record
+  func.func private @strict_list_push_number(%list: f64, %element: f64) -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1.0 : f64
+    %unset = arith.cmpf oeq, %list, %zero : f64
+    cf.cond_br %unset, ^fresh, ^check
+  ^fresh:
+    %first = func.call @strict_list_first(%element) : (f64) -> f64
+    return %first : f64
+  ^check:
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %length = llvm.load %view : !llvm.ptr -> f64
+    %holderSlot = llvm.getelementptr %view[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %holderBits = llvm.load %holderSlot : !llvm.ptr -> f64
+    %holder = func.call @strict_ptr(%holderBits) : (f64) -> !llvm.ptr
+    %usedSlot = llvm.getelementptr %holder[1] : (!llvm.ptr) -> !llvm.ptr, f64
+    %used = llvm.load %usedSlot : !llvm.ptr -> f64
+    %capacitySlot = llvm.getelementptr %holder[2] : (!llvm.ptr) -> !llvm.ptr, f64
+    %capacity = llvm.load %capacitySlot : !llvm.ptr -> f64
+    %isEmpty = arith.cmpf oeq, %length, %zero : f64
+    %isFixed = arith.cmpf oeq, %capacity, %zero : f64
+    %isShared = arith.andi %isEmpty, %isFixed : i1
+    cf.cond_br %isShared, ^fresh, ^grown
+  ^grown:
+    %newestVersion = arith.cmpf oeq, %length, %used : f64
+    %newest = func.call @strict_list_mine(%list, %newestVersion) : (f64, i1) -> i1
+    %room = arith.cmpf olt, %used, %capacity : f64
+    cf.cond_br %newest, ^mine, ^add
+  ^mine:
+    cf.cond_br %room, ^push, ^full
+  ^full:
+    %growable = arith.cmpf ogt, %capacity, %zero : f64
+    cf.cond_br %growable, ^grow, ^add
+  ^grow:
+    %grown = func.call @strict_list_appended(%holder, %used, %element) : (!llvm.ptr, f64, f64) -> f64
+    llvm.store %grown, %view : f64, !llvm.ptr
+    return %list : f64
+  ^push:
+    %itemsBits = llvm.load %holder : !llvm.ptr -> f64
+    %items = func.call @strict_ptr(%itemsBits) : (f64) -> !llvm.ptr
+    %at = arith.fptosi %used : f64 to i64
+    %slot = llvm.getelementptr %items[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    llvm.store %element, %slot : f64, !llvm.ptr
+    cf.br ^stored
+  ^stored:
+    %next = arith.addf %used, %one : f64
+    llvm.store %next, %usedSlot : f64, !llvm.ptr
+    llvm.store %next, %view : f64, !llvm.ptr
+    return %list : f64
+  ^add:
+    %added = func.call @strict_list_add(%list, %element) : (f64, f64) -> f64
+    return %added : f64
+  }
   // two lists computed on the GPU are joined there (WebGPU buffers by strict_gpu_web_joined), an empty list before one is
   // just that list; a host list after 32 bit
   // floats on the GPU moves there too (one Embedded tile of the H3 video VAE went down and up again for 8192 registers)
