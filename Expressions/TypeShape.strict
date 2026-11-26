@@ -46,7 +46,7 @@ IsContract Boolean
 	TypeShape("has number", "constant Max = 255").IsContract is false
 	TypeShape("Run Number", "\t5").IsContract is false
 	TypeShape("has value Generic", "Length Number").IsContract is false
-	IsTrait and not UsesGenerics and (MethodScope.names - ConstantScope.names - "from").Length > 0
+	IsTrait then not UsesGenerics and (MethodScope.names - ConstantScope.names - "from").Length > 0 else false
 MemberScope Scope
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.TypeOf("count") is "Number"
 	TypeShape("has count Number", "constant Limit = 3").MemberScope.names.Length is 1

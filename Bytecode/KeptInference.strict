@@ -105,10 +105,9 @@ Fresh(rest Texts, names Texts) KeptInference
 Joined(files Texts, at Number) KeptInference
 	Loggers.Joined(Swapped, 1).joined.types.names is ("TextWriter", "Logger")
 	shape = ResolveCheck.Shapes(List(Text) + files(at)).First
-	name = ResolveCheck.TypeName(files(at))
-	templates = shape.UsesGenerics then base.templates + name else base.templates
-	leaf = Inferring(List(Text) + files(at), List(TypeShape) + shape, templates).Raw
+	templates = shape.UsesGenerics then base.templates + ResolveCheck.TypeName(files(at)) else base.templates
 	shapes = base.shapes.Slice(0, at) + shape + base.shapes.Slice(at, base.shapes.Length - at)
+	leaf = Inferring(List(Text) + files(at), List(TypeShape) + shape, templates + base.Skips(shape, raw.types.names)).Raw
 	indexed = Whole(raw, leaf, at, files)
 	typed = Inferring(files, shapes, templates).InferScope(indexed, at)
 	own = leaf.types

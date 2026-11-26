@@ -25,7 +25,7 @@ Endless List(ValidationIssue)
 	Recursions(("Loaded(path Text) Terrain", "\tTerrain(Mesh.Loaded(path))"), "Terrain").Endless.Length is 0
 	Recursions(("", "\tx"), "R").Endless.Length is 0 and Recursions(("", "\tx"), "R").Deep.Length is 0
 	for lines
-		if TypeShape(lines).IsMethodHeader(value) and FileCheck.LastLine(lines, index) is index + 1
+		if TypeShape(lines).IsMethodHeader(value) then FileCheck.LastLine(lines, index) is index + 1 else false
 			method = Tokenizer(value).Tokens.First
 			only = Tokenizer(lines(index + 1).Trim).Tokens
 			if method(0).Lower is not method(0) and method is in Call(only) and "then" is not in only
@@ -133,9 +133,8 @@ Lets List(ValidationIssue)
 	for lines
 		if TypeShape(lines).IsMethodHeader(value)
 			method = Tokenizer(value).Tokens.First
-		trimmed = value.Trim
-		tokens = Tokenizer(trimmed).Tokens
-		if (trimmed.StartsWith("let ") or tokens.Length > 1 and tokens(1) is "=") and IsThroughSample(value, method)
+		tokens = Tokenizer(value.Trim).Tokens
+		if tokens.Length > 1 and (tokens(0) is "let" or tokens(1) is "=") then IsThroughSample(value, method) else false
 			issues.Add(ValidationIssue("LetCallsItself", method + LetHint, index + 1))
 	issues
 IsThroughSample(line Text, method Text) Boolean
@@ -147,9 +146,9 @@ IsThroughSample(line Text, method Text) Boolean
 	(Measuring.IsThroughSample("let area = Sample+Area", "Area") or Measuring.IsThroughSample("A Sample.", "A")) is false
 	tokens = Tokenizer(line.Trim).Tokens
 	for tokens
-		isOwn = index > 1 and tokens(index - 2) is in Samples and (index < 3 or tokens(index - 3) is not ".")
-		if value is method and isOwn and tokens(index - 1) is "."
-			return true
+		if value is method and index > 1 and tokens(index - 1) is "."
+			if tokens(index - 2) is in Samples and (index < 3 or tokens(index - 3) is not ".")
+				return true
 	false
 Samples Texts
 	Measuring.Samples is ("Sample")

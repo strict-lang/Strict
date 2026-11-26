@@ -9,7 +9,8 @@ constant Passing = SyntaxParser(Tokenizer("Through(w)").Tokens).Parse
 constant Coding = TypeCodegen("Strict/Boxes/Using", Using, TypeInference(Boxes, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)), List(Text))
 constant Unused = TypeEntry("Strict/Boxes/Using", List(MemberEntry), List(MethodEntry))
 constant Halving = "Through(Wrapped(Halver))"
-constant Traits = KnownTypes(("Counter", "Many"), (Scope("length", "Number"), Scope("elements", "Generics")), (KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(" trait", "true"), KnownTypes.NoMembers))
+constant TraitMembers = (Scope("length", "Number"), Scope("elements", "Generics"), Scope("counter", "Counter"))
+constant Traits = KnownTypes(("Counter", "Many", "Tally"), TraitMembers, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers), (Scope(" trait", "true"), KnownTypes.NoMembers, KnownTypes.NoMembers))
 constant Traited = Specialization(ValueCodegen(TypeInference(Traits, (KnownTypes.NoMembers, KnownTypes.NoMembers)), Scope(List(Text), List(Text)), CallTarget(Traits, TypeShape(Using), "Strict/Boxes/Using", List(Text))))
 constant Wrap = SyntaxParser(Tokenizer("Wrapped(w)").Tokens).Parse
 constant Doubled = KnownTypes("Using", KnownTypes.NoMembers, Scope(("Through", "Through"), ("Number", "Number")), Scope(("Through", "Through types", "Through", "Through types"), ("wrapped", "Wrapped", "other", "Number")))
@@ -64,12 +65,17 @@ IsGeneric(type Text) Boolean
 	Plain.IsGeneric("Wrapped")
 	Plain.IsGeneric("Halver") is false
 	Traited.IsGeneric("Many")
-	Traited.IsGeneric("Counter")
+	Traited.IsGeneric("Counter") and Traited.IsGeneric("Tally")
 	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Generic")) is "Through"
 	Traited.Name(Passing, List(Text) + "Counter", "Using", CodeBlock.Empty.Declare("w", "Many")) is "Through(Many)"
 	Plain.Name(Passing, List(Text) + "Wrapped", "Using", CodeBlock.Empty.Declare("w", "Halver")) is "Through"
 	members = values.target.types.MembersOf(type).types
-	IsTrait(type) or "Generic" is in members or "Generics" is in members
+	if IsTrait(type) or "Generic" is in members or "Generics" is in members
+		return true
+	for members
+		if IsTrait(value)
+			return true
+	false
 IsTrait(type Text) Boolean
 	Traited.IsTrait("Counter")
 	Plain.IsTrait("Halver") is false

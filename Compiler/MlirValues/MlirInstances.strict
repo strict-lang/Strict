@@ -1,5 +1,6 @@
 has function MlirFunction
 has position Number
+constant Unfilled = InstructionEntry.Invoke(1, ("Strict/Character", "from", "Strict/Character"), List(Number), -1)
 constant Built = InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1)
 constant Width = InstructionEntry(InstructionType.FieldLoad, "width", (2, 1, -1))
 constant Loggers = (MemberEntry.LoggerMember, MemberEntry("plain", "Logger", List(InstructionEntry), false), MemberEntry("count", "Number", List(InstructionEntry), false))
@@ -46,7 +47,7 @@ Construct(entry InstructionEntry, typeName Text) Texts
 	MlirInstances(Shapes, 1).Construct(Built, "Strict/Character").Length is 2
 	Text.Combine(MlirInstances(Shapes, 1).Construct(Built, "Strict/Error")).IndexOf("@strict_error_bits(") > 0
 	if TypeEntry.ShortName(typeName) is "File" or MlirLayout(function).IsStruct(typeName) is false
-		return function.Copy("%r" + PayloadDecoder(entry).Arguments.First, "%r" + entry.payload(0), Temp("o"))
+		return Wrap(entry)
 	owner = function.TypeOf(typeName)
 	memory = MlirMemory(function, position)
 	mutable lines = memory.Allocate(MlirEmbedded(function).Slots(typeName), "o")
@@ -54,6 +55,14 @@ Construct(entry InstructionEntry, typeName Text) Texts
 		lines = lines + MemberValue(entry, owner, value, index)
 	built = lines + memory.EmitBox(Temp("op"), "o", typeName) + function.Store(Temp("of"), "%r" + entry.payload(0))
 	MlirStructs(function, position).Construct(entry, owner, built)
+Wrap(entry InstructionEntry) Texts
+	MlirInstances(Shapes, 1).Wrap(Built).Length > 0
+	MlirInstances(Shapes, 1).Wrap(Unfilled).Length is 2
+	arguments = PayloadDecoder(entry).Arguments
+	if arguments.Length > 0
+		return function.Copy("%r" + arguments.First, "%r" + entry.payload(0), Temp("o"))
+	zero = Temp("o")
+	("    " + zero + " = arith.constant 0.0 : " + function.Float, function.Store(zero, "%r" + entry.payload(0)))
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts
 	MlirInstances(Shapes, 1).MemberValue(Built, Shapes.type, Shapes.type.members.First, 0).Length is 4
 	arguments = PayloadDecoder(entry).Arguments

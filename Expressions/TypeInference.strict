@@ -40,9 +40,10 @@ ConstantOf(typeName Text, name Text) Text
 	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Missing", "x") is ""
 	NoInference.TypeOf(ToText, NoShape, NoShape) is "Text"
 	NoInference.TypeOf(SyntaxNode("Binary", "else", (SyntaxNode("Type", "Error"), NoNode)), NoShape, NoShape) is "y"
-	TypeInference(KnownTypes.Sample, Limits).ConstantOf("Count", "Limit") is "3"
+	Counts.ConstantOf("Count", "Limit") is "3" and Counts.ConstantOf("Count(Number)", "Limit") is "3"
 	NoInference.ConstantOf("A", "Missing") is "" and ColorTexts.Converter("Color", "Text") is ""
-	index = types.Index(typeName)
+	base = types.BaseName(typeName)
+	index = types.Index(typeName.IndexOf("(") > 0 and base is not in ("List", "Dictionary") then base else typeName)
 	index is -1 then "" else constants(index).TypeOf(name)
 TypeOf(node SyntaxNode, scope Scope, own Scope) Text
 	Scaling.TypeOf(SyntaxParser(Tokenizer("p.x").Tokens).Parse, Paired, NoShape) is "y"

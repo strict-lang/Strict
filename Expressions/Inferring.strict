@@ -3,21 +3,38 @@ has shapes List(TypeShape)
 has templates Texts
 constant Writers = ("File.strict", "TextWriter.strict", "BytesWriter.strict")
 constant Writing = Inferring(Writers, ResolveCheck.Shapes(Writers), List(Text))
+constant Mocking = (TypeShape("Check(value Text) Boolean"), TypeShape("has Checker", "has platform Text", "Check(value Text) Boolean", "\tvalue is platform"))
+constant Mocks = ("Checker", "Mock")
+constant Implementing = Inferring(("Checker.strict", "Mock.strict"), Mocking, List(Text))
 constant None = Inferring(List(Text), List(TypeShape), List(Text))
 Raw TypeInference
 	Writing.Raw.types.names is ("File", "TextWriter", "BytesWriter")
 	None.Raw.constants.Length is 0
+	Implementing.Raw.types.ParameterScope("Mock").TypeOf("from") is "platform"
 	mutable members = List(Mutable(Scope))
 	mutable methods = List(Mutable(Scope))
 	mutable parameters = List(Mutable(Scope))
 	mutable constants = List(Mutable(Scope))
+	names = ResolveCheck.TypeNames(files)
 	for shapes
 		members.Add(value.MemberScope.Indexed.Owned(ResolveCheck.TypeName(files(index))))
 		methods.Add(value.MethodScope)
-		parameters.Add(Defaults(value.lines).Of(methods.Last, members.Last, value.ConstructorNames(members.Last, templates)))
+		parameters.Add(Parameters(value, methods.Last, members.Last, names))
 		constants.Add(value.ConstantScope)
-	names = ResolveCheck.TypeNames(files)
 	TypeInference(KnownTypes(names, members, methods, CrossChanges(names, shapes).Settle(parameters)), constants)
+Parameters(shape TypeShape, methods Scope, members Scope, names Texts) Scope
+	Implementing.Parameters(Mocking(1), Mocking(1).MethodScope, Mocking(1).MemberScope, Mocks).TypeOf("from") is "platform"
+	Defaults(shape.lines).Of(methods, members, shape.ConstructorNames(members, Skips(shape, names)))
+Skips(shape TypeShape, names Texts) Texts
+	Implementing.Skips(Mocking(1), Mocks) is ("Checker")
+	Implementing.Skips(TypeShape("has checker Checker", "Run", "\t1"), Mocks).Length is 0
+	mutable skipped = templates
+	for shape.MemberScope.types
+		position = names.Index(value)
+		isContract = position < 0 then false else shapes(position).IsContract
+		if isContract then (shapes(position).MethodScope.names - shape.MethodScope.names).Length is 0 else false
+			skipped = skipped + value
+	skipped
 Refine(inference TypeInference) TypeInference
 	None.Refine(ResolveCheck.Counting).types.methods.Length is 0
 	Writing.Refine(Writing.Raw).types.ParameterScope("File").Count("Write") is 3
