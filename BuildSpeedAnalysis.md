@@ -101,7 +101,7 @@ So the fix is to generate the text once and compose the variants from those stri
 
 ### 6. Small wins
 
-- Reuse the `.res` resource object when the manifest did not change (saves `llvm-rc` 0.05–0.06 s per link, every link).
+- Done (790d9a8c): the `.res` resource object is reused while it is newer than the icon, `llvm-rc` runs only when the icon changes.
 - Gate VM tests per chunk rather than per file in folder tests.
 - Cache hygiene: `Networking/native/Socket.<random>.o` ×25, `NeuralNetworks/native/**/*.old*.o` and `quants.*.o` accumulate; they cost disk and confuse "what is current".
 - Warm VM is already at the target (60–220 ms). Keep `run -c`, `test <file> unit`, `check <file>` and the VS Code path on the server; do not move work into the build path.
@@ -115,6 +115,14 @@ The 0.90 s one-line-change link is ThinLTO, not a linker limit. Parts are compil
 - Effort: small, one flag through the existing toolchain objects. Semantics unchanged: `-O0`/no-LTO preserves behavior, only speed and size differ.
 - Do not make it the default for folder builds: every dev run of a DeltaEngine game or a NeuralNetworks model would be 2–10x slower and people would turn it off. Default stays optimized, release builds keep ThinLTO, and benchmarks keep using `Release/<Platform>`.
 - Risk: someone benchmarks a `--fast` build. Keep the flag out of `Release/` and say so in the build line it prints.
+
+### 8. Key a function by what its callers change about it (incremental builds, item 70)
+
+Measured 2026-11-26 on `strict test RealTimeStrategy native` (DeltaEngine copy) after a one-line test edit: the emission cache reuses 2321 of 2427 functions, the other 106 are emitted again (about 0.1 s each, 28 s for the whole test build). Diffing the keys in `obj/Tests.test.emitted` before and after: not line shifts (instruction hashes ignore `line`, and since c32c9963 trace lines are relative to a per-function `@l<Symbol>` base global, so a moved method reuses its body), but field 13 of `EmissionCache.Keys`, `CallGraph.Calling`, the sum of the instruction hashes of every caller. The edited `$Tests` calls `Unit.Jeep`, `Unit.WithDamage`, ... so each of those gets a new key, and `Closure` (callee hashes) carries the change further.
+
+- Lead: replace the whole-caller hash with a hash of only what a caller changes about the callee: the call sites themselves (argument registers kinds, constant arguments, named arguments) and whatever else emission reads from callers.
+- Soundness question to settle first: what does emitting a function read from its callers? Candidates are parameter kinds inferred from call sites (`MlirKinds`), `safeCalls` and the whole-number guards, inlining decisions and `recursive`. Each of those must be part of the new caller key, or a reused body is wrong. `STRICT_EMISSION_CHECK=1` compares every reused body with a fresh emission and logs `EmissionCacheMismatch`, the test for any narrower key.
+- Gain: a test edit would re-emit the edited method, its callers and the test runner only, instead of everything the edited tests call.
 
 ### Deferred
 
