@@ -2,20 +2,8 @@ has isReal Boolean
 Checked Checker
 	Switch(true).Checked.IsChecked("real") and Switch(true).Checked.IsChecked("ok") is false
 	Switch(false).Checked.IsChecked("ok") and Switch(false).Checked.IsChecked("real") is false
-	isReal then Real else Mock
-Real Checker
-	Switch(true).Real.IsChecked("real")
-	RealCheck
-Mock Checker
-	Switch(true).Mock.IsChecked("ok")
-	MockCheck
+	isReal then RealCheck else MockCheck
 Kept Vault
 	Switch(true).Kept.IsBound("ab") and Switch(true).Kept.IsBound("b") is false
 	Switch(false).Kept.IsBound("b")
-	isReal then Prefixed else Memory
-Prefixed Vault
-	Switch(true).Prefixed.IsBound("ab")
-	RealVault("a")
-Memory Vault
-	Switch(true).Memory.IsBound("b")
-	MemoryVault
+	isReal then RealVault("a") else MemoryVault

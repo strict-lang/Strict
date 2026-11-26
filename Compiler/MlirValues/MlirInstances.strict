@@ -9,6 +9,8 @@ constant MemberBase = 100000
 constant Counted = MemberEntry("count", "Strict/Number", List(InstructionEntry), false)
 constant Ordered = TypeEntry(MlirTraits.Mock, Name = "Strict/A/Ordered", members = List(MemberEntry) + Counted + MlirTraits.Held.First)
 constant Mocking = MlirFunction((MlirTraits.Checker, MlirTraits.Mock), MlirTraits.Mock, MethodEntry.CountingLoop)
+constant Prefixed = TypeEntry(MlirTraits.Mock, members = MlirTraits.Held + MemberEntry("Prefix", "Strict/Text", List(InstructionEntry), true))
+constant Prefixing = MlirFunction((MlirTraits.Checker, Prefixed), Prefixed, MethodEntry.CountingLoop)
 constant Mocked = InstructionEntry.Invoke(1, ("Strict/A/MockCheck", "from", "Strict/A/MockCheck"), List(Number), -1)
 constant Ordering = MlirFunction((MlirTraits.Checker, Ordered), Ordered, MethodEntry.CountingLoop)
 constant Looping = MlirFunction(List(TypeEntry), MlirFunction.Shape, MethodEntry.CountingLoop)
@@ -71,12 +73,14 @@ Wrap(entry InstructionEntry) Texts
 	MlirInstances(Shapes, 1).Wrap(Built).Length > 0
 	MlirInstances(Shapes, 1).Wrap(Unfilled).Length is 2
 	MlirInstances(Mocking, 1).Wrap(Mocked).First.EndsWith("2.0 : f64")
+	MlirInstances(Prefixing, 1).Wrap(Mocked).First.EndsWith("2.0 : f64")
 	arguments = PayloadDecoder(entry).Arguments
 	if arguments.Length > 0
 		return function.Copy("%r" + arguments.First, "%r" + entry.payload(0), Temp("o"))
 	zero = Temp("o")
 	owner = function.TypeOf(PayloadDecoder(entry).Text(1))
-	isKind = owner.members.Length is 1 then MlirTraits(function.types).IsSlot(owner, owner.members.First) else false
+	stored = Store(owner)
+	isKind = stored.Length is 1 then MlirTraits(function.types).IsSlot(owner, stored.First) else false
 	value = isKind then MlirTraits(function.types).Id(owner.Name) + ".0" else "0.0"
 	("    " + zero + " = arith.constant " + value + " : " + function.Float, function.Store(zero, "%r" + entry.payload(0)))
 MemberValue(entry InstructionEntry, owner TypeEntry, member MemberEntry, slot Number) Texts

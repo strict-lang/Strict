@@ -3,6 +3,8 @@ constant Triggers = Indexing(KnownTypes(List(Text) + "Trigger", List(Scope) + Kn
 constant Inferring = TypeInference(Triggers.types, List(Scope) + KnownTypes.NoMembers)
 constant Positioned = SyntaxParser(Tokenizer("t.Position(0)").Tokens).Parse
 constant Located = Scope(List(Text) + "t", List(Text) + "Trigger")
+constant Getting = (Scope("Decoded", "Tree"), Scope("get", "Tree"))
+constant Trees = Indexing(KnownTypes(("Saved", "Tree"), KnownTypes.NoMemberPair, Getting, (KnownTypes.NoMembers, Scope("get", "name"))))
 constant Measuring = Indexing(KnownTypes.Measured)
 IsIndexed(typeName Text, name Text, arguments Number) Boolean
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "number", 1)
@@ -11,8 +13,10 @@ IsIndexed(typeName Text, name Text, arguments Number) Boolean
 	Triggers.IsIndexed("Trigger", "Moved", 1) is false and Triggers.IsIndexed("Trigger", "Missing", 1) is false
 	Triggers.IsIndexed("Trigger", "Position", 2) is false and Measuring.IsIndexed("Length", "Length", 1) is false
 	Indexing(KnownTypes.Sample).IsIndexed("Count", "Twice", 1) is false
+	Trees.IsIndexed("Saved", "Decoded", 1) and Trees.IsIndexed("Saved", "Decoded", 2) is false
 	if types.MembersOf(typeName).TypeOf(name) is not ""
 		return true
 	returned = types.MethodsOf(typeName).TypeOf(name)
 	isList = returned is not "" and types.ElementType(returned) is not returned
-	isList and arguments is 1 and types.ParametersOf(typeName, name, 1).Length is 0
+	isGot = returned is not "" and types.ParametersOf(returned, "get", 1).Length is 1
+	(isList or isGot) and arguments is 1 and types.ParametersOf(typeName, name, 1).Length is 0

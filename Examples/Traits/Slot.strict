@@ -1,0 +1,6 @@
+has order Order
+has count Number
+Path Text
+	Slot(Order("a"), 1).Path is "a1"
+	(Slot(Order("a"), 1), Slot(Order("b"), 2))(1).Path is "b2"
+	order.path + count

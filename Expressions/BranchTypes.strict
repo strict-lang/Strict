@@ -20,12 +20,18 @@ constant Compared = SyntaxNode("Binary", "is", Mixed.children)
 constant Message = "ConditionalBranchesMustHaveOneType: count is count then count else area gives a Count or a Area"
 constant Coupled = BranchTypes(Instantiation.Inferring)
 constant Paired = SyntaxParser(Tokenizer("1 is 1 then Couple(\"a\", 2) else Couple(1, 2)").Tokens).Parse
+constant Held = Scope("Checker", "Checker")
+constant Checks = Scope("IsChecked", "Boolean")
+constant Checkers = KnownTypes(("Checker", "MockCheck", "RealCheck"), (KnownTypes.NoMembers, Held, Held), (Checks, Checks, Checks), (Scope(" trait", "true"), KnownTypes.NoMembers, KnownTypes.NoMembers))
+constant Picking = BranchTypes(TypeInference(Checkers, (KnownTypes.NoMembers, KnownTypes.NoMembers, KnownTypes.NoMembers)))
+constant Picked = SyntaxParser(Tokenizer("isReal then RealCheck else MockCheck").Tokens).Parse
 constant Unchecked = ("", "Unknown", "Error", "ErrorWithValue", "None", "Generic")
 Issue(node SyntaxNode, scope Scope, current Scope) Text
 	Sizing.Issue(Mixed, Counted, Counted) is Message
 	Sizing.Issue(Same, Counted, Counted) is "" and Sizing.Issue(Failing, Counted, Counted) is ""
 	Sizing.Issue(ArgumentTypes.Grown, Counted, Counted) is "" and Sizing.Issue(Statement, Counted, Counted) is ""
 	Sizing.Issue(Compared, Counted, Counted) is "" and Sizing.Issue(Fallback, Counted, Counted) is ""
+	Picking.Issue(Picked, Scope("isReal", "Boolean"), KnownTypes.NoMembers) is ""
 	if node.Kind is not "Binary" or node.text is not "else" or node.children(0).text is not "then"
 		return ""
 	thenType = Then(node.children(0), scope, current)
@@ -33,7 +39,19 @@ Issue(node SyntaxNode, scope Scope, current Scope) Text
 	checks = ArgumentTypes(inference)
 	isMixed = checks.IsMismatch(elseType, thenType) or checks.IsMismatch(thenType, elseType) or IsSplit(thenType, elseType)
 	message = "ConditionalBranchesMustHaveOneType: " + node + " gives a " + thenType + " or a " + elseType
-	thenType is not in Unchecked and elseType is not in Unchecked and isMixed then message else ""
+	isChecked = thenType is not in Unchecked and elseType is not in Unchecked and isMixed
+	isChecked and IsShared(thenType, elseType) is false then message else ""
+IsShared(first Text, second Text) Boolean
+	Picking.IsShared("RealCheck", "MockCheck") and Picking.IsShared("RealCheck", "Checker") is false
+	types = inference.types
+	for types.MembersOf(first).types
+		isTrait = types.ParameterScope(value).TypeOf(" trait") is "true" and value is in types.MembersOf(second).types
+		if isTrait and IsCovering(first, value) and IsCovering(second, value)
+			return true
+	false
+IsCovering(type Text, trait Text) Boolean
+	Picking.IsCovering("MockCheck", "Checker")
+	(inference.types.MethodsOf(trait).names - inference.types.MethodsOf(type).names).Length is 0
 IsSplit(first Text, second Text) Boolean
 	Coupled.IsSplit("Couple(Text, Number)", "Couple(Number, Number)")
 	(Coupled.IsSplit("Couple(Text)", "Couple") or Coupled.IsSplit("Couple", "Couple(Text)")) is false

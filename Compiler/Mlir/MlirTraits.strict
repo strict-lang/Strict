@@ -10,9 +10,15 @@ constant Kinded = "    llvm.store %k, %s : f64, !llvm.ptr"
 constant Both = (Checker, Mock, TypeEntry(Mock, Name = "Strict/A/RealCheck"))
 constant Address = "    %address = func.call @strict_ptr(%p0) : (f64) -> !llvm.ptr"
 constant Loaded = "    %kind = llvm.load %address : !llvm.ptr -> f64"
+constant Guard = ("    %empty = arith.cmpf oeq, %p0, %zero : f64", "    cf.cond_br %empty, ^none, ^load", "  ^load:")
+constant Unloaded = ("    return %zero : f64", "  ^none:")
 constant Zero = "    %zero = arith.constant 0.0 : f64"
 constant Ending = ("    return %zero : f64", "  }")
 constant Compared = "    %is0 = arith.cmpf oeq, %p0, %k0 : f64"
+constant Stored = (Checker, Mock, TypeEntry(Mock, Name = "Strict/A/Stored", members = Held + MemberEntry("count", "Strict/Number", List(InstructionEntry), false)))
+constant Request = TypeEntry("Strict/A/Request", List(MemberEntry) + MemberEntry("path", "Strict/Text", List(InstructionEntry), false), List(MethodEntry))
+constant Holding = TypeEntry("Strict/A/Held", List(MemberEntry) + MemberEntry("request", "Strict/A/Request", List(InstructionEntry), false), List(MethodEntry))
+constant Ready = MethodEntry(Readying, instructions = Bodies)
 constant Asking = MlirFunction(Both, Checker, Checking)
 constant Real = TypeEntry(Mock, Name = "Strict/A/RealCheck")
 constant Making = InstructionEntry.Invoke(1, ("Strict/A/RealCheck", "from", "Strict/A/RealCheck"), List(Number), -1)
@@ -51,10 +57,11 @@ IsImplementing(candidate TypeEntry, trait TypeEntry) Boolean
 	MlirTraits(List(TypeEntry)).IsImplementing(Mock, Checker)
 	MlirTraits(List(TypeEntry)).IsImplementing(Checker, Checker) is false
 	MlirTraits(List(TypeEntry)).IsImplementing(Half, Checker) is false
-	if IsHolding(candidate, trait) is false
+	MlirTraits(List(TypeEntry)).IsImplementing(Holding, Request) is false
+	if IsTrait(trait) is false or IsHolding(candidate, trait) is false
 		return false
 	for trait.methods
-		if HasBody(candidate, value.Name) is false
+		if value.instructions.Length is 0 and HasBody(candidate, value.Name) is false
 			return false
 	true
 HasBody(candidate TypeEntry, name Text) Boolean
@@ -100,12 +107,13 @@ Dispatch(function MlirFunction) Texts
 	Text.Combine(MlirTraits(Both).Dispatch(Asking)).IndexOf("@MockCheck_IsChecked") > 0
 	MlirTraits(Both).Dispatch(Asking).First is "  func.func private @Checker_IsChecked_foreign(%p0: f64) -> f64 {"
 	MlirTraits(Both).Dispatch(Asking).Last is "  }"
+	Text.Combine(MlirTraits(Stored).Dispatch(Asking)).IndexOf("^none") > 0
 	Text.Combine(MlirTraits(Both).Dispatch(Asking)).IndexOf(Address) < 0
 	foreign = MlirForeign(function)
 	header = "  func.func private @" + foreign.Wrapper + "(" + foreign.Parameters + ") -> f64 {"
 	targets = Implementers(function)
 	structs = Cases(function, targets, true)
-	loaded = structs.Length is 0 then List(Text) else List(Text) + Address + Loaded + structs
+	loaded = structs.Length is 0 then List(Text) else Guard + Address + Loaded + structs + Unloaded
 	((List(Text) + header + Zero) + Cases(function, targets, false)) + loaded + Ending
 Cases(function MlirFunction, targets List(MlirFunction), isStruct Boolean) Texts
 	MlirTraits(Both).Cases(Asking, MlirTraits(Both).Implementers(Asking), false).Length is 14
@@ -145,3 +153,12 @@ Raw(function MlirFunction) Text
 	for function.Parameters
 		names.Add("%p" + index)
 	Text.Combine(names, ", ")
+IsTrait(type TypeEntry) Boolean
+	MlirTraits(List(TypeEntry)).IsTrait(Checker) and MlirTraits(List(TypeEntry)).IsTrait(Request) is false
+	MlirTraits(List(TypeEntry)).IsTrait(TypeEntry(Checker, methods = (Checking, Ready)))
+	if type.Name.LastIndexOf("/") is "Strict/".Length - 1
+		return false
+	for type.methods
+		if value.instructions.Length is 0
+			return true
+	false

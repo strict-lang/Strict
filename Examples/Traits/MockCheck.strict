@@ -1,4 +1,5 @@
 has Checker
+constant Accepted = "ok"
 IsChecked(text Text) Boolean
 	MockCheck.IsChecked("ok")
-	text is "ok"
+	text is Accepted
