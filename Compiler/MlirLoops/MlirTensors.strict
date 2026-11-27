@@ -142,9 +142,16 @@ Used(program Text) Texts
 			value
 Drift(folder Text) Texts slow
 	Attending.Drift("NeuralNetworks").Length is 0
+	files = SourceFiles(".").Folder(folder)
 	for Typed
-		if Declare(folder + "/" + value + ".strict") is not Stored(Kinds.Index(value))
+		if Declare(Locate(files, value)) is not Stored(Kinds.Index(value))
 			value
+Locate(files Texts, name Text) Text
+	Attending.Locate(("./A/B.strict", "./A/C/D.strict"), "D") is "./A/C/D.strict"
+	for files
+		if value.EndsWith("/" + name + ".strict")
+			return value
+	""
 Declare(path Text) Texts slow
 	Attending.Declare("NeuralNetworks/SituRotated.strict") is SituRotations
 	for File(path).ReadLines

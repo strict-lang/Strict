@@ -21,7 +21,7 @@ constant AppendPacked = ("    %t3pk = func.call @strict_two_x(%t3pl) : (f64) -> 
 constant Appending = AppendLoads + AppendPacked
 IsPaired(kind Text) Boolean
 	Built.Append(Building.instructions(3), MlirLists(Built.function, 3)) is Appending
-	Text.Combine(Built.Append(Building.instructions(4), MlirLists(Built.function, 3))).IndexOf("push(") > 0
+	Text.Combine(Built.Append(Building.instructions(4), MlirLists(Built.function, 3))).IndexOf("_push_number(") > 0
 	Text.Combine(Sample.Append(Building.instructions(2), MlirLists(Sample.function, 1))).IndexOf("push(") > 0
 	Sample.IsPaired("Pairing")
 	MlirPairs(MlirCouples.Sample.function, 0).IsPaired("Sizing")

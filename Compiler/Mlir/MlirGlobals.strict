@@ -9,7 +9,7 @@ constant ShapeStored = ("    %s2 = llvm.getelementptr %table[4] : (!llvm.ptr) ->
 constant ShapeNamed = ("    %w2 = llvm.mlir.addressof @wShape_Run_0 : !llvm.ptr", "    %n2 = llvm.getelementptr %s2[1] : (!llvm.ptr) -> !llvm.ptr, i64", "    llvm.store %w2, %n2 : !llvm.ptr, !llvm.ptr")
 constant Table = "  llvm.mlir.global internal @strict_places(dense<0> : tensor<"
 Lines Texts slow
-	Counted.Lines.Length is 14
+	Counted.Lines.Length is 15
 	files = Files
 	mutable lines = List(Mutable(Text))
 	for functions

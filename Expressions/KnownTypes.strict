@@ -12,6 +12,8 @@ constant Measured = KnownTypes(("F", "Length"), Lengths, (NoMembers, Scope("Leng
 constant Sizes = (Scope("Size", "Number"), Scope("Size", "Number"))
 constant Shadowed = KnownTypes(("G", "F"), (Scope("f", "F"), NoMembers), Sizes, (NoMembers, NoMembers))
 constant Nested = KnownTypes(("G", "F", "Length"), (Scope("f", "F"), Lengths(0), NoMembers), (NoMembers, NoMembers, Scope("Length", "Number")), (NoMembers, NoMembers, NoMembers))
+constant Measuring = (NoMembers, NoMembers, NoMembers, Scope("Length", "Number"))
+constant Near = KnownTypes(("H", "G", "F", "Length"), (Scope(("g", "length"), ("G", "Length")), Scope("f", "F"), Lengths(0), NoMembers), Measuring, (NoMembers, NoMembers, NoMembers, NoMembers))
 constant Cycled = KnownTypes(("A", "B", "F"), (Scope("b", "B"), Scope(("a", "f"), ("A", "F")), NoMembers), (NoMembers, NoMembers, Scope("Length", "Number")), (NoMembers, NoMembers, NoMembers))
 constant CountParameters = Scope(("Increment", "Increment mutable", "Twice", "Twice", "Twice types"), ("", "Mutable", "times,offset", "times", "Number"))
 constant SampleParameters = (CountParameters, NoMembers)
@@ -194,16 +196,17 @@ Inherit(typeName Text, name Text) Text
 Holder(typeName Text, name Text, depth Number) Text
 	Measured.Holder("F", "Length", 1) is "Length"
 	Nested.Holder("G", "Length", 2) is "f"
-	Cycled.Holder("B", "Length", 3) is "a"
+	Cycled.Holder("B", "Length", 3) is "f"
+	Near.Holder("H", "Length", 3) is "length"
 	Sample.Holder("Count", "Twice", 1) is ""
 	Shadowed.Holder("G", "Size", 1) is ""
 	Layered.DeclaredType("A", "Weight", 2) is "Number"
 	if MethodsOf(typeName).TypeOf(name) is not ""
 		return ""
 	typeMembers = Instantiation(value).Members(typeName, MembersOf(typeName))
-	for typeMembers.types
-		if MemberMethodType(value, name, depth - 1) is not ""
-			return typeMembers.names(index)
+	for level, memberType in Range(0, depth), typeMembers.types
+		if MemberMethodType(memberType, name, level) is not ""
+			return typeMembers.names(typeMembers.types.Index(memberType))
 	""
 MemberMethodType(memberType Text, name Text, depth Number) Text
 	Sample.MemberMethodType("Texts", "Missing", 1) is ""
