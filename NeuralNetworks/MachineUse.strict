@@ -31,7 +31,8 @@ Models(name Text, model Number, encoder Number, growth Number, forced Boolean) M
 Weights(name Text, path Text) MachineUse slow
 	MachineUse.Weights("Qwen3Text", "NeuralNetworks/missing.gguf").ram is 0
 	parts = path.Split("-00001-of-")
-	single = File(path).Exists then File(path).Length else 0
+	ensured = ModelSource(path).Ensured
+	single = File(ensured).Exists then File(ensured).Length else 0
 	if parts.Length < 2
 		return MachineUse(name, single, single is 0 then 0 else single + Gigabyte, IsForced(List(Text)))
 	mutable size = 0

@@ -3,7 +3,7 @@ constant Prompts = ("The capital of France is", "Three side lengths form a valid
 constant Count = 32
 constant Sequences = 32
 Run
-	Respond(Weights, 8)
+	Respond(ModelSource(Weights).Ensured, 8)
 Respond(weights Text, bits Number) slow
 	file = Gguf(weights)
 	tokenizer = Gpt2Tokens.Loaded(file)

@@ -1,11 +1,7 @@
 constant Folder = "NeuralNetworks/qwen3/"
-constant Address = "https://huggingface.co/ggml-org/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q8_0.gguf"
 constant Prompt = "Alan Turing theorized that computers would one day become"
 constant Count = 20
 Run
-	if File(Folder + "model.gguf").Exists is false
-		if Process.RunTool("curl", "-sfL --create-dirs -o \"" + Folder + "model.gguf\" \"" + Address + "\"").HasFailed
-			return Error("DownloadFailed: " + Address)
 	if MachineUse.Weights("Qwen3Text", Folder + "model.gguf").IsAdmitted
 		Generate
 Generate

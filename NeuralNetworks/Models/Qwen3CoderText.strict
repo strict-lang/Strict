@@ -1,12 +1,8 @@
 constant Weights = "Qwen3-Coder-30B-A3B-Instruct-Q4_K_M.gguf"
-constant Address = "https://huggingface.co/unsloth/Qwen3-Coder-30B-A3B-Instruct-GGUF/resolve/main/"
 constant Prompt = "def fibonacci(n):"
 constant Count = 24
 Run(folder Text)
-	path = folder + "/" + Weights
-	if File(path).Exists is false
-		Download(path)
-	if MachineUse.Weights("Qwen3CoderText", path).IsAdmitted
+	if MachineUse.Weights("Qwen3CoderText", folder + "/" + Weights).IsAdmitted
 		Generate(folder)
 Generate(folder Text)
 	path = folder + "/" + Weights
@@ -18,6 +14,3 @@ Generate(folder Text)
 	milliseconds = ((Process.Elapsed - loaded) * 1000 / Count).Round(1)
 	logger.Log(Prompt + tokenizer.Decode(generated))
 	logger.Log("Qwen3-Coder-30B-A3B loaded in " + (loaded - started).Round(1) + " s, " + milliseconds + " ms per token")
-Download(path Text) slow
-	if Process.RunTool("curl", "-sfL --create-dirs -o \"" + path + "\" \"" + Address + Weights + "\"").HasFailed
-		return Error("DownloadFailed: " + Address + Weights)
