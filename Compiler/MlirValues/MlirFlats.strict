@@ -64,16 +64,22 @@ Constrain(type TypeEntry) Number
 IsSupported(type TypeEntry, member Text) Boolean
 	Sample.IsSupported(Tripling, "numbers")
 	Sample.IsSupported(Summing, "numbers") is false
+	paren = member + "("
+	dot = member + "."
 	for type.methods
 		steps = value.instructions
 		for steps
 			name = value.texts.Length > 0 then value.texts(0) else ""
-			isNamed = name is member or name.StartsWith(member + "(") or name.StartsWith(member + ".")
-			isRead = value.kind is InstructionType.LoadVariableToRegister
-			isKept = isRead then IsConsumed(steps, index, value.payload(0)) else value.kind is in MlirKinds.Indexing
-			if isNamed and isKept is false
+			isNamed = name.StartsWith(member) then name is member or name.StartsWith(paren) or name.StartsWith(dot) else false
+			if isNamed then IsKept(steps, index) is false else false
 				return false
 	true
+IsKept(steps List(InstructionEntry), at Number) Boolean
+	Sample.IsKept(Zed.instructions, 0)
+	Sample.IsKept(InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "a"), 0) is false
+	step = steps(at)
+	isRead = step.kind is InstructionType.LoadVariableToRegister
+	isRead then IsConsumed(steps, at, step.payload(0)) else step.kind is in MlirKinds.Indexing
 IsAccessor(step InstructionEntry, register Number) Boolean
 	Sample.IsAccessor(Reading, 0) and Sample.IsAccessor(Reading, 1) is false
 	Sample.IsAccessor(InstructionEntry.Return(0), 0) is false
