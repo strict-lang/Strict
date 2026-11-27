@@ -1,0 +1,8 @@
+has functions List(MlirFunction)
+has recursive Texts
+Emit(function MlirFunction) Text
+	MlirEmission(MlirModule.NoFunctions, List(Text)).Emit(MlirWhole.Row.function).IndexOf("alwaysinline") > 0
+	text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
+	emitted = MlirEntry.Optimize(function.method, text)
+	whole = MlirWholeBody(function, functions).Lines
+	whole.Length is 0 then emitted else emitted + "\n" + Text.Combine(whole, "\n")

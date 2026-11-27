@@ -40,7 +40,7 @@ Device(all List(MlirFunction)) Text slow
 Fresh(texts List(MlirFunction)) Texts
 	Counting.Fresh(MlirModule.Counters.Functions).Length is 1
 	for texts
-		module.Emission(value, functions, recursive)
+		MlirEmission(functions, recursive).Emit(value)
 Reuse(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
 	mutable reused = 0
 	for keys
@@ -59,10 +59,10 @@ Pick(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChec
 		Chosen(value, keys(index), stored, isChecked)
 Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked Boolean) Text slow
 	if key is not in stored
-		return module.Emission(function, functions, recursive)
+		return MlirEmission(functions, recursive).Emit(function)
 	if isChecked is false
 		return stored(key)
-	fresh = module.Emission(function, functions, recursive)
+	fresh = MlirEmission(functions, recursive).Emit(function)
 	if stored(key) is not fresh
 		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
 	fresh
