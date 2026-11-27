@@ -98,6 +98,7 @@ So the fix is to generate the text once and compose the variants from those stri
 - Gain: Math emission plausibly from ~25 s to single-digit seconds; the same ratio on every numeric package. This is the only option that makes a *cold* build of numeric code fast.
 - Effort: medium, but it touches the hottest and most intricate emitter, so it needs the emission check mode on a real package (Math) before and after.
 - Risk: emitted text drift. Compare `STRICT_EMISSION_CHECK=1` output and Math's tests before accepting.
+- Measured 2026-11-27 (`strict test Math native`, cold, `STRICT_SERVER=0`): bodies 14.9 s for 269 functions. Per function (instrumented, about 2x slower): `Matrix_$Tests_0` 13-18 s, `Mandelbrot_Orbit` 5.4 s, `Matrix_Times` 3.8 s, `Matrix_Inverse` 1.6 s, everything else under 0.4 s. In `Matrix_$Tests_0` (about 1500 instructions) plain loads cost nothing, but each of 275 invokes costs about 37 ms and each of 259 variable stores about 16 ms: the per-position analyses scan the whole function, so a long test method is quadratic. An invoke splits into the call itself 7.1 s (of that, return checks 3.3, `MlirSpent.Dead` 2.0, dispatch 1.2), `MlirDestined.Aim` 3.0, `MlirGrouped.Keep` 1.2 and `MlirGiving` 1.0 s over 1959 Math invokes; no single analysis dominates. Making `MlirOwned.IsOwned`, `MlirDying.IsReleased` and `MlirSpent` evaluate lazily (`and`/`or` run both sides) measured no gain in an A/B, so it was dropped. The fix is a per-function index built once (stores and loads per variable, writer per register, loop ranges) that these analyses read instead of scanning.
 
 ### 6. Small wins
 
@@ -160,7 +161,7 @@ Profiled run, emission cold, link warm: 89.5 s. An earlier run the same morning 
 
 | Step | Time | Skip when |
 | --- | --- | --- |
-| Function bodies, 5030 functions, nothing cached | 48.4 s | The emission cache hits. A codegen-stamp miss emits all of them. Bodies are about 8× the 2026-11-26 seed (~5 s) inside the loop emitters, not in the cache. |
+| Function bodies, 5030 functions, nothing cached | 48.4 s (5-8 s since cf191723) | The emission cache hits. A codegen-stamp miss emits all of them. The 8× over the 2026-11-26 seed came from the mutable `MlirModule` member, see the end of this section. |
 | MLIR emission, including the bodies | 58.0 s | Same cache. Reachability 3.9 s, safety 1.7 s and GPU kernels 2.1 s are inside this and are skipped by a served compile (`STRICT_SERVER=0` on this run). |
 | Verified, the test gate | 14.2 s | Dependency linking 6.8 s and saving homes 4.5 s rerun every self-build. Homes can wait until a linked source changes. |
 | Frontend inlining | 2.9 s | |
