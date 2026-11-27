@@ -1,0 +1,117 @@
+has root Text
+constant Copied = "Compiler/output/PartCopy"
+constant Recall = "Compiler/output/PartRecall"
+constant Kept = "Compiler/output/PartKeep"
+constant Program = "  func.func @Sum_Run() {\n"
+Open(stamp Text) slow
+	Directory.Create("Compiler/output/PartOpen") is not Error
+	PartCache("Compiler/output/PartOpen").Open("one") is not Error
+	File("Compiler/output/PartOpen/Tools/PartCache/stamp").ReadText is "one"
+	File("Compiler/output/PartOpen/Tools/PartCache/old.o").Write("x".Bytes) is not Error
+	PartCache("Compiler/output/PartOpen").Open("two") is not Error
+	File("Compiler/output/PartOpen/Tools/PartCache/old.o").Exists is false
+	File("Compiler/output/PartOpen/Tools/PartCache/stamp").ReadText is "two"
+	PartCache("no/such").Open("x") is not Error
+	folder = root + "/Tools/PartCache"
+	if Directory.Exists(root) is false
+		return
+	Directory.Create(root + "/Tools")
+	Directory.Create(folder)
+	marker = File(folder + "/stamp")
+	if marker.Exists and marker.ReadText is stamp
+		return
+	if Directory.Delete(folder) is Error
+		return Error("PartCacheNotCleared")
+	Directory.Create(folder)
+	marker.Write(stamp)
+Locate(stamp Text, key Text) Text
+	PartCache("o").Locate("s", "k").StartsWith("o/Tools/PartCache/")
+	PartCache("o").Locate("s", "k") is not PartCache("o").Locate("t", "k")
+	root + "/Tools/PartCache/" + (HashCode(stamp + "|" + key).number to Text)
+IsCopied(source Text, into Text) Boolean slow
+	Directory.Create("Compiler/output/PartCopy") is not Error
+	PartCache(Copied).IsCopied(Copied + "/missing.o", Copied + "/out.o") is false
+	File("Compiler/output/PartCopy/source.o").Write("ab".Bytes) is not Error
+	PartCache("Compiler/output/PartCopy").IsCopied("Compiler/output/PartCopy/source.o", "Compiler/output/PartCopy/out.o")
+	File("Compiler/output/PartCopy/out.o").ReadBytes is "ab".Bytes
+	if File(source).Exists is false
+		return false
+	temporary = into + "." + (1000000000.Random.Floor to Text) + ".tmp"
+	if File(temporary).Write(File(source).ReadBytes) is Error
+		return false
+	File(into).Delete
+	File(temporary).Rename(into) is not Error and File(into).Exists
+IsRecalled(part Text, stamp Text, key Text, index Number, owned Text) Boolean slow
+	Directory.Create("Compiler/output/PartRecall") is not Error
+	PartCache("Compiler/output/PartRecall").Open("stamp") is not Error
+	File("Compiler/output/PartRecall/hit.o").Write("ab".Bytes) is not Error
+	PartCache("Compiler/output/PartRecall").Keep("Compiler/output/PartRecall/hit", "stamp", "fa", 0, "a") is not Error
+	File("Compiler/output/PartRecall/hit.o").Delete is not Error
+	PartCache("Compiler/output/PartRecall").IsRecalled("Compiler/output/PartRecall/hit", "stamp", "fa", 0, "a")
+	File("Compiler/output/PartRecall/hit.o").ReadBytes is "ab".Bytes
+	PartCache("Compiler/output/PartRecall").IsRecalled("Compiler/output/PartRecall/hit", "stamp", "other", 0, "a") is false
+	PartCache(Recall).IsRecalled(Recall + "/hit", "stamp", "fa", 8, Program) is false
+	if IsShared(index, owned, root) is false
+		return false
+	Open(stamp)
+	located = Locate(stamp, key)
+	if File(located + ".o").Exists is false or File(located + ".key").ReadText is not key
+		return false
+	IsCopied(located + ".o", part + ".o") is false then false else PtxCache(part).Save(".owned", key) is not Error
+Keep(part Text, stamp Text, key Text, index Number, owned Text) slow
+	Directory.Create("Compiler/output/PartKeep") is not Error
+	PartCache(Kept).Keep(Kept + "/miss", "s", "k", 8, Program) is not Error
+	File("Compiler/output/PartKeep/Tools/PartCache").Exists is false
+	if IsShared(index, owned, root) is false or File(part + ".o").Exists is false
+		return
+	Open(stamp)
+	located = Locate(stamp, key)
+	if File(located + ".key").Exists and File(located + ".key").ReadText is key and File(located + ".o").Exists
+		return
+	if IsCopied(part + ".o", located + ".o") is false
+		return
+	PtxCache(located).Save(".key", key)
+HasPublished(base Text) Boolean slow
+	Directory.Create("Compiler/output/PartPublish") is not Error
+	PartCache("Compiler/output/PartPublish").HasPublished("Compiler/output/PartPublish/none")
+	stamp = CodegenStamp(root).Current(Process.Current.executable)
+	Open(stamp)
+	for Toolchain.Parts
+		part = base + "-" + value
+		text = File(part + ".owned").Exists then File(part + ".owned").ReadText else ""
+		if text is not "" and File(part + ".o").Exists
+			Keep(part, stamp, text, value, text)
+	true
+IsShared(index Number, owned Text, folder Text) Boolean
+	PartCache(".").IsShared(0, "  func.func @Sum_Run() {\n", ".")
+	PartCache(".").IsShared(8, "  func.func @List_First() {\n", ".")
+	PartCache(".").IsShared(8, "  func.func @Sum_Run() {\n", ".") is false
+	index < MlirSplit.RuntimeParts or IsBase(owned, folder)
+IsBase(owned Text, folder Text) Boolean
+	PartCache(".").IsBase("  func.func @List_First() {\n", ".")
+	PartCache(".").IsBase("  func.func @Sum_Run() {\n", ".") is false
+	names = FindNames(folder)
+	for owned.Split("\n")
+		name = MlirSplit.Sample.Name(value)
+		if IsDeclared(value) and IsRuntime(name) is false and MlirSplit.Sample.FindType(name) is not in names
+			return false
+	true
+FindNames(folder Text) Texts
+	"List" is in PartCache(".").FindNames(".")
+	"Sum" is not in PartCache(".").FindNames(".")
+	runtime = folder + "/Runtime"
+	listed = Directory.Files(folder, "*.strict")
+	for listed + (Directory.Exists(runtime) then Directory.Files(runtime, "*.strict") else List(Text))
+		Path(value).FileName.text.Replace(".strict", "")
+IsDeclared(line Text) Boolean
+	PartCache(".").IsDeclared("  func.func @A() {")
+	PartCache(".").IsDeclared("  llvm.func @strict_new() {")
+	PartCache(".").IsDeclared("  llvm.mlir.global @t() : f64")
+	PartCache(".").IsDeclared("    return") is false
+	isFunction = (line.StartsWith("  func.func ") or line.StartsWith("  llvm.func ")) and line.EndsWith("{")
+	isFunction or line.StartsWith("  llvm.mlir.global ")
+IsRuntime(name Text) Boolean
+	PartCache(".").IsRuntime("strict_new")
+	PartCache(".").IsRuntime("strict_places_fill") is false
+	PartCache(".").IsRuntime("List_First") is false
+	name.StartsWith("strict_") and name is not in MlirSplit.ProgramMade

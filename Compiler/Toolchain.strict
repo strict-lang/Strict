@@ -153,7 +153,7 @@ PartsCompiled(base Text) Boolean
 		if value.HasFailed
 			Logger.Log("clang failed (exit " + value.exitCode + "): " + value.Output + value.error)
 			return false
-	true
+	PartCache(root).HasPublished(base)
 PartObjects(base Text) Text
 	OnWindows.PartObjects("Compiler/output/missing") is ""
 	mutable parts = ""

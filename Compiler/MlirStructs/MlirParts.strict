@@ -47,23 +47,25 @@ Token(piece Text) Text
 		if piece(value) is in Ends
 			return piece.Substring(0, value)
 	piece
-Change(base Text, flags Text) Numbers slow
+Change(base Text, flags Text, root Text = "", stamp Text = "") Numbers slow
 	PtxCache("Compiler/output/Unsplit-0").Save("", "stale") is not Error
 	Sample.Change("Compiler/output/Unsplit", "a").Length > 0
 	File("Compiler/output/Unsplit-0").Exists is false
+	if stamp is not ""
+		PartCache(root).Open(stamp)
 	mutable changed = List(Mutable(Number))
 	for Range(0, Toolchain.Parts)
 		part = base + "-" + value
 		File(part).Delete
-		if IsRefreshed(part, flags, value)
+		if IsRefreshed(part, flags, value, root, stamp)
 			changed.Add(value)
 	changed
-IsRefreshed(part Text, flags Text, index Number) Boolean slow
+IsRefreshed(part Text, flags Text, index Number, root Text = "", stamp Text = "") Boolean slow
 	Sample.IsRefreshed("Compiler/output/Refreshed", "a", Sample.owners.First)
 	File("Compiler/output/Refreshed.mlir").ReadLines.Length > 4
 	data = split.Data(index, shared, placed)
 	owned = split.Own(starts, owners, index)
-	if IsWritten(part, flags, Text.Combine(data + owned, "\n")) is false
+	if IsWritten(part, flags, Text.Combine(data + owned, "\n"), root, stamp, index) is false
 		return false
 	File(part + ".mlir").Write(Part(index, data, owned))
 	true
@@ -73,24 +75,34 @@ IsCurrent(part Text, key Text) Boolean slow
 	Sample.IsCurrent("Compiler/output/Current", "b") is false
 	Sample.IsCurrent("Compiler/output/Absent", "a") is false
 	File(part + ".o").Exists and File(part + ".owned").Exists and PtxCache(part).Read(".owned") is key
-IsWritten(part Text, flags Text, owned Text) Boolean slow
+IsWritten(part Text, flags Text, owned Text, root Text = "", stamp Text = "", index Number = -1) Boolean slow
 	PtxCache("Compiler/output/Keyed").Save(".o", "compiled") is not Error
 	Sample.IsWritten("Compiler/output/Keyed", "f", "") is false
 	File("Compiler/output/Keyed.o").Exists is false
 	Sample.IsWritten("Compiler/output/Keyed", "f", "a")
+	PartCache("Compiler/output").Open("parts") is not Error
+	File("Compiler/output/Cached-0.o").Write("ab".Bytes) is not Error
+	PartCache("Compiler/output").Keep("Compiler/output/Cached-0", "parts", "fa", 0, "a") is not Error
+	File("Compiler/output/Cached-0.o").Delete is not Error
+	Sample.IsWritten("Compiler/output/Cached-0", "f", "a", "Compiler/output", "parts", 0) is false
+	File("Compiler/output/Cached-0.o").ReadBytes is "ab".Bytes
+	key = flags + owned
 	if owned is ""
 		File(part + ".o").Delete
 		return false
-	if IsCurrent(part, flags + owned)
+	if IsCurrent(part, key)
+		return false
+	if stamp is not "" and PartCache(root).IsRecalled(part, stamp, key, index, owned)
 		return false
 	File(part + ".o").Delete
-	PtxCache(part).Save(".owned", flags + owned)
+	PtxCache(part).Save(".owned", key)
 	true
 Lower(base Text, tools Toolchain) Text slow
 	Sample.Lower("Compiler/output/missing", Toolchain.OnWindows).StartsWith("mlir-opt failed")
 	mutable optimizing = List(Text)
 	mutable translating = List(Text)
-	for Change(base, MlirSplit.Single + tools.Bitcode(""))
+	flags = MlirSplit.Single + tools.Bitcode("")
+	for Change(base, flags, tools.root, CodegenStamp(tools.root).Current(Process.Current.executable))
 		part = base + "-" + value
 		optimizing = optimizing + ("\"" + part + ".mlir\"" + MlirSplit.Single + part + ".llvm.mlir\"")
 		translating = translating + (MlirSplit.Translating + "\"" + part + ".llvm.mlir\" -o \"" + part + "\"")

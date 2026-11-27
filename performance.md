@@ -24,6 +24,7 @@ Profiled run, emission cold, link warm: 89.5 s. An earlier run the same morning 
 | Fresh program | 2.25 s | Lowering 0.93 s (`mlir-opt` 0.26, `mlir-translate` 0.18), host clang 12 jobs 0.63 s, link 0.15 s | The 12 clang jobs are the runtime parts. A repeat compiles the one changed part. |
 | One-line edit (`Sum + 0`) | 0.54 s | Lowering 0.14 s, clang 1 job 0.03 s, link 0.14 s, 1 of 2 functions re-emitted | Unchanged parts already stay. The link is the floor. |
 | Web | 12.1 s | `emcc` 8.1 s, `wasm-opt` 2.2 s, clang 0.9 s | `wasm-opt` is the optional dev-build cut. |
+| Fresh again, `Examples/obj` deleted, `Tools/PartCache` kept | 0.72 s | Lowering 0.12 s (`mlir-opt` 0.07, `mlir-translate` 0.05), host clang 3 jobs 0.05 s, link 0.14 s | The other objects are the runtime and base-type parts. Ten of them were copied from the shared cache. The cold run just before this was 1.65 s (clang 12 jobs, 0.59 s). |
 
 ## Native test, `strict test Math native`
 
