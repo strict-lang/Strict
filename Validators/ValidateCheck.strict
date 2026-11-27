@@ -6,6 +6,7 @@ Run(folder Text, root Text) Number
 	mutable issues = 0
 	for Parts(folder)
 		issues = issues + Validate(value, root, mutations, sources)
+	issues = issues + (folder.EndsWith(".strict") then 0 else Log(folder, TypeNames(Parts(folder)).Issues))
 	Phases.Report("Check validation", started)
 	before = Process.Elapsed
 	cycles = folder.EndsWith(".strict") then 0 else Log(folder, AcyclicDependencies(root).Issues(Parts(folder)))
