@@ -21461,10 +21461,7 @@
   ^host:
     %shadedMask = arith.constant 255 : i64
     %shadedFormat = arith.andi %packedFormat, %shadedMask : i64
-    %rowShift = arith.constant 16 : i64
-    %shadedRowsBits = arith.shli %rows, %rowShift : i64
-    %shadedRowsMask = arith.ori %mask, %shadedRowsBits : i64
-    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %shadedRowsMask, %shadedFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %mask, %shadedFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isShaded = arith.cmpf one, %shaded, %zero : f64
     cf.cond_br %isShaded, ^shadedDone, ^device
   ^shadedDone:
