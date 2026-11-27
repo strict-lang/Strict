@@ -23,6 +23,8 @@ Internals(root Text) Dictionary(Text, Text) slow
 Widened TypeFolders slow
 	"Vector2" is in TypeFolders.Local(".").Widened.folders
 	TypeFolders.Local(".").Widened.folders.Length >= TypeFolders.Local(".").locals.Length
+	if File("Any.strict").Exists
+		return TypeFolders(locals, locals, internals)
 	mutable parents = List(Text)
 	for Directory.Directories("..")
 		project = Path(value.Replace("\\", "/")).FileName.text
