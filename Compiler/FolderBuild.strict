@@ -1,0 +1,37 @@
+has given Texts
+constant Options = ("windows", "linux", "web", "edit", "android", "ios", "fast", "library", "full")
+IsBare Boolean
+	FolderBuild(List(Text) + "build").IsBare and FolderBuild(("build", ".", "windows")).IsBare
+	FolderBuild(List(Text) + "run").IsBare
+	FolderBuild(("build", "Examples/Sum.strict")).IsBare is false
+	FolderBuild(List(Text) + "test").IsBare is false
+	if given.Length is 0 or given(0) is not in ("build", "run")
+		return false
+	for given.Slice(1, given.Length - 1)
+		if value is not "." and value is not in Options
+			return false
+	true
+Programs(folder Text) Texts slow
+	FolderBuild(List(Text)).Programs("Examples").Length > 5
+	FolderBuild(List(Text)).Programs("Math").Length is 0
+	for Directory.Files(folder, "*.strict")
+		if "Run" is in TypeShape(File(value).ReadLines).MethodScope.names
+			value
+Result Number slow
+	FolderBuild(List(Text) + "build").IsBare
+	programs = Programs(".")
+	if programs.Length is 0
+		return Error("NothingToBuild: no file in " + Directory.Current + " has Run")
+	options = given.Slice(1, given.Length - 1) - "."
+	main = Command.FindMainFile(".")
+	chosen = main is "" then programs else List(Text) + main
+	if given(0) is "run"
+		return chosen.Length is 1 then Command.Launch(Command.Root(chosen + options), ".") else Several(programs)
+	mutable failed = 0
+	for programs
+		failed = failed + Command.Native("build", (List(Text) + value + TypeSource.Root) + options)
+	logger.Log("Built " + programs.Length + " programs: " + Text.Combine(programs))
+	failed
+Several(programs Texts) Error
+	FolderBuild(List(Text) + "run").Several(("a.strict", "b.strict")).text.StartsWith("SeveralPrograms")
+	Error("SeveralPrograms: run one of " + Text.Combine(programs) + " with strict <file>")

@@ -80,6 +80,8 @@ RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = In
 	head = arguments.Length > 0 then arguments(0) else ""
 	given = head is in Command.Informing then List(Text) + head else Command.Project(Command.InsertMainFile(arguments))
 	command = given.Length > 0 then given(0) else "help"
+	if FolderBuild(given).IsBare
+		return Answer(FolderBuild(given).Result, known)
 	rest = Command.Clean(command, Command.Root(command is in Command.Commands then Command.Rest(given) else given))
 	message = Command.Message(command, rest)
 	if message is not ""
