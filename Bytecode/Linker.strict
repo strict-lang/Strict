@@ -172,10 +172,15 @@ Elements(types Texts, package Text) Texts
 	result
 Qualify(element Text, package Text) Text
 	Sample.Elements(List(Text) + "Strict/List(List(Byte))", "Strict") is ("Strict/List(List(Byte))")
-	Sample.Qualify("MemberEntry", "Strict/Bytecode") is "Strict/Bytecode/MemberEntry"
+	Sample.Qualify("MemberEntry", "Strict/Bytecode") is "Strict/Bytecode/Binary/MemberEntry"
 	Sample.Qualify("Logger", "Strict/Bytecode") is "Strict/Logger"
 	nearby = package + "/" + element
-	nearby is in main.typeNames then nearby else "Strict/" + element
+	if nearby is in main.typeNames or package is "Strict"
+		return nearby is in main.typeNames then nearby else "Strict/" + element
+	for main.typeNames
+		if value.StartsWith(package + "/") and value.EndsWith("/" + element)
+			return value
+	"Strict/" + element
 Targets(entries List(TypeEntry)) Texts
 	Sample.Targets(Go) is ("Strict/B.Go")
 	Sample.Targets(Counted) is ("Strict/Range.Count")
