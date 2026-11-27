@@ -80,7 +80,8 @@ Invoke(entry InstructionEntry, decoder PayloadDecoder) Texts
 	if helper is not ""
 		return MlirDestined(function, position).Aim(entry, MlirNatives(function, position).Emit(entry, type, helper))
 	compiled = MlirDestined(function, position).Aim(entry, Compile(entry, decoder, type, count))
-	MlirGrouped(function, position).Keep(compiled, entry.payload(0))
+	giving = MlirGiving(function, position)
+	giving.Give + MlirGrouped(function, position).Keep(compiled, entry.payload(0)) + giving.Taken
 Compile(entry InstructionEntry, decoder PayloadDecoder, type TypeEntry, count Number) Texts
 	MlirCalls(Shapes, 2).Compile(Area, PayloadDecoder(Area), AreaShape, 0).Length is 3
 	owner = MlirTraits(function.types).Owner(type, decoder.Callee(type))

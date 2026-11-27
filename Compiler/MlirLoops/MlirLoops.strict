@@ -166,6 +166,7 @@ IsSpelling Boolean
 	-1 is not in method.instructions(method.LoopEndOf(position)).payload
 Presized Texts
 	Counting.Presized.Length is 0
+	Text.Combine(MlirLoops(MlirGiven.Given.function, 2).Presized).IndexOf("@strict_record_list_given(%t2a, ") > 0
 	Collecting.Presized.Last is "    llvm.store %t1r, %v_forResult : f64, !llvm.ptr"
 	MlirLoops(MlirParallel.Byting.function, 2).Presized.Length is 0
 	Spelling.Presized is TextCreated
@@ -175,8 +176,10 @@ Presized Texts
 	constant capacity = "    " + Temp("a") + " = arith.maximumf " + Temp("n") + ", %zero : f64"
 	reset = function.Store("%zero", "%spelled" + position)
 	text = (MlirMemory(function, position).Call(Temp("r"), "strict_text_new", List(Text) + Temp("a")), reset)
-	created = IsSpelling then text else MlirListDestined(function, position).Creat(Temp("r"), Temp("a"))
-	(List(Text) + capacity) + created + function.Store(Temp("r"), "%v_forResult")
+	given = MlirGiven(function, position)
+	fresh = MlirListDestined(function, position)
+	listed = given.Member is "" then fresh.Creat(Temp("r"), Temp("a")) else given.Creat(Temp("r"), Temp("a"))
+	(List(Text) + capacity) + (IsSpelling then text else listed) + function.Store(Temp("r"), "%v_forResult")
 Restore(begin Number) Texts
 	MlirLoops(Nested.function, 2).Restore(0) is List(Text) + "    llvm.store %t0z, %v_outer : f64, !llvm.ptr"
 	names = function.Named

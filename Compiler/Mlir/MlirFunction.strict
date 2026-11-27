@@ -141,7 +141,8 @@ Entry Texts
 		lines = lines + Store("%p" + index, "%v_" + value)
 	lists = MlirParameters(value)
 	unpacked = lists.Hoist(method.parameters) + MlirInstances(value, 0).Unpacked + lists.Hoist(lists.Indexed)
-	lines + MlirDestined(value, 0).Prologue + MlirTails(value, 0).Restart + unpacked + MlirInstances(value, 0).Constants
+	taken = MlirDestined(value, 0).Prologue + MlirGiven(value, 0).Taken
+	lines + taken + MlirTails(value, 0).Restart + unpacked + MlirInstances(value, 0).Constants
 Slot(name Text) Texts
 	Counter.Slot("%r0")(1) is "    llvm.store %zero, %r0 : f64, !llvm.ptr"
 	Counter.Slots(5) is "    %r0 = llvm.alloca %one x f64 : (i64) -> !llvm.ptr"

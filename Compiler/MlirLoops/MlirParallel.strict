@@ -65,7 +65,9 @@ Forked Texts
 	branch = "    cf.cond_br " + Temp("pb") + ", " + label + "parallel, " + label + "serial"
 	packed = MlirBytes(function, position).Creat(Temp("pk")) + MlirFiltering(function, position).Holed
 	checked = (List(Text) + count + threshold) + Enough + branch
-	checked + ("  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:")
+	given = MlirGiven(function, position)
+	serial = given.Member is "" then List(Text) else given.Serial
+	checked + ("  " + label + "parallel:") + packed + Context + Joined + ("  " + label + "serial:") + serial
 Enough Texts
 	Doubling.Enough(2) is "    %t2pww = func.call @strict_parallel_worth(%t2pwf, %t2pn) : (" + Shape + ", i64) -> i1"
 	Doubling.Enough.Last is "    %t2pb = arith.andi %t2pwc, %t2pww : i1"
@@ -167,9 +169,11 @@ Next Texts
 	next = "    " + Temp("kn") + " = arith.addi " + Temp("ki") + ", %one : i64"
 	(next, "    cf.br " + label + "(" + Temp("kn") + " : i64)", "  " + label + "exit:", "    return %zero : f64")
 Body Texts
+	Text.Combine(MlirParallel(MlirGiven.Given.function, 2).Body).IndexOf("@strict_item_holed(%t2ri, %t2ki, %t2hg)") > 0
 	Doubling.Body.Last.StartsWith("    llvm.store %t5e, %t5p")
 	Trailing.Body.Last is "  ^bb7:"
-	mutable lines = List(Mutable(Text))
+	given = MlirGiven(function, position)
+	mutable lines = given.Member is "" then List(Text) else given.Holing
 	for Range(position + 1, function.method.LoopEndOf(position))
 		entry = function.method.instructions(value)
 		isCollect = entry.kind is InstructionType.InvokeWriteToList and entry.texts(0) is "forResult"

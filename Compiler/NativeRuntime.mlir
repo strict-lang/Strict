@@ -15563,6 +15563,158 @@
     llvm.store %chosen, %slot : f64, !llvm.ptr
     return
   }
+  // ownership passing (MlirGiving, MlirGiven): a method whose local struct only still feeds the copy that replaces
+  // its member list gives that list to the call that computes the replacement, when nothing else can read it: the
+  // struct is unshared, the list is not pinned, shared or on the GPU and its count is exactly its holders in that
+  // frame (the struct, plus the caller's receiver when the caller got it as its destination and it still holds the
+  // same list); the callee takes the list in its prologue
+  llvm.mlir.global internal thread_local @strict_list_given(0.0 : f64) : f64
+  func.func private @strict_list_give(%holder: f64, %offset: i64, %other: f64, %otherGiven: i1) {
+    %zero = arith.constant 0.0 : f64
+    %one = arith.constant 1 : i32
+    %two = arith.constant 2 : i32
+    %noFlags = arith.constant 0 : i16
+    %slot = llvm.mlir.addressof @strict_list_given : !llvm.ptr
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    %alone = func.call @strict_rc_unshared(%holder) : (f64) -> i1
+    cf.cond_br %alone, ^locate, ^done
+  ^locate:
+    %holderPointer = func.call @strict_ptr(%holder) : (f64) -> !llvm.ptr
+    %listSlot = llvm.getelementptr %holderPointer[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %list = llvm.load %listSlot : !llvm.ptr -> f64
+    %view = func.call @strict_ptr(%list) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %unset = llvm.mlir.zero : !llvm.ptr
+    %found = llvm.icmp "ne" %located#0, %unset : !llvm.ptr
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %usable = arith.andi %found, %isStart : i1
+    cf.cond_br %usable, ^counted, ^done
+  ^counted:
+    %flags = func.call @strict_rc_flags(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %flagByte = llvm.load %flags atomic monotonic {alignment = 2 : i64} : !llvm.ptr -> i16
+    // pinned (32), on the GPU (64) or shared through a constant (128)
+    %heldFlags = arith.constant 224 : i16
+    %held = arith.andi %flagByte, %heldFlags : i16
+    %isFree = arith.cmpi eq, %held, %noFlags : i16
+    %counter = func.call @strict_rc_counter(%located#0, %located#1, %located#3) : (!llvm.ptr, i64, i1) -> !llvm.ptr
+    %count = llvm.load %counter : !llvm.ptr -> i32
+    %holderBits = arith.bitcast %holder : f64 to i64
+    %otherBits = arith.bitcast %other : f64 to i64
+    %isOther = arith.cmpi ne, %holderBits, %otherBits : i64
+    %otherSet = arith.cmpf une, %other, %zero : f64
+    %otherChosen = arith.select %otherSet, %other, %holder : f64
+    %otherPointer = func.call @strict_ptr(%otherChosen) : (f64) -> !llvm.ptr
+    %otherSlot = llvm.getelementptr %otherPointer[%offset] : (!llvm.ptr, i64) -> !llvm.ptr, f64
+    %otherList = llvm.load %otherSlot : !llvm.ptr -> f64
+    %listBits = arith.bitcast %list : f64 to i64
+    %otherListBits = arith.bitcast %otherList : f64 to i64
+    %sameList = arith.cmpi eq, %listBits, %otherListBits : i64
+    %second = arith.andi %isOther, %sameList : i1
+    %given = arith.andi %second, %otherGiven : i1
+    cf.cond_br %given, ^other, ^compare(%one : i32)
+  ^other:
+    %otherAlone = func.call @strict_rc_unshared(%other) : (f64) -> i1
+    %holders = arith.select %otherAlone, %two, %one : i32
+    cf.br ^compare(%holders : i32)
+  ^compare(%allowed: i32):
+    %isExact = arith.cmpi eq, %count, %allowed : i32
+    %giving = arith.andi %isExact, %isFree : i1
+    cf.cond_br %giving, ^give, ^done
+  ^give:
+    llvm.store %list, %slot : f64, !llvm.ptr
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_list_taken() -> f64 {
+    %zero = arith.constant 0.0 : f64
+    %slot = llvm.mlir.addressof @strict_list_given : !llvm.ptr
+    %given = llvm.load %slot : !llvm.ptr -> f64
+    llvm.store %zero, %slot : f64, !llvm.ptr
+    return %given : f64
+  }
+  // the result list of a loop over a member list of records (MlirGiven): the given list itself when it is the one
+  // the loop iterates and a finished record list (large, its items in its own allocation), so every element is
+  // rebuilt in its own block; its record cache and device copies are forgotten; else a new record list
+  func.func private @strict_record_list_given(%capacity: f64, %slots: f64, %source: f64, %given: f64) -> f64 {
+    %none = arith.constant 0 : i64
+    %sourceBits = arith.bitcast %source : f64 to i64
+    %givenBits = arith.bitcast %given : f64 to i64
+    %isGiven = arith.cmpi eq, %sourceBits, %givenBits : i64
+    %isSet = arith.cmpi ne, %givenBits, %none : i64
+    %offered = arith.andi %isGiven, %isSet : i1
+    cf.cond_br %offered, ^locate, ^fresh
+  ^locate:
+    %view = func.call @strict_ptr(%source) : (f64) -> !llvm.ptr
+    %object = llvm.ptrtoint %view : !llvm.ptr to i64
+    %located:5 = func.call @strict_gc_locate(%object) : (i64) -> (!llvm.ptr, i64, i64, i1, i1)
+    %isStart = arith.cmpi eq, %located#1, %object : i64
+    %isLargeStart = arith.andi %located#3, %isStart : i1
+    cf.cond_br %isLargeStart, ^finished, ^fresh
+  ^finished:
+    %scannedSlot = llvm.getelementptr %located#0[36] : (!llvm.ptr) -> !llvm.ptr, i8
+    %scanned = llvm.load %scannedSlot : !llvm.ptr -> i32
+    %noWords = arith.constant 1 : i32
+    %isOwn = arith.cmpi eq, %scanned, %noWords : i32
+    %length = func.call @strict_list_length(%source) : (f64) -> f64
+    %isFull = arith.cmpf oeq, %length, %capacity : f64
+    %reusable = arith.andi %isOwn, %isFull : i1
+    cf.cond_br %reusable, ^reuse, ^fresh
+  ^reuse:
+    func.call @strict_records_forget(%object) : (i64) -> ()
+    func.call @strict_rc_forget_device(%object) : (i64) -> ()
+    return %source : f64
+  ^fresh:
+    %list = func.call @strict_record_list_new(%capacity, %slots) : (f64, f64) -> f64
+    return %list : f64
+  }
+  // a list the loop fills in place keeps its items until each iteration read its own (strict_item_holed)
+  func.func private @strict_list_holes_fresh(%list: f64, %source: f64, %length: f64) {
+    %listBits = arith.bitcast %list : f64 to i64
+    %sourceBits = arith.bitcast %source : f64 to i64
+    %isGiven = arith.cmpi eq, %listBits, %sourceBits : i64
+    cf.cond_br %isGiven, ^done, ^holes
+  ^holes:
+    func.call @strict_list_holes(%list, %length) : (f64, f64) -> ()
+    cf.br ^done
+  ^done:
+    return
+  }
+  func.func private @strict_item_holed(%items: !llvm.ptr, %index: i64, %given: i1) attributes {llvm.passthrough = ["alwaysinline"]} {
+    %hole = arith.constant 0x7FFD000000000000 : i64
+    %slot = llvm.getelementptr %items[%index] : (!llvm.ptr, i64) -> !llvm.ptr, i64
+    %old = llvm.load %slot : !llvm.ptr -> i64
+    %new = arith.select %given, %hole, %old : i64
+    llvm.store %new, %slot : i64, !llvm.ptr
+    return
+  }
+  // the element of a list filled in place is rebuilt in its own block, else in the block of its index
+  func.func private @strict_struct_destine_given(%list: f64, %index: f64, %slots: f64, %source: f64, %element: f64) {
+    %listBits = arith.bitcast %list : f64 to i64
+    %sourceBits = arith.bitcast %source : f64 to i64
+    %isGiven = arith.cmpi eq, %listBits, %sourceBits : i64
+    cf.cond_br %isGiven, ^own, ^block
+  ^own:
+    %destination = llvm.mlir.addressof @strict_struct_destination : !llvm.ptr
+    llvm.store %element, %destination : f64, !llvm.ptr
+    return
+  ^block:
+    func.call @strict_struct_destine_block(%list, %index, %slots) : (f64, f64, f64) -> ()
+    return
+  }
+  // a serial loop writes no holes for the items it skips: it fills a new list
+  func.func private @strict_record_list_serial(%list: f64, %source: f64, %capacity: f64, %slots: f64) -> f64 {
+    %listBits = arith.bitcast %list : f64 to i64
+    %sourceBits = arith.bitcast %source : f64 to i64
+    %isGiven = arith.cmpi eq, %listBits, %sourceBits : i64
+    cf.cond_br %isGiven, ^fresh, ^kept
+  ^fresh:
+    %new = func.call @strict_record_list_new(%capacity, %slots) : (f64, f64) -> f64
+    return %new : f64
+  ^kept:
+    return %list : f64
+  }
   // a list a collecting loop of number structs (MlirEmbedded) fills: room for capacity items and as many blocks of
   // slots numbers after them, the element of an iteration is built in its own block (strict_struct_destine_block);
   // the loop writes every item (or a hole, strict_list_holes) before anything reads them
@@ -21309,7 +21461,10 @@
   ^host:
     %shadedMask = arith.constant 255 : i64
     %shadedFormat = arith.andi %packedFormat, %shadedMask : i64
-    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %mask, %shadedFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
+    %rowShift = arith.constant 16 : i64
+    %shadedRowsBits = arith.shli %rows, %rowShift : i64
+    %shadedRowsMask = arith.ori %mask, %shadedRowsBits : i64
+    %shaded = func.call @strict_gpu_shaded(%name, %count, %source, %kind, %values, %valueCount, %shadedRowsMask, %shadedFormat) : (!llvm.ptr, i64, f64, i64, !llvm.ptr, i64, i64, i64) -> f64
     %isShaded = arith.cmpf one, %shaded, %zero : f64
     cf.cond_br %isShaded, ^shadedDone, ^device
   ^shadedDone:

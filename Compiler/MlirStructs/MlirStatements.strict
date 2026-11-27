@@ -69,7 +69,7 @@ Leave(entry InstructionEntry) Texts
 	kept = MlirChanged(function, position).Keep(false)
 	if MlirLayout(function).IsInitializer
 		return kept + MlirLayout(function).EmitReturn(position)
-	dying = MlirDying(function, position).EmitReturn(entry)
+	dying = MlirDying(function, position).EmitReturn(entry) + MlirGiving(function, position).Released
 	loaded = (List(Text) + function.Load(Temp(""), "%r" + entry.payload(0))) + dying
 	kept + loaded + MlirLines(function).Framed + ("    return " + Temp("") + " : f64")
 Jump(entry InstructionEntry) Texts

@@ -1,0 +1,135 @@
+has function MlirFunction
+has position Number
+constant Shapes = MemberEntry("shapes", "Strict/List(Strict/Shape)", List(InstructionEntry), false)
+constant ShapesLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "shapes")
+constant ValueLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "value")
+constant SizeLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "size")
+constant Growing = InstructionEntry.Invoke(3, ("Strict/Shape", "Made", "Strict/Shape", "size"), 2, 1)
+constant Stored = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "made")
+constant Added = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 4, "made"), InstructionEntry.Named(InstructionType.InvokeWriteToList, 4, "forResult"))
+constant Head = (MlirStructs.ShapesEmptied, ShapesLoad, InstructionEntry.LoopBegin(0, -1), ValueLoad, SizeLoad, Growing, Stored)
+constant Living = MethodEntry("Living", List(MemberEntry), "Strict/List(Strict/Shape)", Head + Added + InstructionEntry.Jump(InstructionType.LoopEnd, 7))
+constant Swarm = TypeEntry("Strict/Swarm", (Shapes, MlirStructs.Sizing), List(MethodEntry) + Living)
+constant Types = (MlirStructs.Maker, Swarm)
+constant Given = MlirGiven(MlirFunction(Types, Swarm, Living), 2)
+constant Reread = MethodEntry(Living, instructions = Head + Added + ValueLoad + InstructionEntry.Jump(InstructionType.LoopEnd, 8))
+constant Twice = MethodEntry(Living, instructions = Head + Added + InstructionEntry.Jump(InstructionType.LoopEnd, 7) + ShapesLoad)
+constant Quad = "(f64, f64, f64, f64) -> f64"
+constant Five = "(f64, f64, f64, f64, f64) -> ()"
+Member Text
+	Given.Member is "shapes"
+	MlirGiven(MlirFunction(Types, Swarm, Reread), 2).Member is ""
+	MlirGiven(MlirFunction(Types, Swarm, Twice), 2).Member is ""
+	MlirGiven(MlirStructs.Collector.function, 2).Member is ""
+	steps = function.method.instructions
+	if position < 1 or steps(position).kind is not InstructionType.LoopBegin
+		return ""
+	loaded = steps(position - 1)
+	isSource = loaded.kind is InstructionType.LoadVariableToRegister and loaded.payload(0) is steps(position).payload(0)
+	name = isSource then loaded.texts(0) else ""
+	if IsMember(name) is false or IsLoadedOnce(name) is false
+		return ""
+	MlirParallel(function, position).IsParallel and IsRecorded(name) and Builder >= 0 then name else ""
+IsLoadedOnce(name Text) Boolean
+	Given.IsLoadedOnce("shapes")
+	Given.IsLoadedOnce("size")
+	Given.IsLoadedOnce("made") is false
+	mutable loads = 0
+	for function.method.instructions
+		isNamed = value.texts.Length > 0 then value.texts(0) is name else false
+		if isNamed and value.kind is InstructionType.FieldLoad
+			return false
+		loads = isNamed and value.kind is InstructionType.LoadVariableToRegister then loads + 1 else loads
+	loads is 1 and IsMember(name)
+IsMember(name Text) Boolean
+	Given.IsMember("shapes")
+	Given.IsMember("made") is false
+	for function.type.members
+		if value.Name is name
+			return true
+	false
+IsRecorded(name Text) Boolean
+	Given.IsRecorded("shapes")
+	Given.IsRecorded("size") is false
+	if IsMember(name) is false
+		return false
+	kinds = MlirKinds(function)
+	element = kinds.ElementKind(kinds.VariableKind(position, "forResult"))
+	element is kinds.ElementKind(kinds.VariableKind(position, name)) and MlirEmbedded(function).IsNumbers(element)
+Builder Number
+	Given.Builder is 5
+	MlirGiven(MlirFunction(Types, Swarm, Reread), 2).Builder is -1
+	steps = function.method.instructions
+	end = function.method.LoopEndOf(position)
+	mutable built = Number.NotFound
+	for Range(position + 1, end)
+		isValue = steps(value).kind is InstructionType.LoadVariableToRegister then steps(value).texts(0) is "value" else false
+		if isValue and built >= 0
+			return Number.NotFound
+		built = built < 0 and IsBuilding(value) then value else built
+	built
+IsBuilding(at Number) Boolean
+	Given.IsBuilding(5)
+	Given.IsBuilding(4) is false
+	entry = function.method.instructions(at)
+	if entry.kind is not InstructionType.Invoke or MlirStructs(function, at).IsKept(entry) is false
+		return false
+	writer = MlirKinds(function).Writer(at, PayloadDecoder(entry).Instance)
+	writer >= 0 then Text.Combine(function.method.instructions(writer).texts) is "value" else false
+Around(at Number) Number
+	Given.Around(5) is 2
+	Given.Around(1) is -1
+	MlirGiven(MlirStructs.Collector.function, 0).Around(4) is -1
+	mutable begin = Number.NotFound
+	for function.method.instructions
+		isLoop = value.kind is InstructionType.LoopBegin and index < at
+		isAround = isLoop then function.method.LoopEndOf(index) > at else false
+		begin = isAround and MlirGiven(function, index).Member is not "" then index else begin
+	begin
+Taken Texts
+	Given.Taken.Last is "    llvm.store %givenValue, %givenList : f64, !llvm.ptr"
+	MlirGiven(MlirStructs.Collector.function, 0).Taken.Length is 0
+	if Consumed is ""
+		return List(Text)
+	constant taken = "    %givenValue = func.call @strict_list_taken() : () -> f64"
+	(taken, "    %givenList = llvm.alloca %one x f64 : (i64) -> !llvm.ptr", function.Store("%givenValue", "%givenList"))
+Consumed Text
+	Given.Consumed is "shapes"
+	MlirGiven(MlirStructs.Collector.function, 0).Consumed is ""
+	for function.method.instructions
+		if value.kind is InstructionType.LoopBegin and MlirGiven(function, index).Member is not ""
+			return MlirGiven(function, index).Member
+	""
+Creat(result Text, capacity Text) Texts
+	Given.Creat("%r", "%a").Last.EndsWith("@strict_record_list_given(%a, %rc, %rs, %rg) : " + Quad)
+	Given.Creat("%r", "%a").First is "    %rc = arith.constant 1.0 : f64"
+	element = MlirKinds(function).ElementKind(MlirKinds(function).VariableKind(position, "forResult"))
+	counted = "    " + result + "c = arith.constant " + MlirEmbedded(function).Slots(element) + ".0 : f64"
+	loads = (function.Load(result + "s", "%v_" + Member), function.Load(result + "g", "%givenList"))
+	names = (capacity, result + "c", result + "s", result + "g")
+	call = " = func.call @strict_record_list_given(" + Text.Combine(names, ", ") + ") : " + Quad
+	(List(Text) + counted) + loads + ("    " + result + call)
+Prefill(list Text, length Text) Texts
+	Given.Prefill("%l", "%n").Last is "    func.call @strict_list_holes_fresh(%l, %ls, %n) : (f64, f64, f64) -> ()"
+	holes = "    func.call @strict_list_holes_fresh(" + list + ", " + list + "s, " + length + ") : (f64, f64, f64) -> ()"
+	(function.Load(list + "s", "%v_" + Member), holes)
+Serial Texts
+	Given.Serial.Last is "    llvm.store %t2sr, %v_forResult : f64, !llvm.ptr"
+	Given.Serial(2).EndsWith("@strict_record_list_serial(%t2sl, %t2ss, %t2a, %t2rc) : " + Quad)
+	temp = "%t" + position
+	loads = (function.Load(temp + "sl", "%v_forResult"), function.Load(temp + "ss", "%v_" + Member))
+	names = (temp + "sl", temp + "ss", temp + "a", temp + "rc")
+	call = "    " + temp + "sr = func.call @strict_record_list_serial(" + Text.Combine(names, ", ") + ") : " + Quad
+	loads + call + function.Store(temp + "sr", "%v_forResult")
+Holing Texts
+	Given.Holing.Last is "    func.call @strict_item_holed(%t2ri, %t2ki, %t2hg) : (!llvm.ptr, i64, i1) -> ()"
+	Given.Holing(1) is "    %t2hg = arith.cmpf oeq, %t2rv, %t2hs : f64"
+	temp = "%t" + position
+	same = "    " + temp + "hg = arith.cmpf oeq, " + temp + "rv, " + temp + "hs : f64"
+	holed = "    func.call @strict_item_holed(" + temp + "ri, " + temp + "ki, " + temp + "hg) : (!llvm.ptr, i64, i1) -> ()"
+	(function.Load(temp + "hs", "%v_" + Member), same, holed)
+Destine(temp Text) Texts
+	Given.Destine("%k").Last.EndsWith("@strict_struct_destine_given(%kl, %ki, %kn, %ks, %ke) : " + Five)
+	names = (temp + "l", temp + "i", temp + "n", temp + "s", temp + "e")
+	destined = "    func.call @strict_struct_destine_given(" + Text.Combine(names, ", ") + ") : " + Five
+	(function.Load(temp + "s", "%v_" + Member), function.Load(temp + "e", "%v_value"), destined)

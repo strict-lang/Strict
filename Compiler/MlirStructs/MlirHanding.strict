@@ -1,0 +1,96 @@
+has function MlirFunction
+has position Number
+constant Start = MemberEntry("start", "Strict/Swarm", List(InstructionEntry), false)
+constant Seeded = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "start"), InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "current"))
+constant Counted = (InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size"), InstructionEntry.LoopBegin(0, -1))
+constant Current = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 1, "current")
+constant Advanced = InstructionEntry.Invoke(2, ("Strict/Swarm", "Advanced", "Strict/Swarm"), List(Number), 1)
+constant Back = InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 2, "current")
+constant Ended = (InstructionEntry.Jump(InstructionType.LoopEnd, 4), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "current"), InstructionEntry.Return(0))
+constant Advancing = MethodEntry("Advance", List(MemberEntry) + Start, "Strict/Swarm", Seeded + Counted + (Current, Advanced, Back) + Ended)
+constant Swarm = TypeEntry("Strict/Swarm", MlirGiven.Swarm.members, (MlirGiven.Living, MlirGiving.Advancing, Advancing))
+constant Types = (MlirStructs.Maker, Swarm)
+constant Handing = MlirHanding(MlirFunction(Types, Swarm, Advancing), 5)
+constant Twice = MethodEntry(Advancing, instructions = Seeded + Counted + (Current, Advanced, Back, Current) + Ended)
+constant Fresh = InstructionEntry.Invoke(0, ("Strict/Swarm", "Other", "Strict/Swarm"), List(Number), -1)
+constant Unseeded = MethodEntry(Advancing, instructions = (Fresh, Seeded(1)) + Counted + (Current, Advanced, Back) + Ended)
+Local Text
+	Handing.Local is "current"
+	MlirHanding(MlirFunction(Types, Swarm, Twice), 5).Local is ""
+	MlirHanding(MlirFunction(Types, Swarm, Unseeded), 5).Local is ""
+	MlirHanding(Handing.function, 4).Local is ""
+	entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke or Loop < 0
+		return ""
+	giving = MlirGiving(function, position)
+	name = giving.Holder
+	next = MlirDestined(function, position).Next(entry)
+	isStore = next.kind is InstructionType.StoreRegisterToVariable and next.payload(0) is entry.payload(0)
+	isBack = isStore then next.texts(0) is name else false
+	isBack and Loads(name) is 1 and IsSeeded(name) and giving.HasOwner(position) is false then name else ""
+Loop Number
+	Handing.Loop is 3
+	MlirHanding(Handing.function, 1).Loop is -1
+	mutable begin = Number.NotFound
+	for function.method.instructions
+		isLoop = value.kind is InstructionType.LoopBegin and index < position
+		begin = (isLoop then function.method.LoopEndOf(index) > position else false) then index else begin
+	begin
+Loads(name Text) Number
+	Handing.Loads("current") is 1
+	MlirHanding(MlirFunction(Types, Swarm, Twice), 5).Loads("current") is 2
+	steps = function.method.instructions
+	mutable loads = 0
+	for Range(Loop + 1, function.method.LoopEndOf(Loop))
+		isLoad = steps(value).kind is InstructionType.LoadVariableToRegister then steps(value).texts(0) is name else false
+		loads = isLoad then loads + 1 else loads
+	loads
+IsSeeded(name Text) Boolean
+	Handing.IsSeeded("current")
+	MlirHanding(MlirFunction(Types, Swarm, Unseeded), 5).IsSeeded("current") is false
+	for function.method.instructions
+		isStored = value.kind is InstructionType.StoreRegisterToVariable then value.texts(0) is name else false
+		if isStored and Source(index) is not position and Seed(index) is ""
+			return false
+	true
+Source(at Number) Number
+	Handing.Source(6) is 5
+	Handing.Source(1) is 0
+	MlirKinds(function).Writer(at, function.method.instructions(at).payload(0))
+Seed(at Number) Text
+	Handing.Seed(1) is "start"
+	Handing.Seed(6) is ""
+	writer = Source(at)
+	loaded = writer < 0 then function.method.instructions(at) else function.method.instructions(writer)
+	name = loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
+	name is in function.method.ParameterNames then name else ""
+Seeds Texts
+	Handing.Seeds is List(Text) + "start"
+	for function.method.instructions
+		isStored = value.kind is InstructionType.StoreRegisterToVariable then value.texts(0) is Local else false
+		if isStored and Seed(index) is not ""
+			Seed(index)
+Hand Texts
+	Handing.Hand.Last is "    func.call @strict_struct_destine(%t5hc) : (f64) -> ()"
+	Handing.Hand(1) is "    %t5hu = func.call @strict_rc_unshared(%t5ho) : (f64) -> i1"
+	Handing.Hand(3) is "    %t5hn0 = arith.cmpf une, %t5ho, %t5hs0 : f64"
+	MlirHanding(Handing.function, 4).Hand.Length is 0
+	if Local is ""
+		return List(Text)
+	temp = "%t" + position + "h"
+	unshared = "    " + temp + "u = func.call @strict_rc_unshared(" + temp + "o) : (f64) -> i1"
+	seeds = Seeds
+	last = seeds.Length is 0 then temp + "u" else temp + "a" + (seeds.Length - 1)
+	chosen = "    " + temp + "c = arith.select " + last + ", " + temp + "o, %zero : f64"
+	destined = "    func.call @strict_struct_destine(" + temp + "c) : (f64) -> ()"
+	(List(Text) + function.Load(temp + "o", "%v_" + Local) + unshared) + Guards(seeds) + (chosen, destined)
+Guards(seeds Texts) Texts
+	Handing.Guards(List(Text) + "start").Last is "    %t5ha0 = arith.andi %t5hu, %t5hn0 : i1"
+	temp = "%t" + position + "h"
+	mutable lines = List(Text)
+	for seeds
+		before = index is 0 then temp + "u" else temp + "a" + (index - 1)
+		differs = "    " + temp + "n" + index + " = arith.cmpf une, " + temp + "o, " + temp + "s" + index + " : f64"
+		both = "    " + temp + "a" + index + " = arith.andi " + before + ", " + temp + "n" + index + " : i1"
+		lines = lines + function.Load(temp + "s" + index, "%v_" + value) + differs + both
+	lines

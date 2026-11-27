@@ -1,0 +1,160 @@
+has function MlirFunction
+has position Number
+constant Self = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "value")
+constant SelfShapes = InstructionEntry(InstructionType.FieldLoad, ("shapes", "Swarm"), (1, 0, -1, -2))
+constant SelfAgain = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "value")
+constant SelfSize = InstructionEntry(InstructionType.FieldLoad, ("size", "Swarm"), (3, 2, -1, -2))
+constant Built = InstructionEntry.Invoke(4, ("Strict/Swarm", "from", "Swarm", "shapes", "size"), (1, 3), -1)
+constant Copied = (Self, SelfShapes, SelfAgain, SelfSize, Built, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 4, "system"))
+constant Held = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "system")
+constant Lived = InstructionEntry.Invoke(1, ("Strict/Swarm", "Living", "Strict/List(Strict/Shape)"), List(Number), 0)
+constant HeldAgain = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 2, "system")
+constant Ended = (HeldAgain, SelfSize, Built, InstructionEntry.Return(4))
+constant Advancing = MethodEntry("Advanced", List(MemberEntry), "Strict/Swarm", Copied + Held + Lived + Ended)
+constant Giving = MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Advancing), 7)
+constant Rereading = MethodEntry(Advancing, instructions = Copied + Held + Lived + (HeldAgain, SelfShapes, SelfSize, Built, InstructionEntry.Return(4)))
+constant Keeping = MethodEntry(Advancing, instructions = Copied + Held + Lived + (HeldAgain, SelfSize, Built, InstructionEntry.Return(2)))
+constant Lane = (InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 3, "lanes8_size"), InstructionEntry.Named(InstructionType.LoadVariableToRegister, 3, "lanes8_size"))
+constant Laned = MethodEntry(Advancing, instructions = Copied + Held + Lived + (HeldAgain, SelfSize) + Lane + (Built, InstructionEntry.Return(4)))
+constant Borrowed = MethodEntry(Advancing, instructions = (Self, InstructionEntry.Named(InstructionType.StoreRegisterToVariable, 0, "system")) + Held + Lived + Ended)
+Member Text
+	Giving.Member is "shapes"
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Rereading), 7).Member is ""
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Keeping), 7).Member is ""
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Borrowed), 3).Member is ""
+	MlirGiving(Giving.function, 4).Member is ""
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Laned), 7).Member is "shapes"
+	entry = function.method.instructions(position)
+	if entry.kind is not InstructionType.Invoke or MlirWholeFunction(function).IsInsideLoop(position)
+		return ""
+	callees = MlirReach(function.types).Call(function, position)
+	consumed = callees.Length > 0 then MlirGiven(callees.First, 0).Consumed else ""
+	consumed is "" then "" else IsFresh(Holder) and IsEnding(consumed) then consumed else ""
+Holder Text
+	Giving.Holder is "system"
+	MlirGiving(Giving.function, 4).Holder is ""
+	instance = PayloadDecoder(function.method.instructions(position)).Instance
+	writer = instance < 0 then Number.NotFound else MlirKinds(function).Writer(position, instance)
+	if writer < 0
+		return ""
+	loaded = function.method.instructions(writer)
+	name = loaded.kind is InstructionType.LoadVariableToRegister then loaded.texts(0) else ""
+	name is in function.Parameters or MlirGiven(function, 0).IsMember(name) then "" else name
+IsFresh(name Text) Boolean
+	Giving.IsFresh("system")
+	Giving.IsFresh("") is false
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Borrowed), 3).IsFresh("system") is false
+	mutable stores = 0
+	for function.method.instructions
+		isStored = value.kind is InstructionType.StoreRegisterToVariable then value.texts(0) is name else false
+		if isStored and IsMade(index, name) is false
+			return false
+		stores = isStored then stores + 1 else stores
+	stores > 0
+IsMade(at Number, name Text) Boolean
+	Giving.IsMade(5, "system")
+	steps = function.method.instructions
+	kinds = MlirKinds(function)
+	writer = kinds.Writer(at, steps(at).payload(0))
+	if (writer < 0 then false else steps(writer).kind is InstructionType.Invoke) is false
+		return false
+	made = steps(writer)
+	if made.texts(1) is "from"
+		return made.texts(0) is steps(position).texts(0)
+	instance = PayloadDecoder(made).Instance
+	receiver = instance < 0 then Number.NotFound else kinds.Writer(writer, instance)
+	receiver >= 0 then Text.Combine(steps(receiver).texts) is name and HasOwner(writer) is false else false
+HasOwner(at Number) Boolean
+	Giving.HasOwner(7) is false
+	kinds = MlirKinds(function)
+	owner = TypeEntry.ShortName(function.method.instructions(position).texts(0))
+	for PayloadDecoder(function.method.instructions(at)).Arguments
+		if kinds.KindOf(at, value) is owner
+			return true
+	false
+IsEnding(consumed Text) Boolean
+	Giving.IsEnding("shapes")
+	Giving.IsEnding("size") is false
+	steps = function.method.instructions
+	mutable built = Number.NotFound
+	for Range(position + 1, steps.Length)
+		step = steps(value)
+		isReturned = step.kind is InstructionType.Return then step.payload(0) is built else false
+		isBuilt = built < 0 and IsRebuilt(value, consumed)
+		if (IsRead(value, consumed) or isReturned or isBuilt) is false
+			return false
+		built = isBuilt then step.payload(0) else built
+	built >= 0
+IsRead(at Number, consumed Text) Boolean
+	Giving.IsRead(8, "shapes")
+	Giving.IsRead(9, "shapes")
+	Giving.IsRead(9, "size") is false
+	Giving.IsRead(10, "shapes") is false
+	step = function.method.instructions(at)
+	isRead = step.kind is InstructionType.FieldLoad then step.texts(0) is not consumed else false
+	isLoad = step.kind is InstructionType.LoadVariableToRegister then step.texts(0) is Holder else false
+	isRead or isLoad or step.kind is InstructionType.CheckError or IsNumber(at)
+IsNumber(at Number) Boolean
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Laned), 7).IsNumber(10)
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Laned), 7).IsNumber(11)
+	Giving.IsNumber(8) is false
+	step = function.method.instructions(at)
+	isNamed = step.kind is in (InstructionType.LoadVariableToRegister, InstructionType.StoreRegisterToVariable)
+	isNamed then MlirKinds(function).VariableKind(at + 1, step.texts(0)) is "Number" else false
+IsRebuilt(at Number, consumed Text) Boolean
+	Giving.IsRebuilt(10, "shapes")
+	Giving.IsRebuilt(8, "shapes") is false
+	steps = function.method.instructions
+	step = steps(at)
+	built = step.kind is InstructionType.Invoke then step.texts else ("", "")
+	if built(1) is not "from" or built(0) is not steps(position).texts(0)
+		return false
+	kinds = MlirKinds(function)
+	for PayloadDecoder(step).Arguments
+		writer = kinds.Writer(at, value)
+		source = writer < 0 then step else steps(writer)
+		if (source.texts.Length > 0 then source.texts(0) is consumed else false) and source.kind is not InstructionType.Invoke
+			return false
+	true
+Give Texts
+	Giving.Give.Last is "    func.call @strict_list_give(%t7gh, %t7go, %p0, %t7gs) : (f64, i64, f64, i1) -> ()"
+	Giving.Give(1) is "    %t7go = arith.constant 0 : i64"
+	MlirGiving(Giving.function, 4).Give.Length is 0
+	member = Member
+	if member is ""
+		return List(Text)
+	temp = "%t" + position + "g"
+	owner = function.TypeOf(TypeEntry.ShortName(function.method.instructions(position).texts(0)))
+	offset = "    " + temp + "o = arith.constant " + MlirEmbedded(function).Offset(owner, member) + " : i64"
+	isSelf = function.type.Name is owner.Name and MlirStructs(function, 0).Consumes(0)
+	same = "    " + temp + "s = arith.cmpf oeq, " + temp + "d, %p0 : f64"
+	flag = "    " + temp + "s = arith.constant false"
+	given = isSelf then (function.Load(temp + "d", "%structDestination"), same) else List(Text) + flag
+	names = (temp + "h", temp + "o", isSelf then "%p0" else "%zero", temp + "s")
+	call = "    func.call @strict_list_give(" + Text.Combine(names, ", ") + ") : (f64, i64, f64, i1) -> ()"
+	(List(Text) + function.Load(temp + "h", "%v_" + Holder) + offset) + given + call
+Taken Texts
+	Giving.Taken is List(Text) + "    %t7gt = func.call @strict_list_taken() : () -> f64"
+	MlirGiving(Giving.function, 4).Taken.Length is 0
+	taken = "    %t" + position + "gt = func.call @strict_list_taken() : () -> f64"
+	Member is "" then List(Text) else List(Text) + taken
+Site Number
+	MlirGiving(Giving.function, 11).Site is 7
+	MlirGiving(Giving.function, 5).Site is -1
+	MlirGiving(MlirFunction(MlirGiven.Types, MlirGiven.Swarm, Keeping), 11).Site is -1
+	steps = function.method.instructions
+	for position
+		at = position - 1 - index
+		if steps(at).kind is InstructionType.Invoke then steps(at).texts(1) is not "from" else false
+			return MlirGiving(function, at).Member is "" then Number.NotFound else at
+	Number.NotFound
+Released Texts
+	MlirGiving(Giving.function, 11).Released.Last is "    func.call @strict_rc_dead(%t11go, %t11) : (f64, f64) -> ()"
+	MlirGiving(Giving.function, 11).Released.First is "    %t11go = llvm.load %v_system : !llvm.ptr -> f64"
+	MlirGiving(Giving.function, 5).Released.Length is 0
+	site = Site
+	if site < 0
+		return List(Text)
+	old = "%t" + position + "go"
+	dead = "    func.call @strict_rc_dead(" + old + ", " + MlirDying(function, position).Survivor + ") : (f64, f64) -> ()"
+	(function.Load(old, "%v_" + MlirGiving(function, site).Holder), dead)

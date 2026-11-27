@@ -1,0 +1,49 @@
+has parts List(OwnedPart)
+has limit Number
+constant Count = 200
+constant Limit = 104
+constant Many = 200000
+constant Ticks = 6
+constant Left = Many / 2 - Ticks
+constant Spare = RecycledPair(7, 7)
+constant Sample = OwnedSwarm(List(OwnedPart) + OwnedPart(RecycledPair(0, 1), Spare, Spare, 0), 5)
+Fill(count Number) List(OwnedPart)
+	Sample.Fill(3).Length is 3
+	Sample.Fill(3)(2) is OwnedPart(RecycledPair(2, 1), Spare, Spare, 0)
+	for count
+		OwnedPart(RecycledPair(index, 1), Spare, Spare, 0)
+Living(step Number) List(OwnedPart)
+	Sample.Living(1) is List(OwnedPart) + OwnedPart(RecycledPair(1, 1, 1), Spare, Spare, 1)
+	Sample.Living(5).Length is 0
+	for parts
+		moved = value.Advanced(step)
+		if moved.pair.first < limit
+			moved
+Advanced(step Number) OwnedSwarm
+	Sample.Advanced(1).parts.Length is 1
+	Sample.Advanced(1).limit is 5
+	system = OwnedSwarm(parts, limit)
+	OwnedSwarm(system, parts = system.Living(step))
+Advance(start OwnedSwarm, ticks Number) OwnedSwarm
+	Sample.Advance(Sample, 3).parts is List(OwnedPart) + OwnedPart(RecycledPair(3, 1, 1), Spare, Spare, 3)
+	Sample.Advance(Sample, 5).parts.Length is 0
+	mutable current = start
+	for ticks
+		current = current.Advanced(1)
+	current
+Total(ticks Number) Number
+	Sample.Total(4) is Count * (Count - 1) / 2 + Count * 4
+	Firsts(Advance(OwnedSwarm(Fill(Count), Count * 2), ticks).parts).Sum
+Firsts(moved List(OwnedPart)) Numbers
+	Sample.Firsts(Sample.parts) is (0)
+	for moved
+		value.pair.first
+Keep(ticks Number) Number
+	Sample.Keep(4) is Count * (Count - 1) / 2 + 100 * 99 / 2 + 100 * 4
+	start = OwnedSwarm(Fill(Count), Limit)
+	Firsts(start.parts).Sum + Firsts(Advance(start, ticks).parts).Sum
+Stress(count Number, ticks Number) Number slow
+	Sample.Stress(Many, Ticks) is Many * (Many - 1) + Many * Ticks + Left * (Left - 1) / 2 + Left * Ticks
+	start = OwnedSwarm(Fill(count), count / 2)
+	all = Firsts(Advance(OwnedSwarm(Fill(count), count * 2), ticks).parts).Sum
+	all + Firsts(Advance(start, ticks).parts).Sum + Firsts(start.parts).Sum

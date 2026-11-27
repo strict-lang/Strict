@@ -97,6 +97,8 @@ Aim(entry InstructionEntry, next InstructionEntry, compiled Texts) Texts
 	callees = MlirReach(function.types).Call(function, position)
 	if callees.Length is 0 then true else MlirStructs(callees.First, 0).Consumes(1) is false
 		return MlirElements(function, position).Destine(entry, next, compiled)
+	if MlirHanding(function, position).Local is not ""
+		return MlirHanding(function, position).Hand + compiled
 	if next.kind is InstructionType.Return and next.payload(0) is entry.payload(0) and Consumes(0)
 		return (function.Load("%t" + position + "sd", "%structDestination"), Destine("sd")) + compiled
 	Element(entry, next, compiled, TypeEntry.ShortName(callees.First.method.returnType))
@@ -121,7 +123,10 @@ Collect(entry InstructionEntry, compiled Texts, returned Text) Texts
 	size = "    " + temp + "n = arith.constant " + embedded.Slots(returned) + ".0 : f64"
 	arguments = temp + "l, " + temp + "i, " + temp + "n) : (f64, f64, f64) -> ()"
 	destined = "    func.call @strict_struct_destine_block(" + arguments
-	(function.Load(temp + "l", "%v_forResult"), function.Load(temp + "i", "%v_index"), size, destined) + compiled
+	loop = MlirGiven(function, 0).Around(position)
+	isGiven = loop < 0 then false else MlirGiven(function, loop).Builder is position
+	placed = isGiven then MlirGiven(function, loop).Destine(temp) else List(Text) + destined
+	(function.Load(temp + "l", "%v_forResult"), function.Load(temp + "i", "%v_index"), size) + placed + compiled
 IsKept(entry InstructionEntry) Boolean
 	Collector.IsKept(Calling)
 	Made.IsKept(Calling) is false
