@@ -79,11 +79,13 @@ Save(keys Texts, emitted Texts, stored Dictionary(Text, Text), path Text) slow
 Keys(texts List(MlirFunction)) Texts slow
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
 	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")
+	Counting.Keys(MlirModule.Counters.Functions).First.EndsWith("|")
 	shared = Share(CodegenStamp(TypeSource.Root).Current(Process.Current.executable))
 	graph = CallGraph(module.types)
 	for texts
 		own = TypeEntry.ShortName(value.type.Name) + "." + value.method.Name
-		Flags(value) + "|" + shared + "|" + graph.Closure(own) + "|" + graph.Calling(own)
+		callers = MlirWholeFunction(value).IsWhole then graph.Calling(own) else ""
+		Flags(value) + "|" + shared + "|" + graph.Closure(own) + "|" + callers
 Flags(function MlirFunction) Text
 	Counting.Flags(MlirModule.Counters.Functions.First).StartsWith("Counter_Run_0|")
 	loops = function.FastLoop + "|" + function.Group + "|" + function.Guarded
