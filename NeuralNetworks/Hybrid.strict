@@ -90,8 +90,9 @@ Drop(cache Numbers, stride Number, dropped Number, count Number) Numbers
 	Tiny.Drop((1, 2, 3, 4, 5, 6, 7, 8), 4, 0, 2) is (5, 6, 7, 8)
 	Tiny.Drop((1, 2, 3, 4, 9, 9, 9, 9, 5, 6, 7, 8, 9, 9, 9, 9), 4, 1, 2) is (1, 2, 3, 4, 5, 6, 7, 8)
 	remaining = count - 1
+	group = remaining * stride
 	for cache.Length / count * remaining
-		token = (index / (remaining * stride)).Floor
+		token = (index / group).Floor
 		slot = (index / stride).Floor % remaining
 		cache((token * count + (slot < dropped then slot else slot + 1)) * stride + index % stride)
 Repeat(state Numbers, count Number) Numbers
