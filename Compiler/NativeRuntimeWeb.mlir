@@ -813,7 +813,24 @@
   ^list:
     %valueSlot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %valueSlot : !llvm.ptr -> f64
-    %bits = func.call @strict_gpu_bits(%value) : (f64) -> i64
+    %sixteen = arith.constant 16 : i64
+    %rowShift = arith.addi %at, %sixteen : i64
+    %rowShifted = arith.shrui %mask, %rowShift : i64
+    %isRow = arith.trunci %rowShifted : i64 to i1
+    cf.cond_br %isRow, ^rowBits, ^plainBits
+  ^rowBits:
+    %rowLen = func.call @strict_list_length(%value) : (f64) -> f64
+    %zeroFloat = arith.constant 0.0 : f64
+    %hasRows = arith.cmpf ogt, %rowLen, %zeroFloat : f64
+    cf.cond_br %hasRows, ^firstRow, ^bitsKnown(%singleBits : i64)
+  ^firstRow:
+    %firstElem = func.call @strict_list_get(%value, %zeroFloat) : (f64, f64) -> f64
+    %firstBits = func.call @strict_gpu_bits(%firstElem) : (f64) -> i64
+    cf.br ^bitsKnown(%firstBits : i64)
+  ^plainBits:
+    %plainBits = func.call @strict_gpu_bits(%value) : (f64) -> i64
+    cf.br ^bitsKnown(%plainBits : i64)
+  ^bitsKnown(%bits: i64):
     %isNarrowList = arith.cmpi ult, %bits, %sixtyFour : i64
     %isBrainList = arith.cmpi eq, %bits, %brainBits : i64
     %anyNarrow = arith.ori %narrow, %isNarrowList : i1
@@ -852,11 +869,15 @@
   ^table:
     %entries = arith.muli %valueCount, %three : i64
     %table = llvm.alloca %entries x f64 : (i64) -> !llvm.ptr
+    %rowBuffers = llvm.alloca %valueCount x !llvm.ptr : (i64) -> !llvm.ptr
     cf.br ^slot(%none : i64)
   ^slot(%at: i64):
     %more = arith.cmpi slt, %at, %valueCount : i64
     cf.cond_br %more, ^value, ^filled
   ^value:
+    %rowBufSlot = llvm.getelementptr %rowBuffers[%at] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    %nullPtr = llvm.mlir.zero : !llvm.ptr
+    llvm.store %nullPtr, %rowBufSlot : !llvm.ptr, !llvm.ptr
     %valueSlot = llvm.getelementptr %values[%at] : (!llvm.ptr, i64) -> !llvm.ptr, f64
     %value = llvm.load %valueSlot : !llvm.ptr -> f64
     %bit = arith.shli %one, %at : i64
@@ -877,6 +898,58 @@
   ^list:
     %listLength = func.call @strict_list_length(%value) : (f64) -> f64
     llvm.store %listLength, %length : f64, !llvm.ptr
+    %sixteen = arith.constant 16 : i64
+    %rowShift = arith.addi %at, %sixteen : i64
+    %rowShifted = arith.shrui %mask, %rowShift : i64
+    %isRow = arith.trunci %rowShifted : i64 to i1
+    cf.cond_br %isRow, ^rows, ^flatList
+  ^rows:
+    %rowCount = arith.fptosi %listLength : f64 to i64
+    %twelve = arith.constant 12 : i64
+    %minRowCount = arith.maxsi %rowCount, %one : i64
+    %descBytes = arith.muli %minRowCount, %twelve : i64
+    %desc = llvm.call @strict_c_malloc(%descBytes) : (i64) -> !llvm.ptr
+    llvm.store %desc, %rowBufSlot : !llvm.ptr, !llvm.ptr
+    cf.br ^rowLoop(%none : i64)
+  ^rowLoop(%rIdx: i64):
+    %rMore = arith.cmpi slt, %rIdx, %rowCount : i64
+    cf.cond_br %rMore, ^rowBody, ^rowDone
+  ^rowBody:
+    %rF64 = arith.sitofp %rIdx : i64 to f64
+    %rowVal = func.call @strict_list_get(%value, %rF64) : (f64, f64) -> f64
+    %rLenF64 = func.call @strict_list_length(%rowVal) : (f64) -> f64
+    %rLen = arith.fptosi %rLenF64 : f64 to i32
+    %rHandle = func.call @strict_gpu_web_handle(%rowVal) : (f64) -> i64
+    %rIsRes = arith.cmpi ne, %rHandle, %none : i64
+    cf.cond_br %rIsRes, ^rowRes, ^rowHost
+  ^rowRes:
+    %rResBits = arith.constant 255 : i64
+    cf.br ^rowStore(%rHandle, %rResBits : i64, i64)
+  ^rowHost:
+    %rHost = func.call @strict_gpu_host(%rowVal) : (f64) -> !llvm.ptr
+    %rHostInt = llvm.ptrtoint %rHost : !llvm.ptr to i64
+    %rHostBits = func.call @strict_gpu_bits(%rowVal) : (f64) -> i64
+    cf.br ^rowStore(%rHostInt, %rHostBits : i64, i64)
+  ^rowStore(%rAddr64: i64, %rBits64: i64):
+    %rAddr = arith.trunci %rAddr64 : i64 to i32
+    %rBits = arith.trunci %rBits64 : i64 to i32
+    %rBase = arith.muli %rIdx, %three : i64
+    %rSlot0 = llvm.getelementptr %desc[%rBase] : (!llvm.ptr, i64) -> !llvm.ptr, i32
+    %rSlot1 = llvm.getelementptr %rSlot0[1] : (!llvm.ptr) -> !llvm.ptr, i32
+    %rSlot2 = llvm.getelementptr %rSlot0[2] : (!llvm.ptr) -> !llvm.ptr, i32
+    llvm.store %rAddr, %rSlot0 : i32, !llvm.ptr
+    llvm.store %rLen, %rSlot1 : i32, !llvm.ptr
+    llvm.store %rBits, %rSlot2 : i32, !llvm.ptr
+    %rNext = arith.addi %rIdx, %one : i64
+    cf.br ^rowLoop(%rNext : i64)
+  ^rowDone:
+    %descInt = llvm.ptrtoint %desc : !llvm.ptr to i64
+    %descF64 = arith.uitofp %descInt : i64 to f64
+    %rowsFormat = arith.constant 65.0 : f64
+    llvm.store %descF64, %number : f64, !llvm.ptr
+    llvm.store %rowsFormat, %format : f64, !llvm.ptr
+    cf.br ^slot(%next : i64)
+  ^flatList:
     %handle = func.call @strict_gpu_web_handle(%value) : (f64) -> i64
     %isResident = arith.cmpi ne, %handle, %none : i64
     cf.cond_br %isResident, ^resident(%handle : i64), ^hosted
@@ -912,6 +985,23 @@
     %waited = llvm.call @strict_webgpu_kernel(%name, %count32, %table, %valueCount32, %bits32) : (!llvm.ptr, i32, !llvm.ptr, i32, i32) -> i32
     cf.br ^have(%waited : i32)
   ^have(%made: i32):
+    cf.br ^freeRows(%none : i64)
+  ^freeRows(%freeAt: i64):
+    %freeMore = arith.cmpi slt, %freeAt, %valueCount : i64
+    cf.cond_br %freeMore, ^freeCheck, ^freeDone
+  ^freeCheck:
+    %freeSlot = llvm.getelementptr %rowBuffers[%freeAt] : (!llvm.ptr, i64) -> !llvm.ptr, !llvm.ptr
+    %freePtr = llvm.load %freeSlot : !llvm.ptr -> !llvm.ptr
+    %nullFree = llvm.mlir.zero : !llvm.ptr
+    %hasFree = llvm.icmp "ne" %freePtr, %nullFree : !llvm.ptr
+    cf.cond_br %hasFree, ^doFree, ^freeNext
+  ^doFree:
+    llvm.call @free(%freePtr) : (!llvm.ptr) -> ()
+    cf.br ^freeNext
+  ^freeNext:
+    %freeNextAt = arith.addi %freeAt, %one : i64
+    cf.br ^freeRows(%freeNextAt : i64)
+  ^freeDone:
     %isMade = arith.cmpi ne, %made, %unused : i32
     cf.cond_br %isMade, ^resides, ^failed
   ^resides:

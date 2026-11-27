@@ -375,11 +375,49 @@ addToLibrary({
 	// written (the buffer of all of them starts as zeros), a 944 MB placeholder of a resident map took seconds
 	$strictWebGpuKernelInputs__deps: ['$strictWebGpu', '$strictWebGpuWidened', '$strictWebGpuFloat8Widened'],
 	$strictWebGpuKernelInputs: (count, table, slots) => {
+		const decode = (addr, len, b) => b === 64 ? HEAPF64.subarray(addr / 8, addr / 8 + len)
+			: b === 32 ? HEAPF32.subarray(addr / 4, addr / 4 + len)
+			: b === 17 ? strictWebGpuWidened(HEAPU16.subarray(addr / 2, addr / 2 + len))
+			: b === 9 ? HEAPU8.subarray(addr >>> 0, (addr >>> 0) + len)
+			: b === 7 ? strictWebGpuFloat8Widened(HEAPU8.subarray(addr >>> 0, (addr >>> 0) + len)) : null;
 		const entries = HEAPF64.slice(table / 8, table / 8 + slots * 3);
-		const places = new Uint32Array(slots * 2 + 1), parts = [], copies = [], bound = [];
+		const places = new Uint32Array(slots * 2 + 1), written = [], copies = [], bound = [];
 		let total = 0;
+		const pushHost = (part) => {
+			const at = total;
+			written.push([at, part instanceof Float32Array ? part : Float32Array.from(part)]);
+			total += part.length;
+			return at;
+		};
 		for (let slot = 0; slot < slots; slot++) {
 			const address = entries[slot * 3], length = entries[slot * 3 + 1], bits = entries[slot * 3 + 2];
+			if (bits === 65) {
+				const descBase = address >>> 2, desc = new Uint32Array(length * 2), descStart = total;
+				places[slot * 2] = descStart;
+				places[slot * 2 + 1] = length;
+				total += length * 2;
+				for (let row = 0; row < length; row++) {
+					const rAddr = HEAPU32[descBase + row * 3], rLen = HEAPU32[descBase + row * 3 + 1];
+					const rBits = HEAPU32[descBase + row * 3 + 2];
+					const rRes = rBits === 255 && strictWebGpu.buffers[rAddr];
+					if (rBits === 255 && !rRes) return null;
+					const rHalf = rRes && rAddr in strictWebGpu.halves, rWords = rHalf ? Math.ceil(rLen / 2) : rLen;
+					const rBound = rRes && bound.length < 4;
+					let rPlace;
+					if (rBound) { bound.push(rRes); rPlace = bound.length * 0x10000000; }
+					else if (rRes) { copies.push([rRes, total, rWords]); rPlace = total; total += rWords; }
+					else {
+						const rPart = decode(rAddr, rLen, rBits);
+						if (!rPart) return null;
+						rPlace = pushHost(rPart);
+					}
+					if (rHalf) rPlace += 0x80000000 + (rAddr in strictWebGpu.sixteens ? 0x08000000 : 0);
+					desc[row * 2] = rPlace >>> 0;
+					desc[row * 2 + 1] = rLen;
+				}
+				written.push([descStart, new Float32Array(desc.buffer)]);
+				continue;
+			}
 			const resident = bits === 255 && strictWebGpu.buffers[address];
 			if (resident && address in strictWebGpu.uploads && strictWebGpu.uploads[address] !== length)
 				return null;
@@ -390,25 +428,18 @@ addToLibrary({
 			else if (resident)
 				copies.push([resident, total, words]);
 			const part = length < 0 ? [address] : resident ? { length: isBound ? 0 : words, isResident: true }
-				: bits === 64 ? HEAPF64.subarray(address / 8, address / 8 + length)
-				: bits === 32 ? HEAPF32.subarray(address / 4, address / 4 + length)
-				: bits === 17 ? strictWebGpuWidened(HEAPU16.subarray(address / 2, address / 2 + length))
-				: bits === 9 ? HEAPU8.subarray(address >>> 0, (address >>> 0) + length)
-				: bits === 7 ? strictWebGpuFloat8Widened(HEAPU8.subarray(address >>> 0, (address >>> 0) + length)) : null;
+				: decode(address, length, bits);
 			if (!part)
 				return null;
 			const isSixteen = isHalved && address in strictWebGpu.sixteens;
-			places[slot * 2] = (isBound ? bound.length * 0x10000000 : total) + (isHalved ? 0x80000000 : 0) +
+			const offset = part.isResident ? total : pushHost(part);
+			if (part.isResident) total += part.length;
+			places[slot * 2] = (isBound ? bound.length * 0x10000000 : offset) + (isHalved ? 0x80000000 : 0) +
 				(isSixteen ? 0x08000000 : 0);
 			places[slot * 2 + 1] = length < 0 ? (Number.isInteger(address) && address >= 0 ? address : 0) : resident ? length
 				: part.length;
-			parts.push(part);
-			total += part.length;
 		}
 		places[slots * 2] = count;
-		const written = [];
-		parts.forEach((part, slot) => part.isResident || written.push([places[slot * 2],
-			part instanceof Float32Array ? part : Float32Array.from(part)]));
 		return { size: total, written, places, copies, bound };
 	},
 	// bfloat16 numbers as 32 bit floats

@@ -50,6 +50,7 @@ IsShaded Boolean
 	Doubling.IsShaded
 	WgslShader(MlirGpu.Timing.function, 2).IsShaded is false
 	Halved.IsShaded
+	WgslShader(MlirDeviceRows.Picking, 2).IsShaded
 	collection = MlirLoops(function, position).Collection
 	isFloats = MlirDoubles(function, position).Format is in (0, 7, 9, MlirDoubles.BFloat16Format, Number.SingleBits)
 	isKernel = MlirWholeKernel(function, position).IsKernel
@@ -92,10 +93,14 @@ Started Texts
 	Doubling.Started.Last is "v_value = n_of(n_item(places[0], at));"
 	WgslShader(MlirLoops.Ranging.function, 3).Started.Last is "v_value = n_add(n_of(numbers[places[0]]), n_int(i32(at)));"
 	source = "places[" + MlirGpuCheck(function, position).Free.Length * 2 + "]"
-	isCounted = MlirLoops(function, position).Collection is ""
+	collection = MlirLoops(function, position).Collection
+	isCounted = collection is ""
 	isRanged = function.method.instructions(position).payload(1) is 1
+	isRows = MlirDeviceRows(function, position).IsRows(collection)
 	counter = isRanged then "n_add(n_of(numbers[" + source + "]), n_int(i32(at)))" else "n_int(i32(at))"
-	("v_index = " + counter + ";", "v_value = " + (isCounted then counter else "n_of(n_item(" + source + ", at))") + ";")
+	rowItem = "v_valuel = vec2<u32>(n_word(" + source + ", at * 2u), n_word(" + source + ", at * 2u + 1u));"
+	plainItem = "v_value = " + (isCounted then counter else "n_of(n_item(" + source + ", at))") + ";"
+	("v_index = " + counter + ";", isRows then rowItem else plainItem)
 Scripts(functions List(MlirFunction)) Text
 	WgslShader.Scripts(List(MlirFunction) + Scaled.function).StartsWith(Marker + "\n;(Module[\"strictShaders\"] ||= {})")
 	WgslShader.Scripts(List(MlirFunction) + Doubling.function).IndexOf("Rows_Doubled_1_gpu2s") > 0

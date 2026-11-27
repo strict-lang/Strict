@@ -73,16 +73,22 @@ Calculate(entry InstructionEntry) Texts
 EmitIndex(entry InstructionEntry) Texts
 	WgslStatement(Summed, 6).EmitIndex(Summed.method.instructions(6)).First.StartsWith("let k6 = n_index(r")
 	WgslStatement(Summed, 6).EmitIndex(Summed.method.instructions(6))(1).IndexOf(" = n_of(n_item(v_") > 0
-	slots = MlirDeviceRecords(function, at).Slots(MlirKinds(function).VariableKind(at, entry.texts(0)))
-	if slots > 0
-		return Record(entry, slots)
+	WgslStatement(MlirDeviceRows.Picking, 4).Lines(1).EndsWith("n_word(v_weightsl.x, k4 * 2u + 1u)); }")
+	kind = MlirKinds(function).VariableKind(at, entry.texts(0))
+	slots = MlirDeviceRecords(function, at).Slots(kind)
+	slots > 0 then Record(entry, slots) else IndexAt(entry, "k" + at, MlirDeviceRows(function, at).IsRows(kind))
+IndexAt(entry InstructionEntry, position Text, isRow Boolean) Texts
+	WgslStatement(Summed, 6).IndexAt(Summed.method.instructions(6), "k6", false)(1).IndexOf("n_of(n_item(") > 0
+	WgslStatement(MlirDeviceRows.Picking, 4).IndexAt(MlirDeviceRows.Lookup, "k4", true)(1).IndexOf("n_word(") > 0
 	list = "v_" + entry.texts(0) + "l"
 	index = "r" + entry.payload(1)
 	target = "r" + entry.payload(0)
-	position = "k" + at
 	inside = "if (" + index + ".f >= 0.0 && " + position + " < " + list + ".y) { "
-	read = inside + target + " = n_of(n_item(" + list + ".x, " + position + ")); }"
-	("let " + position + " = n_index(" + index + ");", read, "else { failed[0] = 1u; " + target + " = n_int(0); }")
+	words = "n_word(" + list + ".x, " + position + " * 2u), n_word(" + list + ".x, " + position + " * 2u + 1u)"
+	rowAccess = target + "l = vec2<u32>(" + words + "); }"
+	read = isRow then rowAccess else target + " = n_of(n_item(" + list + ".x, " + position + ")); }"
+	zeroed = isRow then target + "l = vec2<u32>(0u, 0u); }" else target + " = n_int(0); }"
+	("let " + position + " = n_index(" + index + ");", inside + read, "else { failed[0] = 1u; " + zeroed)
 Call(entry InstructionEntry) Texts
 	WgslStatement(Doubled, 4).Call(Doubled.method.instructions(4)) is ("r2 = s_Rows_Twice_1(n_int(0), r1);")
 	WgslStatement(MlirGpuCheck.Floored, 1).Call(MlirGpuCheck.Flooring) is ("r1 = n_floor(r0);")

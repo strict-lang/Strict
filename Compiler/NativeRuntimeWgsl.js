@@ -20,6 +20,9 @@ fn n_number(place: u32, at: u32) -> f32 {
 		default: { return numbers[index]; }
 	}
 }
+fn n_word(place: u32, at: u32) -> u32 {
+	return bitcast<u32>(n_number(place, at));
+}
 fn n_item(place: u32, at: u32) -> f32 {
 	if (place < 0x80000000u) { return n_number(place, at); }
 	let pair = bitcast<u32>(n_number(place & 0x77ffffffu, at / 2u));
