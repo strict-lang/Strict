@@ -190,3 +190,5 @@ Served compiles, same flags. The published 2026-11-26 one-line edit was 7.0 s.
 | One-line edit with the same calls (`6, 8` / `10`) | 4.15 s | 0.032 s | 0.043 s | 0.36 s | 0.15 s |
 
 The resident server keeps the parsed table, the closure, the safety flags and the GPU table. An edit that changes calls still walks reachability (1.5 s); that walk is the result, not a stale edge list.
+
+Fresh self-build function bodies (2026-11-27 evening, `STRICT_SERVER=0`): 4.6 s before the resident tables, 40.6 s after them (each per-function `module.Emission` went through `MlirModule`, which got a mutable `memory` member), 5.2-8.1 s since `MlirEmission` holds that call (cf191723); the stages vary by 3 s with the machine busy.
