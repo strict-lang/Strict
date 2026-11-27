@@ -8,8 +8,9 @@ constant Going = MethodEntry("Go", List(MemberEntry), "Strict/Number", List(Inst
 constant Running = MethodEntry("Run", List(MemberEntry), "Strict/Number", Invoking)
 constant Types = (TypeEntry("Strict/A", List(MemberEntry), List(MethodEntry) + Running), TypeEntry("Strict/B", List(MemberEntry), List(MethodEntry) + Going))
 constant Graph = CallGraph(Types)
-constant Lined = (InstructionEntry(Invoking(0), line = 5), InstructionEntry(Invoking(1), line = 6))
+constant Lined = (Graph.Copy(Invoking(0), 5, -1), Graph.Copy(Invoking(1), 6, -1))
 constant Shifted = (TypeEntry(Types.First, methods = List(MethodEntry) + MethodEntry(Running, instructions = Lined)), Types.Last)
+constant Aimed = (Graph.Copy(Invoking(0), 0, 4), InstructionEntry.Return(0))
 from(types List(TypeEntry))
 	Graph.callees("A.Run") is ",B.Go" and Graph.callers("B.Go") is ",A.Run"
 	hashes = HashTypes(types)
@@ -18,15 +19,25 @@ from(types List(TypeEntry))
 Key(type TypeEntry, method MethodEntry) Text
 	Graph.Key(Types.First, Running) is "A.Run"
 	TypeEntry.ShortName(type.Name) + "." + method.Name
+Copy(entry InstructionEntry, line Number, target Number) InstructionEntry
+	Copy(Invoking(0), 5, 4).line is 5 and Copy(Invoking(0), 5, 4).Target is 4
+	InstructionEntry(entry.kind, entry.texts, entry.payload, line, target)
+Stable(instructions List(InstructionEntry)) List(InstructionEntry)
+	Stable(Lined).First.line is 0 and Stable(Lined).Last.line is 0
+	Stable(Lined).First.Target is -1 and Stable(Aimed).First.Target is 4
+	for instructions
+		InstructionEntry(value.kind, value.texts, value.payload, 0, value.Target)
 HashTypes(types List(TypeEntry)) Dictionary(Text, Number)
 	Graph.HashTypes(Types).Length is 2
 	Graph.HashTypes(Types)("A.Run") > 1000000007
+	MethodEntry(Running, instructions = Lined).instructions.First.line is 5
 	Graph.HashTypes(Shifted)("A.Run") is Graph.HashTypes(Types)("A.Run")
 	mutable hashed = Dictionary(Text, Number)
 	for type, method in types, type.methods
 		key = Key(type, method)
 		earlier = key is in hashed then hashed(key) else 0
-		wide = HashCode(method.instructions).number * Shift + HashCode(method.instructions.Reverse).number
+		stable = Stable(method.instructions)
+		wide = HashCode(stable).number * Shift + HashCode(stable.Reverse).number
 		hashed = hashed.set(key, (earlier + wide % Range) % Range)
 	hashed
 Call(types List(TypeEntry)) Dictionary(Text, Text)

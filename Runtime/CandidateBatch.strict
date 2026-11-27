@@ -15,15 +15,30 @@ Count(tails Text, execute Execute) Number slow
 	failed = Test(tails.Split("\n---\n"), 0, execute, File(request.rest(0)).ReadText).Count(false)
 	File(FileCompiler.Normalize(request.rest(0))).InMemory("")
 	failed
-Test(tails Texts, at Number, execute Execute, head Text) Booleans slow
+Test(tails Texts, at Number, execute Execute, head Text, files Texts = List(Text), names Texts = List(Text)) Booleans slow
 	Absent.Test(("\t1", "\t2"), 2, Execute, Head).Length is 0
 	if at >= tails.Length
 		return List(Boolean)
 	File(FileCompiler.Normalize(request.rest(0))).InMemory(Source(head, tails(at)))
 	logger.Log("Candidate " + (at + 1))
-	answer = execute.Serve(request.rest(0), request.rest(1))
+	answer = execute.Serve(request.rest(0), request.rest(1), false, Reuse(files, names))
 	warm = Execute(execute, known = answer.known, inferred = answer.inferred)
-	(List(Boolean) + (answer.code is 0)) + Test(tails, at + 1, warm, head)
+	(List(Boolean) + (answer.code is 0)) + Test(tails, at + 1, warm, head, answer.files, Collect(names))
+Reuse(files Texts, names Texts) Texts
+	Absent.Reuse(List(Text), "Number").Length is 0
+	fresh = SourceFiles(".").Mention(FileCompiler.Normalize(request.rest(0)))
+	files.Length > 0 and IsCovered(fresh, names) then files else List(Text)
+Collect(names Texts) Texts
+	"Number" is in Absent.Collect("Number")
+	names + SourceFiles(".").Mention(FileCompiler.Normalize(request.rest(0)))
+IsCovered(fresh Texts, names Texts) Boolean
+	Absent.IsCovered("Number", ("Number", "Text"))
+	Absent.IsCovered(("Foo", "Number"), "Number") is false
+	Absent.IsCovered(List(Text), "Number")
+	for fresh
+		if value is not in names
+			return false
+	true
 Constants(lines Texts) Texts
 	Absent.Constants(("\t1", "constant A = 1")) is ("constant A = 1")
 	for lines

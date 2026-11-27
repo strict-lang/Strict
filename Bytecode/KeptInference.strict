@@ -18,6 +18,7 @@ constant Counted = TypeInference(KnownTypes(List(Text) + "TextWriter", List(Scop
 constant Writing = Empty.Of(Pair, "TextWriter.strict")
 constant Reading = ("mutable n Number", "Go Number", "\tn")
 constant Doctored = KeptInference(Loggers, raw = Counted, refined = Counted)
+constant Shadowed = KeptInference(Writing, tested = "./obj/T.strict", signature = "x", stamps = Empty.Stamps(Pair))
 Of(files Texts, path Text) KeptInference
 	Loggers.joined is ResolveCheck.Inference(Pair) and Loggers.base.files is Writer
 	Loggers.Of(Swapped, "Logger.strict").joined is ResolveCheck.Inference(Swapped)
@@ -25,7 +26,7 @@ Of(files Texts, path Text) KeptInference
 	Empty.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
 	Writing.tested is "TextWriter.strict" and Writing.Of(Pair, "TextWriter.strict").joined is ResolveCheck.Inference(Pair)
 	at = files.Index(path)
-	if at >= 0 and IsCurrent(files, path)
+	if at >= 0 and IsReusable(files, path)
 		return Replaced(files, at)
 	rest = Rest(files, path)
 	isKept = IsKept(rest)
@@ -37,6 +38,27 @@ Of(files Texts, path Text) KeptInference
 Matches(files Texts, path Text) Boolean
 	Writing.Matches(Pair, "TextWriter.strict") and Writing.Matches(Pair, "Logger.strict") is false
 	Fits(Rest(files, path)) or tested is path and base.files is files
+IsReusable(files Texts, path Text) Boolean
+	Empty.IsReusable(Pair, "TextWriter.strict") is false
+	Writing.IsReusable(Pair, "TextWriter.strict")
+	KeptInference(Writing, signature = "x").IsReusable(Pair, "TextWriter.strict") is false
+	Shadowed.IsReusable(Pair, "./obj/T.strict")
+	if tested is not path or base.files is not files or folder is not Directory.Current
+		return false
+	IsOutside(path) and Stamps(Rest(files, path)) is stamps then true else IsCurrent(files, path)
+IsOutside(path Text) Boolean
+	Empty.IsOutside("./obj/Batch/Batched.strict")
+	Empty.IsOutside("./Models/Batched.strict") is false
+	Empty.IsOutside("TextWriter.strict") is false
+	trimmed = Path(path.Replace("\\", "/")).PathOnly.text
+	bare = trimmed.StartsWith("./") then trimmed.Substring(2) else trimmed
+	slash = bare.IndexOf("/")
+	head = slash < 0 then bare else bare.Substring(0, slash)
+	if head is "" or head is "."
+		return false
+	if head is "Release" or head is "Tools"
+		return true
+	head.Length is 0 or head(0) is not head(0).Upper or head(0) is head(0).Lower
 IsCurrent(files Texts, path Text) Boolean
 	Writing.IsCurrent(Pair, "TextWriter.strict") and Loggers.IsCurrent(Pair, "Logger.strict") is false
 	KeptInference(Writing, signature = "x").IsCurrent(Pair, "TextWriter.strict") is false
