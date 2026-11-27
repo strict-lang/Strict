@@ -4,6 +4,7 @@ constant Sizing = MemberEntry("size", "Strict/Number", List(InstructionEntry), f
 constant SizeLoad = InstructionEntry.Named(InstructionType.LoadVariableToRegister, 0, "size")
 constant Making = MethodEntry("Made", List(MemberEntry) + Sizing, "Strict/Shape", (SizeLoad, InstructionEntry.Invoke(1, ("Strict/Shape", "from", "Strict/Shape", "width"), 0, -1), InstructionEntry.Return(1)))
 constant Maker = TypeEntry("Strict/Shape", MlirFunction.Shape.members, List(MethodEntry) + Making)
+constant LocalMaker = TypeEntry(Maker, Name = "Shape")
 constant Made = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, Making), 1)
 constant Validating = InstructionEntry.Invoke(2, ("Strict/Shape", "Validated", "Strict/Shape"), List(Number), 1)
 constant Checker = MlirStructs(MlirFunction(List(TypeEntry) + Maker, Maker, MethodEntry("Checked", List(MemberEntry) + Sizing, "Strict/Shape", Making.instructions.Slice(0, 2) + Validating + InstructionEntry.Return(2))), 1)
@@ -65,6 +66,7 @@ Prologue Texts
 	Consumes(0) then Taking else List(Text)
 IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	Made.IsRebuilt(Making.instructions(1), Maker)
+	Made.IsRebuilt(Making.instructions(1), LocalMaker)
 	Checker.IsRebuilt(Checker.function.method.instructions(1), Maker)
 	MlirStructs(Made.function, 0).IsRebuilt(Making.instructions(0), Maker) is false
 	Made.IsRebuilt(Making.instructions(1), MlirInstances.Outer) is false
@@ -75,9 +77,12 @@ IsRebuilt(entry InstructionEntry, owner TypeEntry) Boolean
 	checked = function.method.instructions(checkedAt)
 	next = MlirDestined(function, checkedAt).Next(checked)
 	isReturned = next.kind is InstructionType.Return and next.payload(0) is checked.payload(0)
-	isReturned and entry.texts(0) is owner.Name and MlirConstants(function, position).IsConstant is false
+	exact = entry.texts(0) is owner.Name
+	local = owner.Name.IndexOf("/") < 0 and TypeEntry.ShortName(entry.texts(0)) is owner.Name
+	isReturned and (exact or local) and MlirConstants(function, position).IsConstant is false
 Construct(entry InstructionEntry, owner TypeEntry, built Texts) Texts
 	Text.Combine(Made.Construct(Making.instructions(1), Maker, MlirOwned.Fresh)).IndexOf("%structDestination") > 0
+	Text.Combine(Made.Construct(Making.instructions(1), LocalMaker, MlirOwned.Fresh)).IndexOf("%structDestination") > 0
 	MlirStructs(MlirInstances.Shapes, 1).Construct(MlirInstances.Built, Maker, MlirOwned.Fresh) is MlirOwned.Fresh
 	owned = MlirOwned(function, position)
 	if owned.Target(entry, owner) is not "" or IsRebuilt(entry, owner) is false or Consumes(0) is false

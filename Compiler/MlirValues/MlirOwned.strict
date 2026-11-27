@@ -164,12 +164,15 @@ Reconstruct(entry InstructionEntry, owner TypeEntry, fresh Texts) Texts
 	opened + reused + Place(Reusing.Slice(4, 2), 0, 0) + fresh + Place(Reusing.Slice(6, 2), 0, 0)
 Target(entry InstructionEntry, owner TypeEntry) Text
 	Rebuilt.Target(Rebuilding(7), MlirInstances.Outer) is "moved"
+	Rebuilt.Target(Rebuilding(7), TypeEntry(MlirInstances.Outer, Name = "Outer")) is "moved"
 	MlirOwned(Rebuilt.function, 4).Target(Making, MlirInstances.Outer) is ""
 	MlirOwned(Rebuilt.function, 2).Target(Making, MlirInstances.Outer) is ""
 	steps = function.method.instructions
 	next = position + 1 < steps.Length then steps(position + 1) else entry
 	isStored = next.kind is Inliner.Store and next.payload(0) is entry.payload(0)
-	isBuilt = entry.texts(0) is owner.Name and MlirConstants(function, position).IsConstant is false
+	exact = entry.texts(0) is owner.Name
+	local = owner.Name.IndexOf("/") < 0 and TypeEntry.ShortName(entry.texts(0)) is owner.Name
+	isBuilt = (exact or local) and MlirConstants(function, position).IsConstant is false
 	(isStored and isBuilt then IsOwned(next.texts(0)) else false) then next.texts(0) else ""
 Rewritten(entry InstructionEntry, owner TypeEntry, name Text) Texts
 	Rebuilt.Rewritten(Rebuilding(7), MlirInstances.Outer, "moved").Last is "    llvm.store %t7ra1, %t7r1 : f64, !llvm.ptr"
