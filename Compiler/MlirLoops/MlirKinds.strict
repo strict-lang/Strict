@@ -91,6 +91,9 @@ VariableKind(position Number, name Text) Text
 	found = Store(position, name)
 	if found < 0
 		return DeclaredKind(position, name)
+	known = function.kindTable.Kind(function, found)
+	if known is not ""
+		return known
 	store = function.method.instructions(found)
 	if store.kind is InstructionType.StoreConstantToVariable
 		return ConstantKind(PayloadDecoder(store).Value(0), store.texts)

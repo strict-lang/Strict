@@ -1,0 +1,24 @@
+has instructions List(InstructionEntry)
+has kinds Texts
+constant Empty = MlirKindTable(List(InstructionEntry), List(Text))
+Kind(function MlirFunction, store Number) Text
+	Empty.Kind(MlirKinds.Graded.function, 1) is ""
+	Index(MlirKinds.Graded.function).kindTable.Kind(Index(MlirKinds.Graded.function), 1) is "Text"
+	(store < kinds.Length then instructions is function.method.instructions else false) then kinds(store) else ""
+Index(function MlirFunction) MlirFunction
+	Index(MlirKinds.Graded.function).kindTable.kinds(1) is "Text"
+	Index(MlirKinds.Graded.function).kindTable.kinds(0) is ""
+	mutable learned = List(Mutable(Text))
+	for function.method.instructions
+		learned.Add(Learn(function, learned, index))
+	MlirFunction(function, kindTable = MlirKindTable(function.method.instructions, learned))
+Learn(function MlirFunction, known Texts, at Number) Text
+	Learn(MlirKinds.Graded.function, List(Text), 1) is "Text"
+	Learn(MlirKinds.Graded.function, List(Text), 0) is ""
+	step = function.method.instructions(at)
+	isStore = step.kind is InstructionType.StoreRegisterToVariable or step.kind is InstructionType.StoreConstantToVariable
+	if isStore is false
+		return ""
+	name = step.kind is InstructionType.StoreRegisterToVariable then step.texts(0) else step.texts.Last
+	partial = MlirFunction(function, kindTable = MlirKindTable(function.method.instructions, known))
+	MlirKinds(partial).VariableKind(at + 1, name)

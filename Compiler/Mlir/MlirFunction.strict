@@ -12,6 +12,7 @@ has typeIndex Dictionary(Text, Number) = Dictionary(Text, Number)
 has safeCalls Dictionary(Text, Number) = Dictionary(Text, Number)
 has IsDeferred Boolean = false
 has Whole Texts = List(Text)
+has kindTable MlirKindTable = MlirKindTable.Empty
 constant OperatorNames = ("+", "-", "*", "/", "%", "^", "<", ">", "<=", ">=")
 constant WholeFailure = "    %wfailed = llvm.alloca %one x !llvm.array<9 x i64> : (i64) -> !llvm.ptr"
 constant OperatorWords = ("Plus", "Minus", "Times", "Divide", "Modulo", "Power", "Less", "More", "AtMost", "AtLeast")

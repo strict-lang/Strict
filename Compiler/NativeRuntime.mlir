@@ -16831,6 +16831,12 @@
     %one = arith.constant 1.0 : f64
     %start = arith.constant 0 : i64
     %step = arith.constant 1 : i64
+    // one immutable list is equal to itself without comparing its items
+    %leftBits = arith.bitcast %left : f64 to i64
+    %rightBits = arith.bitcast %right : f64 to i64
+    %isSame = arith.cmpi eq, %leftBits, %rightBits : i64
+    cf.cond_br %isSame, ^equal, ^measure
+  ^measure:
     %leftLength = func.call @strict_list_length(%left) : (f64) -> f64
     %rightLength = func.call @strict_list_length(%right) : (f64) -> f64
     %sameLength = arith.cmpf oeq, %leftLength, %rightLength : f64
