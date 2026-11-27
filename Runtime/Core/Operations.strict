@@ -114,6 +114,10 @@ Mix(kind Number, left VmValue, right VmValue) VmValue
 	Mix(InstructionType.Add, VmValue.OfNumber(1), VmValue.OfNumber(2)).number is 3
 	Mix(InstructionType.Multiply, VmValue.OfNumber(2), VmValue.OfNumber(3)).number is 6
 	Mix(InstructionType.Subtract, OneTwo, VmValue.OfNumber(1)).Length is 1
+	Mix(InstructionType.Subtract, VmValue.OfNumber(3), VmValue.OfList(List(VmValue) + VmValue.OfNumber(1))).number is 2
+	Mix(InstructionType.Multiply, VmValue.OfNumber(3), VmValue.OfList(List(VmValue) + VmValue.OfNumber(2))).number is 6
+	Mix(InstructionType.Subtract, VmValue.OfNumber(3), OneTwo) is DimensionError
+	Mix(InstructionType.Subtract, VmValue.OfText("ab"), OneTwo).number is 0
 	isValue = left.kind is not in ("Text", "List") and right.kind is not in ("Text", "List")
 	if isValue and (left.kind is "Strict/Error" or right.kind is "Strict/Error")
 		return left.kind is "Strict/Error" then left else right
@@ -121,6 +125,8 @@ Mix(kind Number, left VmValue, right VmValue) VmValue
 		return Add(left, right)
 	if left.kind is "List"
 		return kind is InstructionType.Subtract then Remove(left, right) else Zip(kind, left, right)
+	if left.kind is "Number" and right.kind is "List"
+		return right.items.Length is 1 then Calculate(kind, left, right.items.First) else DimensionError
 	Compute(kind, left.number, right.number)
 Compute(kind Number, left Number, right Number) VmValue
 	Compute(InstructionType.Divide, 6, 4).number is 1.5
