@@ -94,11 +94,12 @@ IsForwarded(arguments Texts) Boolean
 	Sample.IsForwarded(("build", "a.strict")) or Process.Variable("STRICT_SERVER") is "0"
 	Sample.IsForwarded(List(Text) + "stop")
 	Sample.IsForwarded(("test", "a.strict")) or Process.Variable("STRICT_SERVER") is "0"
-	Sample.IsForwarded(("test", "a.strict", "native")) is false
+	Sample.IsForwarded(("test", "a.strict", "native")) or Process.Variable("STRICT_SERVER") is "0"
+	Sample.IsForwarded(("test", "a.strict", "lines")) is false
 	Sample.IsForwarded(("run", "-c", "logger.Log(Process.Input)")) is false
 	command = arguments.Length > 0 then arguments(0) else ""
 	isInput = Scripted.IsCode(arguments) then "Process.Input" is in arguments(2) else false
-	isLocal = "native" is in arguments or "lines" is in arguments or "-" is in arguments or isInput
+	isLocal = "lines" is in arguments or "-" is in arguments or isInput
 	isOptedOut = Process.Variable("STRICT_SERVER") is "0"
 	isServed = command is in ("test", "check", "build", "run") and isLocal is false and isOptedOut is false
 	command is Resident.Stopping or isServed

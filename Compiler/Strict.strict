@@ -61,10 +61,11 @@ GenerateAnswer(resident Resident, request Text, socket Number, arguments Texts, 
 	isCode then answer else Answer(answer, folder = folder).Carried(last)
 Log(arguments Texts, last = Answer(0, Dictionary(Text, TypeEntry))) Answer slow
 	isCode = Scripted.IsRun(arguments)
-	answer = isCode then GenerateCodeAnswer(arguments, last) else RunForAnswer(arguments, last.known, last.inferred)
+	ran = RunForAnswer(arguments, last.known, last.inferred, last.emission)
+	answer = isCode then GenerateCodeAnswer(arguments, last) else ran
 	if answer is Error
 		logger.Log(Command.Shorten(answer to Text))
-		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
+		return Answer(1, last.known, last.folder, last.stamps, last.files, last.Types, last.script, emission = last.emission)
 	answer
 GenerateCodeAnswer(arguments Texts, last Answer) Answer slow
 	if Scripted.IsCode(arguments)
@@ -75,7 +76,7 @@ GenerateCodeAnswer(arguments Texts, last Answer) Answer slow
 		logger.Log(given + " not found")
 		return Answer(2, last.known, last.folder, last.stamps, last.files, last.Types, last.script)
 	Scripted(File(path).ReadText).RanWith(arguments, TypeSource.Root, last, path)
-RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
+RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None, emission = EmissionMemory.Empty) Answer slow
 	folder = Directory.Current
 	head = arguments.Length > 0 then arguments(0) else ""
 	given = head is in Command.Informing then List(Text) + head else Command.Project(Command.InsertMainFile(arguments))
@@ -88,8 +89,8 @@ RunForAnswer(arguments Texts, known = Dictionary(Text, TypeEntry), inferred = In
 		logger.Log(message)
 		return Answer(command is in Command.Informing then 0 else 2, known)
 	if command is in ("build", "check", "update", "format", "suggest")
-		return command is "build" then Answer(Command.Native(command, rest), known) else Tool(command, rest, known)
-	command is "test" then Examine(rest, known, inferred) else Answer(Command.Launch(rest, folder), known)
+		return command is "build" then NativeAnswer(command, rest, known, emission) else Tool(command, rest, known)
+	command is "test" then Examine(rest, known, inferred, emission) else Answer(Command.Launch(rest, folder), known)
 Tool(command Text, rest Texts, known = Dictionary(Text, TypeEntry)) Answer slow
 	if command is "format"
 		logger.Log(Command.Format(rest(0)))
@@ -107,14 +108,14 @@ Check(checker Validators/ValidateCheck, folder Text, root Text) Number slow
 	checker.Run(folder, root)
 Update(updater Bytecode/Repositories, folder Text) slow
 	logger.Log("Updated " + updater.Update(folder) + " packages in " + folder)
-Examine(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache) Answer slow
-	"nightly" is in rest then Answer(Nightly(rest), known) else Testing(rest, known, inferred)
+Examine(rest Texts, known Dictionary(Text, TypeEntry), inferred InferenceCache, emission = EmissionMemory.Empty) Answer slow
+	"nightly" is in rest then Answer(Nightly(rest), known) else Testing(rest, known, inferred, emission)
 Nightly(rest Texts) Number slow
 	if File(rest(0)).Exists is false
 		return Folders.Nightly(rest(0), rest(1)) + Command.Native("test", (rest(0), rest(1), "native"))
 	unit = Execute.Serve(rest(0), rest(1), true).code
 	unit > 0 then unit else Execute("*").Serve(rest(0), rest(1), true).code
-Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None) Answer slow
+Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCache.None, emission = EmissionMemory.Empty) Answer slow
 	Strict.Testing(("Missing.strict", ".")).code is 1
 	request = TestRequest(rest)
 	if request.Message is not ""
@@ -126,8 +127,11 @@ Testing(rest Texts, known = Dictionary(Text, TypeEntry), inferred = InferenceCac
 		return Answer(Trace(request, rest), known)
 	execute = request.Executing(known, inferred)
 	if request.Option is in ("lines", "native")
-		return Answer(Command.Native("test", rest), known)
+		return NativeAnswer("test", rest, known, emission)
 	request.Candidates is "" then execute.Serve(rest(0), rest(1)) else CandidateBatch(request).Serve(execute)
+NativeAnswer(command Text, rest Texts, known Dictionary(Text, TypeEntry), emission EmissionMemory) Answer
+	mutable commands = Command
+	Answer(Answer(commands.Native(command, rest, emission), known), emission = commands.cached)
 Test(text Text) Text slow
 	Trial(text).Ran
 Trace(request TestRequest, rest Texts) Number slow

@@ -8,6 +8,7 @@ constant Looped = MlirModule(List(TypeEntry) + TypeEntry("Strict/Looped", List(M
 constant StackTested = ("    %stackShort = func.call @strict_stack_short() : () -> i1", "    cf.cond_br %stackShort, ^stackOverflowed, ^stackChecked", "  ^stackOverflowed:")
 constant OverflowReturned = ("    %stackOverflow = func.call @strict_stack_overflowed() : () -> f64", "    return %stackOverflow : f64", "  ^stackChecked:")
 constant StackChecked = StackTested + OverflowReturned
+constant Idle = MlirRecursion(List(MlirFunction), 0)
 constant Looping = MlirRecursion(Looped.Functions, 1)
 Recursive(edges List(Numbers)) Texts
 	Looping.Recursive(Looping.Edges) is ("Looped_Again_0")

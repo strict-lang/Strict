@@ -5,6 +5,7 @@ has entries = 1
 has entrySymbol Text = "main"
 has platform = -1
 has Cached = ""
+mutable memory EmissionMemory = EmissionMemory.Empty
 constant Counters = MlirModule(List(TypeEntry) + TypeEntry("Strict/Counter", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run")
 constant Pair = MlirModule(Counters.types + TypeEntry("Strict/Other", List(MemberEntry), List(MethodEntry) + MethodEntry.CountingLoop), "Run", List(Text), 2)
 constant NoFunctions = List(MlirFunction)
@@ -38,7 +39,9 @@ Problem(functions List(MlirFunction)) Text slow
 Safe(reachable List(MlirFunction), edges List(Numbers)) List(MlirFunction)
 	Counters.Safe(Counters.Functions, List(Numbers) + List(Number)).Length is 1
 	started = Process.Elapsed
-	functions = MlirSafety(reachable, edges).Marked
+	safety = MlirSafety(reachable, edges, memory).Applied
+	functions = safety.marked
+	memory = safety.memory
 	Phases.Report("Emission / safety", started)
 	functions
 Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbers)) Texts slow
@@ -48,14 +51,18 @@ Declare(texts List(MlirFunction), functions List(MlirFunction), edges List(Numbe
 	recursive = MlirRecursion(functions, entries + Starts(functions).Length).Recursive(edges)
 	Phases.Report("Emission / recursion", started)
 	lines = ("module {", "  llvm.func @printf(!llvm.ptr, ...) -> i32") + MlirTexts.Declarations
-	emitted = BuildProfile.Emit(value, texts, functions, recursive)
+	bodyStarted = Process.Elapsed
+	emitted = Emit(texts, functions, recursive)
+	Phases.Report("Emission / function bodies (" + texts.Length + " functions)", bodyStarted)
 	before = Process.Elapsed
 	result = lines + emitted + MlirEquality(functions.First, 0).Functions + MlirAutomatic(functions.First).Functions
 	Phases.Report("Emission / helpers", before)
 	result
 Emit(texts List(MlirFunction), functions List(MlirFunction), recursive Texts) Texts slow
 	Counters.Emit(Counters.Functions, Counters.Functions, List(Text)).First.IndexOf("@Counter_Run_0(") > 0
-	EmissionCache(value, functions, recursive).Emit(texts)
+	cache = EmissionCache(value, functions, recursive).Hold(texts)
+	memory = cache.module.memory
+	cache.kept
 Emission(function MlirFunction, functions List(MlirFunction), recursive Texts) Text
 	Counters.Emission(MlirWhole.Row.function, NoFunctions, List(Text)).IndexOf("alwaysinline") > 0
 	text = MlirFunction(function, IsRecursive = function.Symbol is in recursive).Text
@@ -67,7 +74,9 @@ Combine(lines Texts, functions List(MlirFunction), counted List(MlirFunction)) T
 	Scaled.Text.IndexOf(WgslShader.Marker) < Shaded.Text.IndexOf(WgslShader.Marker)
 	table = countedFiles.Length is 0 then List(Text) else MlirLines.Table(functions, Mains, countedFiles)
 	started = Process.Elapsed
-	device = EmissionCache(value, functions, List(Text)).Device(functions)
+	cache = EmissionCache(value, functions, List(Text)).HoldDevice(functions)
+	device = cache.kernel
+	memory = cache.module.memory
 	Phases.Report("Emission / GPU kernels", started)
 	before = Process.Elapsed
 	main = MlirEntry(counted.First, Others(counted), entrySymbol).Main
@@ -85,7 +94,9 @@ Linked MlirRecursion slow
 	Started.Linked.calls.Length is 2
 	mains = Entries
 	roots = mains + Starts(mains)
-	MlirReach(types, entries).Reachable(roots, roots, List(Numbers))
+	reach = MlirReach(types, entries, memory).Apply(roots)
+	memory = reach.memory
+	reach.recursion
 Starts(mains List(MlirFunction)) List(MlirFunction)
 	Counters.Starts(Counters.Functions).Length is 0
 	Started.Starts(Started.Functions).First.Symbol is "Counter_$Start_0"
@@ -125,3 +136,5 @@ RunMethod(main TypeEntry) MethodEntry
 		if value.Name is entryName
 			return value
 	MethodEntry(entryName, List(MemberEntry), "None", List(InstructionEntry))
+Store(path Text, table Dictionary(Text, Text)) slow
+	memory = path.EndsWith(".gpu") then memory.GpuKeep(path, table) else memory.Keep(path, table)

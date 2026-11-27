@@ -1,8 +1,13 @@
 has types List(TypeEntry)
 has entries = 1
+mutable memory EmissionMemory = EmissionMemory.Empty
+mutable indexed Dictionary(Text, MlirFunction) = Dictionary(Text, MlirFunction)
+mutable recursion MlirRecursion = MlirRecursion.Idle
 constant Counting = MlirReach(MlirModule.Counters.types)
-Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers)) MlirRecursion
+constant Range = 4503599627370496
+Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers)) MlirRecursion slow
 	Counting.Reachable(MlirModule.Counters.Functions, MlirModule.Counters.Functions, List(Numbers)).functions.Length is 1
+	memory = (prior.Length is 0 then Prepare(known) else value).memory
 	mutable symbols = MlirRecursion.Symbols(known)
 	mutable found = List(Mutable(MlirFunction))
 	mutable calls = List(Mutable(Numbers))
@@ -12,16 +17,124 @@ Reachable(known List(MlirFunction), fresh List(MlirFunction), prior List(Numbers
 		symbols = symbols + MlirRecursion.Symbols(unseen)
 		calls.Add(MlirRecursion.Indexes(value, symbols))
 	found.Length is 0 then MlirRecursion(known, entries, prior + calls) else Reachable(known + found, found, prior + calls)
-Collect(fresh List(MlirFunction)) List(List(MlirFunction))
+Collect(fresh List(MlirFunction)) List(List(MlirFunction)) slow
 	Counting.Collect(MlirModule.Counters.Functions).First.Length is 0
 	for fresh
 		Callees(value)
-Callees(function MlirFunction) List(MlirFunction)
+HasStored Boolean slow
+	mutable warm = MlirReach(MlirModule.Counters.types, memory = EmissionMemory.Empty)
+	found = warm.Callees(MlirModule.Counters.Functions.First)
+	found.Length is 0 and warm.memory.HasCall(warm.Key(MlirModule.Counters.Functions.First))
+Callees(function MlirFunction) List(MlirFunction) slow
 	Counting.Callees(MlirModule.Counters.Functions.First).Length is 0
+	Counting.HasStored
+	key = Key(function)
+	memory = memory.Note(function.Symbol, HashCode(function.method.instructions).number)
+	if memory.HasCall(key)
+		return Take(key)
 	mutable callees = List(Mutable(MlirFunction))
 	for function.method.instructions
 		callees = callees + Call(function, index)
+	memory = memory.Remember(key, Join(callees))
 	callees
+Take(key Text) List(MlirFunction)
+	Counting.Take("missing").Length is 0
+	saved = memory.Call(key)
+	if saved is ""
+		return List(MlirFunction)
+	mutable found = List(MlirFunction)
+	for saved.Split("\n")
+		if value is in indexed
+			found = found + (List(MlirFunction) + indexed(value))
+	found
+Join(functions List(MlirFunction)) Text
+	Counting.Join(MlirModule.Counters.Functions) is "Counter_Run_0"
+	mutable names = List(Mutable(Text))
+	for functions
+		names.Add(value.Symbol)
+	Text.Combine(names, "\n")
+Index(shared Dictionary(Text, Number)) MlirReach
+	Counting.Index(Dictionary(Text, Number)).indexed("Counter_Run_0").Symbol is "Counter_Run_0"
+	if indexed.Length > 0
+		return value
+	mutable map = Dictionary(Text, MlirFunction)
+	for type, method in types, type.methods
+		made = MlirFunction(types, type, method, typeIndex = shared)
+		map = map.set(made.Symbol, made)
+		memory = Touch(made).memory
+	indexed = map
+	Seal(recursion)
+Touch(made MlirFunction) MlirReach
+	HashCode(MlirModule.Counters.Functions.First.method.instructions).number is not 0
+	Counting.Touch(MlirModule.Counters.Functions.First).memory.HashOf("Counter_Run_0") is not 0
+	next = HashCode(made.method.instructions).number
+	prior = memory.HashOf(made.Symbol)
+	memory = memory.Note(made.Symbol, next)
+	if prior is not 0 and prior is not next and memory.Call("|dirty") is not "1"
+		if Join(Callees(made)) is not memory.Call(made.Symbol + "|" + prior)
+			memory = memory.Remember("|dirty", "1")
+	Seal(recursion)
+Prepare(known List(MlirFunction)) MlirReach
+	Counting.Prepare(MlirModule.Counters.Functions).memory.notes.shape.Length > 0
+	shared = known.Length > 0 then known.First.typeIndex else Dictionary(Text, Number)
+	memory = memory.Arm(Scope)
+	reached = Index(shared)
+	memory = reached.memory
+	Seal(reached.recursion)
+Apply(roots List(MlirFunction)) MlirReach slow
+	mutable prepared = Prepare(roots)
+	saved = prepared.memory.Call("|closure")
+	if saved is "" or prepared.memory.Call("|dirty") is "1"
+		return prepared.Store(prepared.Reachable(roots, roots, List(Numbers)))
+	prepared.Replay(saved)
+Store(found MlirRecursion) MlirReach
+	Counting.Store(MlirRecursion.Idle).memory.Call("|dirty") is ""
+	mutable flat = List(Mutable(Text))
+	mutable row = List(Number)
+	for found.calls
+		row = value
+		for row
+			flat.Add(value to Text)
+		flat.Add(";")
+	memory = memory.Remember("|closure", Join(found.functions))
+	memory = memory.Remember("|edges", Text.Combine(flat, ",")).Remember("|dirty", "")
+	Seal(found)
+Replay(saved Text) MlirReach
+	Counting.Replay("").recursion.functions.Length is 0
+	mutable functions = List(MlirFunction)
+	for saved.Split("\n")
+		if value is in indexed
+			functions.Add(indexed(value))
+	Seal(MlirRecursion(functions, entries, Unpack(memory.Call("|edges"))))
+Unpack(text Text) List(Numbers)
+	Counting.Unpack("0,1,;").First is (0, 1)
+	mutable rows = List(Mutable(Numbers))
+	mutable row = List(Mutable(Number))
+	for text.Split(",")
+		if value is ";"
+			rows.Add(row)
+			row = List(Number)
+		else if value is not ""
+			row.Add(value to Number)
+	rows
+Seal(found MlirRecursion) MlirReach
+	Counting.Seal(MlirRecursion.Looping).recursion.entries is 1
+	MlirReach(types, entries, memory, indexed, found)
+Key(function MlirFunction) Text
+	Counting.Key(MlirModule.Counters.Functions.First).StartsWith("Counter_Run_0|")
+	function.Symbol + "|" + HashCode(function.method.instructions).number
+Scope Text
+	Counting.Scope.Length > 0
+	mutable sum = 0
+	for types
+		sum = (sum + HashCode(Shape(value)).number) % Range
+	sum to Text
+Shape(type TypeEntry) Text
+	Counting.Shape(MlirModule.Counters.types.First).StartsWith("Strict/Counter")
+	mutable headers = List(Mutable(Text))
+	for type.methods
+		headers.Add(value.Name + (value.parameters to Text) + value.returnType)
+	type.Name + (type.members to Text) + Text.Combine(headers, ";")
 Call(function MlirFunction, position Number) List(MlirFunction)
 	Counting.Call(MlirModule.Counters.Functions.First, 0).Length is 0
 	MlirReach(List(TypeEntry) + MlirTexts.Joined.type).Call(MlirTexts.Joined, 2).Length is 0

@@ -1,0 +1,43 @@
+has compiler Text = ""
+has shape Text = ""
+has calls Dictionary(Text, Text) = Dictionary(Text, Text)
+has direct Dictionary(Text, Number) = Dictionary(Text, Number)
+has heavy Dictionary(Text, Number) = Dictionary(Text, Number)
+has bodies Dictionary(Text, Number) = Dictionary(Text, Number)
+constant Empty = EmissionNotes("", "", Dictionary(Text, Text), Dictionary(Text, Number), Dictionary(Text, Number), Dictionary(Text, Number))
+HasCall(key Text) Boolean
+	Empty.Remember("k", "A").HasCall("k")
+	Empty.HasCall("missing") is false
+	key is in calls
+Call(key Text) Text
+	Empty.Remember("k", "A").Call("k") is "A"
+	Empty.Call("missing") is ""
+	key is in calls then calls(key) else ""
+Remember(key Text, symbols Text) EmissionNotes
+	Empty.Remember("k", "").HasCall("k")
+	EmissionNotes(compiler, shape, calls.set(key, symbols), direct, heavy, bodies)
+Note(symbol Text, hash Number) EmissionNotes
+	Empty.Note("A", 3).HashOf("A") is 3
+	EmissionNotes(compiler, shape, calls, direct, heavy, bodies.set(symbol, hash))
+HashOf(symbol Text) Number
+	Empty.HashOf("missing") is 0
+	symbol is in bodies then bodies(symbol) else 0
+Flag(kind Text, key Text) Number
+	Empty.SetFlag("direct", "k", 1).Flag("direct", "k") is 1
+	Empty.Flag("direct", "missing") is Number.NotFound
+	map = kind is "heavy" then heavy else direct
+	key is in map then map(key) else Number.NotFound
+SetFlag(kind Text, key Text, flag Number) EmissionNotes
+	Empty.SetFlag("heavy", "k", 0).Flag("heavy", "k") is 0
+	straight = kind is "heavy" then direct else direct.set(key, flag)
+	EmissionNotes(compiler, shape, calls, straight, kind is "heavy" then heavy.set(key, flag) else heavy, bodies)
+Prepared(stamp Text) EmissionNotes
+	Empty.Prepared("codegen").compiler is "codegen"
+	EmissionNotes(stamp, "", Empty.calls, Empty.direct, Empty.heavy, Empty.bodies)
+Arm(next Text) EmissionNotes
+	Empty.Arm("one").shape is "one"
+	Empty.Arm("one").Arm("one").calls.Length is 0
+	shape is next then value else EmissionNotes(compiler, next, Empty.calls, Empty.direct, Empty.heavy, Empty.bodies)
+Clear EmissionNotes
+	Empty.Remember("k", "A").Clear.calls.Length is 0
+	EmissionNotes(compiler, "", Empty.calls, Empty.direct, Empty.heavy, Empty.bodies)

@@ -1,3 +1,4 @@
+mutable cached EmissionMemory = EmissionMemory.Empty
 constant Version = "1.0"
 constant Commands = ("build", "test", "check", "update", "format", "suggest")
 constant QuietSeconds = 5
@@ -158,9 +159,12 @@ Rest(arguments Texts) Texts
 	Command.Rest(("test", "a", "b")) is ("a", "b")
 	for Range(1, arguments.Length)
 		arguments(value)
-Native(command Text, rest Texts) Number slow
+Native(command Text, rest Texts, emission = EmissionMemory.Empty) Number slow
 	Command.Native("test", ("Missing.strict", ".", "values", "other")) is 2
-	NativeCompiler.RunCommand((List(Text) + command) + rest)
+	mutable compiler = NativeCompiler
+	code = compiler.RunCommand((List(Text) + command) + rest, emission)
+	cached = compiler.cached
+	code
 Format(path Text) Text slow
 	Command.Format("Examples/HelloLogger.strict").StartsWith("Run\n\tlogger.Log(")
 	lines = RoundTrip.Tab(File(path).ReadLines)

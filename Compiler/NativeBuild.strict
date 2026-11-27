@@ -9,6 +9,8 @@ has isReleased Boolean = false
 has isFast Boolean = false
 has isEdited Boolean = false
 has gated List(TypeEntry) = List(TypeEntry)
+mutable cached EmissionMemory = EmissionMemory.Empty
+mutable module MlirModule = MlirModule.Counters
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 constant Unbuilt = NativeBuild(false, isReleased = true)
@@ -22,22 +24,35 @@ IsProgram(path Text) Boolean
 	NativeBuild.IsProgram("Examples/Sum.strict")
 	NativeBuild.IsProgram("Character.strict") is false
 	"Run" is in TypeShape(File(path).ReadLines).MethodScope.names
-Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text))
+Compile(path Text, root Text, isTesting = false, isCounting = false, sources Texts = List(Text), emission = EmissionMemory.Empty)
+	mutable cache = emission
+	cache = cache.Prepared(CodegenStamp(root).Current(Process.Current.executable))
+	cached = cache
 	CodegenStamp(root).Pending(path)
 	isProgram = isTesting is false and IsProgram(path)
 	base = Output(path, isProgram)
 	beside = Path(base).PathOnly.text + "/obj/" + Path(base).FileName.text
 	objects = base.IndexOf("/obj/") >= 0 then base else beside
-	module = MlirModule(Folder.Module(path, root, isCounting, isProgram, Target, sources), Cached = objects + ".emitted")
+	compiled = Folder.Module(path, root, isCounting, isProgram, Target, sources)
+	module = MlirModule(compiled, Cached = objects + ".emitted", memory = cache)
 	if module.types.Length is 0
 		return Error("NoTypesCompiled")
-	program = BuildProfile.Program(module, base, root, value)
+	program = Emit(base, root)
 	if program is ""
 		return Error("NoProgramEmitted")
 	natives = NativeFolder(isRecursive = isRecursive).Natives(path, root, module.types)
 	Build(base, program, Toolchain(Platform.Current, root, natives, isWeb), isCounting)
-TestPath(path Text, root Text, isCounting Boolean, sources Texts) Number
-	Compile(path, root, true, isCounting, sources)
+Emit(base Text, root Text) Text
+	started = Process.Elapsed
+	text = module.Text
+	Phases.Report("MLIR emission", started)
+	before = Process.Elapsed
+	ready = Device(WebBuild.BuildShaders(text, base, isWeb), base, root)
+	Phases.Report("GPU preparation", before)
+	cached = module.memory
+	ready
+TestPath(path Text, root Text, isCounting Boolean, sources Texts, emission = EmissionMemory.Empty) Number
+	Compile(path, root, true, isCounting, sources, emission)
 	RunBuilt(Output(path, false), Toolchain(Platform.Current, root), path, isCounting)
 Device(program Text, base Text, root Text) Text
 	NativeBuild.Device("module {\n}", "A", ".") is "module {\n" + PtxCache.Empty
@@ -157,16 +172,14 @@ Mlir(program Text, root Text, platform Number) Text slow
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@strict_web(") > 0
 	NativeBuild.Mlir("module {\n}", ".", Platform.Web).IndexOf("@memset(!llvm.ptr, i32, i64)") is -1
 	NativeBuild(false).Mlir("module {\n}", ".", Platform.Linux).Split(CpuNotice).Length is 2
-	runtime = PlaceRelease(Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n"))
+	NativeBuild(isWeb = true).Mlir("module {\n}", ".", Platform.Linux).IndexOf("(0 : i64)") > 0
+	read = Text.Combine(File(root + "/Compiler/NativeRuntime.mlir").ReadLines, "\n")
+	runtime = isWeb then read.Replace(CpuNotice, CpuNotice.Replace("(1 : i64)", "(0 : i64)")) else read
 	system = Text.Combine(Platform.Runtime(platform, root), "\n")
 	body = program.Substring(0, program.Length - 1)
 	if platform is Platform.Web
 		return WebBuild.Patch(body + runtime) + "\n" + system + "\n}"
 	Text.Combine((body, runtime, "\n", system, "\n}"), "")
-PlaceRelease(mlir Text) Text
-	NativeBuild(isWeb = true).PlaceRelease(CpuNotice) is CpuNotice.Replace("(1 : i64)", "(0 : i64)")
-	NativeBuild(false).PlaceRelease(CpuNotice) is CpuNotice
-	isWeb then mlir.Replace(CpuNotice, CpuNotice.Replace("(1 : i64)", "(0 : i64)")) else mlir
 Failure(program Text) Text
 	NativeBuild.Failure("unsupported: a\nb") is "unsupported: a\nb"
 	NativeBuild.Failure("x\nunsupported: a\nb") is "unsupported: a"

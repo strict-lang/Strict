@@ -1,10 +1,19 @@
 has functions List(MlirFunction)
 has edges List(Numbers)
+mutable memory EmissionMemory = EmissionMemory.Empty
+mutable marked List(MlirFunction) = List(MlirFunction)
+constant Range = 4503599627370496
 constant Rows = (MlirParallel.Doubling.function, MlirFunction(MlirParallel.Doubling.function.types, MlirParallel.Rows, MlirParallel.Twice), MlirParallel.Timing.function)
 constant Rowed = MlirSafety(Rows, MlirRecursion(Rows, 1).Edges)
 constant Chain = MlirSafety(List(MlirFunction), ((1), List(Number)))
 constant Tensored = MlirSafety(List(MlirFunction) + MlirTensors.Attending.function, List(Numbers) + List(Number))
 constant Gated = MlirSafety(List(MlirFunction) + MlirFunction(List(TypeEntry) + MlirPurity.Hosting, MlirPurity.Hosting, MlirPurity.Hosting.methods.First), List(Numbers) + List(Number))
+Applied MlirSafety
+	marked = Marked
+	Seal(marked)
+Seal(list List(MlirFunction)) MlirSafety
+	Rowed.Seal(Rowed.functions).marked.Length is 3
+	MlirSafety(functions, edges, memory, list)
 Marked List(MlirFunction)
 	Rowed.Marked.First.safeCalls("Rows_Twice_1") is 1
 	calls = Calls
@@ -34,6 +43,16 @@ Heavy Numbers
 IsHeavy(function MlirFunction) Boolean
 	Rowed.IsHeavy(MlirTokens.Summing.function)
 	Rowed.IsHeavy(Rowed.functions.First) is false
+	key = SafetyKey(function)
+	cached = memory.Flag("heavy", key)
+	if cached is not Number.NotFound
+		return cached is 1
+	found = WasHeavy(function)
+	memory = memory.SetFlag("heavy", key, found then 1 else 0)
+	found
+WasHeavy(function MlirFunction) Boolean
+	Rowed.WasHeavy(MlirTokens.Summing.function)
+	Rowed.WasHeavy(Rowed.functions.First) is false
 	if MlirTensors(function).Kind is not ""
 		return true
 	for function.method.instructions
@@ -43,6 +62,16 @@ IsHeavy(function MlirFunction) Boolean
 IsDirect(function MlirFunction) Boolean
 	Rowed.IsDirect(Rowed.functions.Last)
 	Rowed.IsDirect(Rowed.functions.First) is false
+	key = SafetyKey(function)
+	cached = memory.Flag("direct", key)
+	if cached is not Number.NotFound
+		return cached is 1
+	found = WasDirect(function)
+	memory = memory.SetFlag("direct", key, found then 1 else 0)
+	found
+WasDirect(function MlirFunction) Boolean
+	Rowed.WasDirect(Rowed.functions.Last)
+	Rowed.WasDirect(Rowed.functions.First) is false
 	if MlirForeign(function).IsForeign
 		return true
 	purity = MlirPurity(function, 0)
@@ -52,6 +81,14 @@ IsDirect(function MlirFunction) Boolean
 		if (isCall then purity.IsAllowed(function, index, callees) else purity.IsSafe(function, index, 1)) is false
 			return true
 	false
+SafetyKey(function MlirFunction) Text
+	Rowed.SafetyKey(Rowed.functions.First).IndexOf("|") > 0
+	key = MlirReach(function.types).Key(function)
+	saved = memory.Call(key)
+	mutable sum = 0
+	for saved.Split("\n")
+		sum = (sum + memory.HashOf(value)) % Range
+	key + "|" + sum
 Spread(flags Numbers) Numbers
 	Chain.Spread((0, 1)) is (1, 1)
 	next = Spreading(flags)

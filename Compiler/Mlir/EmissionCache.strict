@@ -1,11 +1,21 @@
-has module MlirModule
+mutable module MlirModule
 has functions List(MlirFunction)
 has recursive Texts
+mutable kept Texts = List(Text)
+mutable kernel Text = ""
 constant Separator = "\n// strict emission "
 constant Range = 4503599627370496
 constant Counting = EmissionCache(MlirModule.Counters, MlirModule.Counters.Functions, List(Text))
 constant SafeCounter = MlirFunction(MlirModule.Counters.Functions.First, safeCalls = Dictionary(("Counter_Run_0", 1)))
 constant Safe = EmissionCache(MlirModule.Counters, List(MlirFunction) + SafeCounter, List(Text))
+Hold(texts List(MlirFunction)) EmissionCache slow
+	Carry(Emit(texts), kernel)
+HoldDevice(all List(MlirFunction)) EmissionCache slow
+	Carry(kept, Device(all))
+Carry(lines Texts, text Text) EmissionCache
+	Counting.Carry(List(Text) + "module {", "kernel").kept.First is "module {"
+	Counting.Carry(List(Text), "kernel").kernel is "kernel"
+	EmissionCache(module, functions, recursive, lines, text)
 Emit(texts List(MlirFunction)) Texts slow
 	Counting.Emit(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
 	if module.Cached is ""
@@ -57,7 +67,14 @@ Chosen(function MlirFunction, key Text, stored Dictionary(Text, Text), isChecked
 		Logger.Log("EmissionCacheMismatch: " + function.Symbol + function.Variant)
 	fresh
 Load(path Text) Dictionary(Text, Text) slow
-	File(path).Exists then Parse(File(path).ReadText) else Dictionary(Text, Text)
+	isGpu = path.EndsWith(".gpu")
+	if isGpu and module.memory.HasGpu(path)
+		return module.memory.device.Table
+	if isGpu is false and module.memory.HasFile(path)
+		return module.memory.files.Table
+	parsed = File(path).Exists then Parse(File(path).ReadText) else Dictionary(Text, Text)
+	module.Store(path, parsed)
+	parsed
 Parse(text Text) Dictionary(Text, Text)
 	Counting.Parse(Separator + "a\nx" + Separator + "b\ny").Length is 2
 	Counting.Parse(Separator + "a\nx" + Separator + "a\ny")("a") is "x"
@@ -76,6 +93,8 @@ Save(keys Texts, emitted Texts, stored Dictionary(Text, Text), path Text) slow
 		joined.Add(Separator + value + "\n" + emitted(index))
 	if isNew
 		File(path).Write(Text.Combine(joined, ""))
+	kept = Process.Variable("STRICT_SERVER") is "0" or isNew is false
+	module.Store(path, kept then stored else Parse(Text.Combine(joined, "")))
 Keys(texts List(MlirFunction)) Texts slow
 	Counting.Keys(MlirModule.Counters.Functions).Length is 1
 	Counting.Keys(MlirModule.Counters.Functions).First.StartsWith("Counter_Run_0|")

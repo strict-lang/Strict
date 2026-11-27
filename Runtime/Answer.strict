@@ -7,10 +7,13 @@ has Types List(TypeEntry) = List(TypeEntry)
 has script ScriptCache = ScriptCache.Empty
 has constants Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
 has inferred InferenceCache = InferenceCache.None
+has emission EmissionMemory = EmissionMemory.Empty
 constant Sources = ("./Character.strict", "./Number.strict")
 constant Known = Dictionary(("Strict/Character:", TypeEntry.CharacterEntry))
 constant Holder = TypeEntry("Strict/Holder", List(MemberEntry) + MemberEntry("items", "Strict/List(Number)", List(InstructionEntry), false), List(MethodEntry))
 constant Character = Answer(0, Known, ".", Dictionary(Text, Number), Sources)
+constant Kept = EmissionMemory.Empty.Keep(EmissionSlot.Missing, Dictionary(("k", "v")))
+constant Warm = Answer(0, Known, emission = Kept)
 Stamped(started Number) Answer
 	Character.Stamped(Time.Now).Fresh(".").Length is 1
 	Character.Stamped(0).Fresh(".").Length is 0
@@ -49,8 +52,12 @@ Carried(last Answer) Answer
 	Answer(0, Known).Carried(Character).files is Sources
 	Character.Carried(Answer(0, Known)).files is Sources
 	Answer(0, Known, script = ScriptCache.Sample).Carried(Character).script.IsFresh(".", ".")
+	Warm.Carried(Character).emission.files.Table("k") is "v"
+	Answer(0, Known).Carried(Warm).emission.files.Table("k") is "v"
 	kept = script.files.Length > 0 then script else last.script
 	inference = inferred.entries.Length is 0 then last.inferred else inferred
+	keptEmission = emission.notes.compiler is "" and emission.files.path is "" then last.emission else emission
 	if files.Length > 0
-		return Answer(value, script = kept, inferred = inference)
-	Answer(value, folder = last.folder, stamps = last.stamps, files = last.files, script = kept, inferred = inference)
+		return Answer(value, script = kept, inferred = inference, emission = keptEmission)
+	copied = Answer(value, folder = last.folder, stamps = last.stamps, files = last.files, script = kept)
+	Answer(copied, inferred = inference, emission = keptEmission)

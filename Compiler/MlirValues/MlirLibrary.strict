@@ -18,7 +18,7 @@ Text Text slow
 	Policy.Text.StartsWith("module {")
 	Policy.Text.EndsWith("}")
 	Policy.Text.IndexOf("  func.func @Policy_Start(") > 0
-	module = MlirModule(types, Exported.First.Name)
+	mutable module = MlirModule(types, Exported.First.Name)
 	mutable roots = List(Mutable(MlirFunction))
 	mutable wrappers = List(Mutable(Text))
 	for Exported
@@ -26,6 +26,7 @@ Text Text slow
 		wrappers = wrappers + Wrapper(value)
 	functions = MlirReach(types, module.entries).Reachable(roots, roots, List(Numbers)).functions
 	declared = module.Declare(functions, functions, MlirRecursion(functions, module.entries).Edges)
+	module = module
 	outer.Text.Combine((declared + MlirGlobals(functions).Lines + wrappers + "}" + MlirGpu.Module(functions)) - "", "\n")
 Exported List(MethodEntry)
 	Policy.Exported is List(MethodEntry) + Start

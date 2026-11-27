@@ -1,3 +1,4 @@
+mutable cached EmissionMemory = EmissionMemory.Empty
 constant Swapped = PtxCache("Compiler/output/Swapped")
 constant Mixed = "Mobile target cannot be combined with another platform"
 constant Alone = "fast builds for this computer only, without a platform or other options"
@@ -9,13 +10,19 @@ constant Whole = "fast builds single programs, build a complete game with its Co
 constant WebOnly = " is a Web app, build it with web"
 constant Tested = NativeCompiler
 constant Web = "MossWeb.strict"
-RunCommand(arguments Texts) Number
+RunCommand(arguments Texts, emission = EmissionMemory.Empty) Number
+	cached = emission
 	rest = arguments.Slice(1, arguments.Length - 1)
 	if IsLocked(rest(0)) is false
 		return 1
 	started = Process.Elapsed
 	cache = NativeCache(arguments(0), rest)
-	result = IsCurrent(cache) then 0 else BuildProfile.Compile(cache)
+	current = IsCurrent(cache)
+	mutable profile = BuildProfile
+	mutable result = 0
+	if current is false
+		result = profile.Compile(cache, emission)
+		cached = profile.cached
 	code = result is Error("InvalidTestRequest") then 2 else result is Error then 1 else result
 	reported = Report(code, started, result is Error then result to Text else "")
 	IsUnlocked(rest(0)) then reported else 1
@@ -55,9 +62,10 @@ Lock(target Text) Text
 	path = BuildOutput.Intermediate(target) + ".lock"
 	Directory.Create(Path(path).PathOnly.text)
 	path
-Compile(command Text, rest Texts, sources Texts = List(Text)) Number
+Compile(command Text, rest Texts, sources Texts = List(Text), emission = EmissionMemory.Empty) Number
+	cached = emission
 	if command is "build"
-		return Check(rest, sources)
+		return Check(rest, sources, emission)
 	request = TestRequest(rest)
 	if request.Message is not ""
 		logger.Log(request.Message)
@@ -65,13 +73,18 @@ Compile(command Text, rest Texts, sources Texts = List(Text)) Number
 	isCounting = request.Option is "lines"
 	isRecursive = "--no-recursive" is not in request.Options
 	selection = request.Selection is "" then "" else TestCodegen.Everything + request.Selection.Replace("*", "")
-	NativeBuild(false, selection = selection, isRecursive = isRecursive).TestPath(rest(0), rest(1), isCounting, sources)
-Check(rest Texts, sources Texts) Number
+	mutable build = NativeBuild(false, selection = selection, isRecursive = isRecursive)
+	outcome = build.TestPath(rest(0), rest(1), isCounting, sources, emission)
+	cached = build.cached
+	outcome
+Check(rest Texts, sources Texts, emission = EmissionMemory.Empty) Number
+	cached = emission
 	gate = Execute.Serve(rest(0), rest(1), true, sources)
 	if gate.code is 0
-		Build(rest, sources, gate.Types)
+		Build(rest, sources, gate.Types, emission)
 	gate.code
-Build(rest Texts, sources Texts, gated List(TypeEntry))
+Build(rest Texts, sources Texts, gated List(TypeEntry), emission = EmissionMemory.Empty)
+	cached = emission
 	options = Options(rest)
 	if rest.Length > 2 and rest(2) is "library"
 		return LibraryBuild.Build(rest(0), rest(1))
@@ -79,7 +92,10 @@ Build(rest Texts, sources Texts, gated List(TypeEntry))
 	if problem is not ""
 		logger.Log(problem)
 		return Error("UnsupportedBuildOptions")
-	NativeBuild(Configure(options, rest(0)), gated = gated).Compile(rest(0), rest(1), sources = sources)
+	mutable build = NativeBuild(Configure(options, rest(0)), gated = gated)
+	outcome = build.Compile(rest(0), rest(1), sources = sources, emission = emission)
+	cached = build.cached
+	outcome
 Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler.Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
 	NativeCompiler.Problem("Examples/Sum.strict", ("android", "ios"), Summing) is Mixed

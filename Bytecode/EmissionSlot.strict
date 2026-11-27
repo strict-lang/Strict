@@ -1,0 +1,16 @@
+has path Text = ""
+has modified Number = -1
+has bytes Number = -1
+has Table Dictionary(Text, Text) = Dictionary(Text, Text)
+constant Empty = EmissionSlot("", -1, -1, Dictionary(Text, Text))
+constant Missing = "Bytecode/Missing.emitted"
+Has(file Text) Boolean
+	Empty.Has(Missing) is false
+	path is file and modified is File(file).Modified and bytes is File(file).Length
+Keep(file Text, rows Dictionary(Text, Text)) EmissionSlot
+	Empty.Keep(Missing, Dictionary(("a", "b"))).Table("a") is "b"
+	exists = File(file).Exists
+	EmissionSlot(file, exists then File(file).Modified else -1, exists then File(file).Length else -1, rows)
+Clear EmissionSlot
+	Empty.Keep(Missing, Dictionary(("a", "b"))).Clear.Table.Length is 0
+	EmissionSlot("", modified, bytes, Dictionary(Text, Text))

@@ -1,0 +1,50 @@
+has files EmissionSlot = EmissionSlot.Empty
+has device EmissionSlot = EmissionSlot.Empty
+has notes EmissionNotes = EmissionNotes.Empty
+constant Empty = EmissionMemory(EmissionSlot.Empty, EmissionSlot.Empty, EmissionNotes.Empty)
+HasFile(file Text) Boolean
+	EmissionMemory.Empty.HasFile(EmissionSlot.Missing) is false
+	files.Has(file)
+HasGpu(file Text) Boolean
+	EmissionMemory.Empty.HasGpu(EmissionSlot.Missing) is false
+	device.Has(file)
+Keep(file Text, rows Dictionary(Text, Text)) EmissionMemory
+	EmissionMemory.Empty.Keep(EmissionSlot.Missing, Dictionary(("a", "b"))).files.Table("a") is "b"
+	EmissionMemory(files.Keep(file, rows), device, notes)
+GpuKeep(file Text, rows Dictionary(Text, Text)) EmissionMemory
+	EmissionMemory.Empty.GpuKeep(EmissionSlot.Missing, Dictionary(("a", "b"))).device.Table("a") is "b"
+	EmissionMemory(files, device.Keep(file, rows), notes)
+Prepared(stamp Text) EmissionMemory
+	EmissionMemory.Empty.Prepared("codegen").notes.compiler is "codegen"
+	notes.compiler is stamp then value else EmissionMemory(files.Clear, device.Clear, notes.Prepared(stamp))
+Clear EmissionMemory
+	EmissionMemory.Empty.Remember("k", "A").Clear.notes.calls.Length is 0
+	EmissionMemory(files, device, notes.Clear)
+Arm(next Text) EmissionMemory
+	EmissionMemory.Empty.Arm("one").notes.shape is "one"
+	EmissionMemory.Empty.Arm("one").Arm("one").notes.calls.Length is 0
+	notes.shape is next then value else EmissionMemory(files, device, notes.Arm(next))
+HasCall(key Text) Boolean
+	EmissionMemory.Empty.Remember("k", "A").HasCall("k")
+	EmissionMemory.Empty.HasCall("missing") is false
+	notes.HasCall(key)
+Call(key Text) Text
+	EmissionMemory.Empty.Remember("k", "A").Call("k") is "A"
+	EmissionMemory.Empty.Call("missing") is ""
+	notes.Call(key)
+Remember(key Text, symbols Text) EmissionMemory
+	EmissionMemory.Empty.Remember("k", "").HasCall("k")
+	EmissionMemory(files, device, notes.Remember(key, symbols))
+Note(symbol Text, hash Number) EmissionMemory
+	EmissionMemory.Empty.Note("A", 3).HashOf("A") is 3
+	EmissionMemory(files, device, notes.Note(symbol, hash))
+HashOf(symbol Text) Number
+	EmissionMemory.Empty.HashOf("missing") is 0
+	notes.HashOf(symbol)
+Flag(kind Text, key Text) Number
+	EmissionMemory.Empty.SetFlag("direct", "k", 1).Flag("direct", "k") is 1
+	EmissionMemory.Empty.Flag("direct", "missing") is Number.NotFound
+	notes.Flag(kind, key)
+SetFlag(kind Text, key Text, flag Number) EmissionMemory
+	EmissionMemory.Empty.SetFlag("heavy", "k", 0).Flag("heavy", "k") is 0
+	EmissionMemory(files, device, notes.SetFlag(kind, key, flag))
