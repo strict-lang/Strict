@@ -6,14 +6,14 @@ constant Many = 200000
 constant Ticks = 6
 constant Left = Many / 2 - Ticks
 constant Spare = RecycledPair(7, 7)
-constant Sample = OwnedSwarm(List(OwnedPart) + OwnedPart(RecycledPair(0, 1), Spare, Spare, 0), 5)
+constant Sample = OwnedSwarm(List(OwnedPart) + OwnedPart(RecycledPair(0, 1), Spare, Spare, 0, 0), 5)
 Fill(count Number) List(OwnedPart)
 	Sample.Fill(3).Length is 3
-	Sample.Fill(3)(2) is OwnedPart(RecycledPair(2, 1), Spare, Spare, 0)
+	Sample.Fill(3)(2) is OwnedPart(RecycledPair(2, 1), Spare, Spare, 0, 0)
 	for count
-		OwnedPart(RecycledPair(index, 1), Spare, Spare, 0)
+		OwnedPart(RecycledPair(index, 1), Spare, Spare, 0, 0)
 Living(step Number) List(OwnedPart)
-	Sample.Living(1) is List(OwnedPart) + OwnedPart(RecycledPair(1, 1, 1), Spare, Spare, 1)
+	Sample.Living(1) is List(OwnedPart) + OwnedPart(RecycledPair(1, 1, 1), Spare, Spare, 0, 1)
 	Sample.Living(5).Length is 0
 	for parts
 		moved = value.Advanced(step)
@@ -25,7 +25,7 @@ Advanced(step Number) OwnedSwarm
 	system = OwnedSwarm(parts, limit)
 	OwnedSwarm(system, parts = system.Living(step))
 Advance(start OwnedSwarm, ticks Number) OwnedSwarm
-	Sample.Advance(Sample, 3).parts is List(OwnedPart) + OwnedPart(RecycledPair(3, 1, 1), Spare, Spare, 3)
+	Sample.Advance(Sample, 3).parts is List(OwnedPart) + OwnedPart(RecycledPair(3, 1, 1), Spare, Spare, 0, 3)
 	Sample.Advance(Sample, 5).parts.Length is 0
 	mutable current = start
 	for ticks

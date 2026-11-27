@@ -1,0 +1,7 @@
+has ticks Number
+Total(count Number) Number
+	OwnedTicks(2).Total(3) is 3 + 3 * 2
+	OwnedSwarm.Firsts(OwnedSwarm.Sample.Advance(OwnedSwarm(OwnedSwarm.Sample.Fill(count), count * 2), ticks).parts).Sum
+Stress(count Number) Number slow
+	OwnedTicks(6).Stress(200000) is 200000 * 199999 + 200000 * 6 + 99994 * 99993 / 2 + 99994 * 6
+	OwnedSwarm.Sample.Stress(count, ticks)

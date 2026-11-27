@@ -1,15 +1,11 @@
 has pair RecycledPair
 has spare RecycledPair
 has turn RecycledPair
+has kind Number with value.Bits is 32
 has weight Number with value.Bits is 32
 Advanced(step Number) OwnedPart
-	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 3).Advanced(2).pair is RecycledPair(3, 2, 2)
-	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 3).Advanced(2).weight is 5
-	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 3).Advanced(-1) is Error("InvalidStep: -1")
-	OwnedPart(pair.Advanced(step), turn, spare, Grown(step))
-Grown(step Number) Number
-	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 3).Grown(2) is 5
-	mutable grown = weight
-	for step
-		grown = grown + 1
-	grown
+	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 4, 3).Advanced(2).pair is RecycledPair(3, 2, 2)
+	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 4, 3).Advanced(2).weight is 5
+	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 4, 3).Advanced(2).kind is 4
+	OwnedPart(RecycledPair(1, 2), RecycledPair(1, 1), RecycledPair(2, 2), 4, 3).Advanced(-1) is Error("InvalidStep: -1")
+	OwnedPart(pair.Advanced(step), spare, turn, kind, weight + step)
