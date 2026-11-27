@@ -1,16 +1,20 @@
-has folders Texts
+has folder Text
 constant Rule = "TypeNamesMustBeUnique"
+Count Number slow
+	TypeNames("Math").Count is 0
+	TypeNames("Math/Vector2.strict").Count is 0
+	folder.EndsWith(".strict") then 0 else ValidateCheck.Log(folder, Issues)
 Issues ValidationIssues slow
-	TypeNames(List(Text) + "./Math").Issues.Length is 0
+	TypeNames("./Math").Issues.Length is 0
 	mutable files = List(Mutable(Text))
-	for folders
+	for ValidateCheck.Parts(folder)
 		files = files + Directory.Files(value, "*.strict")
 	for Duplicates(files)
 		ValidationIssue(Rule, value, 1)
 Duplicates(files Texts) Texts slow
-	TypeNames(List(Text)).Duplicates(("A/F.strict", "B/F.strict")) is ("B/F.strict has the type name of A/F.strict")
-	TypeNames(List(Text)).Duplicates(("A/F.strict", "B/Other.strict")).Length is 0
-	TypeNames(List(Text)).Duplicates(("Examples/Sum.strict", "B/Sum.strict")).Length is 0
+	TypeNames("").Duplicates(("A/F.strict", "B/F.strict")) is ("B/F.strict has the type name of A/F.strict")
+	TypeNames("").Duplicates(("A/F.strict", "B/Other.strict")).Length is 0
+	TypeNames("").Duplicates(("Examples/Sum.strict", "B/Sum.strict")).Length is 0
 	mutable seen = Dictionary(Text, Text)
 	mutable found = List(Mutable(Text))
 	for files
@@ -21,8 +25,8 @@ Duplicates(files Texts) Texts slow
 			found.Add(value + " has the type name of " + seen(name))
 	found
 IsProgram(file Text) Boolean slow
-	TypeNames(List(Text)).IsProgram("Examples/Sum.strict")
-	TypeNames(List(Text)).IsProgram("Validators/TypeNames.strict") is false
-	TypeNames(List(Text)).IsProgram("B/Missing.strict") is false
+	TypeNames("").IsProgram("Examples/Sum.strict")
+	TypeNames("").IsProgram("Validators/TypeNames.strict") is false
+	TypeNames("").IsProgram("B/Missing.strict") is false
 	text = File(file).Exists then "\n" + File(file).ReadText else ""
 	text.IndexOf("\nRun(") >= 0 or text.IndexOf("\nRun\n") >= 0
