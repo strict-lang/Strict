@@ -57,6 +57,8 @@ IsSame(left VmValue, right VmValue) Boolean
 	IsSame(VmValue.OfNumber(1), VmValue.OfError("")) is false and IsSame(DimensionError, VmValue.OfError("x")) is false
 	IsSame(VmValue.OfError(""), DimensionError) and IsSame(VmValue.OfNumber(0), VmValue.OfText("x")) is false
 	IsSame(EmptyTextList, DimensionError) is false and IsSame(DimensionError, EmptyTextList) is false
+	IsSame(VmValue("Strict/Content/Cat", 0, "", OneTwo.items), VmValue("Strict/Cat", 0, "", OneTwo.items))
+	IsSame(VmValue("Strict/Dog", 0, "", OneTwo.items), VmValue("Strict/Cat", 0, "", OneTwo.items)) is false
 	if left.kind is right.kind and left.kind is in ("Number", "Text", "Boolean", "None")
 		return left.kind is "Text" then left.text is right.text else left.number is right.number
 	compared = Comparable(left)
@@ -64,7 +66,19 @@ IsSame(left VmValue, right VmValue) Boolean
 	isError = compared.kind is "Strict/Error" and other.kind is "Strict/Error"
 	isLeftAny = compared.items.Length > 0 and compared.items.First.text is ""
 	isAny = isLeftAny or other.items.Length > 0 and other.items.First.text is ""
-	isError and isAny or compared is other
+	isError and isAny or IsAlike(compared, other)
+IsAlike(left VmValue, right VmValue) Boolean
+	IsAlike(OneTwo, OneTwo) and IsAlike(OneTwo, VmValue.OfList(List(VmValue))) is false
+	IsAlike(VmValue("Strict/A/Cat", 0, "", List(VmValue)), VmValue("Strict/Cat", 0, "", List(VmValue)))
+	if left is right
+		return true
+	isShaped = left.number is right.number and left.text is right.text and left.items.Length is right.items.Length
+	if isShaped is false or TypeEntry.ShortName(left.kind) is not TypeEntry.ShortName(right.kind)
+		return false
+	for left.items
+		if IsSame(value, right.items(index)) is false
+			return false
+	true
 Comparable(operand VmValue) VmValue
 	Comparable(Detailed) is DimensionError
 	Comparable(VmValue.Failed) is VmValue.OfError("x")
