@@ -94,6 +94,8 @@ Sidecar(release Text)
 	Release("Missing/App").Sidecar("Missing/Release") is not Error
 	PtxCache("Compiler/output/Sided").HasWritten(List(Text) + "// a", ".ptx")
 	Release("Compiler/output/Sided").Sidecar("Compiler/output/Release/Web") is not Error
+	Release("Compiler/output/Sided").Sidecar("Compiler/output/Release/Sided") is not Error
+	File("Compiler/output/Release/Sided/ptx/Sided.ptx").Exists
 	Release("Compiler/output/obj/A").Package("module {\n}") is not Error
 	File("Compiler/output/Release/" + Platform.NameOf(Platform.Current) + "/A.shell.html").Exists
 	isWeb = Path(release).FileName.text is "Web"

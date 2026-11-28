@@ -70,7 +70,10 @@ Bodies(functions List(PtxFunction)) Texts
 Place(base Text, ending Text, release Text) slow
 	sidecar = base + ending
 	if File(sidecar).Exists and File(sidecar).Length > 0
-		File(BuildOutput.Ship(release, sidecar)).Write(File(sidecar).ReadBytes)
+		shipped = BuildOutput.Ship(ending is ".metal" then release else release + "/ptx", sidecar)
+		File(release + "/" + Path(sidecar).FileName.text).Delete
+		File(release + "/" + Path(shipped).FileName.text).Delete
+		File(shipped).Write(File(sidecar).ReadBytes)
 		if ending is in Endings
 			Copy(Traverse(sidecar, ending), ending, release)
 	if ending is ".ptx"

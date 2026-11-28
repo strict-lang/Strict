@@ -20202,6 +20202,7 @@
     return %path : !llvm.ptr
   }
   llvm.mlir.global internal constant @strict_gpu_beside_obj("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00obj/\00") : !llvm.array<21 x i8>
+  llvm.mlir.global internal constant @strict_gpu_beside_ptx("\04\00\00\00\00\00\00\00\04\00\00\00\00\00\00\00ptx/\00") : !llvm.array<21 x i8>
   // the runtime kernels of a program (Name.runtime.ptx, Name.runtime.fatbin) or else the ones the programs of a release
   // folder share (shared.runtime.ptx, BuildOutput.Shipped): MossImage and H3Video shipped the same 12.5 MB twice
   llvm.mlir.global internal constant @strict_gpu_shared_stem("\06\00\00\00\00\00\00\00\06\00\00\00\00\00\00\00shared\00") : !llvm.array<23 x i8>
@@ -20220,8 +20221,8 @@
     return %shared : !llvm.ptr
   }
   // the whole file stem + ending in the obj folder of the executable (where a program build keeps it, so it wins over a
-  // stale file left beside the executable by an older build) or else beside it (shipped builds), as text, an empty text
-  // when it cannot be read
+  // stale file left beside the executable by an older build), else in its ptx folder (shipped builds) or else beside it
+  // (libraries named ptx/...), as text, an empty text when it cannot be read
   func.func private @strict_gpu_beside(%stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
     %zero = arith.constant 0 : i64
     %one = arith.constant 1 : i64
@@ -20245,12 +20246,20 @@
     %terminator = arith.constant 0 : i8
     %unset = llvm.mlir.zero : !llvm.ptr
     %objLength = arith.constant 4 : i64
-    %objFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %objLength, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %objLengths = llvm.mlir.addressof @strict_gpu_beside_obj : !llvm.ptr
+    %obj = llvm.getelementptr %objLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %objFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %obj, %objLength, %stem, %ending) : (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %isObjMissing = llvm.icmp "eq" %objFile, %unset : !llvm.ptr
-    cf.cond_br %isObjMissing, ^beside, ^found(%objFile : !llvm.ptr)
+    cf.cond_br %isObjMissing, ^shipped, ^found(%objFile : !llvm.ptr)
+  ^shipped:
+    %ptxLengths = llvm.mlir.addressof @strict_gpu_beside_ptx : !llvm.ptr
+    %ptx = llvm.getelementptr %ptxLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
+    %ptxFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %ptx, %objLength, %stem, %ending) : (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %isPtxMissing = llvm.icmp "eq" %ptxFile, %unset : !llvm.ptr
+    cf.cond_br %isPtxMissing, ^beside, ^found(%ptxFile : !llvm.ptr)
   ^beside:
     %besideLength = arith.constant 0 : i64
-    %besideFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %besideLength, %stem, %ending) : (!llvm.ptr, i64, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
+    %besideFile = func.call @strict_gpu_file_opened(%executable, %folderLength, %obj, %besideLength, %stem, %ending) : (!llvm.ptr, i64, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr) -> !llvm.ptr
     %isMissing = llvm.icmp "eq" %besideFile, %unset : !llvm.ptr
     cf.cond_br %isMissing, ^empty, ^found(%besideFile : !llvm.ptr)
   ^found(%file: !llvm.ptr):
@@ -20273,9 +20282,9 @@
     llvm.store %terminator, %end : i8, !llvm.ptr
     return %buffer : !llvm.ptr
   }
-  // the file the first folderLength characters of path, objLength characters of "obj/", stem and ending name, opened for
-  // reading, null when it is missing
-  func.func private @strict_gpu_file_opened(%path: !llvm.ptr, %folderLength: i64, %objLength: i64, %stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
+  // the file the first folderLength characters of path, objLength characters of the subfolder obj, stem and ending name,
+  // opened for reading, null when it is missing
+  func.func private @strict_gpu_file_opened(%path: !llvm.ptr, %folderLength: i64, %obj: !llvm.ptr, %objLength: i64, %stem: !llvm.ptr, %ending: !llvm.ptr) -> !llvm.ptr {
     %one = arith.constant 1 : i64
     %stemLength = llvm.call @strlen(%stem) : (!llvm.ptr) -> i64
     %endingLength = llvm.call @strlen(%ending) : (!llvm.ptr) -> i64
@@ -20286,8 +20295,6 @@
     %full = func.call @strict_malloc(%fullSize) : (i64) -> !llvm.ptr
     %folderCopied = llvm.call @memcpy(%full, %path, %folderLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %objTarget = llvm.getelementptr %full[%folderLength] : (!llvm.ptr, i64) -> !llvm.ptr, i8
-    %objLengths = llvm.mlir.addressof @strict_gpu_beside_obj : !llvm.ptr
-    %obj = llvm.getelementptr %objLengths[16] : (!llvm.ptr) -> !llvm.ptr, i8
     %objCopied = llvm.call @memcpy(%objTarget, %obj, %objLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
     %stemTarget = llvm.getelementptr %full[%folderEnd] : (!llvm.ptr, i64) -> !llvm.ptr, i8
     %stemCopied = llvm.call @memcpy(%stemTarget, %stem, %stemLength) : (!llvm.ptr, !llvm.ptr, i64) -> !llvm.ptr
