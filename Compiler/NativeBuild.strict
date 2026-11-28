@@ -59,7 +59,7 @@ Device(program Text, base Text, root Text) Text
 	NativeBuild(isWeb = true).Device("module {\n" + MlirGpu.Marker + "\n  x\n}", "Web", ".").Length > 0
 	failure = Failure(program)
 	if failure is not ""
-		return Check("Native compilation failed, " + failure)
+		return Check("Native compilation failed, " + failure + Command.AdviseBootstrap(base))
 	marker = program.IndexOf("\n" + MlirGpu.Marker)
 	if marker < 0 or isFast
 		return PtxCache(base).Unlaunch(program)

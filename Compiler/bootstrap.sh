@@ -1,8 +1,11 @@
 #!/bin/sh
-# Builds a seed compiler from Bootstrap.mlir without any Strict binary and with it strict in the Strict folder, needs mlir-opt, mlir-translate and clang
+# Builds a seed compiler from Bootstrap.mlir without any Strict binary, with it strict in the Strict folder and with that one itself
+# Needs mlir-opt, mlir-translate and clang
 # The seed has no GPU code, so its compiler runs on the CPU
 set -e
 cd "$(dirname "$0")"
+# an old strict server would answer the new strict
+[ -x ../strict ] && ../strict stop >/dev/null 2>&1 || true
 platform=Linux
 linked="-lm -lpthread"
 [ "$(uname)" = Darwin ] && platform=MacOS && linked="$linked -Wl,-stack_size,0x4000000"
@@ -24,4 +27,6 @@ STRICT_GPU=0 ./Compiler/NativeCompiler build Compiler/Strict.strict . $release
 # a seed older than Compiler/Strict.strict puts strict next to it
 [ -f Compiler/strict ] && mv -f Compiler/strict strict
 rm -f Compiler/NativeCompiler Compiler/NativeCompiler.$platform.ll Compiler/NativeCompiler.$platform.llvm.mlir Compiler/NativeCompiler.$platform.mlir
+# the seed compiler is old and builds without GPU code, the new strict builds itself fully
+./strict build strict
 echo "Built $(pwd)/strict"

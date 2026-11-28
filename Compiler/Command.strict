@@ -54,6 +54,11 @@ Message(command Text, rest Texts) Text slow
 		return Text.Combine(Help, "\n")
 	isFolder = command is "test" and Directory.Exists(rest(0))
 	command is in ("check", "update") or isFolder or File(rest(0)).Exists then "" else rest(0) + " not found"
+AdviseBootstrap(base Text) Text
+	Command.AdviseBootstrap("./Examples/obj/Sum") is ""
+	Command.AdviseBootstrap("./Compiler/obj/Strict").StartsWith("\nThis strict is too old to build itself, run ")
+	bootstrap = Process.OperatingSystem is "Windows" then "Compiler\\Bootstrap.cmd" else "sh Compiler/bootstrap.sh"
+	Path(base).FileName.text.Lower is "strict" then "\nThis strict is too old to build itself, run " + bootstrap else ""
 Root(arguments Texts) Texts slow
 	Command.Root(List(Text) + "a.strict") is ("a.strict", ".")
 	Command.Root(("a.strict", ".")) is ("a.strict", ".")
