@@ -963,7 +963,7 @@ addToLibrary({
 	// the last 48 are kept until 5 s after the last read (fewer had Moss fetch a third of its file twice), with the
 	// total size of each file from its first answer, the last block read of it and the bytes downloaded of it
 	$strictWebFile: { blocks: new Map(), sizes: {}, lasts: {}, read: {}, folders: {}, timer: 0, writer: null,
-		pending: new Map(), recent: new Map(), prefetched: {} },
+		pending: new Map(), recent: new Map(), prefetched: {}, fetching: 0, waiters: [] },
 	// the folder in the origin private file system keeping the downloaded blocks of the file at source (one file per
 	// block and its size), null without one; the storage is asked to persist (else Chrome may evict it as best effort)
 	$strictWebFileFolder__deps: ['$strictWebFile'],
@@ -1003,6 +1003,7 @@ addToLibrary({
 		if (pending)
 			return pending;
 		const fetched = (async () => {
+			cache.fetching++;
 			const first = index * 16777216, range = { headers: { Range: 'bytes=' + first + '-' + (first + 16777215) },
 				cache: isKept ? 'no-store' : 'default' };
 			const response = await fetch(source, range).catch(() => fetch(source, range)).catch(() => fetch(source, range));
@@ -1021,12 +1022,16 @@ addToLibrary({
 					Math.round(cache.sizes[url] / 1048576) + ' MB');
 			}
 			return bytes;
-		})().finally(() => cache.pending.delete(key));
+		})().finally(() => {
+			cache.fetching--;
+			cache.waiters.splice(0).forEach((wake) => wake());
+			cache.pending.delete(key);
+		});
 		cache.pending.set(key, fetched);
 		return fetched;
 	},
-	// every block of a mapped file not kept yet is downloaded in the background, 8 at a time (one request at a time
-	// gave 15, 8 gave 63 MB/s from Hugging Face, more failed), the first time one of its blocks has to be downloaded
+	// every block of a mapped file not kept yet is downloaded in the background, sharing up to 8 fetches across all
+	// files (one request at a time gave 15, 8 gave 63 MB/s from Hugging Face, more failed), when first read or prefetched
 	$strictWebFilePrefetch__deps: ['$strictWebFile', '$strictWebFileFetched'],
 	$strictWebFilePrefetch: (url, source, folder) => {
 		const cache = strictWebFile;
@@ -1042,8 +1047,11 @@ addToLibrary({
 		const worker = async () => {
 			while (next < blocks) {
 				const index = next++;
-				if (!cache.pending.has(url + ' ' + index) && !cache.read[url]?.has(index) && !await kept(index))
+				if (!cache.pending.has(url + ' ' + index) && !cache.read[url]?.has(index) && !await kept(index)) {
+					while (cache.fetching >= 8)
+						await new Promise((wake) => cache.waiters.push(wake));
 					await strictWebFileFetched(url, source, index, true).catch(() => {});
+				}
 			}
 		};
 		for (let count = 0; count < 8; count++)
@@ -1057,7 +1065,7 @@ addToLibrary({
 	// length than the file size says is read again), every block
 	// downloaded prints "Downloading name: 16 of 98 MB" (bytes read so far, kept ones too) for the page's progress bar
 	$strictWebFileBlock__deps: ['$strictWebFile', '$strictWebFileFolder', '$strictWebFileStored', '$strictWebFileFetched',
-		'$strictWebFilePrefetch'],
+		'$strictWebFilePrefetch', '$strictWebGpuMobile'],
 	$strictWebFileBlock: (url, index) => {
 		const cache = strictWebFile, key = url + ' ' + index;
 		let block = cache.blocks.get(key);
@@ -1084,8 +1092,8 @@ addToLibrary({
 				return bytes;
 			})();
 			block.catch(() => cache.blocks.delete(key));
-			// 12 blocks (192 MB) cover a read and the 8 after it, 48 held 768 MB a phone could not spare
-			if (cache.blocks.size >= 12)
+			// 48 blocks (768 MB) cover interleaved layers without OPFS double-reads; 12 (192 MB) fit mobile memory
+			if (cache.blocks.size >= (strictWebGpuMobile() ? 12 : 48))
 				cache.blocks.delete(cache.blocks.keys().next().value);
 		}
 		cache.blocks.set(key, block);
@@ -1117,6 +1125,13 @@ addToLibrary({
 	},
 	strict_webfile_mapped__deps: ['$UTF8ToString'],
 	strict_webfile_mapped: (name) => (Module['strictFiles'] || {})[UTF8ToString(name)] ? 1 : 0,
+	strict_webfile_prefetch__deps: ['$strictWebFile', '$strictWebFileBlock', '$UTF8ToString'],
+	strict_webfile_prefetch: (url) => {
+		const name = UTF8ToString(url);
+		if ((Module['strictFiles'] || {})[name] && !strictWebFile.prefetched[name])
+			strictWebFileBlock(name, 0).catch(() => {});
+		return strictWebFile.sizes[name] || 0;
+	},
 	strict_webfile_read__deps: ['$strictWebFileRange', '$UTF8ToString', '$Asyncify'],
 	strict_webfile_read__async: true,
 	strict_webfile_read: (url, offset, bytes, target) => Asyncify.handleSleep((wakeUp) => {
@@ -1190,13 +1205,27 @@ addToLibrary({
 			return buffer;
 		})();
 	},
-	// the rows of files a kernel's table binds as kept handles, uploaded before its inputs are read
+	// the rows of files a kernel's table binds as kept handles, uploaded before its inputs are read, speculatively starting
+	// the next lazy handle so its OPFS read and upload overlap with the current WebGPU shader execution
 	$strictWebGpuPlacedInputs__deps: ['$strictWebGpu', '$strictWebGpuPlaced'],
 	$strictWebGpuPlacedInputs: (table, slots) => {
 		const entries = HEAPF64.subarray(table / 8, table / 8 + slots * 3), waits = [];
+		let lastHandle = 0;
 		for (let slot = 0; slot < slots; slot++)
-			if (entries[slot * 3 + 2] === 255 && entries[slot * 3] in strictWebGpu.lazy)
-				waits.push(strictWebGpuPlaced(entries[slot * 3]));
+			if (entries[slot * 3 + 2] === 255 && entries[slot * 3] in strictWebGpu.lazy) {
+				const handle = entries[slot * 3];
+				if (handle > lastHandle)
+					lastHandle = handle;
+				waits.push(strictWebGpuPlaced(handle));
+			}
+		if (lastHandle)
+			for (let probe = lastHandle + 1; probe <= lastHandle + 4; probe++) {
+				const lazy = strictWebGpu.lazy[probe];
+				if (lazy && !lazy.placing) {
+					strictWebGpuPlaced(probe).catch(() => {});
+					break;
+				}
+			}
 		return Promise.all(waits);
 	},
 	// the views of count rows at address whose block is the WebGPU buffer handle (strict_rows_web): stride bytes a row, 4
@@ -1247,6 +1276,10 @@ addToLibrary({
 					strictWebGpu.lazy[handle] = { borrowOf: source.handle };
 				} else
 					strictWebGpu.buffers[handle] = strictWebGpu.buffers[source.handle];
+			} else if (files.every(Boolean) && runs.every((run) => !strictWebGpu.buffers[run.block.handle])) {
+				strictWebGpu.filed[handle] = { size: count * stride + count * 4, fill: (buffer) =>
+					Promise.all(runs.map((run, at) => fromFile(buffer, run, files[at]))) };
+				strictWebGpu.lazy[handle] = Object.assign({}, strictWebGpu.filed[handle]);
 			} else {
 				const joined = strictWebGpuCreated(count * stride + count * 4, 128 | 8 | 4);
 				if (files.every(Boolean))

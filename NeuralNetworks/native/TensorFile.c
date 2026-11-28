@@ -62,6 +62,7 @@ static _Thread_local int nextHeader;
 /* A file that is not in the package of a web build is read from the server the page came from, with range requests
    (WebRuntime.js), 8 bit rows go straight to WebGPU (strict_rows_web). */
 int strict_webfile_read(const char* url, double offset, double bytes, void* target);
+double strict_webfile_prefetch(const char* url);
 int strict_webfile_rows(const char* url, double offset, double rows, double rowBytes, double codesBytes, double stride,
 	double columns, const float* scales);
 double strict_rows_web(uint64_t count, uint64_t elements, double bits, int64_t handle, int64_t nibbles);
@@ -1311,7 +1312,7 @@ static void* Prefetching(void* context)
 STRICT_EXPORT double TensorFile_Prefetch(double self, double path)
 {
 #ifdef __EMSCRIPTEN__
-	return 0;
+	return strict_webfile_prefetch(strict_text(path));
 #elif defined(_WIN32)
 	HANDLE file = CreateFileA(strict_text(path), GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
 	if (file == INVALID_HANDLE_VALUE)
