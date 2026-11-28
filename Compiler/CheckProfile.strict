@@ -1,9 +1,9 @@
 constant ToolSeconds = 90
 constant ProbeLines = ("has profile Compiler/BuildProfile", "Run Number", "	BuildProfile(Logger).Reported(\"Fast profile probe\", Process.Elapsed)", "	(profile.IsDetailed is Phases.IsDetailed) then 0 else 1")
 constant ProgramLines = ("Run Number", "	0")
-constant StagesA = ("Dependency inventory", "Dependency snapshot", "Frontend / source discovery", "Frontend / shape loading and fusion", "Frontend / dependency linking", "Frontend / syntax validation")
+constant StagesA = ("Dependency inventory", "Dependency snapshot", "Frontend / source discovery", "Frontend / shape loading and fusion", "dependency types", "Frontend / syntax validation")
 constant StagesB = ("Emission / reachability", "Emission / safety", "Emission / function bodies", "GPU preparation", "Host runtime assembly")
-constant StagesC = ("mlir-opt", "mlir-translate", "Linking", "Packaging", "Build total")
+constant StagesC = ("mlir-opt", "mlir-translate", "Linking", "Packaging", " built in ")
 Run Number
 	folder = "Compiler/output/ProfileCheck" + 1000000.Random.Floor
 	if Directory.Create(folder) is Error

@@ -1,11 +1,14 @@
 constant IsRequested = Process.Variable("STRICT_BUILD_PROFILE") is "1"
 IsDetailed Boolean
 	IsRequested
+Line(phase Text, elapsed Number) Text
+	Phases.Line("MLIR emission", 5.891) is "5.89s: MLIR emission"
+	(elapsed.Round(2) to Text) + "s: " + phase
 Report(phase Text, started Number)
 	Phases.Report("a", Process.Elapsed) is not Error
 	elapsed = Process.Elapsed - started
 	if IsDetailed or elapsed >= 3
-		logger.Log((IsDetailed then "[build] " + phase else phase) + ": " + elapsed.Round(IsDetailed then 4 else 2) + " s")
+		logger.Log(IsDetailed then "[build] " + phase + ": " + elapsed.Round(4) + " s" else Line(phase, elapsed))
 Shapes(files Texts) List(TypeShape)
 	started = Process.Elapsed
 	shapes = ResolveCheck.Shapes(files)

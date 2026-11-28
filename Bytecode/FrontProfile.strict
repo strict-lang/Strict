@@ -9,7 +9,7 @@ Entry(main TypeCodegen, withTests Boolean, isQuiet Boolean, selection = "") Type
 Link(linker Linker, entry TypeEntry) LinkRound
 	started = Process.Elapsed
 	linked = linker.Link(entry, List(Text))
-	Phases.Report("Frontend / dependency linking (" + linked.entries.Length + " types)", started)
+	Phases.Report("Linking " + linked.entries.Length + " dependency types", started)
 	linked
 IsParsed(compiler FileCompiler, sources Texts) Boolean
 	started = Process.Elapsed

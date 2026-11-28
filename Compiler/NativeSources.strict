@@ -144,7 +144,7 @@ LinuxLink(base Text, program Text, root Text) Text
 	libraries = " -Wl,--gc-sections -lm -lpthread" + Wsl(Flags(Platform.Linux, root), tools)
 	output = " -o " + tools.Quote(LinuxBuild.WslPath(program)) + libraries
 	Release(base).Creat(Path(program).PathOnly.text)
-	linked = ToolRunner("wsl").Execute(linkage + sources + output)
+	linked = ToolRunner("wsl").Execute(linkage + sources + output, "Linking for Linux in WSL")
 	linked.HasFailed then "Linux build failed (needs WSL with gcc): " + linked.error else "Built " + program + " for Linux"
 Wsl(flags Text, tools Toolchain) Text
 	Adding.Wsl(" -DX -IC:/s/a C:/s/b.c -lm", Toolchain.OnWindows) is " -DX -I\"/mnt/c/s/a\" \"/mnt/c/s/b.c\" -lm"

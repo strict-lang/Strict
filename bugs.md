@@ -1,0 +1,1 @@
+- `5 - 1 to Text` is "5" (`to` binds before `-`), yet `strict check` reports `((5 - 1) to Text)` as BracketsMustBeNecessary

@@ -22,12 +22,20 @@ Compile(cache NativeCache, emission = EmissionMemory.Empty) Number
 	mutable compiler = NativeCompiler
 	result = compiler.Compile(cache.command, cache.rest, files, emission)
 	cached = compiler.cached
-	Phases.Report("Total compilation", started)
+	if result is 0 and compiler.delivered is not ""
+		logger.Log(Announce(compiler.delivered, Process.Elapsed - started))
 	if result is 0
 		before = Process.Elapsed
 		cache.Save(inputs)
 		Phases.Report("Build stamp write", before)
 	result
+Announce(delivered Text, elapsed Number) Text
+	BuildProfile.Announce("Built ./strict.exe", 36.784) is "strict.exe built in 36.78s"
+	BuildProfile.Announce("Built ./obj/A.exe, unchanged", 1) is "A.exe built in 1s"
+	BuildProfile.Announce("", 1) is ""
+	if delivered is ""
+		return ""
+	Path(delivered.Substring(6).Split(", ").First).FileName.text + " built in " + elapsed.Round(2) + "s"
 Runtime(build NativeBuild, program Text, root Text) Text
 	started = Process.Elapsed
 	text = build.Mlir(program, root, build.Target)

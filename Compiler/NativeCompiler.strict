@@ -1,4 +1,5 @@
 mutable cached EmissionMemory = EmissionMemory.Empty
+mutable delivered Text = ""
 constant Swapped = PtxCache("Compiler/output/Swapped")
 constant Mixed = "Mobile target cannot be combined with another platform"
 constant Alone = "fast builds for this computer only, without a platform or other options"
@@ -36,7 +37,8 @@ Report(code Number, started Number, problem Text) Number
 	NativeCompiler.Report(2, Process.Elapsed, "Error: InvalidTestRequest") is 2
 	if (problem is "" then "" else problem.Lines.First) is not in Logged
 		logger.Log(problem)
-	Phases.Report(code is 0 then "Build total" else "Build FAILED (" + code + "), total", started)
+	if code is not 0
+		Phases.Report("Build FAILED (" + code + ")", started)
 	code
 IsLocked(target Text) Boolean slow
 	lock = File(Lock(target))
@@ -95,6 +97,7 @@ Build(rest Texts, sources Texts, gated List(TypeEntry), emission = EmissionMemor
 	mutable build = NativeBuild(Configure(options, rest(0)), gated = gated)
 	outcome = build.Compile(rest(0), rest(1), sources = sources, emission = emission)
 	cached = build.cached
+	delivered = build.delivered
 	outcome
 Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler.Problem("Examples/Sum.strict", List(Text) + "fast", Summing) is ""
@@ -103,12 +106,17 @@ Problem(path Text, options Texts, sources Texts) Text
 	NativeCompiler.Problem("Examples/Sum.strict", List(Text) + "fast", Learning) is "Examples/Sum.strict" + Model
 	NativeCompiler.Problem("Examples/Sum.strict", List(Text), Learning) is ""
 	Tested.Problem(Web, List(Text), Summing) is Web + WebOnly and Tested.Problem(Web, List(Text) + "web", Summing) is ""
-	if Path(path).FileName.text.IndexOf("Web") >= 0 and "web" is not in options
+	if IsWebOnly(path, options)
 		return path + WebOnly
 	isFast = "fast" is in options
 	if IsMixed(options) or isFast and options.Length > 1
 		return isFast then Alone else Mixed
 	isFast and IsGame(path) then Whole + path else isFast and IsLearning(sources) then path + Model else ""
+IsWebOnly(path Text, options Texts) Boolean
+	NativeCompiler.IsWebOnly(Web, List(Text)) and NativeCompiler.IsWebOnly(Web, List(Text) + "linux")
+	NativeCompiler.IsWebOnly(Web, List(Text) + "web") is false
+	NativeCompiler.IsWebOnly("Sum.strict", List(Text)) is false
+	Path(path).FileName.text.IndexOf("Web") >= 0 and "web" is not in options
 IsGame(path Text) Boolean
 	NativeCompiler.IsGame("Missing/App/App.strict") is false
 	Release("Compiler/output/Game/obj/Demo").Creat("Compiler/output/Game/Content") is not Error

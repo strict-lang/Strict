@@ -78,7 +78,6 @@ Refresh(release Text, content Text, stem Text, endings Texts)
 			if IsPlaced(built, release + "/" + Label(built)) is false
 				logger.Log("Release could not replace " + release + "/" + Label(built) + ", is it still running?")
 				return Error("ReleaseNotReplaced")
-	logger.Log("Release: " + release)
 	Sidecar(release)
 	Mirror(content)
 IsPlaced(source Text, target Text) Boolean

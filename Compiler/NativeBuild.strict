@@ -11,6 +11,7 @@ has isEdited Boolean = false
 has gated List(TypeEntry) = List(TypeEntry)
 mutable cached EmissionMemory = EmissionMemory.Empty
 mutable module MlirModule = MlirModule.Counters
+mutable delivered Text = ""
 constant Logged = List(TypeEntry) + TypeEntry.HelloLogger
 constant Broken = "module {\n  func.func private @A() -> f64 {\n    return %missing : f64\n  }\n}"
 constant Unbuilt = NativeBuild(false, isReleased = true)
@@ -94,9 +95,10 @@ Build(base Text, program Text, tools Toolchain, isCounting = false)
 	if isCrossing and Target is Platform.Windows and Path(base).FileName.text is "Strict"
 		return CrossBuild(base, program, tools, isCounting)
 	built = Rebuilt(base, BuildProfile.Runtime(value, program, tools.root), tools)
-	logger.Log(built)
 	if built.StartsWith("Built ") is false
+		logger.Log(built)
 		return Error("NotBuilt")
+	delivered = built
 	CrossBuild(base, program, tools, isCounting)
 	Intermediates.Remove(base)
 	BuildProfile.Package(value, base, program, tools)

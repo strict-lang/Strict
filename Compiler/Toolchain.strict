@@ -165,7 +165,7 @@ Lower(base Text, kept = "", parts = 1) Text
 	OnWindows.Lower("Compiler/output/missing").StartsWith("mlir-opt failed")
 	if parts > 1 and File(base + ".mlir").Exists
 		split = MlirSplit(File(base + ".mlir").ReadLines)
-		return MlirParts(split).Laid.Lower(base, Toolchain(platform, root, natives, isWeb, cpu))
+		return MlirParts(split).Laid.Lower(base, Toolchain(platform, root, natives, isWeb, cpu, target))
 	privatized = kept is "" then "" else " --symbol-privatize=exclude=" + kept
 	lowering = Quote(base + ".mlir") + privatized + MlirSplit.Single + base + ".llvm.mlir\""
 	lowered = ToolRunner(Locate("mlir-opt")).Execute(lowering)

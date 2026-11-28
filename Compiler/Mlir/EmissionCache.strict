@@ -20,9 +20,10 @@ Emit(texts List(MlirFunction)) Texts slow
 	Counting.Emit(MlirModule.Counters.Functions).First.IndexOf("@Counter_Run_0(") > 0
 	if module.Cached is ""
 		return Fresh(texts)
+	started = Process.Elapsed
 	keys = Keys(texts)
 	stored = Load(module.Cached)
-	emitted = Reuse(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1")
+	emitted = Reuse(texts, keys, stored, Process.Variable("STRICT_EMISSION_CHECK") is "1", started)
 	Save(keys, emitted, stored, module.Cached)
 	emitted
 Device(all List(MlirFunction)) Text slow
@@ -41,19 +42,19 @@ Fresh(texts List(MlirFunction)) Texts
 	Counting.Fresh(MlirModule.Counters.Functions).Length is 1
 	for texts
 		MlirEmission(functions, recursive).Emit(value)
-Reuse(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
+Reuse(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean, started Number) Texts slow
 	mutable reused = 0
 	for keys
 		reused = value is in stored then reused + 1 else reused
-	Logger.Log(Report(reused, texts.Length, isChecked))
+	Logger.Log(Phases.Line(Report(reused, texts.Length, isChecked), Process.Elapsed - started))
 	Pick(texts, keys, stored, isChecked)
 Report(reused Number, count Number, isChecked Boolean) Text
-	Counting.Report(0, 2, true) is "Fresh build: nothing cached to reuse, emitting all 2 functions"
-	Counting.Report(1, 2, true) is "Emission cache: 1 of 2 functions reused, each compared with a fresh emission"
+	Counting.Report(0, 2, true) is "Emitting all 2 functions, fresh build: nothing cached to reuse"
+	Counting.Report(1, 2, true) is "1 of 2 functions reused from emission cache, each compared with a fresh emission"
 	if reused is 0
-		return "Fresh build: nothing cached to reuse, emitting all " + count + " functions"
+		return "Emitting all " + count + " functions, fresh build: nothing cached to reuse"
 	checking = isChecked then ", each compared with a fresh emission" else ""
-	"Emission cache: " + reused + " of " + count + " functions reused" + checking
+	(reused to Text) + " of " + count + " functions reused from emission cache" + checking
 Pick(texts List(MlirFunction), keys Texts, stored Dictionary(Text, Text), isChecked Boolean) Texts slow
 	for texts
 		Chosen(value, keys(index), stored, isChecked)
