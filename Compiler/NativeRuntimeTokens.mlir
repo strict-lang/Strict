@@ -194,8 +194,9 @@
   ^plainDone:
     return %plainSums : vector<4xf32>
   }
-  // `Batch.Sums` of 1 or 2 tokens (or numbers that are not 8 bit): a warp takes one row and 4 tokens, the dot
-  // of row r and token t becomes number t * rows + r of the result (doubles when wide)
+  // `Batch.Sums` of 1 to 4 tokens (or numbers that are not 8 bit): a warp takes one row (two 3 bit rows, see
+  // strict_device_tokens_pair) and 4 tokens, the dot of row r and token t becomes number t * rows + r of the result
+  // (doubles when wide)
   // the first row of the token's rows: bases(token / 64), the chunks of tokens of all three kernels lie in one such
   // tile (8, 32 or 64 tokens from a multiple of them, 24 only below 64 tokens), 0 without bases
   func.func private @strict_device_token_base(%bases: !llvm.ptr, %count: i64, %bits: i64, %token: i64) -> i64 attributes {llvm.linkage = #llvm.linkage<internal>} {
@@ -235,6 +236,115 @@
     %plain = func.call @strict_device_offset_dots(%failed, %rowData, %rowBits, %rowCount, %none, %input, %inputBits, %inputCount, %none, %rowCount, %lane, %thirtyTwo) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> f32
     return %plain : f32
   }
+  // the sums of strict_device_tokens_sums for rows 2 * row and the next of 3 bit rows (PTQ1_0) in one warp, which reads
+  // the 8 bit numbers of each token once for both rows (mode 1), mode 2 for the warps of the second half of the rows
+  // (whole blocks that end at once), mode 0 for one row; and the first row the sums are of
+  func.func private @strict_device_tokens_pair(%failed: !llvm.ptr, %rows: !llvm.ptr, %basedRow: i64, %row: i64, %rowTotal: i64, %rowCount: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %width: i64, %first: i64, %last: i64, %lane: i64) -> (vector<4xf32>, vector<4xf32>, i64, i64) attributes {llvm.linkage = #llvm.linkage<internal>} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %two = arith.constant 2 : i64
+    %three = arith.constant 3 : i64
+    %five = arith.constant 5 : i64
+    %eight = arith.constant 8 : i64
+    %thirtyOne = arith.constant 31 : i64
+    %thirtyTwo = arith.constant 32 : i64
+    %zeros = arith.constant dense<0.0> : vector<4xf32>
+    %rowData, %rowBits, %rowBytes = func.call @strict_device_row(%rows, %basedRow) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    %start = arith.muli %first, %width : i64
+    %quantized = arith.cmpi eq, %inputBits, %eight : i64
+    %widthRest = arith.andi %width, %thirtyOne : i64
+    %widthAligned = arith.cmpi eq, %widthRest, %none : i64
+    %isThree = arith.cmpi eq, %rowBits, %three : i64
+    %aligned = arith.andi %quantized, %widthAligned : i1
+    %blocked = arith.andi %aligned, %isThree : i1
+    %bytes = llvm.getelementptr %input[%start] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    cf.cond_br %blocked, ^check, ^single
+  ^check:
+    %fits = func.call @strict_device_fits8(%rowData, %rowBits, %rowCount, %bytes) : (!llvm.ptr, i64, i64, !llvm.ptr) -> i1
+    cf.cond_br %fits, ^placed, ^single
+  ^placed:
+    %rowsUp = arith.addi %rowTotal, %one : i64
+    %pairs = arith.shrui %rowsUp, %one : i64
+    %beyond = arith.cmpi sge, %row, %pairs : i64
+    cf.cond_br %beyond, ^covered, ^lead
+  ^covered:
+    return %zeros, %zeros, %two, %row : vector<4xf32>, vector<4xf32>, i64, i64
+  ^lead:
+    %lead = arith.shli %row, %one : i64
+    %leadBased = arith.addi %basedRow, %row : i64
+    %next = arith.addi %lead, %one : i64
+    %hasNext = arith.cmpi slt, %next, %rowTotal : i64
+    cf.cond_br %hasNext, ^both, ^last
+  ^last:
+    %lastSums = func.call @strict_device_tokens_sums(%failed, %rows, %leadBased, %rowCount, %input, %inputCount, %inputBits, %width, %first, %last, %lane) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> vector<4xf32>
+    return %lastSums, %zeros, %none, %lead : vector<4xf32>, vector<4xf32>, i64, i64
+  ^both:
+    %leadData, %leadBits, %leadBytes = func.call @strict_device_row(%rows, %leadBased) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    %nextBased = arith.addi %leadBased, %one : i64
+    %otherData, %otherBits, %otherBytes = func.call @strict_device_row(%rows, %nextBased) : (!llvm.ptr, i64) -> (!llvm.ptr, i64, i64)
+    %data = func.call @strict_device_data(%inputCount, %eight) : (i64, i64) -> i64
+    %allScales = llvm.getelementptr %input[%data] : (!llvm.ptr, i64) -> !llvm.ptr, i8
+    %scaleStart = arith.shrui %start, %five : i64
+    %scales = llvm.getelementptr %allScales[%scaleStart] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+    %relativeLast = arith.subi %last, %first : i64
+    %sums, %otherSums = func.call @strict_device_trits_pairs(%leadData, %otherData, %rowCount, %bytes, %scales, %width, %relativeLast, %lane, %thirtyTwo) : (!llvm.ptr, !llvm.ptr, i64, !llvm.ptr, !llvm.ptr, i64, i64, i64, i64) -> (vector<4xf32>, vector<4xf32>)
+    return %sums, %otherSums, %one, %lead : vector<4xf32>, vector<4xf32>, i64, i64
+  ^single:
+    %alone = func.call @strict_device_tokens_sums(%failed, %rows, %basedRow, %rowCount, %input, %inputCount, %inputBits, %width, %first, %last, %lane) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> vector<4xf32>
+    return %alone, %zeros, %none, %row : vector<4xf32>, vector<4xf32>, i64, i64
+  }
+  // the 3 bit path of strict_device_dots4_tokens for two rows: the 8 bit numbers of each token are loaded once for both
+  func.func private @strict_device_trits_pairs(%row: !llvm.ptr, %other: !llvm.ptr, %count: i64, %bytes: !llvm.ptr, %scales: !llvm.ptr, %stride: i64, %last: i64, %lane: i64, %lanes: i64) -> (vector<4xf32>, vector<4xf32>) attributes {llvm.linkage = #llvm.linkage<internal>, llvm.passthrough = ["noinline"]} {
+    %none = arith.constant 0 : i64
+    %one = arith.constant 1 : i64
+    %four = arith.constant 4 : i64
+    %six = arith.constant 6 : i64
+    %zeros = arith.constant dense<0.0> : vector<4xf32>
+    %units = arith.shrui %count, %six : i64
+    cf.br ^unit(%lane, %zeros, %zeros : i64, vector<4xf32>, vector<4xf32>)
+  ^unit(%unit: i64, %sums: vector<4xf32>, %otherSums: vector<4xf32>):
+    %more = arith.cmpi slt, %unit, %units : i64
+    cf.cond_br %more, ^body, ^reduce(%none, %sums, %otherSums : i64, vector<4xf32>, vector<4xf32>)
+  ^body:
+    %weights:7 = func.call @strict_device_trits_weights(%row, %count, %unit) : (!llvm.ptr, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
+    %otherWeights:7 = func.call @strict_device_trits_weights(%other, %count, %unit) : (!llvm.ptr, i64, i64) -> (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64)
+    cf.br ^token(%none, %sums, %otherSums : i64, vector<4xf32>, vector<4xf32>)
+  ^token(%index: i64, %totals: vector<4xf32>, %otherTotals: vector<4xf32>):
+    %tokens = arith.cmpi slt, %index, %four : i64
+    cf.cond_br %tokens, ^used, ^next
+  ^used:
+    %used = arith.cmpi sle, %index, %last : i64
+    cf.cond_br %used, ^add, ^joined(%totals, %otherTotals : vector<4xf32>, vector<4xf32>)
+  ^add:
+    %inputs:2 = func.call @strict_device_token_inputs(%bytes, %scales, %stride, %index, %last) : (!llvm.ptr, !llvm.ptr, i64, i64, i64) -> (!llvm.ptr, !llvm.ptr)
+    %old = llvm.extractelement %totals[%index : i64] : vector<4xf32>
+    %new = func.call @strict_device_trits_token(%weights#0, %weights#1, %weights#2, %weights#3, %weights#4, %weights#5, %weights#6, %inputs#0, %inputs#1, %old) : (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
+    %updated = llvm.insertelement %new, %totals[%index : i64] : vector<4xf32>
+    %otherOld = llvm.extractelement %otherTotals[%index : i64] : vector<4xf32>
+    %otherNew = func.call @strict_device_trits_token(%otherWeights#0, %otherWeights#1, %otherWeights#2, %otherWeights#3, %otherWeights#4, %weights#5, %weights#6, %inputs#0, %inputs#1, %otherOld) : (vector<4xi32>, vector<4xi32>, vector<4xi32>, vector<4xi32>, f32, i64, i64, !llvm.ptr, !llvm.ptr, f32) -> f32
+    %otherUpdated = llvm.insertelement %otherNew, %otherTotals[%index : i64] : vector<4xf32>
+    cf.br ^joined(%updated, %otherUpdated : vector<4xf32>, vector<4xf32>)
+  ^joined(%kept: vector<4xf32>, %otherKept: vector<4xf32>):
+    %after = arith.addi %index, %one : i64
+    llvm.br ^token(%after, %kept, %otherKept : i64, vector<4xf32>, vector<4xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^next:
+    %following = arith.addi %unit, %lanes : i64
+    cf.br ^unit(%following, %totals, %otherTotals : i64, vector<4xf32>, vector<4xf32>)
+  ^reduce(%reduceIndex: i64, %reduceTotals: vector<4xf32>, %reduceOthers: vector<4xf32>):
+    %reducing = arith.cmpi slt, %reduceIndex, %four : i64
+    cf.cond_br %reducing, ^reduceOne, ^reduced
+  ^reduceOne:
+    %partial = llvm.extractelement %reduceTotals[%reduceIndex : i64] : vector<4xf32>
+    %reducedOne = func.call @strict_device_lanes_sums(%partial, %lane, %lanes) : (f32, i64, i64) -> f32
+    %replaced = llvm.insertelement %reducedOne, %reduceTotals[%reduceIndex : i64] : vector<4xf32>
+    %otherPartial = llvm.extractelement %reduceOthers[%reduceIndex : i64] : vector<4xf32>
+    %otherReduced = func.call @strict_device_lanes_sums(%otherPartial, %lane, %lanes) : (f32, i64, i64) -> f32
+    %otherReplaced = llvm.insertelement %otherReduced, %reduceOthers[%reduceIndex : i64] : vector<4xf32>
+    %reduceNext = arith.addi %reduceIndex, %one : i64
+    llvm.br ^reduce(%reduceNext, %replaced, %otherReplaced : i64, vector<4xf32>, vector<4xf32>) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^reduced:
+    return %reduceTotals, %reduceOthers : vector<4xf32>, vector<4xf32>
+  }
   func.func private @strict_device_tokens_rows(%count: i64, %result: !llvm.ptr, %failed: !llvm.ptr, %rowsData: !llvm.ptr, %columns: i64, %input: !llvm.ptr, %inputCount: i64, %inputBits: i64, %widthNumber: f64, %rowsNumber: f64, %wide: i1, %biases: !llvm.ptr, %biasesCount: i64, %biasesBits: i64, %bases: !llvm.ptr, %basesCount: i64, %basesBits: i64, %alone: i1) attributes {llvm.linkage = #llvm.linkage<internal>} {
     %brain = arith.constant false
     %zeros = arith.constant dense<0.0> : vector<4xf32>
@@ -272,29 +382,34 @@
   ^alone:
     %dot = func.call @strict_device_token_sum(%failed, %rowsData, %basedRow, %columns, %input, %inputCount, %inputBits, %width, %lane) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64) -> f32
     %single = llvm.insertelement %dot, %zeros[%none : i64] : vector<4xf32>
-    cf.br ^summed(%single : vector<4xf32>)
+    cf.br ^summed(%single, %zeros, %brain, %row : vector<4xf32>, vector<4xf32>, i1, i64)
   ^several:
-    %several = func.call @strict_device_tokens_sums(%failed, %rowsData, %basedRow, %columns, %input, %inputCount, %inputBits, %width, %first, %last, %lane) : (!llvm.ptr, !llvm.ptr, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> vector<4xf32>
-    cf.br ^summed(%several : vector<4xf32>)
-  ^summed(%sums: vector<4xf32>):
+    %several, %pairSums, %mode, %sumsRow = func.call @strict_device_tokens_pair(%failed, %rowsData, %basedRow, %row, %rows, %columns, %input, %inputCount, %inputBits, %width, %first, %last, %lane) : (!llvm.ptr, !llvm.ptr, i64, i64, i64, i64, !llvm.ptr, i64, i64, i64, i64, i64, i64) -> (vector<4xf32>, vector<4xf32>, i64, i64)
+    %covered = arith.cmpi sgt, %mode, %one : i64
+    %paired = arith.cmpi eq, %mode, %one : i64
+    cf.cond_br %covered, ^exit, ^summed(%several, %pairSums, %paired, %sumsRow : vector<4xf32>, vector<4xf32>, i1, i64)
+  ^summed(%sums: vector<4xf32>, %laterSums: vector<4xf32>, %hasLater: i1, %firstRow: i64):
     %isFirstLane = arith.cmpi eq, %lane, %none : i64
-    cf.cond_br %isFirstLane, ^write(%none : i64), ^exit
-  ^write(%index: i64):
+    cf.cond_br %isFirstLane, ^write(%none, %sums, %firstRow, %hasLater : i64, vector<4xf32>, i64, i1), ^exit
+  ^write(%index: i64, %rowSums: vector<4xf32>, %writeRow: i64, %pending: i1):
     %writes = arith.cmpi slt, %index, %four : i64
-    cf.cond_br %writes, ^token, ^exit
+    cf.cond_br %writes, ^token, ^written
   ^token:
     %token = arith.addi %first, %index : i64
     %writing = arith.cmpi sle, %token, %last : i64
-    %value = llvm.extractelement %sums[%index : i64] : vector<4xf32>
+    %value = llvm.extractelement %rowSums[%index : i64] : vector<4xf32>
     %tokenStart = arith.muli %token, %rows : i64
-    %element = arith.addi %tokenStart, %row : i64
+    %element = arith.addi %tokenStart, %writeRow : i64
     cf.cond_br %writing, ^store, ^stored
   ^store:
-    func.call @strict_device_tokens_store(%result, %wide, %brain, %element, %value, %row, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
+    func.call @strict_device_tokens_store(%result, %wide, %brain, %element, %value, %writeRow, %rows, %biases, %biasesCount, %biasesBits) : (!llvm.ptr, i1, i1, i64, f32, i64, i64, !llvm.ptr, i64, i64) -> ()
     cf.br ^stored
   ^stored:
     %next = arith.addi %index, %one : i64
-    llvm.br ^write(%next : i64) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+    llvm.br ^write(%next, %rowSums, %writeRow, %pending : i64, vector<4xf32>, i64, i1) {loop_annotation = #llvm.loop_annotation<unroll = #llvm.loop_unroll<full = true>>}
+  ^written:
+    %laterRow = arith.addi %writeRow, %one : i64
+    cf.cond_br %pending, ^write(%none, %laterSums, %laterRow, %brain : i64, vector<4xf32>, i64, i1), ^exit
   ^exit:
     return
   }
@@ -1052,7 +1167,7 @@
   ^done:
     return
   }
-  // `Batch.Sums` of 2 tokens or more: a block takes 8 rows and up to 32 tokens, each of its 8 warps an eighth of the
+  // `Batch.Sums` of 5 tokens or more: a block takes 8 rows and up to 32 tokens, each of its 8 warps an eighth of the
   // parts of 256 numbers of Q4_K, Q6_K or 8 bit rows on the 8 bit tensor cores, added up in shared memory (64 rows and 32
   // tokens of other rows in strict_device_tokens_tile, fewer tokens row by row); the dot of row r and token t becomes
   // number t * rows + r of the result
