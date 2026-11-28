@@ -6,19 +6,25 @@ constant PendingFile = BinaryFile(PendingPath)
 constant PendingSource = File(PendingPath).ReadText is "from" then true else File(PendingPath).Write("from") is not Error
 constant PendingHeader = PendingSource then BinarySources(List(Text) + PendingPath).Stamped.Header else List(Number)
 constant PendingBytes = PendingFile.Pack(PendingHeader, List(TypeEntry) + BinaryLinks.Tested, List(Text))
-TestFolder(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false) Number
+TestFolder(folder Text, root Text, isRecursive = true, isMutating = false, isFull = false, listed = "") Number
 	Folders.TestFolder("Missing", ".") is 0
-	files = SourceFiles.Plain.Folder(folder, isRecursive)
+	files = Gather(folder, isRecursive, listed)
 	pending = Pending(files, isMutating)
 	mutable failed = 0
 	if pending.Length > 0
 		if isMutating is false and isFull is false
-			failed = Verify(pending, root)
+			failed = Verify(pending, root, listed is "")
 		else
 			failed = RunFolders(Commands("test", pending, root, isMutating, isFull))
 	for files - pending
 		failed = failed + Execute(isMutating = isMutating).Cache(value)
 	failed
+Gather(folder Text, isRecursive Boolean, listed Text) Texts slow
+	Directory.Create("Compiler/output/Listed") is not Error and Directory.Create("Compiler/output/Listed/obj") is not Error
+	File("Compiler/output/Listed/obj/Tests.part0.txt").Write("Math/Size.strict") is not Error
+	Folders.Gather("Math", false, "Compiler/output/Listed/obj/Tests.part0.txt") is ("Math/Size.strict")
+	Folders.Gather("Math", false, "").Length > 10
+	listed is "" then SourceFiles.Plain.Folder(folder, isRecursive) else File(listed).ReadLines
 Pending(files Texts, isMutating Boolean) Texts slow
 	Folders.Pending(List(Text) + "Missing.strict", false) is ("Missing.strict")
 	PendingFile.Save(PendingBytes) is not Error
@@ -97,13 +103,23 @@ Fail(exitCode Number) Number
 	Folders.Fail(-1073741819) is 1
 	Folders.Fail(0) is 0 and Folders.Fail(200) is 1
 	exitCode >= 0 and exitCode < CrashExitCode then exitCode else 1
-Verify(pending Texts, root Text) Number slow
+Verify(pending Texts, root Text, isSplit = true) Number slow
 	Folders.Verify(List(Text), ".") is 0
 	folders = Directories(pending)
-	width = Width(Process.Executed(0))
-	if folders.Length < 2 or width < 2
+	threads = Process.Executed(0)
+	if folders.Length > 1 and Width(threads) > 1
+		return RunFolders(Separately(Commands("test", folders, root)), Width(threads))
+	chunks = TestChunks(pending, isSplit then Lines(pending) else List(Number))
+	commands = chunks.Commands(threads, root)
+	if commands.Length < 2
 		return Execute.Failures(pending, pending, root, false)
-	RunFolders(Separately(Commands("test", folders, root)), width)
+	failed = RunFolders(commands, commands.Length)
+	chunks.Clear(commands.Length)
+	failed
+Lines(files Texts) Numbers slow
+	Folders.Lines(List(Text) + "Math/Size.strict").First > 10
+	for files
+		File(value).ReadLines.Length
 Separately(commands Texts) Texts
 	Folders.Separately(List(Text) + "test \"a\"") is ("test \"a\" --no-recursive")
 	for commands

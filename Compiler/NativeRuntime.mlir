@@ -1528,8 +1528,8 @@
     %five = arith.constant 5 : i64
     %onSlot = llvm.mlir.addressof @strict_executed_on : !llvm.ptr
     llvm.store %one, %onSlot atomic monotonic {alignment = 8 : i64} : i64, !llvm.ptr
-    %workersSlot = llvm.mlir.addressof @strict_pool_workers : !llvm.ptr
-    %workers = llvm.load %workersSlot : !llvm.ptr -> i64
+    // the threads this process can use (STRICT_THREADS or the default), also before its first parallel loop
+    %workers = func.call @strict_pool_started() : () -> i64
     %threads = arith.addi %workers, %one : i64
     %threadCount = arith.sitofp %threads : i64 to f64
     %empty = func.call @strict_list_empty() : () -> f64

@@ -1,0 +1,49 @@
+has files Texts
+has lines Numbers
+constant ChildLines = 600
+constant Chunked = TestChunks(("Compiler/output/Chunked/A.strict", "Compiler/output/Chunked/B.strict"), (600, 600))
+constant Spread = TestChunks(("a", "b", "c", "d"), (900, 300, 600, 600))
+Count(threads Number) Number
+	Spread.Count(64) is 4
+	Spread.Count(8) is 2
+	Spread.Count(4) is 1
+	TestChunks(("a", "b"), (100, 200)).Count(64) is 1
+	(lines.Sum / ChildLines).Floor.Minimum((threads / 4).Floor).Minimum(files.Length).Maximum(1)
+Cut(count Number) List(Texts)
+	Spread.Cut(2) is (("a", "b"), ("c", "d"))
+	Spread.Cut(4).Length is 4 and Spread.Cut(4)(2).First is "c"
+	TestChunks(("a", "b", "c"), (600, 600, 0)).Cut(2).Last is ("b", "c")
+	TestChunks(("a", "b", "c", "d", "e", "f"), (300, 300, 300, 300, 300, 300)).Cut(3)(1) is ("c", "d")
+	Spread.Cut(1).First is Spread.files
+	mutable groups = List(Mutable(Texts))
+	mutable current = List(Mutable(Text))
+	mutable sum = 0
+	for files
+		current.Add(value)
+		sum = sum + lines(index)
+		if sum * count >= lines.Sum * (groups.Length + 1) and groups.Length < count - 1
+			groups.Add(current)
+			current = List(Mutable(Text))
+	groups + current
+Commands(threads Number, root Text) Texts slow
+	Directory.Create("Compiler/output/Chunked") is not Error
+	Chunked.Commands(8, ".").Length is 2
+	File(Chunked.Locate(1)).ReadText is "Compiler/output/Chunked/B.strict"
+	Spread.Commands(4, ".").Length is 0
+	count = Count(threads)
+	if count < 2
+		return List(Text)
+	folder = Path(files.First).PathOnly.text
+	Directory.Create(folder + "/obj")
+	for Cut(count)
+		File(Locate(index)).Write(value)
+		"test \"" + folder + "\" \"" + root + "\" unit --no-recursive files:" + Locate(index)
+Locate(index Number) Text
+	Spread.Locate(1).EndsWith("-1.txt")
+	Spread.Locate(0).StartsWith("/obj/Tests.part")
+	Path(files.First).PathOnly.text + "/obj/Tests.part" + Process.Id + "-" + index + ".txt"
+Clear(count Number) slow
+	Chunked.Clear(2) is not Error
+	File(Chunked.Locate(1)).Exists is false
+	for Range(0, count)
+		File(Locate(value)).Delete

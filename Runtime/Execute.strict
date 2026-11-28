@@ -8,6 +8,7 @@ has cached Dictionary(Text, VmValue) = Dictionary(Text, VmValue)
 has quietUntil Number = 0
 has inferred InferenceCache = InferenceCache.None
 has trial TrialMachine = TrialMachine.None
+has listed Text = ""
 constant Adder = BinaryFile("./Examples/NativeAdd/Adder.strict")
 constant AdderFiles = SourceFiles(".").Of(Adder.source)
 constant Unstamped = BinarySources(List(Text))
@@ -29,7 +30,7 @@ Test(path Text, root Text, isQuiet = false, sources Texts = List(Text)) Number
 	isFolder = Directory.Exists(path)
 	if File(path).Exists and isFolder is false
 		return Failures(path, Stale(path), root, isQuiet, sources)
-	isFolder then Folders.TestFolder(path, root, isRecursive, isMutating, isFull) else 1
+	isFolder then Folders.TestFolder(path, root, isRecursive, isMutating, isFull, listed) else 1
 Failures(paths Texts, stale Texts, root Text, isQuiet Boolean, sources Texts = List(Text)) Number
 	files = Source(stale, root, sources)
 	types = ResolveCheck.Inference(files)
