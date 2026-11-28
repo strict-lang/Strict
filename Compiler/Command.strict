@@ -95,6 +95,7 @@ Resolve(arguments Texts, main Text) Texts slow
 	Command.Resolve(("test", "."), Entry) is ("test", ".")
 	Command.Resolve(List(Text) + "test", Entry) is ("test", Entry)
 	Command.Resolve(("build", "strict", "windows"), Entry) is ("build", Entry, "windows")
+	Command.Resolve(("build", "missing"), Entry) is ("build", "missing")
 	given = arguments.Length > 1 then arguments(1) else ""
 	if arguments(0) is "build" and (given is "." or Directory.Exists(given))
 		folder = FindMainFile(given)
@@ -103,7 +104,8 @@ Resolve(arguments Texts, main Text) Texts slow
 		return List(Text) + arguments(0) + Entry + arguments.Slice(2, arguments.Length - 2)
 	isSource = given is not "" and IsSource(given)
 	target = arguments(0) is "test" and main is "" then "." else main
-	isSource or target is "" then arguments else List(Text) + arguments(0) + target + Rest(arguments)
+	isOption = arguments(0) is "test" or given.Lower is in SelfBuild.BuildOptions
+	isSource or target is "" or isOption is false then arguments else List(Text) + arguments(0) + target + Rest(arguments)
 IsSource(given Text) Boolean slow
 	Command.IsSource("Examples/Sum") and Command.IsSource("Math")
 	Command.IsSource("LICENSE") is false
