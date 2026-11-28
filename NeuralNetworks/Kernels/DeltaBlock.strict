@@ -107,11 +107,11 @@ Key(mixed Numbers) Numbers
 	size = norm.Length
 	channels = convolution.Length / 4
 	keys = 2 * KeyHeads * size
-	scales = Qwen3Block.Scales(mixed, size, Qwen3Block.Epsilon / size)
 	for mixed
 		within = index % channels
 		query = within < keys / 2 then 1 / size else 1 / size.SquareRoot
-		within >= keys then value else value * scales((index / size).Floor) * query
+		squares = Normalization.Square(mixed, (index / size).Floor * size, size)
+		within >= keys then value else value * Normalization.Scale(squares, size, Qwen3Block.Epsilon / size) * query
 Decay(combined Numbers, tokens Number) Numbers
 	Tiny.Decay(Layer.Zeros(64), 2).Length is 16
 	Tiny.Decay(Layer.Zeros(32), 1)(4) is 0.5
@@ -157,10 +157,10 @@ Gate(raw Numbers, combined Numbers) Numbers
 	size = norm.Length
 	values = decays.Length * size
 	width = combined.Length * values / raw.Length
-	scales = Qwen3Block.Scales(raw, size, Qwen3Block.Epsilon)
 	for raw
 		gate = combined((index / values).Floor * width + convolution.Length / 4 + index % values)
-		scaled = value * scales((index / size).Floor) * norm(index % size)
+		squares = Normalization.Square(raw, (index / size).Floor * size, size)
+		scaled = value * Normalization.Scale(squares, size, Qwen3Block.Epsilon) * norm(index % size)
 		(sigmoidGate then scaled else scaled * gate) / (1 + (-gate).Exponential)
 Output(input Numbers) Numbers
 	Tiny.Cached(Tiny.Combine(Drafter.Rows(1))).Output(Drafter.Rows(1)).Length is 8

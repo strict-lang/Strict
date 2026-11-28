@@ -122,9 +122,9 @@ Normalize(input Numbers, start Number, count Number, weights Numbers) Numbers
 	part = start is 0 and count is input.Length then input else Safetensors.Part(input, start, count, 1)
 	if size is 0
 		return part
-	scales = Scales(part, size, Epsilon)
 	for count
-		part(index) * weights(index % size) * scales((index / size).Floor)
+		squares = Normalization.Square(part, (index / size).Floor * size, size)
+		part(index) * weights(index % size) * Normalization.Scale(squares, size, Epsilon)
 Scales(input Numbers, size Number, epsilon Number) Float32s
 	Tiny.Scales((3, 4, 0, 1), 2, Epsilon)(1).IsNearlyEqual(1.41421215)
 	constant WebParts = 32
